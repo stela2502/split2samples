@@ -7,6 +7,12 @@ use std::io::Write;
 use std::str;
 mod utils;
 use crate::utils::get_all_snps;
+use std::path::Path;
+use std::ffi::OsStr;
+
+use std::collections::BTreeMap;
+
+
 
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
@@ -16,193 +22,207 @@ use crate::utils::get_all_snps;
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Rob P. <rob@cs.umd.edu>")]
 struct Opts {
+    /// the input R1 file
+    #[clap(short, long)]
+    read_file1: String,
     /// the input R2 file
     #[clap(short, long)]
-    read_file: String,
-    /// the map of oligo-dT to random hexamers
+    read_file2: String,
+    /// the specie of the library
     #[clap(short, long)]
-    bc_map: String,
-    /// start position of the random barcode
+    specie: String,
+    /// the input outpath
     #[clap(short, long)]
-    start: usize,
-    /// end position of the random barcode
-    #[clap(short, long)]
-    end: usize,
+    outpath: String,
     /// consider 1-hamming distance neighbors of random hexamers
     #[clap(short, long)]
     one_hamming: bool,
 }
 
 #[derive(Debug, Deserialize)]
-struct BCMapRecord {
-    oligo_dt: String,
-    rand_hex: String,
+struct sample {
+    oligo: &str,
+    id: short,
+    search: &BTreeMap<&str, &str>,
+    file1: &Box<dyn Write>, 
+    file2: &Box<dyn Write>,
 }
 
-/// Parse a 2-column tab-separated file (given by `bc_map`) that contains the
-/// mapping of oligo-dT sequences to random-mer sequences.  The file
-/// *must* be tab-separated, and *must* begin with a header line starting
-/// with `#`.
-///
-/// If the `one_edit` argument is `true` then all one-edit neighbors of an random-mer will
-/// be mapped to the corresponding oligo-dT.  Otherwise, only exactly matching random-mers
-/// will be matched to the corresponding oligo-dT.
-fn parse_bc_map(bc_map: &str, one_edit: bool) -> HashMap<u64, String, ahash::RandomState> {
-    let mut rdr = csv::ReaderBuilder::new()
-        .delimiter(b'\t')
-        .comment(Some(b'#'))
-        .has_headers(false)
-        .from_path(bc_map)
-        .expect("cannot open barcode file");
 
-    let s = ahash::RandomState::with_seeds(2u64, 7u64, 1u64, 8u64);
-    let mut hm = HashMap::with_hasher(s);
-    let s2 = ahash::RandomState::with_seeds(2u64, 7u64, 1u64, 8u64);
-    let mut hs = HashMap::with_hasher(s2);
-    let mut collisions = 0usize;
-    let mut neighbor_vec = Vec::new();
+/// from https://users.rust-lang.org/t/solved-how-to-split-string-into-multiple-sub-strings-with-given-length/10542/7
+fn sub_strings(string: &str, sub_len: usize) -> Vec<&str> {
+    let mut subs = Vec::with_capacity(string.len() / sub_len);
+    let mut iter = string.chars();
+    let mut pos = 0;
 
-    for result in rdr.deserialize() {
-        // Notice that we need to provide a type hint for automatic
-        // deserialization.
-        let record: BCMapRecord = result.expect("could not deserialize barcode map record.");
-
-        if let Some((_, rh, _)) = BitNuclKmer::new(
-            record.rand_hex.as_bytes(),
-            record.rand_hex.len() as u8,
-            false,
-        )
-        .next()
-        {
-            let count = hs.entry(rh.0).or_insert(0usize);
-            if *count > 0 {
-                collisions += 1;
-            }
-            *count += 1;
-
-            neighbor_vec.push((rh.0, record.oligo_dt.clone()));
-            // if we are considering one-edit neighbors, then generate
-            // of the neighbors of the random-mer, and prepare them
-            // for insertion into the map with the corresponding
-            // oligo-dT.
-            if one_edit {
-                for n in get_all_snps(rh.0, record.rand_hex.len()) {
-                    let count = hs.entry(n).or_insert(0usize);
-                    if *count > 0 {
-                        collisions += 1;
-                    }
-                    *count += 1;
-                    neighbor_vec.push((n, record.oligo_dt.clone()));
-                }
-            }
+    while pos < string.len() {
+        let mut len = 0;
+        for ch in iter.by_ref().take(sub_len) {
+            len += ch.len_utf8();
         }
+        subs.push(&string[pos..pos + len]);
+        pos += len;
     }
-    // how many collisions do we observe between the 1-edit
-    // neighbors of the random hexamers?
-    if collisions > 0 {
-        eprintln!(
-            "Observed {} collisions in the edit distance neighbors of the random hexamers.",
-            collisions
-        );
-    }
-    for (k, v) in neighbor_vec {
-        if let Some(count) = hs.get(&k) {
-            if *count == 1 {
-                hm.insert(k, v);
-            } else {
-                eprintln!(
-                    "{} different random mers were within 1-hamming of {}",
-                    count, k
-                );
-            }
-        }
-    }
-    hm
+    subs
 }
+
+/// from https://stackoverflow.com/questions/65976432/how-to-remove-first-and-last-character-of-a-string-in-rust
+fn rem_first(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next();
+    chars.as_str()
+}
+
+
+fn get_sample(primer: &str, id: usize, sub_len: usize, outpath: &str) -> &sample {
+    let mut sam: sample;
+    sam.oligo = primer;
+    sam.id = id;
+    /// and here comes the fun. Get me all possible sub_len strings in that oligo into the BTreeMap
+    for n in 1..sub_len {
+	for subS in sub_strings( primer, sub_len){
+		sam.search.insert( subS, subS);
+	}
+    }
+    /// start the two files buffers
+    let f = Path::new(&opts.outpath);
+    let mut File2 = f.join( Path::new(&opts.read_file1).file_name().unwrap());
+    sam.file1 = writer( &File2 );
+    File2 = f.join( Path::new(&opts.read_file2).file_name().unwrap());
+    sam.file2 = writer( &File2 );
+
+    return &sam;
+}	
+
+/// from https://users.rust-lang.org/t/write-to-normal-or-gzip-file-transparently/35561
+/// Write normal or compressed files seamlessly
+/// Uses the presence of a `.gz` extension to decide
+// Attempting to have a file writer too
+pub fn writer(filename: &Path ) -> &Box<dyn Write> {
+
+    let file = match File::create(&filename) {
+        Err(why) => panic!("couldn't open {}: {}", path.display(), why.description()),
+        Ok(file) => file,
+    };
+
+    if path.extension() == Some(OsStr::new("gz")) {
+        // Error is here: Created file isn't gzip-compressed
+        return &Box::new(BufWriter::with_capacity(
+            128 * 1024,
+            write::GzEncoder::new(file, Compression::default()),
+        ))
+    } else {
+        return &Box::new(BufWriter::with_capacity(128 * 1024, file))
+    }
+
+}	
+
+pub fn writeFastq( buf Box<dyn Write>, res FastqRecord ) {
+    rec = res.unwrap();
+    buf.write_all( rec.all() ).unwrap();
+}
+
+
 
 fn main() {
     // parse the options
     let opts: Opts = Opts::parse();
 
-    // read in the random hexamer to oligo-dT map
-    // if edit distance bound is 0, only populate with
-    // exact matches.  Otherwise, populate with all
-    // 1-edit neighbors of random hexamers.
-    let bcm = parse_bc_map(&opts.bc_map, opts.one_hamming);
+    let mut samples: Vec<&sample> = Vec::with_capacity(12);
 
-    // the barcode length
-    let bclen = ((opts.end - opts.start) + 1) as u8;
+    //let File1 = Path::new(outpath).join( Path::new(read_file1).file_name());
+    let mut File1 = Path::new(&opts.outpath);
 
-    // lock stdout and buffer so we can write to it quickly.
-    let stdout = std::io::stdout();
-    let lock = stdout.lock();
-    let mut buf = std::io::BufWriter::with_capacity(32 * 1024, lock);
+    let mut File2 = File1.join( Path::new(&opts.read_file1).file_name().unwrap());
+
+    let file1 = writer( &File2 );
+    File2 = File1.join( Path::new(&opts.read_file2).file_name().unwrap() );
+    let file2 = writer( &File2);
+
+    if ( opts.specie.eq("human") ){
+        /// get all the human sample IDs into this.
+        samples[0] = get_sample(primer="ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", 1, 9, outpath);
+        samples[1] = get_sample("TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", 2, 9, outpath);
+        samples[2] = get_sample("CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", 3, 9, outpath);
+        samples[3] = get_sample("ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 4, 9, outpath);
+        samples[4] = get_sample("CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", 5, 9, outpath);
+        samples[5] = get_sample("TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", 6, 9, outpath);
+        samples[6] = get_sample("TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", 7, 9, outpath);
+        samples[7] = get_sample("CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", 8, 9, outpath);
+        samples[8] = get_sample("GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", 9, 9, outpath);
+        samples[9] = get_sample("GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", 10, 9, outpath);
+        samples[10] = get_sample("CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", 11, 9, outpath);
+        samples[11] = get_sample("GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", 12, 9, outpath);
+
+    }
+    else if ( opts.specie.eq("mouse") ){
+        // and the mouse ones
+        samples[0] = get_sample("AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", 1, 9, outpath);
+        samples[1] = get_sample("ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 2, 9, outpath);
+        samples[2] = get_sample("AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", 3, 9, outpath);
+        samples[3] = get_sample("TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", 4, 9, outpath);
+        samples[4] = get_sample("GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", 5, 9, outpath);
+        samples[5] = get_sample("GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", 6, 9, outpath);
+        samples[6] = get_sample("ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", 7, 9, outpath);
+        samples[7] = get_sample("TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", 8, 9, outpath);
+        samples[8] = get_sample("GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", 9, 9, outpath);
+        samples[9] = get_sample("TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", 10, 9, outpath);
+        samples[10] = get_sample("GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", 11, 9, outpath);
+        samples[11] = get_sample(primer="CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", 12, 9, outpath);
+    }
+    else {
+        println!("Sorry, but I have no primers for specie {}", specie);
+        std::process::exit(1)
+    }
+
 
     // for now, we're assuming FASTQ and not FASTA.
-    let mut reader = parse_fastx_file(&opts.read_file).expect("valid path/file");
+    let mut reader1 = parse_fastx_file(&opts.read_file1).expect("valid path/file");
+    let mut reader2 = parse_fastx_file(&opts.read_file2).expect("valid path/file");
 
-    while let Some(record) = reader.next() {
-        let seqrec = record.expect("invalid record");
-        let seq = seqrec.seq().into_owned();
-        // get the parts of the read:
-        // fivep = before the barcode
-        // bcs = the barcode
-        // threep = after the barcode
-        let fivep = &seq[..opts.start - 1];
-        let bcs = &seq[opts.start - 1..opts.start - 1 + (bclen as usize)];
-        let threep = &seq[opts.end..];
+    while let Some(record2) = reader2.next() {
+        let Some(record1) = reader1.next();	
+        let seqrec = record2.expect("invalid record");
+        let seq = format("{}",seqrec.seq().into_owned());
 
-        // the fallthrough numeric encoding of
-        // the barcode
-        let mut bc = 0;
+	
+	// create 9mers of the R2 read and check which of teh 12 sample ids matches best:
+	let mut subs = sub_strings( &seq, 9 );
+    let mut res = Vec::with_capacity(12);
+ 
+	for i in 0..11{
+	   res[i] = 0;
+	   for s in subs{
+		if samples[i].search.contains_key( s ){
+		    res[i] +=1;
+		}
+	   }
+	}
+	let maxValue: Integer = res.iter().max();
+	let mut z = 0;
+        let ID: int;
+        if maxValue > 2{
+	for i in 0..res.len(){
+    	    if res[i] == max {
+	        ID = i;
+                z += z;
+	    }
+ 	}
+	if (z == 1){
+	    writeFastq( samples[i].file1, record1 );
+	    writeFastq( samples[i].file2, record2 );	
+	}
+	else {
+	    writeFastq( file1, record1 );
+	    writeFastq( file2, record1 );
+	}
 
-        // currently, this is the only tricky bit.
-        // try to convert the barcode to a bitkmer.
-        // this will fail only if there are non-ACGT nucleotides in it.
-        // in that case, try and replace any `N` with an `A` and try again.
-        // if it **still** fails for some reason, just fall back to the
-        // fake 0 barcode encoding.
-        match BitNuclKmer::new(bcs, bclen, false).next() {
-            Some((_, bck, _)) => {
-                bc = bck.0;
-            }
-            None => {
-                let sbcs = unsafe { str::from_utf8_unchecked(bcs) };
-                let nbcs = str::replace(sbcs, "N", "A");
-                if let Some((_, bck, _)) = BitNuclKmer::new(nbcs.as_bytes(), bclen, false).next() {
-                    bc = bck.0;
-                }
-            }
-        }
-
-        // write the read info for the part before the
-        // sequence.
-        buf.write_all(b"@").unwrap();
-        buf.write_all(seqrec.id()).unwrap();
-        buf.write_all(b"\n").unwrap();
-
-        // try to lookup the barcode in the translation & correction
-        // map.  If we find a hit, then write the corrected read
-        // otherwise, wrtie the original read.
-        if let Some(oligo_dt) = bcm.get(&bc) {
-            /*eprintln!(
-                "{} => {}",
-                String::from_utf8(seq[opts.start - 1..opts.start - 1 + (bclen as usize)].to_vec())
-                    .unwrap(),
-                oligo_dt
-            );
-            */
-            buf.write_all(fivep).unwrap();
-            buf.write_all(oligo_dt.as_bytes()).unwrap();
-            buf.write_all(threep).unwrap();
-        } else {
-            buf.write_all(&seqrec.seq()).unwrap();
-        }
-        buf.write_all(b"\n+").unwrap();
-        buf.write_all(seqrec.id()).unwrap();
-        buf.write_all(b"\n").unwrap();
-        buf.write_all(seqrec.qual().unwrap()).unwrap();
-        buf.write_all(b"\n").unwrap();
     }
-    buf.flush().unwrap();
+
+    for i in 0..11{
+	samples[i].file1.flush().unwrap();
+	samples[i].file2.flush().unwrap();
+    }
+    file1.flush().unwrap();
+    file2.flush().unwrap();
 }
