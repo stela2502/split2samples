@@ -1,14 +1,22 @@
 use clap::Parser;
-use needletail::bitkmer::BitNuclKmer;
+//use flate2;
+//use flate2::read;
+use flate2::write;
+use flate2::Compression;
+//use needletail::bitkmer::BitNuclKmer;
 use needletail::parse_fastx_file;
+use needletail::parser::SequenceRecord;
+
 use serde::Deserialize;
-use std::collections::HashMap;
+//use std::collections::HashMap;
 use std::io::Write;
+use std::io::BufWriter;
 use std::str;
 mod utils;
-use crate::utils::get_all_snps;
+//use crate::utils::get_all_snps;
 use std::path::Path;
 use std::ffi::OsStr;
+use std::fs::File;
 
 use std::collections::BTreeMap;
 
@@ -20,7 +28,7 @@ use std::collections::BTreeMap;
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields
 #[derive(Parser)]
-#[clap(version = "0.1.0", author = "Rob P. <rob@cs.umd.edu>")]
+#[clap(version = "0.1.0", author = "Rob P. <rob@cs.umd.edu>, Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 file
     #[clap(short, long)]
@@ -40,12 +48,12 @@ struct Opts {
 }
 
 #[derive(Debug, Deserialize)]
-struct sample {
-    oligo: &str,
-    id: short,
-    search: &BTreeMap<&str, &str>,
-    file1: &Box<dyn Write>, 
-    file2: &Box<dyn Write>,
+struct Sample {
+    oligo:  &str,
+    id: i16,
+    search:  BTreeMap< &str, &str>,
+    file1:  Box<dyn Write>, 
+    file2:  Box<dyn Write>,
 }
 
 
@@ -74,24 +82,22 @@ fn rem_first(value: &str) -> &str {
 }
 
 
-fn get_sample(primer: &str, id: usize, sub_len: usize, outpath: &str) -> &sample {
-    let mut sam: sample;
-    sam.oligo = primer;
-    sam.id = id;
-    /// and here comes the fun. Get me all possible sub_len strings in that oligo into the BTreeMap
+fn get_sample(sample: &Sample, primer: &str, id: usize, sub_len: usize, outpath: &str, read1: &str, read2: &str) {
+    sample.oligo = primer;
+    sample.id = id;
+    // and here comes the fun. Get me all possible sub_len strings in that oligo into the BTreeMap
     for n in 1..sub_len {
-	for subS in sub_strings( primer, sub_len){
-		sam.search.insert( subS, subS);
-	}
+	  for subS in sub_strings( primer, sub_len){
+		sample.search.insert( subS, subS);
+	  }
     }
-    /// start the two files buffers
-    let f = Path::new(&opts.outpath);
-    let mut File2 = f.join( Path::new(&opts.read_file1).file_name().unwrap());
-    sam.file1 = writer( &File2 );
-    File2 = f.join( Path::new(&opts.read_file2).file_name().unwrap());
-    sam.file2 = writer( &File2 );
+    // start the two files buffers
+    let f = Path::new( outpath );
+    let mut File2 = f.join( Path::new( read1 ).file_name().unwrap());
+    sample.file1 = writer( &File2 );
+    File2 = f.join( Path::new( read2 ).file_name().unwrap());
+    sample.file2 = writer( &File2 );
 
-    return &sam;
 }	
 
 /// from https://users.rust-lang.org/t/write-to-normal-or-gzip-file-transparently/35561
@@ -101,11 +107,11 @@ fn get_sample(primer: &str, id: usize, sub_len: usize, outpath: &str) -> &sample
 pub fn writer(filename: &Path ) -> &Box<dyn Write> {
 
     let file = match File::create(&filename) {
-        Err(why) => panic!("couldn't open {}: {}", path.display(), why.description()),
+        Err(why) => panic!("couldn't open {}: {}", filename.display(), why.description()),
         Ok(file) => file,
     };
 
-    if path.extension() == Some(OsStr::new("gz")) {
+    if filename.extension() == Some(OsStr::new("gz")) {
         // Error is here: Created file isn't gzip-compressed
         return &Box::new(BufWriter::with_capacity(
             128 * 1024,
@@ -117,9 +123,9 @@ pub fn writer(filename: &Path ) -> &Box<dyn Write> {
 
 }	
 
-pub fn writeFastq( buf Box<dyn Write>, res FastqRecord ) {
-    rec = res.unwrap();
-    buf.write_all( rec.all() ).unwrap();
+pub fn writeFastq( buf: Box<dyn Write>, res: SequenceRecord ) {
+    res = res.unwrap();
+    buf.write_all( res.all() ).unwrap();
 }
 
 
@@ -128,8 +134,7 @@ fn main() {
     // parse the options
     let opts: Opts = Opts::parse();
 
-    let mut samples: Vec<&sample> = Vec::with_capacity(12);
-
+    let mut samples: Vec<&Sample> = Vec::with_capacity(12);
     //let File1 = Path::new(outpath).join( Path::new(read_file1).file_name());
     let mut File1 = Path::new(&opts.outpath);
 
@@ -139,39 +144,87 @@ fn main() {
     File2 = File1.join( Path::new(&opts.read_file2).file_name().unwrap() );
     let file2 = writer( &File2);
 
-    if ( opts.specie.eq("human") ){
-        /// get all the human sample IDs into this.
-        samples[0] = get_sample(primer="ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", 1, 9, outpath);
-        samples[1] = get_sample("TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", 2, 9, outpath);
-        samples[2] = get_sample("CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", 3, 9, outpath);
-        samples[3] = get_sample("ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 4, 9, outpath);
-        samples[4] = get_sample("CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", 5, 9, outpath);
-        samples[5] = get_sample("TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", 6, 9, outpath);
-        samples[6] = get_sample("TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", 7, 9, outpath);
-        samples[7] = get_sample("CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", 8, 9, outpath);
-        samples[8] = get_sample("GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", 9, 9, outpath);
-        samples[9] = get_sample("GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", 10, 9, outpath);
-        samples[10] = get_sample("CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", 11, 9, outpath);
-        samples[11] = get_sample("GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", 12, 9, outpath);
+    if  &opts.specie.eq("human") {
+        // get all the human sample IDs into this.
+        let mut sam1: Sample;
+        samples[0] = sam1;
+        get_sample(&sam1, "ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", 1, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam2: Sample;
+        samples[1] = sam2;
+        get_sample(&sam2, "TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", 2, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam3: Sample;
+        samples[2] = sam3;
+        get_sample(&sam3, "CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", 3, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam4: Sample;
+        samples[3] = sam4;
+        get_sample(&sam4, "ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 4, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam5: Sample;
+        samples[4] = sam5;
+        get_sample(&sam5, "CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", 5, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam6: Sample;
+        samples[5] = sam6;
+        get_sample(&sam6, "TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", 6, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam7: Sample;
+        samples[6] = sam7;
+        get_sample(&sam7, "TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", 7, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );    
+        let mut sam8: Sample;
+        samples[7] = sam8;
+        get_sample(&sam8, "CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", 8, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam9: Sample;
+        samples[8] = sam9;
+        get_sample(&sam9, "GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", 9, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam10: Sample;
+        samples[9] = sam10;
+        get_sample(&sam10, "GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", 10, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam11: Sample;
+        samples[10] = sam11;
+        get_sample(&sam11, "CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", 11, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam12: Sample;
+        samples[11] = sam12;
+        get_sample(&sam12, "GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", 12, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
 
     }
-    else if ( opts.specie.eq("mouse") ){
+    else if &opts.specie.eq("mouse") {
         // and the mouse ones
-        samples[0] = get_sample("AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", 1, 9, outpath);
-        samples[1] = get_sample("ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 2, 9, outpath);
-        samples[2] = get_sample("AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", 3, 9, outpath);
-        samples[3] = get_sample("TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", 4, 9, outpath);
-        samples[4] = get_sample("GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", 5, 9, outpath);
-        samples[5] = get_sample("GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", 6, 9, outpath);
-        samples[6] = get_sample("ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", 7, 9, outpath);
-        samples[7] = get_sample("TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", 8, 9, outpath);
-        samples[8] = get_sample("GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", 9, 9, outpath);
-        samples[9] = get_sample("TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", 10, 9, outpath);
-        samples[10] = get_sample("GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", 11, 9, outpath);
-        samples[11] = get_sample(primer="CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", 12, 9, outpath);
+        let mut sam1: Sample;
+        samples[0] = sam1;
+        get_sample(&sam1, "AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", 1, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam2: Sample;
+        samples[1] = sam2;
+        get_sample(&sam2, "ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 2, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam3: Sample;
+        samples[2] = sam3;
+        get_sample(&sam3, "AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", 3, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam4: Sample;
+        samples[3] = sam4;
+        get_sample(&sam4, "TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", 4, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam5: Sample;
+        samples[4] = sam5;
+        get_sample(&sam5, "GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", 5, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam6: Sample;
+        samples[5] = sam6;
+        get_sample(&sam6, "GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", 6, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam7: Sample;
+        samples[6] = sam7;
+        get_sample(&sam7, "ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", 7, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );    
+        let mut sam8: Sample;
+        samples[7] = sam8;
+        get_sample(&sam8, "TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", 8, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam9: Sample;
+        samples[8] = sam9;
+        get_sample(&sam9, "GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", 9, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam10: Sample;
+        samples[9] = sam10;
+        get_sample(&sam10, "TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", 10, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam11: Sample;
+        samples[10] = sam11;
+        get_sample(&sam11, "GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", 11, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
+        let mut sam12: Sample;
+        samples[11] = sam12;
+        get_sample(&sam12, "CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", 12, 9, &opts.outpath, &opts.read_file1, &opts.read_file2 );
     }
     else {
-        println!("Sorry, but I have no primers for specie {}", specie);
+        println!("Sorry, but I have no primers for specie {}", &opts.specie);
         std::process::exit(1)
     }
 
@@ -183,7 +236,7 @@ fn main() {
     while let Some(record2) = reader2.next() {
         let Some(record1) = reader1.next();	
         let seqrec = record2.expect("invalid record");
-        let seq = format("{}",seqrec.seq().into_owned());
+        let seq = seqrec.seq().into_owned();
 
 	
 	// create 9mers of the R2 read and check which of teh 12 sample ids matches best:
@@ -191,26 +244,27 @@ fn main() {
     let mut res = Vec::with_capacity(12);
  
 	for i in 0..11{
-	   res[i] = 0;
-	   for s in subs{
-		if samples[i].search.contains_key( s ){
+	    res[i] = 0;
+	    for s in subs{
+		  if samples[i].search.contains_key( s ){
 		    res[i] +=1;
-		}
-	   }
+		  }
+	    }
 	}
-	let maxValue: Integer = res.iter().max();
+	let maxValue = res.iter().max();
 	let mut z = 0;
-        let ID: int;
-        if maxValue > 2{
-	for i in 0..res.len(){
-    	    if res[i] == max {
-	        ID = i;
-                z += z;
+    let mut id = -1;
+    if maxValue > 2{
+        for i in 0..res.len(){
+    	    if res[i] == maxValue {
+	           id = i;
+            z += z;
+            }
 	    }
  	}
-	if (z == 1){
-	    writeFastq( samples[i].file1, record1 );
-	    writeFastq( samples[i].file2, record2 );	
+	if z == 1{
+	    writeFastq( samples[id].file1, record1 );
+	    writeFastq( samples[id].file2, record2 );	
 	}
 	else {
 	    writeFastq( file1, record1 );
@@ -220,8 +274,8 @@ fn main() {
     }
 
     for i in 0..11{
-	samples[i].file1.flush().unwrap();
-	samples[i].file2.flush().unwrap();
+	   samples[i].file1.flush().unwrap();
+	   samples[i].file2.flush().unwrap();
     }
     file1.flush().unwrap();
     file2.flush().unwrap();
