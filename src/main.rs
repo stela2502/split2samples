@@ -1,8 +1,8 @@
 use clap::Parser;
 //use flate2;
 //use flate2::read;
-use flate2::write;
 use flate2::Compression;
+use flate2::write::ZlibEncoder;
 //use needletail::bitkmer::BitNuclKmer;
 use needletail::parse_fastx_file;
 use needletail::parser::SequenceRecord;
@@ -17,6 +17,8 @@ mod utils;
 use std::path::Path;
 use std::ffi::OsStr;
 use std::fs::File;
+use std::fs;
+
 
 use std::collections::BTreeMap;
 
@@ -93,48 +95,67 @@ fn get_sample<'a>( primer: &'a str, id: usize, sub_len: usize, outpath: &'a str,
 	  }
     }
     // start the two files buffers
-    let f = Path::new( outpath );
-    let mut File2 = f.join( Path::new( read1 ).file_name().unwrap());
-    sample.file1 = get_writer( &File2 );
-    File2 = f.join( Path::new( read2 ).file_name().unwrap());
-    sample.file2 = get_writer( &File2 );
+    // let f = Path::new( outpath );
+    // let mut File2 = f.join( Path::new( read1 ).file_name().unwrap());
+    // sample.file1 = get_writer( &File2 );
+    // File2 = f.join( Path::new( read2 ).file_name().unwrap());
+    // sample.file2 = get_writer( &File2 );
     return &sample;
 }	
 
-/// from https://users.rust-lang.org/t/write-to-normal-or-gzip-file-transparently/35561
-/// Write normal or compressed files seamlessly
-/// Uses the presence of a `.gz` extension to decide
-// Attempting to have a file writer too
-pub fn get_writer<'a>(filename: &'a Path ) -> &'a BufWriter<W, W: Write> {
+// /// from https://users.rust-lang.org/t/write-to-normal-or-gzip-file-transparently/35561
+// /// Write normal or compressed files seamlessly
+// /// Uses the presence of a `.gz` extension to decide
+// /// Attempting to have a file writer too
+// ///
+// /// OK the first try did fail. And it is overly complicated anyhow. I always want to write to a gziped file!
+// pub fn get_writer<'a>(filename: &'a str ) -> &'a ZlibEncoder {
 
-    let file = match File::create(&filename) {
-        Err(why) => panic!("couldn't open {}", filename.display() ),//, why.description()),
-        Ok(file) => file,
-    };
+    
+//     let mut path =  Path::new( filename );
+//     if path.extension() != Some(OsStr::new("gz")){
+//         path.set_file_name([path.file_name().to_string_lossy(), "gz"].join("."));
+//     }
 
-    //https://stackoverflow.com/questions/55771631/how-to-put-a-reference-to-a-trait-object-in-an-option
-    //let mut w: Box<dyn Write>;
-    let mut w: BufWriter<W, W: Write>;
+//     if path_exists(path.file_name().to_string_lossy()){
+//           fs::remove_file( path.file_name().to_string_lossy() )?;
+//     } 
+    
+//     let file = match File::create(&filename) {
+//         Err(why) => panic!("couldn't open {}", filename.display() ),//, why.description()),
+//         Ok(file) => file,
+//     };
 
-    if filename.extension() == Some(OsStr::new("gz")) {
-        // Error is here: Created file isn't gzip-compressed
-        // w = Box::new(BufWriter::with_capacity(
-        //     128 * 1024,
-        //     write::GzEncoder::new(file, Compression::default()),
-        // ));
-        //Type change - the box is anoying!
-        w = BufWriter::with_capacity(
-            128 * 1024,
-            write::GzEncoder::new(file, Compression::default()),
-        );
-    } else {
-        //w =Box::new(BufWriter::with_capacity(128 * 1024, file));
-        w = BufWriter::with_capacity(128 * 1024, file);
-    }
-    //let rw: &mut dyn std::io::Write = &mut w;
-    //let filestream = Some(rw);
-    return w.get_ref();
-}	
+
+//     // https://crates.io/crates/flate2
+
+//     let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
+
+
+
+//     //https://stackoverflow.com/questions/55771631/how-to-put-a-reference-to-a-trait-object-in-an-option
+//     //let mut w: Box<dyn Write>;
+//     let mut w: BufWriter<W, W: Write>;
+
+//     if filename.extension() == Some(OsStr::new("gz")) {
+//         // Error is here: Created file isn't gzip-compressed
+//         // w = Box::new(BufWriter::with_capacity(
+//         //     128 * 1024,
+//         //     write::GzEncoder::new(file, Compression::default()),
+//         // ));
+//         //Type change - the box is anoying!
+//         w = BufWriter::with_capacity(
+//             128 * 1024,
+//             write::GzEncoder::new(file, Compression::default()),
+//         );
+//     } else {
+//         //w =Box::new(BufWriter::with_capacity(128 * 1024, file));
+//         w = BufWriter::with_capacity(128 * 1024, file);
+//     }
+//     //let rw: &mut dyn std::io::Write = &mut w;
+//     //let filestream = Some(rw);
+//     return w.get_ref();
+// }	
 
 pub fn writeFastq( buf: Box<dyn Write>, res: SequenceRecord ) {
     //res = res.unwrap();
@@ -161,15 +182,21 @@ fn main() {
     // parse the options
     let opts: Opts = Opts::parse();
 
-    let mut samples: Vec<&Sample> = Vec::with_capacity(12);
-    //let File1 = Path::new(outpath).join( Path::new(read_file1).file_name());
-    let mut File1 = Path::new(&opts.outpath);
+    // for now just write some tests to the stdout!
 
-    let mut File2 = File1.join( Path::new(&opts.read_file1).file_name().unwrap());
+    let stdout = std::io::stdout();
+    let lock = stdout.lock();
+    let mut buf = std::io::BufWriter::with_capacity(32 * 1024, lock);
 
-    let file1 = get_writer( &File2 );
-    File2 = File1.join( Path::new(&opts.read_file2).file_name().unwrap() );
-    let file2 = get_writer( &File2);
+    // let mut samples: Vec<&Sample> = Vec::with_capacity(12);
+    // //let File1 = Path::new(outpath).join( Path::new(read_file1).file_name());
+    // let mut File1 = Path::new(&opts.outpath);
+
+    // let mut File2 = File1.join( Path::new(&opts.read_file1).file_name().unwrap());
+
+    // let file1 = get_writer( &File2 );
+    // File2 = File1.join( Path::new(&opts.read_file2).file_name().unwrap() );
+    // let file2 = get_writer( &File2);
 
     if  opts.specie.eq("human") {
         // get all the human sample IDs into this.
@@ -282,21 +309,22 @@ fn main() {
                 }
 	        }
  	    }
-    	if z == 1{
-    	    writeFastq( samples[id].file1, record1 );
-    	    writeFastq( samples[id].file2, record2 );	
-    	}
-    	else {
-    	    writeFastq( file1, record1 );
-    	    writeFastq( file2, record1 );
-    	}
+        
+    	// if z == 1{
+    	//     writeFastq( samples[id].file1, record1 );
+    	//     writeFastq( samples[id].file2, record2 );	
+    	// }
+    	// else {
+    	//     writeFastq( file1, record1 );
+    	//     writeFastq( file2, record1 );
+    	// }
 
     }
 
-    for i in 0..11{
-	   samples[i].file1.flush().unwrap();
-	   samples[i].file2.flush().unwrap();
-    }
-    file1.flush().unwrap();
-    file2.flush().unwrap();
+    // for i in 0..11{
+	   // samples[i].file1.flush().unwrap();
+	   // samples[i].file2.flush().unwrap();
+    // }
+    // file1.flush().unwrap();
+    // file2.flush().unwrap();
 }
