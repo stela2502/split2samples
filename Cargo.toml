@@ -1,11 +1,11 @@
 [package]
-name = "splitp"
+name = "split2samples"
 version = "0.1.0"
 edition = "2018"
 license-file = "LICENSE"
-description = "Streaming SPLiT-seq read pre-processing"
-homepage = "https://github.com/COMBINE-lab/splitp"
-repository = "https://github.com/COMBINE-lab/splitp"
+description = "Split BD rapsody fastq files into sample specific fastq files"
+homepage = "https://github.com/stela2502/split2samples"
+repository = "https://github.com/stela2502/split2samples"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -1,54 +1,49 @@
-# splitp
+# split2sample
 
-Streaming SPLiT-seq read pre-processing in Rust.  Currently, this is just a Rust implementation of the Perl pre-processing script by [@jeremymsimon](https://github.com/jeremymsimon) [here](https://github.com/jeremymsimon/SPLITseq).  In the future, capabilities may expand / become more general.
-
-The raison d'etre of the program is simply to perform equivalent processing to the custom Perl script above, but much faster.  To that end, here's a small benchmark on a set of 10,000,000 SPLiT-seq v2 reads.  This is on a 2016 MacBook Pro 2.9 GHz Quad-Core Intel Core i7, 16 GB 2133 MHz LPDDR3 (but both programs are using a single thread).
-
-| program     | runtime     |
-| ----------- | ----------- |
-| Perl script | 2m 48.6s    |
-| splitp      | 5.7s        |
-| splitp (pipe to `/dev/null`)      | 3.7s        |
+This program is forked and based on the splitp Rust SPLiT-seq read pre-processing script.
+Main implementation was performed by Rob P. Idea and logics came from Stefan L.
 
 ### Usage 
 
-The `splitp` program takes several arguments.  The usage can be printed 
-from the command line using `splitp -h`.
+The `split2sample` program takes several arguments.  The usage can be printed 
+from the command line using `split2sample -h`.
 
 ```
+split2samples 0.1.0
+Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>
+Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
+
 USAGE:
-    splitp [OPTIONS] --read-file <READ_FILE> --bc-map <BC_MAP> --start <START> --end <END>
+    split2samples --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH>
 
 OPTIONS:
-    -b, --bc-map <BC_MAP>          the map of oligo-dT to random hexamers
-    -e, --end <END>                end position of the random barcode
-    -h, --help                     Print help information
-    -o, --one-hamming              consider 1-hamming distance neighbors of random hexamers
-    -r, --read-file <READ_FILE>    the input R2 file
-    -s, --start <START>            start position of the random barcode
-    -V, --version                  Print version information
+    -f, --file <FILE>          the input R2 samples file
+    -h, --help                 Print help information
+    -o, --outpath <OUTPATH>    the outpath
+    -r, --reads <READS>        the input R1 reads file
+    -s, --specie <SPECIE>      the specie of the library [mouse, human]
+    -V, --version              Print version information
 
 ```
 
-**Please take note** that `splitp` writes the output (processed reads) to stdout, so that the 
-output can be directly piped to an input stream of another program (e.g. directly 
-to `alevin-fry` via [process substitution](https://tldp.org/LDP/abs/html/process-sub.html)).  This 
-also means, if you want to store the processed reads on disk, you can pipe the results directly 
-to gzip to compress them e.g.:
+**Please take note** that `split2samples` will create 13 files in the output folder - 12 sample specific 
+and one ambig.fastq.gz containing all reads where the sample id could not be identified.
 
 ```
-splitp -r reads.fq -b oligo_hex_bc_mapping.txt -s 87 -e 94 -o | gzip > reads.fq.gz
+split2samples -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
 ```
 
-### Notes
+### Installation
 
-The input oligo-dT to random-mer mapping must be provided in a two-column **tab-separated** file.
-Further, the first row of the file must be a comment starting with the `#` character.
+```
+git clone https://github.com/stela2502/split2samples
+cd split2samples
+cargo build
+cp target/debug/split2samples /usr/bin
+``` 
 
 
 ### Limitations / differences
 
-* Currently, random hexamers can only be searched at a Hamming distance of 0 or 1.
-* If the barcode being considered for replacement (BC1) has `N` characters in it, they are all replaced with `A` before lookup
-  in the table of random hexamer hamming neighbors.  If there is more than one `N`, this may result in slightly different 
-  behavior than the Perl script.
+This program is totally untested and under heavy development.
+This is only the first draft - let's see where this heads to.
