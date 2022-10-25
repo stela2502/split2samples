@@ -27,7 +27,8 @@ OPTIONS:
 ```
 
 **Please take note** that `split2samples` will create 13 files in the output folder - 12 sample specific 
-and one ambig.fastq.gz containing all reads where the sample id could not be identified.
+and one ambig.fastq.gz containing all reads where the sample id could not be identified. 
+Please note that not all of these fastq files contain data.
 
 ```
 split2samples -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
