@@ -33,26 +33,22 @@ use std::collections::BTreeSet;
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
 
-/// This doc string acts as a help message when the user runs '--help'
-/// as do all doc strings on fields
+/// Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Rob P. <rob@cs.umd.edu>, Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
-    /// the input R1 file
-    #[clap(long)]
-    r1 String,
-    /// the input R2 file
-    #[clap(long)]
-    r2: String,
+    /// the input R1 reads file
+    #[clap(short, long)]
+    reads: String,
+    /// the input R2 samples file
+    #[clap(short, long)]
+    file: String,
     /// the specie of the library
     #[clap(short, long)]
     specie: String,
     /// the outpath
     #[clap(short, long)]
     outpath: String,
-//    /// consider 1-hamming distance neighbors of random hexamers
-//    #[clap(short, long)]
-//    one_hamming: bool,
 }
 
 struct Sample {
@@ -109,13 +105,13 @@ fn main() -> anyhow::Result<()> {
 
     let mut samples: Vec<Sample>;// = Vec::with_capacity(12);
     let sub_len = 9;
-    // //let File1 = Path::new(outpath).join( Path::new(r1).file_name());
+    // //let File1 = Path::new(outpath).join( Path::new(reads).file_name());
     // let mut File1 = Path::new(&opts.outpath);
 
-    // let mut File2 = File1.join( Path::new(&opts.r1).file_name().unwrap());
+    // let mut File2 = File1.join( Path::new(&opts.reads).file_name().unwrap());
 
     // let file1 = get_writer( &File2 );
-    // File2 = File1.join( Path::new(&opts.r2).file_name().unwrap() );
+    // File2 = File1.join( Path::new(&opts.file).file_name().unwrap() );
     // let file2 = get_writer( &File2);
  
     fs::create_dir_all(&opts.outpath)?;
@@ -123,57 +119,57 @@ fn main() -> anyhow::Result<()> {
     if  opts.specie.eq("human") {
         // get all the human sample IDs into this.
         samples = vec![
-            Sample::from_description( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", 1, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", 2, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", 3, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 4, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", 5, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", 6, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", 7, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),    
-            Sample::from_description( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", 8, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", 9, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", 10, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", 11, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", 12, sub_len, &opts.outpath, &opts.r1, &opts.r2 )
+            Sample::from_description( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", 1, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", 2, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", 3, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 4, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", 5, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", 6, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", 7, sub_len, &opts.outpath, &opts.reads, &opts.file ),    
+            Sample::from_description( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", 8, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", 9, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", 10, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", 11, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", 12, sub_len, &opts.outpath, &opts.reads, &opts.file )
         ];
 
     }
     else if opts.specie.eq("mouse") {
         // and the mouse ones
         samples = vec![
-            Sample::from_description( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", 1, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 2, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", 3, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", 4, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", 5, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", 6, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", 7, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),    
-            Sample::from_description( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", 8, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", 9, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", 10, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", 11, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
-            Sample::from_description( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", 12, sub_len, &opts.outpath, &opts.r1, &opts.r2 ),
+            Sample::from_description( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", 1, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 2, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", 3, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", 4, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", 5, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", 6, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", 7, sub_len, &opts.outpath, &opts.reads, &opts.file ),    
+            Sample::from_description( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", 8, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", 9, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", 10, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", 11, sub_len, &opts.outpath, &opts.reads, &opts.file ),
+            Sample::from_description( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", 12, sub_len, &opts.outpath, &opts.reads, &opts.file ),
         ];
     } else {
         println!("Sorry, but I have no primers for species {}", &opts.specie);
         std::process::exit(1)
     }
 
-    let file1_path = PathBuf::from(&opts.outpath).join(&opts.r1).join("ambig.fq.gz");
-    let file2_path = PathBuf::from(&opts.outpath).join(&opts.r2).join("ambig.fq.gz");
+    let file1_path = PathBuf::from(&opts.outpath).join(&opts.reads).join("ambig.fq.gz");
+    let file2_path = PathBuf::from(&opts.outpath).join(&opts.file).join("ambig.fq.gz");
         
     // need better error handling here too
     let mut file1_ambig_out = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
     let mut file2_ambig_out = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
 
     // for now, we're assuming FASTQ and not FASTA.
-    let mut reader1 = parse_fastx_file(&opts.r1).expect("valid path/file");
-    let mut reader2 = parse_fastx_file(&opts.r2).expect("valid path/file");
+    let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
+    let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
 
     let mut kmer_vec = Vec::<u64>::with_capacity(12);
 
-    while let Some(record2) = reader2.next() {
-        if let Some(record1) = reader1.next() {
+    while let Some(record2) = readefile.next() {
+        if let Some(record1) = readereads.next() {
             let seqrec = record2.expect("invalid record");
             let seqrec1 = record1.expect("invalid record");
             //let seq = seqrec.seq().into_owned();
