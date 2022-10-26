@@ -71,14 +71,15 @@ impl Sample {
             search.insert(km);
         }
 
-        let file1_path = PathBuf::from(outpath).join(format!("{}.fq.gz", id));
-        let file2_path = PathBuf::from(outpath).join(format!("{}.fq.gz", id));
+        let file1_path = PathBuf::from(outpath).join(format!("{}.R1.fq.gz", id));
+        let file2_path = PathBuf::from(outpath).join(format!("{}.R2.fq.gz", id));
         
         // need better error handling here too
         // println!( "why does this file break? {}", file1_path.display() );
         let file1 = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
         let file2 = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
-        
+        let id = 0;
+
         Self {
   //          oligo: String::from_utf8_lossy(primer).into_owned(), // handle errors better
             id,
@@ -134,44 +135,44 @@ fn main() -> anyhow::Result<()> {
     if  opts.specie.eq("human") {
         // get all the human sample IDs into this.
         samples = vec![
-            Sample::from_description( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", 0, sub_len, &opts.outpath ),    
-            Sample::from_description( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", 0, sub_len, &opts.outpath )
+            Sample::from_description( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", 1, sub_len, &opts.outpath ),
+            Sample::from_description( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", 2, sub_len, &opts.outpath ),
+            Sample::from_description( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", 3, sub_len, &opts.outpath ),
+            Sample::from_description( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 4, sub_len, &opts.outpath ),
+            Sample::from_description( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", 5, sub_len, &opts.outpath ),
+            Sample::from_description( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", 6, sub_len, &opts.outpath ),
+            Sample::from_description( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", 7, sub_len, &opts.outpath ),    
+            Sample::from_description( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", 8, sub_len, &opts.outpath ),
+            Sample::from_description( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", 9, sub_len, &opts.outpath ),
+            Sample::from_description( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", 10, sub_len, &opts.outpath ),
+            Sample::from_description( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", 11, sub_len, &opts.outpath ),
+            Sample::from_description( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", 12, sub_len, &opts.outpath )
         ];
 
     }
     else if opts.specie.eq("mouse") {
         // and the mouse ones
         samples = vec![
-            Sample::from_description( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", 0, sub_len, &opts.outpath ),    
-            Sample::from_description( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", 0, sub_len, &opts.outpath ),
-            Sample::from_description( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", 0, sub_len, &opts.outpath ),
+            Sample::from_description( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", 1, sub_len, &opts.outpath ),
+            Sample::from_description( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 2, sub_len, &opts.outpath ),
+            Sample::from_description( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", 3, sub_len, &opts.outpath ),
+            Sample::from_description( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", 4, sub_len, &opts.outpath ),
+            Sample::from_description( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", 5, sub_len, &opts.outpath ),
+            Sample::from_description( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", 6, sub_len, &opts.outpath ),
+            Sample::from_description( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", 7, sub_len, &opts.outpath ),    
+            Sample::from_description( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", 8, sub_len, &opts.outpath ),
+            Sample::from_description( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", 9, sub_len, &opts.outpath ),
+            Sample::from_description( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", 10, sub_len, &opts.outpath ),
+            Sample::from_description( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", 11, sub_len, &opts.outpath ),
+            Sample::from_description( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", 12, sub_len, &opts.outpath ),
         ];
     } else {
         println!("Sorry, but I have no primers for species {}", &opts.specie);
         std::process::exit(1)
     }
 
-    let file1_path = PathBuf::from(&opts.outpath).join("ambig.fq.gz");
-    let file2_path = PathBuf::from(&opts.outpath).join("ambig.fq.gz");
+    let file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
+    let file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
         
     // need better error handling here too
     //println!( "why does this file break? {}", file1_path.display() );
@@ -217,7 +218,7 @@ fn main() -> anyhow::Result<()> {
 
             let mut z = 0;
             let mut id = 0;
-            if max_value > 2 {
+            if max_value > 4 { // a real live example gave multi mapping reads with 4 max value - hence that can not be trusted... 
                 for i in 0..res.len(){
                     if res[i] == max_value {
                         id = i;
@@ -227,10 +228,14 @@ fn main() -> anyhow::Result<()> {
             }
             //println!( "we have a match to sample {} with a max value of {} and {} samples reaching this value ",id, max_value,z );
             if z == 1 {
+                //println!("MATCH - A read matching to one sample z={} id = {} and max_value={} for this sequence: {}", z, id, max_value, str::from_utf8(&seqrec.seq())? );
                 samples[id].id += 1;
                 seqrec1.write(&mut samples[id].file1, None)?;
                 seqrec.write(&mut samples[id].file2, None)?;
-            } else {
+            } else if z > 1 { 
+                println!("REALLY?! A read matching to more than one samples z={} and max_value={}", z, max_value );
+            }
+            else {
                 unknown += 1;
                 seqrec1.write(&mut file1_ambig_out, None)?;
                 seqrec.write(&mut file2_ambig_out, None)?;
@@ -243,7 +248,7 @@ fn main() -> anyhow::Result<()> {
     
     println!( "collected sample info:");
     for i in 0..samples.len(){
-        println!( "    sample {}: {} reads", i, samples[i].id );
+        println!( "    sample {}: {} reads", i+1, samples[i].id );
         samples[i].file1.try_finish()?;
         samples[i].file2.try_finish()?;
     }
