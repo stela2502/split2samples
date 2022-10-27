@@ -205,12 +205,23 @@ fn main() -> anyhow::Result<()> {
             let mut max_value = 0;
 
             for i in 0..samples.len(){
-                for s in &kmer_vec {
-                    if samples[i].search.contains(&s){
+                let mut id = 0;
+                // reduce the number of checks by factor 9. Hope this still leads to ome usable
+                // results.
+                while id < kmer_vec.len() {
+                    if samples[i].search.contains(&kmer_vec[id]){
                         //println!( "kmer matches to sample {}", samples[i].id );
                         res[i] +=1;
                     }
+                    id += 9;
                 }
+
+                //for s in &kmer_vec {
+                //    if samples[i].search.contains(&s){
+                //        //println!( "kmer matches to sample {}", samples[i].id );
+                //        res[i] +=1;
+                //    }
+                //}
                 if res[i] > max_value{
                     max_value = res[i];
                 }
@@ -218,7 +229,7 @@ fn main() -> anyhow::Result<()> {
 
             let mut z = 0;
             let mut id = 0;
-            if max_value > 4 { // a real live example gave multi mapping reads with 4 max value - hence that can not be trusted... 
+            if max_value > 2 {
                 for i in 0..res.len(){
                     if res[i] == max_value {
                         id = i;
