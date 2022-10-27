@@ -244,7 +244,7 @@ fn main() -> anyhow::Result<()> {
                 seqrec1.write(&mut samples[id].file1, None)?;
                 seqrec.write(&mut samples[id].file2, None)?;
             } else if z > 1 { 
-                println!("REALLY?! A read matching to more than one samples z={} and max_value={}", z, max_value );
+                println!("REALLY?! A read matching to more than one samples z={} and max_value={}\n{}", z, max_value, str::from_utf8(&seqrec.seq())? );
             }
             else {
                 unknown += 1;
