@@ -81,7 +81,7 @@ impl Sample {
         let file1 = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
         let file2 = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
 
-        let hashSet HashSet<i32>= HashSet::with_capacity(10000);
+        let hashSet: HashSet<i32> = HashSet::with_capacity(10000);
 
         let id = 0;
 
@@ -253,7 +253,8 @@ fn main() -> anyhow::Result<()> {
                 let cellid:i32 = match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                     Ok(val) => val,
                     Err(err) => continue, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-                }
+                };
+
                 samples[id].hashSet.insert( cellid ); // will never insert one element twice. Great!
 
                 //println!("MATCH - A read matching to one sample z={} id = {} and max_value={} for this sequence: {}\n   sampleID= {}",
