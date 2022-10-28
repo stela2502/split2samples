@@ -10,12 +10,13 @@ use needletail::{parse_fastx_file, Sequence};
 use std::convert::TryInto;
 
 //use serde::Deserialize;
-//use std::collections::HashMap;
+use std::collections::HashSet;
 //use std::io::Write;
 //use std::io::BufWriter;
 use std::str;
 //use anyhow::{Context, Result};
-
+mod cellids;
+use crate::cellids::CellIds;
 //mod utils;
 //use crate::utils::get_all_snps;
 //use std::path::Path;
@@ -57,6 +58,7 @@ struct Sample {
     search: BTreeSet<u64>,
     file1:  GzEncoder<File>, 
     file2:  GzEncoder<File>,
+    hashSet: HashSet<i32>,
 }
 
 impl Sample {
@@ -78,6 +80,9 @@ impl Sample {
         // println!( "why does this file break? {}", file1_path.display() );
         let file1 = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
         let file2 = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
+
+        let hashSet HashSet<i32>= HashSet::with_capacity(10000);
+
         let id = 0;
 
         Self {
@@ -85,10 +90,12 @@ impl Sample {
             id,
             search,
             file1,
-            file2
+            file2,
+            hashSet,
         }
     }
 }
+
 
 fn fill_kmer_vec<'a>(seq: needletail::kmer::Kmers<'a>, kmer_vec: &mut Vec<u64>) {
    kmer_vec.clear();
@@ -183,6 +190,10 @@ fn main() -> anyhow::Result<()> {
     let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
     let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
 
+
+    //  now we need to get a CellIDs object, too
+    let cells = CellIds::new();
+
     let mut kmer_vec = Vec::<u64>::with_capacity(60);
     let mut unknown = 0;
 
@@ -239,17 +250,26 @@ fn main() -> anyhow::Result<()> {
             }
             //println!( "we have a match to sample {} with a max value of {} and {} samples reaching this value ",id, max_value,z );
             if z == 1 {
-                //println!("MATCH - A read matching to one sample z={} id = {} and max_value={} for this sequence: {}", z, id, max_value, str::from_utf8(&seqrec.seq())? );
+                let cellid:i32 = match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+                    Ok(val) => val,
+                    Err(err) => continue, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+                }
+                samples[id].hashSet.insert( cellid ); // will never insert one element twice. Great!
+
+                //println!("MATCH - A read matching to one sample z={} id = {} and max_value={} for this sequence: {}\n   sampleID= {}",
+                // z, id, max_value, str::from_utf8(&seqrec.seq())?, cellid );
+
                 samples[id].id += 1;
-                seqrec1.write(&mut samples[id].file1, None)?;
-                seqrec.write(&mut samples[id].file2, None)?;
+
+                //seqrec1.write(&mut samples[id].file1, None)?;
+                //seqrec.write(&mut samples[id].file2, None)?;
             } else if z > 1 { 
                 println!("REALLY?! A read matching to more than one samples z={} and max_value={}\n{}", z, max_value, str::from_utf8(&seqrec.seq())? );
             }
             else {
                 unknown += 1;
-                seqrec1.write(&mut file1_ambig_out, None)?;
-                seqrec.write(&mut file2_ambig_out, None)?;
+                //seqrec1.write(&mut file1_ambig_out, None)?;
+                //seqrec.write(&mut file2_ambig_out, None)?;
             }
 
         } else {
@@ -259,15 +279,27 @@ fn main() -> anyhow::Result<()> {
     
     println!( "collected sample info:");
     for i in 0..samples.len(){
-        println!( "    sample {}: {} reads", i+1, samples[i].id );
-        samples[i].file1.try_finish()?;
-        samples[i].file2.try_finish()?;
+        println!( "    sample {}: {} reads and {} cells", i+1, samples[i].id, samples[i].hashSet.len() );
+        //samples[i].file1.try_finish()?;
+        //samples[i].file2.try_finish()?;
     }
-    println!( "      unknown: {} reads", unknown );
-    file1_ambig_out.try_finish()?;
-    file2_ambig_out.try_finish()?;
+    println!(     "genomic reads: {} reads", unknown );
+    //file1_ambig_out.try_finish()?;
+    //file2_ambig_out.try_finish()?;
     
+    // now lets rewind the fastq files and actually process the 
+
+    println!("There is more to come here!");
 
 
     Ok(())
 }
+
+
+
+// macro_rules! to_cellid {
+//    ($r1: expr) => {
+//       //1-9,22-30,44-52
+//       to_cellid($r1, [0,8], [21,29], [43,51]  )
+//    };
+// }
