@@ -12,7 +12,7 @@ use std::convert::TryInto;
 //use serde::Deserialize;
 use std::collections::HashSet;
 //use std::io::Write;
-//use std::io::BufWriter;
+use std::io::BufWriter;
 use std::str;
 //use anyhow::{Context, Result};
 mod cellids;
@@ -282,12 +282,15 @@ fn main() -> anyhow::Result<()> {
     for i in 0..samples.len(){
         if samples[i].hash_set.len() > 0 {
             println!( "    sample {}: {} reads and {} cells", i+1, samples[i].id, samples[i].hash_set.len() );
-            let file_path = PathBuf::from(&opts.outpath).join("sample{i}.ints.txt");
+
+            let file_path = PathBuf::from(&opts.outpath).join(format!("sample{}.ints.txt",i+1));
             let mut file = File::create( file_path )?;
+            let mut writer = BufWriter::new(&file);
             for int in samples[i].hash_set.drain(){
                 //file.write( )
                 //BigEndian::write_u32(file, int).unwrap();
-                println!( "        with sample {}",int );
+                writeln!(writer, "{}", int);
+                //println!( "        with sample {}",int );
             }
         }
         // this is not working - I need to first make sure the i32 does work for me here....
