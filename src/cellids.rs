@@ -5,17 +5,18 @@
 use std::collections::BTreeMap;
 use kmers::naive_impl::Kmer;
 
-mod cellIDsError;
-use crate::cellids::cellIDsError::NnuclError;
+//mod cellIDsError;
+//use crate::cellids::cellIDsError::NnuclError;
+
 
 // and here the data
 pub struct CellIds<'a>{    
     c1s: Vec<&'a [u8; 9]>,
     c2s: Vec<&'a [u8; 9]>,
     c3s: Vec<&'a [u8; 9]>,
-    csl1: BTreeMap<u64, i32>,
-    csl2: BTreeMap<u64, i32>,
-    csl3: BTreeMap<u64, i32>,
+    csl1: BTreeMap<u64, u32>,
+    csl2: BTreeMap<u64, u32>,
+    csl3: BTreeMap<u64, u32>,
 }
 
 
@@ -27,9 +28,9 @@ impl CellIds<'_>{
         let  c2s: Vec<&[u8; 9]>;
         let  c3s: Vec<&[u8; 9]>;
 
-        let mut csl1 = BTreeMap::<u64, i32>::new();
-        let mut csl2 = BTreeMap::<u64, i32>::new();
-        let mut csl3 = BTreeMap::<u64, i32>::new();
+        let mut csl1 = BTreeMap::<u64, u32>::new();
+        let mut csl2 = BTreeMap::<u64, u32>::new();
+        let mut csl3 = BTreeMap::<u64, u32>::new();
 
         c1s = vec![
               b"GTCGCTATA", b"CTTGTACTA", b"CTTCACATA", b"ACACGCCGG",
@@ -110,7 +111,7 @@ impl CellIds<'_>{
               b"ACTAGACCG", b"ACTCATACG", b"ATCGAGTCT", b"CATAGGTCA"
             ];
 
-        let mut i: i32 = 0;
+        let mut i: u32 = 0;
         for kmer_u8 in &c1s{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, 9 ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
@@ -145,8 +146,9 @@ impl CellIds<'_>{
         }
     }
 
-    pub fn to_cellid (&self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result<i32, NnuclError>{
-        let mut cell_id = 0;
+    pub fn to_cellid (&self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
+        let mut cell_id:u32 = 0;
+        let max:u32 = 96;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
         
         //println!("to_cellid the c1 seq: {:?}", std::str::from_utf8( &r1[c1[0]..c1[1]] ) );
@@ -155,9 +157,10 @@ impl CellIds<'_>{
 
         for km in [ &r1[c1[0]..c1[1]], &r1[c2[0]..c2[1]], &r1[c3[0]..c3[1]] ]{
             for nuc in km{  
-                if ! *nuc ==b'N'{
-                    let tmp = std::str::from_utf8(km)?;
-                    Err::<i32, NnuclError<'_>>( NnuclError::new( &tmp ));
+                if *nuc ==b'N'{
+                    //let tmp = std::str::from_utf8(km)?;
+                    return Err::<u32, &str>( "NnuclError");
+                    //Err::<i32, NnuclError<'_>>( NnuclError::new( &tmp ));
                 }
             }
         }
@@ -168,12 +171,9 @@ impl CellIds<'_>{
             cell_id += match self.csl1.get( &km ){
                 Some(c1) => {
                         println!("to_cellid the c1 {}", c1 );
-                        *c1 as i32 * 96 * 96
+                        *c1 * max * max
                     },
-                None =>  {
-                    //println!("no match to c1");
-                    -1 as i32
-                },
+                None => return Err::<u32, &str>( "no match 1" ),
             };
             //println!("to_cellid 1: {}", cell_id);
         }
@@ -183,13 +183,10 @@ impl CellIds<'_>{
             cell_id +=match self.csl2.get( &km ){
                 Some(c2) => {
                         //println!("to_cellid the c2 {}", c2 );
-                         *c2  as i32* 96 
+                         *c2 * max 
                     }
                     ,
-                None =>  {
-                    //println!("no match to c2");
-                    -1 as i32
-                },
+                None =>  return Err::<u32, &str>( "no match 2" ),
 
             };
             //println!("to_cellid 2: {}", cell_id);
@@ -199,12 +196,9 @@ impl CellIds<'_>{
             cell_id +=match self.csl3.get( &km ){
                 Some(c3) => {
                     //println!("to_cellid the c3 {}", c3 );
-                    *c3 as i32
+                    *c3
                 },
-                None =>  {
-                    //println!("no match to c3");
-                    -1 as i32
-                },
+                None =>  return Err::<u32, &str>( "no match 3" ),
             };
             //println!("to_cellid 3: {}", cell_id);
         }
@@ -214,11 +208,11 @@ impl CellIds<'_>{
         return Ok(cell_id)
     }
 
-    pub fn to_sequence(&self, index:i32) -> Vec<&[u8; 9]>{
-        let mut idx: i32 = index - 1;
-        let code1 = ((idx / (96 * 96)) as f64).floor() as i32;
+    pub fn to_sequence(&self, index:u32) -> Vec<&[u8; 9]>{
+        let mut idx: u32 = index - 1;
+        let code1 = ((idx / (96 * 96)) as f64).floor() as u32;
         idx = idx - code1 * (96 * 96);
-        let code2 = ((idx / 96) as f64).floor() as i32;
+        let code2 = ((idx / 96) as f64).floor() as u32;
         idx = idx - code2 * 96;
         println!("index {} -> I translated to the ids {}, {}, {}", index, code1, code2, idx );
         let ret = vec![ self.c1s[code1 as usize], self.c2s[code2 as usize], self.c3s[idx as usize]];
@@ -242,18 +236,39 @@ mod tests {
         let cells = crate::CellIds::new();
 
         let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
-        let mut id = 1;
-        let mut exp = (id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1;
-        assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        let mut id:u32 = 1;
+        let mut exp= ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
+        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+            Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
+            Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+        };
+        
         let mut exp2 = vec![b"GTCGCTATA", b"TACAGGATA", b"AAGCCTTCT"];
         assert_eq!( cells.to_sequence( exp ), exp2 );
         // 3, 3, 3
         primer = b"CTTCACATANNNNNNNNNNNNTGTGAAGAANNNNNNNNNNNNNCACAAGTAT";
         id = 3;
-        exp = (id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1;
+        exp = ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
         exp2 = vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"];
-        assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+            Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
+            Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+        };
+        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
         assert_eq!( cells.to_sequence( exp ), exp2 );
+
+        // and the last one
+        primer = b"TGCGATCTANNNNNNNNNNNNCAACAACGGNNNNNNNNNNNNNCATAGGTCA";
+        id = 96;
+        exp = ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
+        exp2 = vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"];
+        assert_eq!( 884735+1 , exp);
+        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+            Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
+            Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+        };
+        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        assert_eq!( cells.to_sequence( exp ), exp2 );        
     }
 }
 

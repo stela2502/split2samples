@@ -28,7 +28,9 @@ use std::fs;
 use kmers::naive_impl::Kmer;
 
 use std::collections::BTreeSet;
+use std::io::prelude::*;
 
+use byteorder::{BigEndian, ReadBytesExt};
 
 
 // first, reproduce the appproach from
@@ -58,7 +60,7 @@ struct Sample {
     search: BTreeSet<u64>,
     file1:  GzEncoder<File>, 
     file2:  GzEncoder<File>,
-    hashSet: HashSet<i32>,
+    hash_set: HashSet<u32>,
 }
 
 impl Sample {
@@ -81,7 +83,7 @@ impl Sample {
         let file1 = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
         let file2 = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
 
-        let hashSet: HashSet<i32> = HashSet::with_capacity(10000);
+        let hash_set: HashSet<u32> = HashSet::with_capacity(10000);
 
         let id = 0;
 
@@ -91,7 +93,7 @@ impl Sample {
             search,
             file1,
             file2,
-            hashSet,
+            hash_set,
         }
     }
 }
@@ -250,12 +252,10 @@ fn main() -> anyhow::Result<()> {
             }
             //println!( "we have a match to sample {} with a max value of {} and {} samples reaching this value ",id, max_value,z );
             if z == 1 {
-                let cellid:i32 = match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                    Ok(val) => val,
+                match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+                    Ok(val) => samples[id].hash_set.insert( val ), // will never insert one element twice. Great!
                     Err(err) => continue, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
                 };
-
-                samples[id].hashSet.insert( cellid ); // will never insert one element twice. Great!
 
                 //println!("MATCH - A read matching to one sample z={} id = {} and max_value={} for this sequence: {}\n   sampleID= {}",
                 // z, id, max_value, str::from_utf8(&seqrec.seq())?, cellid );
@@ -280,7 +280,23 @@ fn main() -> anyhow::Result<()> {
     
     println!( "collected sample info:");
     for i in 0..samples.len(){
-        println!( "    sample {}: {} reads and {} cells", i+1, samples[i].id, samples[i].hashSet.len() );
+        if samples[i].hash_set.len() > 0 {
+            println!( "    sample {}: {} reads and {} cells", i+1, samples[i].id, samples[i].hash_set.len() );
+            let file_path = PathBuf::from(&opts.outpath).join("sample{i}.ints.txt");
+            let mut file = File::create( file_path )?;
+            for int in samples[i].hash_set.drain(){
+                //file.write( )
+                //BigEndian::write_u32(file, int).unwrap();
+                println!( "        with sample {}",int );
+            }
+        }
+        // this is not working - I need to first make sure the i32 does work for me here....
+        //let file_path = PathBuf::from(&opts.outpath).join("sample{i}.ints.dat");
+        //let mut file = File::create( file_path )?;
+        //for int in samples[i].hash_set.drain(){
+        //    file.write( int )?;
+        //}
+        
         //samples[i].file1.try_finish()?;
         //samples[i].file2.try_finish()?;
     }
