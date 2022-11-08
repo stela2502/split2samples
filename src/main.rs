@@ -269,8 +269,8 @@ fn main() -> anyhow::Result<()> {
             }
             else {
                 unknown += 1;
-                //seqrec1.write(&mut file1_ambig_out, None)?;
-                //seqrec.write(&mut file2_ambig_out, None)?;
+                seqrec1.write(&mut file1_ambig_out, None)?;
+                seqrec.write(&mut file2_ambig_out, None)?;
             }
 
         } else {
