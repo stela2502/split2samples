@@ -32,6 +32,7 @@ impl CellIds<'_>{
         let mut csl2 = BTreeMap::<u64, u32>::new();
         let mut csl3 = BTreeMap::<u64, u32>::new();
 
+        TACAGAACA
         c1s = vec![
               b"GTCGCTATA", b"CTTGTACTA", b"CTTCACATA", b"ACACGCCGG",
               b"CGGTCCAGG", b"AATCGAATG", b"CCTAGTATA", b"ATTGGCTAA",
@@ -170,7 +171,7 @@ impl CellIds<'_>{
             
             cell_id += match self.csl1.get( &km ){
                 Some(c1) => {
-                        println!("to_cellid the c1 {}", c1 );
+                        //println!("to_cellid the c1 {}", c1 );
                         *c1 * max * max
                     },
                 None => return Err::<u32, &str>( "no match 1" ),

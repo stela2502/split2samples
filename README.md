@@ -3,7 +3,7 @@
 This program is forked and based on the splitp Rust SPLiT-seq read pre-processing script.
 Main implementation was performed by Rob P. Idea and logics came from Stefan L.
 
-### Usage 
+### Usage
 
 The `split2sample` program takes several arguments.  The usage can be printed 
 from the command line using `split2sample -h`.
@@ -43,7 +43,11 @@ cargo build
 cp target/debug/split2samples /usr/bin
 ``` 
 
+To run the test data (a tiny bit of a real dataset):
 
+```
+./target/debug/split2samples -r testData/testData_R1.fastq.gz -f testData/testData_R2.fastq.gz -o testData/output -s mouse
+```
 ### Limitations / differences
 
 This program is totally untested and under heavy development.
