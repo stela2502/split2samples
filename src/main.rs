@@ -33,6 +33,7 @@ use std::fs;
 
 use std::io::prelude::*;
 
+use std::time::{Duration, SystemTime};
 
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
@@ -94,6 +95,11 @@ impl Ofiles{
 
 fn main() -> anyhow::Result<()> {
     // parse the options
+
+    println!("starting to collect the cell ids per sample - can take a LONG time");
+    let now = SystemTime::now();
+    println!("Start time {:#?}", now );
+
     let opts: Opts = Opts::parse();
 
     // for now just write some tests to the stdout!
@@ -171,7 +177,16 @@ fn main() -> anyhow::Result<()> {
     let mut file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
     let mut file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
 
-
+    match now.elapsed() {
+       Ok(elapsed) => {
+           // it prints '2'
+           println!("time to prepare the search modules {} sec", elapsed.as_secs());
+       }
+       Err(e) => {
+           // an error occurred!
+           println!("Error: {e:?}");
+       }
+   }
     //  now we need to get a CellIDs object, too
     let mut cells = CellIds::new();
 
@@ -191,6 +206,12 @@ fn main() -> anyhow::Result<()> {
             if let Some(record1) = readereads.next() {
                 let seqrec = record2.expect("invalid record");
                 let seqrec1 = record1.expect("invalid record");
+
+                // totally unusable sequence
+                if seqrec1.seq().len() < 53 {
+                    unknown +=1;
+                    continue;
+                }
                 //let seq = seqrec.seq().into_owned();
 
                 match samples.get( &seqrec.seq(), 9, 2, 1 ){
@@ -252,7 +273,16 @@ fn main() -> anyhow::Result<()> {
         file2_ambig_out.try_finish()?;
     }
     // now lets rewind the fastq files and actually process the 
-
+    match now.elapsed() {
+       Ok(elapsed) => {
+           // it prints '2'
+           println!("time to identify cells -> sample connections {} sec", elapsed.as_secs());
+       }
+       Err(e) => {
+           // an error occurred!
+           println!("Error: {e:?}");
+       }
+   }
     println!("Splitting the real data");
 
     file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
@@ -325,6 +355,17 @@ fn main() -> anyhow::Result<()> {
     }
     println!("{} reads did not match a sample",missing);
     println!("{} reads had no cell id", unknown);
+
+    match now.elapsed() {
+       Ok(elapsed) => {
+           // it prints '2'
+           println!("overall run time {} sec", elapsed.as_secs());
+       }
+       Err(e) => {
+           // an error occurred!
+           println!("Error: {e:?}");
+       }
+   }
 
     Ok(())
 }
