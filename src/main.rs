@@ -6,8 +6,8 @@ use flate2::write::GzEncoder;
 
 //use needletail::bitkmer::BitNuclKmer;
 //use needletail::{parse_fastx_file, Sequence, FastxReader};
-use needletail::{parse_fastx_file, Sequence};
-use std::convert::TryInto;
+use needletail::parse_fastx_file;
+//use std::convert::TryInto;
 
 //use serde::Deserialize;
 use std::collections::HashSet;
@@ -17,9 +17,12 @@ use std::str;
 //use anyhow::{Context, Result};
 
 mod cellids;
-mod sampleids;
-
 use crate::cellids::CellIds;
+use std::collections::BTreeMap;
+
+mod sampleids;
+use crate::sampleids::SampleIds;
+
 //mod utils;
 //use crate::utils::get_all_snps;
 //use std::path::Path;
@@ -28,12 +31,7 @@ use std::path::PathBuf;
 use std::fs::File;
 use std::fs;
 
-use kmers::naive_impl::Kmer;
-
-use std::collections::BTreeSet;
 use std::io::prelude::*;
-
-use byteorder::{BigEndian, ReadBytesExt};
 
 
 // first, reproduce the appproach from
@@ -57,6 +55,42 @@ struct Opts {
     outpath: String,
 }
 
+struct Ofiles {
+    pub id: usize,
+    pub count: u32,
+    pub file1: GzEncoder<File>,
+    pub file2: GzEncoder<File>
+}
+
+impl Ofiles{
+    pub fn new(id: usize, outpath: &str )->Self {
+        let file1_path = PathBuf::from(outpath).join(format!("{}.R1.fq.gz", id));
+        let file2_path = PathBuf::from(outpath).join(format!("{}.R2.fq.gz", id));
+        
+        // need better error handling here too
+        // println!( "why does this file break? {}", file1_path.display() );
+        let file1 = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
+        let file2 = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
+        let count:u32 = 0;
+        Self{
+            id,
+            count,
+            file1,
+            file2
+        }
+    }
+    pub fn close( &mut self ){
+        match self.file1.try_finish(){
+            Ok(_val) => (), //println!("closed sample {} R1 file with {} reads",self.id, self.count),
+            Err(err) => println!("I could not close the sample {} R1 file with {} reads\nErr {}", self.id, self.count, err)
+        };
+        match self.file2.try_finish(){
+            Ok(_val) => (),//println!("closed sample {} R2 file with {} reads",self.id, self.count),
+            Err(err) => println!("I could not close the sample {} R2 file with {} reads\nErr {}", self.id, self.count, err)
+        };
+    }
+}
+
 
 fn main() -> anyhow::Result<()> {
     // parse the options
@@ -69,7 +103,7 @@ fn main() -> anyhow::Result<()> {
     //let buf = std::io::BufWriter::with_capacity(32 * 1024, lock);
 
     let sub_len = 9;
-    let mut samples: SampleIds::new( sub_len );// = Vec::with_capacity(12);
+    let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
     // //let File1 = Path::new(outpath).join( Path::new(reads).file_name());
     // let mut File1 = Path::new(&opts.outpath);
 
@@ -81,6 +115,7 @@ fn main() -> anyhow::Result<()> {
  
     fs::create_dir_all(&opts.outpath)?;
 
+    let mut cells2sample =  BTreeMap::<u32, u32>::new(); //: BTreeMap<u32, u32>;
     let mut cell2sample: Vec<HashSet<u32>>;
     cell2sample = vec![
         HashSet::with_capacity(10000),
@@ -133,85 +168,163 @@ fn main() -> anyhow::Result<()> {
         std::process::exit(1)
     }
 
-    let file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
-    let file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
-        
-    // need better error handling here too
-    //println!( "why does this file break? {}", file1_path.display() );
-    let mut file1_ambig_out = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
-    let mut file2_ambig_out = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
-
-    // for now, we're assuming FASTQ and not FASTA.
-    let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
-    let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
+    let mut file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
+    let mut file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
 
 
     //  now we need to get a CellIDs object, too
-    let cells = CellIds::new();
+    let mut cells = CellIds::new();
 
-    let mut kmer_vec = Vec::<u64>::with_capacity(60);
     let mut unknown = 0;
 
+    {
+        // need better error handling here too
+        //println!( "why does this file break? {}", file1_path.display() );
+        let mut file1_ambig_out = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
+        let mut file2_ambig_out = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
+
+        // for now, we're assuming FASTQ and not FASTA.
+        let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
+        let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
+
+        while let Some(record2) = readefile.next() {
+            if let Some(record1) = readereads.next() {
+                let seqrec = record2.expect("invalid record");
+                let seqrec1 = record1.expect("invalid record");
+                //let seq = seqrec.seq().into_owned();
+
+                match samples.get( &seqrec.seq(), 9, 2, 1 ){
+                    Ok(id) => {
+                        match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+                            Ok(val) => {
+                                cell2sample[id as usize].insert( val ); // will never insert one element twice. Great!
+                                cells2sample.insert( val, id);
+                            },
+                            Err(_err) => {
+                                //println!("{}",err);
+                                continue
+                            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+                        };
+                    },
+                    Err(_err) => {
+                        //println!("{}",err);
+                        seqrec1.write(&mut file1_ambig_out, None)?;
+                        seqrec.write(&mut file2_ambig_out, None)?;
+                        unknown +=1;
+                    }
+                }
+            } else {
+                anyhow::bail!("file 2 had reads remaining, but file 1 ran out of reads!");
+            }
+        }
+        
+        println!( "collected sample info:");
+        for i in 0..cell2sample.len(){
+            if cell2sample[i].len() > 0 {
+
+                match samples.read_get( i as u32 )  {
+                    Some(val) => println!( "    sample {}: {} reads and {} cells", i+1, val.total, cell2sample[i].len() ),
+                    None => println!( "    sample {}: {} reads and {} cells", i+1, "na", cell2sample[i].len() ),
+                };
+
+                let file_path = PathBuf::from(&opts.outpath).join(format!("sample{}.ints.txt",i+1));
+                let file = File::create( file_path )?;
+                let mut writer = BufWriter::new(&file);
+                for int in &cell2sample[i]{
+                    //file.write( )
+                    //BigEndian::write_u32(file, int).unwrap();
+                    writeln!(writer, "{}", int)?;
+                    //println!( "        with sample {}",int );
+                }
+            }
+            // this is not working - I need to first make sure the i32 does work for me here....
+            //let file_path = PathBuf::from(&opts.outpath).join("sample{i}.ints.dat");
+            //let mut file = File::create( file_path )?;
+            //for int in samples[i].hash_set.drain(){
+            //    file.write( int )?;
+            //}
+            
+            //samples[i].file1.try_finish()?;
+            //samples[i].file2.try_finish()?;
+        }
+        println!(     "genomic reads: {} reads", unknown );
+        file1_ambig_out.try_finish()?;
+        file2_ambig_out.try_finish()?;
+    }
+    // now lets rewind the fastq files and actually process the 
+
+    println!("Splitting the real data");
+
+    file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
+    file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
+
+    let mut readereads = parse_fastx_file(file1_path).expect("valid path/file");
+    let mut readefile = parse_fastx_file(file2_path).expect("valid path/file");
+
+    unknown = 0;
+
+    let mut ofiles: Vec<Ofiles>;
+    ofiles = vec![
+        Ofiles::new(1, &opts.outpath),
+        Ofiles::new(2, &opts.outpath),
+        Ofiles::new(3, &opts.outpath),
+        Ofiles::new(4, &opts.outpath),
+        Ofiles::new(5, &opts.outpath),
+        Ofiles::new(6, &opts.outpath),
+        Ofiles::new(7, &opts.outpath),
+        Ofiles::new(8, &opts.outpath),
+        Ofiles::new(9, &opts.outpath),
+        Ofiles::new(10, &opts.outpath),
+        Ofiles::new(11, &opts.outpath),
+        Ofiles::new(12, &opts.outpath)
+    ];
+
+    let mut missing:u32 = 0;
     while let Some(record2) = readefile.next() {
         if let Some(record1) = readereads.next() {
             let seqrec = record2.expect("invalid record");
             let seqrec1 = record1.expect("invalid record");
             //let seq = seqrec.seq().into_owned();
 
-            match samples.get( &seqrec.seq() ){
+            match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 Ok(id) => {
-                    match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                        Ok(val) => cell2sample[id].insert( val ), // will never insert one element twice. Great!
-                        Err(err) => {
-                            println!("{}",err);
-                            continue
-                        }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-                    };
-                },
-                Err(err) => {
-                    println!("{}",err);
-                    seqrec1.write(&mut file1_ambig_out, None)?;
-                    seqrec.write(&mut file2_ambig_out, None)?;
+                    // check if the cell has been detected before or print error
+                    match cells2sample.get( &id ){
+                        Some(cell_id) => {
+                            // print record to sample specific out file
+                            //println!("Cell {} is written to file", id);
+                            ofiles[*cell_id as usize].count += 1;
+                            // here we could possibly 'fix' the sequence. Look into the splip source on how to do that!
+                            seqrec1.write(&mut ofiles[*cell_id as usize].file1, None)?;
+                            seqrec.write( &mut ofiles[*cell_id as usize].file2, None)?;
+                        },
+                        None => {
+                            missing += 1;
+                            //let tmp = seqrec1.seq();
+                            //let seq = str::from_utf8( &tmp );
+                            //println!( "cell with id {} has not been detected before:\n{:?}", id, seq )
+                        }
+                    }
                 }
-            }
+                Err(_err) => {
+                    unknown += 1;
+                    //println!("trying to print the data, but: {}",err);
+                    continue
+                }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+            };
         } else {
             anyhow::bail!("file 2 had reads remaining, but file 1 ran out of reads!");
         }
     }
-    
-    println!( "collected sample info:");
-    for i in 0..cell2sample.len(){
-        if cell2sample[i].hash_set.len() > 0 {
-            println!( "    sample {}: {} reads and {} cells", i+1, samples.reads[i as u32], cell2sample[i].hash_set.len() );
 
-            let file_path = PathBuf::from(&opts.outpath).join(format!("sample{}.ints.txt",i+1));
-            let mut file = File::create( file_path )?;
-            let mut writer = BufWriter::new(&file);
-            for int in cell2sample[i].drain(){
-                //file.write( )
-                //BigEndian::write_u32(file, int).unwrap();
-                writeln!(writer, "{}", int);
-                //println!( "        with sample {}",int );
-            }
-        }
-        // this is not working - I need to first make sure the i32 does work for me here....
-        //let file_path = PathBuf::from(&opts.outpath).join("sample{i}.ints.dat");
-        //let mut file = File::create( file_path )?;
-        //for int in samples[i].hash_set.drain(){
-        //    file.write( int )?;
-        //}
-        
-        //samples[i].file1.try_finish()?;
-        //samples[i].file2.try_finish()?;
+    let mut i = 1;
+    for mut f in ofiles{
+        println!( "{} reads in sample {}", f.count, i);
+        f.close();
+        i += 1;
     }
-    println!(     "genomic reads: {} reads", unknown );
-    file1_ambig_out.try_finish()?;
-    file2_ambig_out.try_finish()?;
-    
-    // now lets rewind the fastq files and actually process the 
-
-    println!("There is more to come here!");
-
+    println!("{} reads did not match a sample",missing);
+    println!("{} reads had no cell id", unknown);
 
     Ok(())
 }

@@ -5,18 +5,24 @@
 use std::collections::BTreeMap;
 use kmers::naive_impl::Kmer;
 
+use crate::sampleids::SampleIds;
+
 //mod cellIDsError;
 //use crate::cellids::cellIDsError::NnuclError;
 
 
 // and here the data
 pub struct CellIds<'a>{    
+    //kmer_len: usize,
     c1s: Vec<&'a [u8; 9]>,
     c2s: Vec<&'a [u8; 9]>,
     c3s: Vec<&'a [u8; 9]>,
     csl1: BTreeMap<u64, u32>,
     csl2: BTreeMap<u64, u32>,
     csl3: BTreeMap<u64, u32>,
+    csl1kmer: SampleIds,
+    csl2kmer: SampleIds,
+    csl3kmer: SampleIds,
 }
 
 
@@ -31,8 +37,8 @@ impl CellIds<'_>{
         let mut csl1 = BTreeMap::<u64, u32>::new();
         let mut csl2 = BTreeMap::<u64, u32>::new();
         let mut csl3 = BTreeMap::<u64, u32>::new();
-
-        TACAGAACA
+        let kmer_len = 5;
+        // TACAGAACA
         c1s = vec![
               b"GTCGCTATA", b"CTTGTACTA", b"CTTCACATA", b"ACACGCCGG",
               b"CGGTCCAGG", b"AATCGAATG", b"CCTAGTATA", b"ATTGGCTAA",
@@ -59,6 +65,12 @@ impl CellIds<'_>{
               b"CAAGCAAGC", b"CAAAGTGTG", b"GGCAAGCAA", b"GAGCCAATA",
               b"ATGTAATGG", b"CCTGAGCAA", b"GAGTACATT", b"TGCGATCTA"
             ];
+
+        let mut csl1kmer= SampleIds::new( kmer_len );
+        for kmer in &c1s{
+            csl1kmer.add( *kmer );
+        }
+
         c2s = vec![
               b"TACAGGATA", b"CACCAGGTA", b"TGTGAAGAA", b"GATTCATCA",
               b"CACCCAAAG", b"CACAAAGGC", b"GTGTGTCGA", b"CTAGGTCCT",
@@ -85,6 +97,12 @@ impl CellIds<'_>{
               b"AACCCTCGG", b"AGGCAGCTA", b"AACCAAAGT", b"GAGTGCGAA",
               b"CGCTAAGCA", b"AATTATAAC", b"TACTAGTCA", b"CAACAACGG"
             ];
+
+        let mut csl2kmer= SampleIds::new( kmer_len );
+        for kmer in &c2s{
+            csl2kmer.add( *kmer );
+        }
+
         c3s = vec![
               b"AAGCCTTCT", b"ATCATTCTG", b"CACAAGTAT", b"ACACCTTAG",
               b"GAACGACAA", b"AGTCTGTAC", b"AAATTACAG", b"GGCTACAGA",
@@ -112,6 +130,11 @@ impl CellIds<'_>{
               b"ACTAGACCG", b"ACTCATACG", b"ATCGAGTCT", b"CATAGGTCA"
             ];
 
+        let mut csl3kmer= SampleIds::new( kmer_len );
+        for kmer in &c3s{
+            csl3kmer.add( *kmer );
+        }
+
         let mut i: u32 = 0;
         for kmer_u8 in &c1s{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, 9 ) { // exactly 1
@@ -138,16 +161,20 @@ impl CellIds<'_>{
         }
 
         Self {
+            //kmer_len,
             c1s,
             c2s,
             c3s,
             csl1,
             csl2,
-            csl3
+            csl3,
+            csl1kmer,
+            csl2kmer,
+            csl3kmer
         }
     }
 
-    pub fn to_cellid (&self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
+    pub fn to_cellid (&mut self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
         let mut cell_id:u32 = 0;
         let max:u32 = 96;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
@@ -174,7 +201,19 @@ impl CellIds<'_>{
                         //println!("to_cellid the c1 {}", c1 );
                         *c1 * max * max
                     },
-                None => return Err::<u32, &str>( "no match 1" ),
+                None => {
+                    //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
+                    match self.csl1kmer.get( &kmer, 1, 2, 1 ){
+                        Ok(c1) => {
+                            //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
+                            c1 * max * max
+                        },
+                        Err(_err) => {
+                            //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
+                            return  Err::<u32, &str>( "Cells no match 1" )
+                        }
+                    }
+                }
             };
             //println!("to_cellid 1: {}", cell_id);
         }
@@ -187,8 +226,20 @@ impl CellIds<'_>{
                          *c2 * max 
                     }
                     ,
-                None =>  return Err::<u32, &str>( "no match 2" ),
-
+                None => {
+                    //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
+                    //return  Err::<u32, &str>( "Cells no match 1" )
+                    match self.csl2kmer.get( &kmer, 1, 2, 1 ){
+                        Ok(c1) => {
+                            //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
+                            c1 * max
+                        },
+                        Err(_err) => {
+                            //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
+                            return  Err::<u32, &str>( "Cells no match 1" )
+                        }
+                    }
+                }
             };
             //println!("to_cellid 2: {}", cell_id);
         }
@@ -199,7 +250,19 @@ impl CellIds<'_>{
                     //println!("to_cellid the c3 {}", c3 );
                     *c3
                 },
-                None =>  return Err::<u32, &str>( "no match 3" ),
+                None => {
+                    //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
+                    match self.csl3kmer.get( &kmer, 1, 2, 1 ){
+                        Ok(c1) => {
+                            //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
+                            c1
+                        },
+                        Err(_err) => {
+                            //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
+                            return  Err::<u32, &str>( "Cells no match 1" )
+                        }
+                    }
+                }
             };
             //println!("to_cellid 3: {}", cell_id);
         }
@@ -234,7 +297,7 @@ impl CellIds<'_>{
 mod tests {
     #[test]
     fn getsamples() {
-        let cells = crate::CellIds::new();
+        let cells = crate::cell_ids::new();
 
         let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
         let mut id:u32 = 1;

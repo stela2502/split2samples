@@ -19,4 +19,3 @@ csv = "1.1"
 serde = { version="1.0.103", features = ["derive"] }
 flate2 = "1.0.24"
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
-byteorder = { version = "1" }
