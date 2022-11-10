@@ -1,7 +1,7 @@
 # split2sample
 
 This program is forked and based on the splitp Rust SPLiT-seq read pre-processing script.
-Main implementation was performed by Rob P. Idea and logics came from Stefan L.
+Initial implementation was performed by Rob P. Idea, logics and later implementations came from Stefan L.
 
 ### Usage
 

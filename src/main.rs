@@ -33,7 +33,7 @@ use std::fs;
 
 use std::io::prelude::*;
 
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
@@ -324,7 +324,27 @@ fn main() -> anyhow::Result<()> {
                             // print record to sample specific out file
                             //println!("Cell {} is written to file", id);
                             ofiles[*cell_id as usize].count += 1;
-                            // here we could possibly 'fix' the sequence. Look into the splip source on how to do that!
+                            // here we could possibly 'fix' the sequence. Look into the splitp source on how to do that!
+                            ofiles[*cell_id as usize].file1.write_all(b"@").unwrap();
+                            ofiles[*cell_id as usize].file1.write_all(seqrec1.id()).unwrap();
+                            ofiles[*cell_id as usize].file1.write_all(b"\n").unwrap();
+                            // here comes the seq
+                            let mut seq = seqrec1.seq().into_owned();
+                            let expected = cells.to_sequence( id );
+                            for i in 0..9{
+                                seq[i] = expected[0][i];
+                            }
+                            for i in 21..30{
+                                seq[i] = expected[0][i-21];
+                            }
+                            for i in 43..52{
+                                seq[i] = expected[0][i-43];
+                            }
+                            ofiles[*cell_id as usize].file1.write_all( &seq ).unwrap();
+                            ofiles[*cell_id as usize].file1.write_all(b"\n+\n").unwrap();
+                            ofiles[*cell_id as usize].file1.write_all(seqrec1.qual().unwrap()).unwrap();
+
+
                             seqrec1.write(&mut ofiles[*cell_id as usize].file1, None)?;
                             seqrec.write( &mut ofiles[*cell_id as usize].file2, None)?;
                         },

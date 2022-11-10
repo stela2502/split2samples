@@ -278,7 +278,7 @@ impl CellIds<'_>{
         idx = idx - code1 * (96 * 96);
         let code2 = ((idx / 96) as f64).floor() as u32;
         idx = idx - code2 * 96;
-        println!("index {} -> I translated to the ids {}, {}, {}", index, code1, code2, idx );
+        //println!("index {} -> I translated to the ids {}, {}, {}", index, code1, code2, idx );
         let ret = vec![ self.c1s[code1 as usize], self.c2s[code2 as usize], self.c3s[idx as usize]];
         return ret;
     }
