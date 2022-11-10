@@ -1,20 +1,11 @@
 use clap::Parser;
-//use flate2;
-//use flate2::read;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 
-//use needletail::bitkmer::BitNuclKmer;
-//use needletail::{parse_fastx_file, Sequence, FastxReader};
 use needletail::parse_fastx_file;
-//use std::convert::TryInto;
-
-//use serde::Deserialize;
 use std::collections::HashSet;
-//use std::io::Write;
 use std::io::BufWriter;
 use std::str;
-//use anyhow::{Context, Result};
 
 mod cellids;
 use crate::cellids::CellIds;
@@ -23,17 +14,13 @@ use std::collections::BTreeMap;
 mod sampleids;
 use crate::sampleids::SampleIds;
 
-//mod utils;
-//use crate::utils::get_all_snps;
-//use std::path::Path;
 use std::path::PathBuf;
-//use std::ffi::OsStr;
 use std::fs::File;
 use std::fs;
 
 use std::io::prelude::*;
-
 use std::time::SystemTime;
+
 
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
@@ -54,13 +41,18 @@ struct Opts {
     /// the outpath
     #[clap(short, long)]
     outpath: String,
+    /// the mode of the program [fastqSplit, cellIdent, toSamples]
+    #[clap(short, long)]
+    mode: String,
 }
 
 struct Ofiles {
     pub id: usize,
     pub count: u32,
-    pub file1: GzEncoder<File>,
-    pub file2: GzEncoder<File>
+    //pub file1: GzEncoder<File>,
+    //pub file2: GzEncoder<File>,
+    pub buff1: BufWriter<GzEncoder<File>>,
+    pub buff2: BufWriter<GzEncoder<File>>
 }
 
 impl Ofiles{
@@ -72,23 +64,36 @@ impl Ofiles{
         // println!( "why does this file break? {}", file1_path.display() );
         let file1 = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
         let file2 = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
+
+        let mut buff1 = BufWriter::new( file1 );
+        let mut buff2 = BufWriter::new( file2 );
+
         let count:u32 = 0;
         Self{
             id,
             count,
-            file1,
-            file2
+            //file1,
+            //file2,
+            buff1,
+            buff2
         }
     }
     pub fn close( &mut self ){
-        match self.file1.try_finish(){
-            Ok(_val) => (), //println!("closed sample {} R1 file with {} reads",self.id, self.count),
-            Err(err) => println!("I could not close the sample {} R1 file with {} reads\nErr {}", self.id, self.count, err)
-        };
-        match self.file2.try_finish(){
-            Ok(_val) => (),//println!("closed sample {} R2 file with {} reads",self.id, self.count),
-            Err(err) => println!("I could not close the sample {} R2 file with {} reads\nErr {}", self.id, self.count, err)
-        };
+
+        self.buff1.flush();
+        self.buff2.flush();
+
+        // let mut file1 = self.buff1.into_inner().unwrap();
+        // let mut file2 = self.buff2.into_inner().unwrap();
+         
+        // match file1.try_finish(){
+        //     Ok(_val) => (), //println!("closed sample {} R1 file with {} reads",self.id, self.count),
+        //     Err(err) => println!("I could not close the sample {} R1 file with {} reads\nErr {}", self.id, self.count, err)
+        // };
+        // match file2.try_finish(){
+        //     Ok(_val) => (),//println!("closed sample {} R2 file with {} reads",self.id, self.count),
+        //     Err(err) => println!("I could not close the sample {} R2 file with {} reads\nErr {}", self.id, self.count, err)
+        // };
     }
 }
 
@@ -101,6 +106,13 @@ fn main() -> anyhow::Result<()> {
     println!("Start time {:#?}", now );
 
     let opts: Opts = Opts::parse();
+
+    match mode.as_str() {
+        "fastqSplit" => (), 
+        "cellIdent" => (), 
+        "toSamples" => ()
+    };
+
 
     // for now just write some tests to the stdout!
     // thanks to Rob I can now skip the stdout part!
@@ -198,6 +210,10 @@ fn main() -> anyhow::Result<()> {
         let mut file1_ambig_out = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
         let mut file2_ambig_out = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
 
+
+        let mut outBuff1 = BufWriter::new( file1_ambig_out );
+        let mut outBuff2 = BufWriter::new( file2_ambig_out );
+        
         // for now, we're assuming FASTQ and not FASTA.
         let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
         let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
@@ -214,7 +230,7 @@ fn main() -> anyhow::Result<()> {
                 }
                 //let seq = seqrec.seq().into_owned();
 
-                match samples.get( &seqrec.seq(), 9, 2, 1 ){
+                match samples.get( &seqrec.seq(), 9, 10 ){
                     Ok(id) => {
                         match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                             Ok(val) => {
@@ -229,8 +245,10 @@ fn main() -> anyhow::Result<()> {
                     },
                     Err(_err) => {
                         //println!("{}",err);
-                        seqrec1.write(&mut file1_ambig_out, None)?;
-                        seqrec.write(&mut file2_ambig_out, None)?;
+                        //seqrec1.write(&mut file1_ambig_out, None)?;
+                        //seqrec.write(&mut file2_ambig_out, None)?;
+                        //seqrec1.write(&mut outBuff1, None)?;
+                        //seqrec.write(&mut outBuff2, None)?;
                         unknown +=1;
                     }
                 }
@@ -269,8 +287,8 @@ fn main() -> anyhow::Result<()> {
             //samples[i].file2.try_finish()?;
         }
         println!(     "genomic reads: {} reads", unknown );
-        file1_ambig_out.try_finish()?;
-        file2_ambig_out.try_finish()?;
+        outBuff1.into_inner().unwrap().try_finish()?;
+        outBuff2.into_inner().unwrap().try_finish()?;
     }
     // now lets rewind the fastq files and actually process the 
     match now.elapsed() {
@@ -283,13 +301,18 @@ fn main() -> anyhow::Result<()> {
            println!("Error: {e:?}");
        }
    }
+
+
     println!("Splitting the real data");
 
     file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
     file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
 
-    let mut readereads = parse_fastx_file(file1_path).expect("valid path/file");
-    let mut readefile = parse_fastx_file(file2_path).expect("valid path/file");
+    //let mut readereads = parse_fastx_file(file1_path).expect("valid path/file");
+    //let mut readefile = parse_fastx_file(file2_path).expect("valid path/file");
+
+    let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
+    let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
 
     unknown = 0;
 
@@ -315,6 +338,10 @@ fn main() -> anyhow::Result<()> {
             let seqrec = record2.expect("invalid record");
             let seqrec1 = record1.expect("invalid record");
             //let seq = seqrec.seq().into_owned();
+            if seqrec1.seq().len() < 53 {
+                unknown +=1;
+                continue;
+            }
 
             match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 Ok(id) => {
@@ -325,9 +352,9 @@ fn main() -> anyhow::Result<()> {
                             //println!("Cell {} is written to file", id);
                             ofiles[*cell_id as usize].count += 1;
                             // here we could possibly 'fix' the sequence. Look into the splitp source on how to do that!
-                            ofiles[*cell_id as usize].file1.write_all(b"@").unwrap();
-                            ofiles[*cell_id as usize].file1.write_all(seqrec1.id()).unwrap();
-                            ofiles[*cell_id as usize].file1.write_all(b"\n").unwrap();
+                            ofiles[*cell_id as usize].buff1.write_all(b"@").unwrap();
+                            ofiles[*cell_id as usize].buff1.write_all(seqrec1.id()).unwrap();
+                            ofiles[*cell_id as usize].buff1.write_all(b"\n").unwrap();
                             // here comes the seq
                             let mut seq = seqrec1.seq().into_owned();
                             let expected = cells.to_sequence( id );
@@ -340,13 +367,13 @@ fn main() -> anyhow::Result<()> {
                             for i in 43..52{
                                 seq[i] = expected[0][i-43];
                             }
-                            ofiles[*cell_id as usize].file1.write_all( &seq ).unwrap();
-                            ofiles[*cell_id as usize].file1.write_all(b"\n+\n").unwrap();
-                            ofiles[*cell_id as usize].file1.write_all(seqrec1.qual().unwrap()).unwrap();
+                            ofiles[*cell_id as usize].buff1.write_all( &seq ).unwrap();
+                            ofiles[*cell_id as usize].buff1.write_all(b"\n+\n").unwrap();
+                            ofiles[*cell_id as usize].buff1.write_all(seqrec1.qual().unwrap()).unwrap();
 
 
-                            seqrec1.write(&mut ofiles[*cell_id as usize].file1, None)?;
-                            seqrec.write( &mut ofiles[*cell_id as usize].file2, None)?;
+                            //seqrec1.write(&mut ofiles[*cell_id as usize].file1, None)?;
+                            seqrec.write( &mut ofiles[*cell_id as usize].buff2, None)?;
                         },
                         None => {
                             missing += 1;

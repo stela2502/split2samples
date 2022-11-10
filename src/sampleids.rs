@@ -72,11 +72,13 @@ impl SampleIds{
     }
 
 
-    pub fn get(&mut self, seq: &[u8], jump: usize, min_value: usize, min_z: usize ) -> Result< u32, &str>{
+    pub fn get(&mut self, seq: &[u8], jump: usize, start: usize ) -> Result< u32, &str>{
         
         for (_key, value) in self.read.iter_mut() {
             value.part = 0;
         }
+        let min_value = 2;
+        let min_z = 1;
         let mut max_value = 0;
         let mut ret:u32 = 0;
         let kmers = needletail::kmer::Kmers::new(seq, self.kmer_size as u8 );
@@ -84,7 +86,7 @@ impl SampleIds{
 
         fill_kmer_vec(kmers, &mut kmer_vec);
 
-        let mut id = 0;
+        let mut id = start;
         while id < kmer_vec.len() {
             let km = kmer_vec[id];
             //println!("SampleIds::get - checking this sequence: {} and the at pos {}", km, id );
