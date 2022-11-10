@@ -5,7 +5,7 @@ use flate2::write::GzEncoder;
 use needletail::parse_fastx_file;
 use std::collections::HashSet;
 use std::io::BufWriter;
-use std::str;
+//use std::str;
 
 mod cellids;
 use crate::cellids::CellIds;
@@ -21,8 +21,9 @@ use std::fs;
 use std::io::prelude::*;
 use std::time::SystemTime;
 
-crate glob;
+//use crate::glob;
 use glob::glob; // to search for files
+use regex::Regex;
 
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
@@ -49,7 +50,6 @@ struct Opts {
 }
 
 struct Ofiles {
-    pub id: usize,
     pub count: u32,
     //pub file1: GzEncoder<File>,
     //pub file2: GzEncoder<File>,
@@ -59,20 +59,31 @@ struct Ofiles {
 
 impl Ofiles{
     pub fn new(id: usize, opts: &Opts )->Self {
-        let file1_path = PathBuf::from(opts.outpath).join(format!("{}.{}.{}", opts.mode, id, opts.reads ));
-        let file2_path = PathBuf::from(opts.outpath).join(format!("{}.{}.{}", opts.mode, id, opts.file ));
+
+        let fp1 = PathBuf::from(opts.reads.clone());
+        let fp2 = PathBuf::from(opts.file.clone());
+        let file1_path = PathBuf::from(&opts.outpath).join(format!("{}.{}.{}", opts.mode, id, fp1.file_name().unwrap().to_str().unwrap() ));
+        let file2_path = PathBuf::from(&opts.outpath).join(format!("{}.{}.{}", opts.mode, id, fp2.file_name().unwrap().to_str().unwrap() ));
         
         // need better error handling here too
         // println!( "why does this file break? {}", file1_path.display() );
-        let file1 = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
-        let file2 = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
+        let f1 = match File::create(file1_path){
+            Ok(file) => file,
+            Err(err) => panic!("The file {} cound not be created: {}", format!("{}.{}.{}", opts.mode, id, fp1.file_name().unwrap().to_str().unwrap() ), err)
+        };
+        let f2 = match File::create(file2_path){
+            Ok(file) => file,
+            Err(err) => panic!("The file {} cound not be created: {}", format!("{}.{}.{}", opts.mode, id, fp2.file_name().unwrap().to_str().unwrap() ), err)
+        };
+        
+        let file1 = GzEncoder::new(f1, Compression::default());
+        let file2 = GzEncoder::new(f2, Compression::default());
 
-        let mut buff1 = BufWriter::new( file1 );
-        let mut buff2 = BufWriter::new( file2 );
+        let buff1 = BufWriter::new( file1 );
+        let buff2 = BufWriter::new( file2 );
 
         let count:u32 = 0;
         Self{
-            id,
             count,
             //file1,
             //file2,
@@ -82,8 +93,14 @@ impl Ofiles{
     }
     pub fn close( &mut self ){
 
-        self.buff1.flush();
-        self.buff2.flush();
+        match self.buff1.flush(){
+            Ok(_) => (),
+            Err(e) => eprintln!("Could not flush R1: {}",e),
+        };
+        match self.buff2.flush(){
+            Ok(_) => (),
+            Err(e) => eprintln!("Could not flush R2: {}",e),
+        };
 
         // let mut file1 = self.buff1.into_inner().unwrap();
         // let mut file2 = self.buff2.into_inner().unwrap();
@@ -100,40 +117,40 @@ impl Ofiles{
 }
 
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     // parse the options
 
     let now = SystemTime::now();
     
     let opts: Opts = Opts::parse();
 
-    match mode.as_str() {
-        "fastqSplit" => fastqSplit( &opts), 
-        "cellIdent" => cellIdent( &opts) , 
-        "sampleSplit" => sampleSplit ( &opts )
+    match fs::create_dir_all(&opts.outpath){
+        Ok(_) => (),
+        Err(e) => panic!("I could not create the outpath: {}", e)
+    };
+
+    match opts.mode.as_str() {
+        "fastqSplit" => fastq_split( &opts), 
+        "cellIdent" => cell_ident( &opts) , 
+        "sampleSplit" => sample_split( &opts ),
+        &_ => eprintln!("mode {} is not supported:\nfastqSplit splits a fastq file into 10 subsets\ncellIdent captures the cells<->sample info\nsampleSplit splits the fastq file based on the collective results from the cellIdent runs", &opts.mode) 
     };
 
     match now.elapsed() {
-       Ok(elapsed) => {
-           // it prints '2'
-           println!("split2samples {} finished in {} sec", &opts.mode, elapsed.as_secs());
-       }
-       Err(e) => {
-           // an error occurred!
-           println!("Error: {e:?}");
-       }
-   }
+       Ok(elapsed) => {println!("split2samples {} finished in {} sec", &opts.mode, elapsed.as_secs());},
+       Err(e) => {println!("Error: {e:?}");}
+    }
 
 }
 
 
-fn fastqSplit( opts:Opts){
+fn fastq_split( opts:&Opts){
     // this will at the moment just split it into 10 files.
     let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
     let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
     let split:usize = 100;
-    let id:usize = 0;
-    let fileid:usize = 0;
+    let mut id:usize = 0;
+    let mut fileid:usize = 0;
 
     let mut ofiles: Vec<Ofiles>;
     ofiles = vec![
@@ -152,24 +169,30 @@ fn fastqSplit( opts:Opts){
         if let Some(record1) = readereads.next() {
             let seqrec = record2.expect("invalid record");
             let seqrec1 = record1.expect("invalid record");
-            seqrec1.write(&mut ofiles[ fileid ].buff1, None)?;
-            seqrec.write( &mut ofiles[ fileid ].buff2, None)?;
+            match seqrec1.write(&mut ofiles[ fileid ].buff1, None){
+                Ok(_) => (),
+                Err(err) => println!("{}",err)
+            };
+            match seqrec.write( &mut ofiles[ fileid ].buff2, None){
+                Ok(_) => (),
+                Err(err) => println!("{}",err)
+            };
             id += 1;
             if id > split{
                 id = 0;
                 fileid += 1;
-                if file_id > ofiles.len(){
+                if fileid == ofiles.len(){
                     fileid = 0;
                 }
             }
         }
         else {
-                anyhow::bail!("file 2 had reads remaining, but file 1 ran out of reads!");
+                println!("file 2 had reads remaining, but file 1 ran out of reads!");
             }
     }
 }
 
-fn cellIdent( opts:Opts ){
+fn cell_ident( opts:&Opts ){
     // for now just write some tests to the stdout!
     // thanks to Rob I can now skip the stdout part!
     //let stdout = std::io::stdout();
@@ -181,8 +204,6 @@ fn cellIdent( opts:Opts ){
     let sub_len = 9;
     let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
  
-    fs::create_dir_all(&opts.outpath)?;
-
     let mut cell2sample: Vec<HashSet<u32>>;
     cell2sample = vec![
         HashSet::with_capacity(10000),
@@ -283,7 +304,7 @@ fn cellIdent( opts:Opts ){
                     }
                 }
             } else {
-                anyhow::bail!("file 2 had reads remaining, but file 1 ran out of reads!");
+                println!("file 2 had reads remaining, but file 1 ran out of reads!");
             }
         }
         
@@ -296,13 +317,22 @@ fn cellIdent( opts:Opts ){
                     None => println!( "    sample {}: {} reads and {} cells", i+1, "na", cell2sample[i].len() ),
                 };
 
-                let file_path = PathBuf::from(&opts.outpath).join(format!("{}sample{}.ints.txt", opts.reads, i+1));
-                let file = File::create( file_path )?;
+                let fp1 = PathBuf::from(opts.reads.clone());
+                let file_path = PathBuf::from(&opts.outpath).join(
+                    format!("{}sample{}.ints.txt", fp1.file_name().unwrap().to_str().unwrap(), i+1)
+                );
+                let file = match File::create( file_path ){
+                    Ok(file) => file,
+                    Err(err) => {
+                        eprintln!("Error: {:#?}", err);
+                        std::process::exit(1)
+                    }
+                };
                 let mut writer = BufWriter::new(&file);
                 for int in &cell2sample[i]{
                     //file.write( )
                     //BigEndian::write_u32(file, int).unwrap();
-                    writeln!(writer, "{}", int)?;
+                    writeln!(writer, "{}", int).unwrap();
                     //println!( "        with sample {}",int );
                 }
             }
@@ -313,16 +343,9 @@ fn cellIdent( opts:Opts ){
 }
 
 
-fn sampleSplit( opts: Opts){
+fn sample_split( opts: &Opts){
 
     println!("Splitting the real data");
-
-    let now = SystemTime::now();
-
-    let sub_len = 9;
-    let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
- 
-    fs::create_dir_all(&opts.outpath)?;
 
     let mut cells2sample =  BTreeMap::<u32, u32>::new(); //: BTreeMap<u32, u32>;
 
@@ -331,7 +354,7 @@ fn sampleSplit( opts: Opts){
 
     // and we need to collect all cell2sample data
     let re = Regex::new(r"sample(\d*).int").unwrap();
-    for entry in glob(opts.outpath+"/*.ints.txt").expect("Failed to read glob pattern") {
+    for entry in glob(&(opts.outpath.clone()+"/*.ints.txt")).expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => {
                 // get the id of the sample we read in at the moment
@@ -340,14 +363,32 @@ fn sampleSplit( opts: Opts){
                 // for cap in re.captures_iter(text) {
                 //     println!("Month: {} Day: {} Year: {}", &cap[2], &cap[3], &cap[1]);
                 // }
-                let id:u32;
-                for cap in re.captures_iter(path) {
-                    id = id as u32;
+                let mut id_loc:u32 = 0;
+                let file_name = match path.to_str(){
+                    Some(file_name) => file_name,
+                    None => {
+                        continue
+                    },
+                };
+                for cap in re.captures_iter( file_name ) {
+                    match cap[1].to_string().parse(){
+                        Ok(id) => {
+                            id_loc = id;
+                            let data = fs::read_to_string(path.clone());
+                            for st in data.expect("std::io::Error").lines().map(|line| line.trim()){
+                                cells2sample.insert( st.parse::<u32>().unwrap(), id );
+                            }
+                        },
+                        Err(err) => {
+                            eprintln!("file {} does not contain the sample id! patternmatch threw this error {}",  file_name, err );
+                            std::process::exit(1)
+                        }
+                    }
                 }
-
-                let data = fs::read_to_string(path);
-                for st in data.lines().map(|line| line.trim()){
-                    cells2sample.insert( st as u32, id );
+                                
+                if id_loc == 0{
+                    eprintln!("file {} does not contain the sample id! patternmatch did not match",  file_name );
+                    std::process::exit(1)
                 }
             },
             Err(e) => println!("{:?}", e),
@@ -357,7 +398,7 @@ fn sampleSplit( opts: Opts){
     let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
     let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
 
-    unknown = 0;
+    let mut unknown = 0;
 
     let mut ofiles: Vec<Ofiles>;
     ofiles = vec![
@@ -416,7 +457,10 @@ fn sampleSplit( opts: Opts){
 
 
                             //seqrec1.write(&mut ofiles[*cell_id as usize].file1, None)?;
-                            seqrec.write( &mut ofiles[*cell_id as usize].buff2, None)?;
+                            match seqrec.write( &mut ofiles[*cell_id as usize].buff2, None){
+                                Ok(_) => (),
+                                Err(e) => eprintln!("sequence could nnot be written {}",e)
+                            };
                         },
                         None => {
                             missing += 1;
@@ -433,7 +477,7 @@ fn sampleSplit( opts: Opts){
                 }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
             };
         } else {
-            anyhow::bail!("file 2 had reads remaining, but file 1 ran out of reads!");
+            println!("file 2 had reads remaining, but file 1 ran out of reads!");
         }
     }
 
@@ -446,7 +490,8 @@ fn sampleSplit( opts: Opts){
     println!("{} reads did not match a sample",missing);
     println!("{} reads had no cell id", unknown);
 
-    Ok(())
+    //Ok(())
+    ()
 }
 
 
