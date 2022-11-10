@@ -21,6 +21,8 @@ use std::fs;
 use std::io::prelude::*;
 use std::time::SystemTime;
 
+crate glob;
+use glob::glob; // to search for files
 
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
@@ -41,7 +43,7 @@ struct Opts {
     /// the outpath
     #[clap(short, long)]
     outpath: String,
-    /// the mode of the program [fastqSplit, cellIdent, toSamples]
+    /// the mode of the program [fastqSplit, cellIdent, sampleSplit]
     #[clap(short, long)]
     mode: String,
 }
@@ -56,9 +58,9 @@ struct Ofiles {
 }
 
 impl Ofiles{
-    pub fn new(id: usize, outpath: &str )->Self {
-        let file1_path = PathBuf::from(outpath).join(format!("{}.R1.fq.gz", id));
-        let file2_path = PathBuf::from(outpath).join(format!("{}.R2.fq.gz", id));
+    pub fn new(id: usize, opts: &Opts )->Self {
+        let file1_path = PathBuf::from(opts.outpath).join(format!("{}.{}.{}", opts.mode, id, opts.reads ));
+        let file2_path = PathBuf::from(opts.outpath).join(format!("{}.{}.{}", opts.mode, id, opts.file ));
         
         // need better error handling here too
         // println!( "why does this file break? {}", file1_path.display() );
@@ -101,39 +103,86 @@ impl Ofiles{
 fn main() -> anyhow::Result<()> {
     // parse the options
 
-    println!("starting to collect the cell ids per sample - can take a LONG time");
     let now = SystemTime::now();
-    println!("Start time {:#?}", now );
-
+    
     let opts: Opts = Opts::parse();
 
     match mode.as_str() {
-        "fastqSplit" => (), 
-        "cellIdent" => (), 
-        "toSamples" => ()
+        "fastqSplit" => fastqSplit( &opts), 
+        "cellIdent" => cellIdent( &opts) , 
+        "sampleSplit" => sampleSplit ( &opts )
     };
 
+    match now.elapsed() {
+       Ok(elapsed) => {
+           // it prints '2'
+           println!("split2samples {} finished in {} sec", &opts.mode, elapsed.as_secs());
+       }
+       Err(e) => {
+           // an error occurred!
+           println!("Error: {e:?}");
+       }
+   }
 
+}
+
+
+fn fastqSplit( opts:Opts){
+    // this will at the moment just split it into 10 files.
+    let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
+    let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
+    let split:usize = 100;
+    let id:usize = 0;
+    let fileid:usize = 0;
+
+    let mut ofiles: Vec<Ofiles>;
+    ofiles = vec![
+        Ofiles::new(1, &opts),
+        Ofiles::new(2, &opts),
+        Ofiles::new(3, &opts),
+        Ofiles::new(4, &opts),
+        Ofiles::new(5, &opts),
+        Ofiles::new(6, &opts),
+        Ofiles::new(7, &opts),
+        Ofiles::new(8, &opts),
+        Ofiles::new(9, &opts),
+        Ofiles::new(10, &opts)
+    ];
+    while let Some(record2) = readefile.next() {
+        if let Some(record1) = readereads.next() {
+            let seqrec = record2.expect("invalid record");
+            let seqrec1 = record1.expect("invalid record");
+            seqrec1.write(&mut ofiles[ fileid ].buff1, None)?;
+            seqrec.write( &mut ofiles[ fileid ].buff2, None)?;
+            id += 1;
+            if id > split{
+                id = 0;
+                fileid += 1;
+                if file_id > ofiles.len(){
+                    fileid = 0;
+                }
+            }
+        }
+        else {
+                anyhow::bail!("file 2 had reads remaining, but file 1 ran out of reads!");
+            }
+    }
+}
+
+fn cellIdent( opts:Opts ){
     // for now just write some tests to the stdout!
     // thanks to Rob I can now skip the stdout part!
     //let stdout = std::io::stdout();
     //let lock = stdout.lock();
     //let buf = std::io::BufWriter::with_capacity(32 * 1024, lock);
 
+    println!("starting to collect the cell ids per sample - can take a LONG time");
+
     let sub_len = 9;
     let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
-    // //let File1 = Path::new(outpath).join( Path::new(reads).file_name());
-    // let mut File1 = Path::new(&opts.outpath);
-
-    // let mut File2 = File1.join( Path::new(&opts.reads).file_name().unwrap());
-
-    // let file1 = get_writer( &File2 );
-    // File2 = File1.join( Path::new(&opts.file).file_name().unwrap() );
-    // let file2 = get_writer( &File2);
  
     fs::create_dir_all(&opts.outpath)?;
 
-    let mut cells2sample =  BTreeMap::<u32, u32>::new(); //: BTreeMap<u32, u32>;
     let mut cell2sample: Vec<HashSet<u32>>;
     cell2sample = vec![
         HashSet::with_capacity(10000),
@@ -186,34 +235,16 @@ fn main() -> anyhow::Result<()> {
         std::process::exit(1)
     }
 
-    let mut file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
-    let mut file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
+    // let mut file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
+    // let mut file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
 
-    match now.elapsed() {
-       Ok(elapsed) => {
-           // it prints '2'
-           println!("time to prepare the search modules {} sec", elapsed.as_secs());
-       }
-       Err(e) => {
-           // an error occurred!
-           println!("Error: {e:?}");
-       }
-   }
     //  now we need to get a CellIDs object, too
     let mut cells = CellIds::new();
 
     let mut unknown = 0;
 
     {
-        // need better error handling here too
-        //println!( "why does this file break? {}", file1_path.display() );
-        let mut file1_ambig_out = GzEncoder::new(File::create(file1_path).unwrap(), Compression::default());
-        let mut file2_ambig_out = GzEncoder::new(File::create(file2_path).unwrap(), Compression::default());
-
-
-        let mut outBuff1 = BufWriter::new( file1_ambig_out );
-        let mut outBuff2 = BufWriter::new( file2_ambig_out );
-        
+        // need better error handling here too    
         // for now, we're assuming FASTQ and not FASTA.
         let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
         let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
@@ -235,7 +266,6 @@ fn main() -> anyhow::Result<()> {
                         match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                             Ok(val) => {
                                 cell2sample[id as usize].insert( val ); // will never insert one element twice. Great!
-                                cells2sample.insert( val, id);
                             },
                             Err(_err) => {
                                 //println!("{}",err);
@@ -266,7 +296,7 @@ fn main() -> anyhow::Result<()> {
                     None => println!( "    sample {}: {} reads and {} cells", i+1, "na", cell2sample[i].len() ),
                 };
 
-                let file_path = PathBuf::from(&opts.outpath).join(format!("sample{}.ints.txt",i+1));
+                let file_path = PathBuf::from(&opts.outpath).join(format!("{}sample{}.ints.txt", opts.reads, i+1));
                 let file = File::create( file_path )?;
                 let mut writer = BufWriter::new(&file);
                 for int in &cell2sample[i]{
@@ -276,40 +306,53 @@ fn main() -> anyhow::Result<()> {
                     //println!( "        with sample {}",int );
                 }
             }
-            // this is not working - I need to first make sure the i32 does work for me here....
-            //let file_path = PathBuf::from(&opts.outpath).join("sample{i}.ints.dat");
-            //let mut file = File::create( file_path )?;
-            //for int in samples[i].hash_set.drain(){
-            //    file.write( int )?;
-            //}
-            
-            //samples[i].file1.try_finish()?;
-            //samples[i].file2.try_finish()?;
         }
         println!(     "genomic reads: {} reads", unknown );
-        outBuff1.into_inner().unwrap().try_finish()?;
-        outBuff2.into_inner().unwrap().try_finish()?;
     }
-    // now lets rewind the fastq files and actually process the 
-    match now.elapsed() {
-       Ok(elapsed) => {
-           // it prints '2'
-           println!("time to identify cells -> sample connections {} sec", elapsed.as_secs());
-       }
-       Err(e) => {
-           // an error occurred!
-           println!("Error: {e:?}");
-       }
-   }
 
+}
+
+
+fn sampleSplit( opts: Opts){
 
     println!("Splitting the real data");
 
-    file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
-    file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
+    let now = SystemTime::now();
 
-    //let mut readereads = parse_fastx_file(file1_path).expect("valid path/file");
-    //let mut readefile = parse_fastx_file(file2_path).expect("valid path/file");
+    let sub_len = 9;
+    let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
+ 
+    fs::create_dir_all(&opts.outpath)?;
+
+    let mut cells2sample =  BTreeMap::<u32, u32>::new(); //: BTreeMap<u32, u32>;
+
+    //  now we need to get a CellIDs object, too
+    let mut cells = CellIds::new();
+
+    // and we need to collect all cell2sample data
+    let re = Regex::new(r"sample(\d*).int").unwrap();
+    for entry in glob(opts.outpath+"/*.ints.txt").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                // get the id of the sample we read in at the moment
+                // let re = Regex::new(r"(\d{4})-(\d{2})-(\d{2})").unwrap();
+                // let text = "2012-03-14, 2013-01-01 and 2014-07-05";
+                // for cap in re.captures_iter(text) {
+                //     println!("Month: {} Day: {} Year: {}", &cap[2], &cap[3], &cap[1]);
+                // }
+                let id:u32;
+                for cap in re.captures_iter(path) {
+                    id = id as u32;
+                }
+
+                let data = fs::read_to_string(path);
+                for st in data.lines().map(|line| line.trim()){
+                    cells2sample.insert( st as u32, id );
+                }
+            },
+            Err(e) => println!("{:?}", e),
+        }
+    }
 
     let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
     let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
@@ -318,18 +361,18 @@ fn main() -> anyhow::Result<()> {
 
     let mut ofiles: Vec<Ofiles>;
     ofiles = vec![
-        Ofiles::new(1, &opts.outpath),
-        Ofiles::new(2, &opts.outpath),
-        Ofiles::new(3, &opts.outpath),
-        Ofiles::new(4, &opts.outpath),
-        Ofiles::new(5, &opts.outpath),
-        Ofiles::new(6, &opts.outpath),
-        Ofiles::new(7, &opts.outpath),
-        Ofiles::new(8, &opts.outpath),
-        Ofiles::new(9, &opts.outpath),
-        Ofiles::new(10, &opts.outpath),
-        Ofiles::new(11, &opts.outpath),
-        Ofiles::new(12, &opts.outpath)
+        Ofiles::new(1, &opts),
+        Ofiles::new(2, &opts),
+        Ofiles::new(3, &opts),
+        Ofiles::new(4, &opts),
+        Ofiles::new(5, &opts),
+        Ofiles::new(6, &opts),
+        Ofiles::new(7, &opts),
+        Ofiles::new(8, &opts),
+        Ofiles::new(9, &opts),
+        Ofiles::new(10, &opts),
+        Ofiles::new(11, &opts),
+        Ofiles::new(12, &opts)
     ];
 
     let mut missing:u32 = 0;
@@ -403,25 +446,8 @@ fn main() -> anyhow::Result<()> {
     println!("{} reads did not match a sample",missing);
     println!("{} reads had no cell id", unknown);
 
-    match now.elapsed() {
-       Ok(elapsed) => {
-           // it prints '2'
-           println!("overall run time {} sec", elapsed.as_secs());
-       }
-       Err(e) => {
-           // an error occurred!
-           println!("Error: {e:?}");
-       }
-   }
-
     Ok(())
 }
 
 
 
-// macro_rules! to_cellid {
-//    ($r1: expr) => {
-//       //1-9,22-30,44-52
-//       to_cellid($r1, [0,8], [21,29], [43,51]  )
-//    };
-// }
