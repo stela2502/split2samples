@@ -55,7 +55,7 @@ This will (hopefully) create a total of 20 fastq files in the outpath
 ## Identifying sample -> cell links
 
 ```
-split2samples -mode cellIdent -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
+split2samples -m cellIdent -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
 ```
 
 This will create a set of 12 Data_R1.fastq.gz.sample[1-12].ints.txt files that are necessary for the next step.
@@ -63,7 +63,7 @@ This will create a set of 12 Data_R1.fastq.gz.sample[1-12].ints.txt files that a
 ## Split the Fastq files into sample specififc fastq files
 
 ```
-split2samples -mode sampleSplit -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
+split2samples -m sampleSplit -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
 ```
 
 This will create a set of 24 (12 +12) fastq files - two for each sample.
@@ -74,8 +74,8 @@ This will create a set of 24 (12 +12) fastq files - two for each sample.
 ```
 git clone https://github.com/stela2502/split2samples
 cd split2samples
-cargo build
-cp target/debug/split2samples /usr/bin
+cargo build --release
+cp target/release/split2samples /usr/bin
 ``` 
 
 To run the test data (a tiny bit of a real dataset):
@@ -87,7 +87,7 @@ To run the test data (a tiny bit of a real dataset):
 Or the bigger test data with 1e+5 reads:
 ```
 
-./target/debug/split2samples -mode fastqSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
+./target/debug/split2samples -m fastqSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
 ```
 # Limitations / differences
 

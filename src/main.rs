@@ -1,11 +1,13 @@
 use clap::Parser;
 use flate2::Compression;
 use flate2::write::GzEncoder;
+// use flate2::read::GzDecoder;
 
 use needletail::parse_fastx_file;
 use std::collections::HashSet;
 use std::io::BufWriter;
-//use std::str;
+// use std::io::BufReader;
+// use std::str;
 
 mod cellids;
 use crate::cellids::CellIds;
@@ -48,6 +50,99 @@ struct Opts {
     #[clap(short, long)]
     mode: String,
 }
+
+// struct Ifiles {
+//    pub buff1: BufReader<GzDecoder<File>>,
+//    pub buff2: BufReader<GzDecoder<File>>
+// }
+
+// impl Ifiles {
+//    pub fn new( f1:&str, f2:&str ) -> Self {
+//        let fp1 = PathBuf::from(f1);
+//        let fp2 = PathBuf::from(f2);
+
+//        let ff1 = match File::open(fp1){
+//             Ok(file) => file,
+//             Err(err) => panic!("The file {} could not be opened: {}", f1, err )
+//        };
+//        let ff2 = match File::open(fp2){
+//             Ok(file) => file,
+//             Err(err) => panic!("The file {} could not be opened: {}", f2, err )
+//        };
+//        let buff1 = BufReader::new(GzDecoder::new( ff1 ));
+//        let buff2 = BufReader::new(GzDecoder::new( ff2 ));
+//        Self{
+//            buff1,
+//            buff2
+//        }
+//    }
+//    // this should fetch from the self.ifile1 and self.file2 n fastq reads and write them to
+//    // the buff1 and buff2 of the respective Ofiles entry
+//    pub fn copy( &mut self, mut ofiles: Vec<Ofiles> ) {
+        
+//         let split:usize = 400;
+//         let mut id:usize = 0;
+//         let mut fileid:usize = 0;
+
+//         let mut buffer = String::new();
+
+//         loop{
+//             match self.buff1.read_line( &mut buffer){
+//                 Ok(_line) => {
+
+//                     id += 1;
+//                     if id > split{
+//                         match &mut ofiles[ fileid ].buff1.write( buffer.as_bytes() ){
+//                             Ok(_) => {
+//                                 ofiles[ fileid ].buff1.flush();
+//                                 buffer.clear();
+//                             },
+//                             Err(err) => panic!("Could not write to buff2 {}",err)
+//                         };
+//                         id = 0;
+//                         fileid += 1;
+//                         if fileid == ofiles.len(){
+//                             fileid = 0;
+//                         }
+//                     }
+//                 }
+//                 Err(err) => {
+//                     println!("copy hit an error: {}",err);
+//                     break;
+//                 }
+//             }
+//         }
+
+//         id = 0;
+//         fileid = 0;
+
+//         loop{
+//             match self.buff2.read_line( &mut buffer){
+//                 Ok(_line) => {
+//                     id += 1;
+//                     if id > split{
+//                         match &mut ofiles[ fileid ].buff2.write( buffer.as_bytes() ){
+//                             Ok(_) => {
+//                                 ofiles[ fileid ].buff2.flush();
+//                                 buffer.clear();
+//                             },
+//                             Err(err) => panic!("Could not write to buff2 {}",err)
+//                         };
+//                         id = 0;
+//                         fileid += 1;
+//                         if fileid == ofiles.len(){
+//                             fileid = 0;
+//                         }
+//                     }
+//                 }
+//                 Err(err) => {
+//                     println!("copy hit an error: {}",err);
+//                     break;
+//                 }
+//             }
+//         }
+//    }
+// }
 
 struct Ofiles {
     pub count: u32,
@@ -101,18 +196,6 @@ impl Ofiles{
             Ok(_) => (),
             Err(e) => eprintln!("Could not flush R2: {}",e),
         };
-
-        // let mut file1 = self.buff1.into_inner().unwrap();
-        // let mut file2 = self.buff2.into_inner().unwrap();
-         
-        // match file1.try_finish(){
-        //     Ok(_val) => (), //println!("closed sample {} R1 file with {} reads",self.id, self.count),
-        //     Err(err) => println!("I could not close the sample {} R1 file with {} reads\nErr {}", self.id, self.count, err)
-        // };
-        // match file2.try_finish(){
-        //     Ok(_val) => (),//println!("closed sample {} R2 file with {} reads",self.id, self.count),
-        //     Err(err) => println!("I could not close the sample {} R2 file with {} reads\nErr {}", self.id, self.count, err)
-        // };
     }
 }
 
@@ -133,6 +216,10 @@ fn main() {
         "fastqSplit" => fastq_split( &opts), 
         "cellIdent" => cell_ident( &opts) , 
         "sampleSplit" => sample_split( &opts ),
+        "analysis" => {
+            cell_ident( &opts );
+            sample_split( &opts )
+        }
         &_ => eprintln!("mode {} is not supported:\nfastqSplit splits a fastq file into 10 subsets\ncellIdent captures the cells<->sample info\nsampleSplit splits the fastq file based on the collective results from the cellIdent runs", &opts.mode) 
     };
 
@@ -146,9 +233,10 @@ fn main() {
 
 fn fastq_split( opts:&Opts){
     // this will at the moment just split it into 10 files.
-    let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
-    let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
-    let split:usize = 100;
+
+    println!("This is inefficient - please use another tool! >4 times slower than fastqsplit");
+
+    let split:usize = 400;
     let mut id:usize = 0;
     let mut fileid:usize = 0;
 
@@ -165,6 +253,10 @@ fn fastq_split( opts:&Opts){
         Ofiles::new(9, &opts),
         Ofiles::new(10, &opts)
     ];
+
+    let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
+    let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
+
     while let Some(record2) = readefile.next() {
         if let Some(record1) = readereads.next() {
             let seqrec = record2.expect("invalid record");
@@ -318,8 +410,9 @@ fn cell_ident( opts:&Opts ){
                 };
 
                 let fp1 = PathBuf::from(opts.reads.clone());
+                //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
                 let file_path = PathBuf::from(&opts.outpath).join(
-                    format!("{}sample{}.ints.txt", fp1.file_name().unwrap().to_str().unwrap(), i+1)
+                    format!("{}.sample{}.ints.txt", fp1.file_name().unwrap().to_str().unwrap(), i+1)
                 );
                 let file = match File::create( file_path ){
                     Ok(file) => file,
@@ -434,11 +527,12 @@ fn sample_split( opts: &Opts){
                         Some(cell_id) => {
                             // print record to sample specific out file
                             //println!("Cell {} is written to file", id);
-                            ofiles[*cell_id as usize].count += 1;
+                            let loc_id:usize = *cell_id as usize -1;
+                            ofiles[loc_id].count += 1;
                             // here we could possibly 'fix' the sequence. Look into the splitp source on how to do that!
-                            ofiles[*cell_id as usize].buff1.write_all(b"@").unwrap();
-                            ofiles[*cell_id as usize].buff1.write_all(seqrec1.id()).unwrap();
-                            ofiles[*cell_id as usize].buff1.write_all(b"\n").unwrap();
+                            ofiles[loc_id].buff1.write_all(b"@").unwrap();
+                            ofiles[loc_id].buff1.write_all(seqrec1.id()).unwrap();
+                            ofiles[loc_id].buff1.write_all(b"\n").unwrap();
                             // here comes the seq
                             let mut seq = seqrec1.seq().into_owned();
                             let expected = cells.to_sequence( id );
@@ -451,13 +545,13 @@ fn sample_split( opts: &Opts){
                             for i in 43..52{
                                 seq[i] = expected[0][i-43];
                             }
-                            ofiles[*cell_id as usize].buff1.write_all( &seq ).unwrap();
-                            ofiles[*cell_id as usize].buff1.write_all(b"\n+\n").unwrap();
-                            ofiles[*cell_id as usize].buff1.write_all(seqrec1.qual().unwrap()).unwrap();
+                            ofiles[loc_id].buff1.write_all( &seq ).unwrap();
+                            ofiles[loc_id].buff1.write_all(b"\n+\n").unwrap();
+                            ofiles[loc_id].buff1.write_all(seqrec1.qual().unwrap()).unwrap();
 
 
                             //seqrec1.write(&mut ofiles[*cell_id as usize].file1, None)?;
-                            match seqrec.write( &mut ofiles[*cell_id as usize].buff2, None){
+                            match seqrec.write( &mut ofiles[loc_id].buff2, None){
                                 Ok(_) => (),
                                 Err(e) => eprintln!("sequence could nnot be written {}",e)
                             };
