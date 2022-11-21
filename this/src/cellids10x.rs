@@ -52,8 +52,10 @@ impl CellData{
             }
         }
     }
+
+
     
-    pub fn to_str<'live>(&mut self, gene_info:&GeneIds ) -> std::string::String {
+    pub fn to_str<'live>(&mut self, gene_info:&GeneIds, min_count:usize ) -> Result< String, &str> {
 
         let mut data = Vec::<std::string::String>::with_capacity( gene_info.names.len()+3 );
         data.push(self.name.clone());
@@ -80,11 +82,14 @@ impl CellData{
                 }
             }
         }
+        if total < min_count{
+            return Err::<String, &str>("not enough data");
+        }
         data.push( max_name.clone() ); // max expressing gene (or sample id in an HTO analysis)
         data.push( (max as f32 / total as f32 ).to_string()); // fraction of reads for the max gene
 
         let ret = data.join( "\t" );
-        format!( "{}",ret)
+        Ok( format!( "{}",ret) )
     }
 }
 
@@ -132,7 +137,7 @@ impl <'a> CellIds10x{
         Ok( ret )
     }
 
-    pub fn write (&mut self, file_path: PathBuf, genes: &GeneIds) -> Result< (), &str>{
+    pub fn write (&mut self, file_path: PathBuf, genes: &GeneIds, min_count:usize) -> Result< (), &str>{
         
         let file = match File::create( file_path ){
             Ok(file) => file,
@@ -150,20 +155,23 @@ impl <'a> CellIds10x{
             }
         };
 
+        let mut failed = 0;
+        let mut passed = 0;
         for ( _id,  cell_obj ) in &mut self.cells {
 
             //println!( "get something here?: {}", cell_obj.to_str( &gene_ids ) );
-
-            match writeln!( writer, "{}", cell_obj.to_str( genes )){
-            // the compiler thought this might be more correct...
-            //match writeln!( writer, "{}", cell_obj.to_str( <Vec<u64> as Borrow<Borrowed>>::borrow(&gene_ids).clone() ) ){
-             Ok(_) => (),
-             Err(err) => {
-                 eprintln!("write error: {}", err);
-                 return Err::<(), &str>("cell data could not be written")   
-             }
+            match cell_obj.to_str( genes, min_count ){
+                Ok(text) => match writeln!( writer, "{}", text){
+                    Ok(_) => passed +=1,
+                    Err(err) => {
+                        eprintln!("write error: {}", err);
+                        return Err::<(), &str>("cell data could not be written")   
+                    }
+                },
+                Err(_) => failed +=1 ,
             }
         }
+        println!( "{} cell written - {} cells too view umis", passed, failed );
         Ok( () )
     }
 }

@@ -109,7 +109,7 @@ impl GeneIds{
         let mut ret:Option<usize> = None;
 
         if kmer_vec.len() == 0 {
-            eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
+            //eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
             return ret
         }  
         let mut sums = vec![0 ;self.names.len()];

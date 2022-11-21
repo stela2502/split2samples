@@ -47,6 +47,9 @@ struct Opts {
     /// the outpath
     #[clap(short, long)]
     outpath: String,
+    /// the minimum reads (sample + genes + antybody combined)
+    #[clap(short, long)]
+    min_umi: usize,
 }
 
 
@@ -190,7 +193,7 @@ fn main() {
             format!("Cell2Sample.{}.tsv", fp1.file_name().unwrap().to_str().unwrap() )
         );
 
-        match cells.write ( file_path, &genes ) {
+        match cells.write ( file_path, &genes, opts.min_umi ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };

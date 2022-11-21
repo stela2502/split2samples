@@ -76,6 +76,8 @@ git clone https://github.com/stela2502/split2samples
 cd split2samples
 cargo build --release
 cp target/release/split2samples /usr/bin
+cp target/release/demux10x /usr/bin
+cp target/release/quantifyRhapsody /usr/bin
 ``` 
 
 To run the test data (a tiny bit of a real dataset):
@@ -89,9 +91,17 @@ Or the bigger test data with 1e+5 reads:
 #./target/release/split2samples -m fastqSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
 ./target/release/split2samples -m cellIdent -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
 ./target/release/split2samples -m sampleSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
-# or the two together:
+# or the two together
 ./target/release/split2samples -m analysis -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
 ```
+
+Test case for the quantifyRhapsody:
+
+```
+target/release/quantifyRhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 3
+```
+
+
 # Limitations / differences
 
 This program is totally untested and under heavy development.

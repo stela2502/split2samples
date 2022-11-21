@@ -1,16 +1,6 @@
 use clap::Parser;
-use flate2::Compression;
-use flate2::write::GzEncoder;
-// use flate2::read::GzDecoder;
-
 use needletail::parse_fastx_file;
-use std::collections::HashSet;
-use std::io::BufWriter;
-// use std::io::BufReader;
-// use std::str;
-
 use kmers::naive_impl::Kmer;
-
 use this::cellids::CellIds;
 
 use this::sampleids::SampleIds;
@@ -18,10 +8,8 @@ use this::cellids10x::CellIds10x;
 use this::geneids::GeneIds;
 
 use std::path::PathBuf;
-use std::fs::File;
 use std::fs;
 
-use std::io::prelude::*;
 use std::time::SystemTime;
 
 // first, reproduce the appproach from
@@ -49,63 +37,11 @@ struct Opts {
     /// the fastq database containing the antibody tags
     #[clap(short, long)]
     antybody: String,
+    /// the minimum reads (sample + genes + antybody combined)
+    #[clap(short, long)]
+    min_umi: usize,
 }
 
-struct Ofiles {
-    pub count: u32,
-    //pub file1: GzEncoder<File>,
-    //pub file2: GzEncoder<File>,
-    pub buff1: BufWriter<GzEncoder<File>>,
-    pub buff2: BufWriter<GzEncoder<File>>
-}
-
-/// Ofiles encapsulates two BufWriter<GzEncoder<File>> objects to make handling of 20 of these more convenient.
-impl Ofiles{
-    pub fn new(id: usize, opts: &Opts )->Self {
-
-        let fp1 = PathBuf::from(opts.reads.clone());
-        let fp2 = PathBuf::from(opts.file.clone());
-        let file1_path = PathBuf::from(&opts.outpath).join(format!("{}.{}", id, fp1.file_name().unwrap().to_str().unwrap() ));
-        let file2_path = PathBuf::from(&opts.outpath).join(format!("{}.{}", id, fp2.file_name().unwrap().to_str().unwrap() ));
-        
-        // need better error handling here too
-        // println!( "why does this file break? {}", file1_path.display() );
-        let f1 = match File::create(file1_path){
-            Ok(file) => file,
-            Err(err) => panic!("The file {} cound not be created: {}", format!("{}.{}", id, fp1.file_name().unwrap().to_str().unwrap() ), err)
-        };
-        let f2 = match File::create(file2_path){
-            Ok(file) => file,
-            Err(err) => panic!("The file {} cound not be created: {}", format!("{}.{}", id, fp2.file_name().unwrap().to_str().unwrap() ), err)
-        };
-        
-        let file1 = GzEncoder::new(f1, Compression::default());
-        let file2 = GzEncoder::new(f2, Compression::default());
-
-        let buff1 = BufWriter::new( file1 );
-        let buff2 = BufWriter::new( file2 );
-
-        let count:u32 = 0;
-        Self{
-            count,
-            //file1,
-            //file2,
-            buff1,
-            buff2
-        }
-    }
-    pub fn close( &mut self ){
-
-        match self.buff1.flush(){
-            Ok(_) => (),
-            Err(e) => eprintln!("Could not flush R1: {}",e),
-        };
-        match self.buff2.flush(){
-            Ok(_) => (),
-            Err(e) => eprintln!("Could not flush R2: {}",e),
-        };
-    }
-}
 
 
 // the main function nowadays just calls the other data handling functions
@@ -126,22 +62,7 @@ fn main() {
     let sub_len = 9;
     let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
     samples.init_rhapsody( &opts.specie );
- 
-    let mut cell2sample: Vec<HashSet<u32>>;
-    cell2sample = vec![
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-        HashSet::with_capacity(10000),
-    ];
+
 
     let mut genes:GeneIds = GeneIds::new(9); // split them into 9 bp kmers
 
@@ -267,7 +188,7 @@ fn main() {
                             },
                             None => {
                                 unknown +=1;
-                                eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) );
+                                //eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) );
                             }
                         };
 
@@ -293,15 +214,17 @@ fn main() {
             format!("BD_Rhapsody_expression_and_sample_ids.{}.tsv", fp1.file_name().unwrap().to_str().unwrap() )
         );
 
-        match gex.write ( file_path, &genes ) {
+        match gex.write ( file_path, &genes, opts.min_umi ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
 
         println!(     "no sample ID reads: {} reads", no_sample );
         println!(     "genomic reads     : {} reads", unknown );
-
-        println!( "written to {:?}", file_path.into_os_string().into_string() );
+        println!(     "no sample ID reads: {} reads", no_sample );
+        println!(     "genomic reads     : {} reads", unknown );
+        let file_path2 = format!("{}/BD_Rhapsody_expression_and_sample_ids.{}.tsv", opts.reads.clone(), fp1.file_name().unwrap().to_str().unwrap() );
+        println!( "written to {:?}", file_path2);
     }
 
 
