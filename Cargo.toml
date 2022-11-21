@@ -8,8 +8,6 @@ homepage = "https://github.com/stela2502/split2samples"
 repository = "https://github.com/stela2502/split2samples"
 readme = "README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 ahash = "0.7.6"
 anyhow = "1.0.66"
@@ -21,3 +19,4 @@ flate2 = "1.0.24"
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
 glob = "0.3.0"
 regex = "1"
+this = { path = "this" }

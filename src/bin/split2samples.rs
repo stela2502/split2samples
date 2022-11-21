@@ -9,12 +9,10 @@ use std::io::BufWriter;
 // use std::io::BufReader;
 // use std::str;
 
-mod cellids;
-use crate::cellids::CellIds;
+use this::cellids::CellIds;
 use std::collections::BTreeMap;
 
-mod sampleids;
-use crate::sampleids::SampleIds;
+use this::sampleids::SampleIds;
 
 use std::path::PathBuf;
 use std::fs::File;
@@ -50,99 +48,6 @@ struct Opts {
     #[clap(short, long)]
     mode: String,
 }
-
-// struct Ifiles {
-//    pub buff1: BufReader<GzDecoder<File>>,
-//    pub buff2: BufReader<GzDecoder<File>>
-// }
-
-// impl Ifiles {
-//    pub fn new( f1:&str, f2:&str ) -> Self {
-//        let fp1 = PathBuf::from(f1);
-//        let fp2 = PathBuf::from(f2);
-
-//        let ff1 = match File::open(fp1){
-//             Ok(file) => file,
-//             Err(err) => panic!("The file {} could not be opened: {}", f1, err )
-//        };
-//        let ff2 = match File::open(fp2){
-//             Ok(file) => file,
-//             Err(err) => panic!("The file {} could not be opened: {}", f2, err )
-//        };
-//        let buff1 = BufReader::new(GzDecoder::new( ff1 ));
-//        let buff2 = BufReader::new(GzDecoder::new( ff2 ));
-//        Self{
-//            buff1,
-//            buff2
-//        }
-//    }
-//    // this should fetch from the self.ifile1 and self.file2 n fastq reads and write them to
-//    // the buff1 and buff2 of the respective Ofiles entry
-//    pub fn copy( &mut self, mut ofiles: Vec<Ofiles> ) {
-        
-//         let split:usize = 400;
-//         let mut id:usize = 0;
-//         let mut fileid:usize = 0;
-
-//         let mut buffer = String::new();
-
-//         loop{
-//             match self.buff1.read_line( &mut buffer){
-//                 Ok(_line) => {
-
-//                     id += 1;
-//                     if id > split{
-//                         match &mut ofiles[ fileid ].buff1.write( buffer.as_bytes() ){
-//                             Ok(_) => {
-//                                 ofiles[ fileid ].buff1.flush();
-//                                 buffer.clear();
-//                             },
-//                             Err(err) => panic!("Could not write to buff2 {}",err)
-//                         };
-//                         id = 0;
-//                         fileid += 1;
-//                         if fileid == ofiles.len(){
-//                             fileid = 0;
-//                         }
-//                     }
-//                 }
-//                 Err(err) => {
-//                     println!("copy hit an error: {}",err);
-//                     break;
-//                 }
-//             }
-//         }
-
-//         id = 0;
-//         fileid = 0;
-
-//         loop{
-//             match self.buff2.read_line( &mut buffer){
-//                 Ok(_line) => {
-//                     id += 1;
-//                     if id > split{
-//                         match &mut ofiles[ fileid ].buff2.write( buffer.as_bytes() ){
-//                             Ok(_) => {
-//                                 ofiles[ fileid ].buff2.flush();
-//                                 buffer.clear();
-//                             },
-//                             Err(err) => panic!("Could not write to buff2 {}",err)
-//                         };
-//                         id = 0;
-//                         fileid += 1;
-//                         if fileid == ofiles.len(){
-//                             fileid = 0;
-//                         }
-//                     }
-//                 }
-//                 Err(err) => {
-//                     println!("copy hit an error: {}",err);
-//                     break;
-//                 }
-//             }
-//         }
-//    }
-// }
 
 struct Ofiles {
     pub count: u32,
@@ -313,6 +218,7 @@ fn cell_ident( opts:&Opts ){
 
     let sub_len = 9;
     let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
+    samples.init_rhapsody( &opts.specie );
  
     let mut cell2sample: Vec<HashSet<u32>>;
     cell2sample = vec![
@@ -330,42 +236,6 @@ fn cell_ident( opts:&Opts ){
         HashSet::with_capacity(10000),
     ];
 
-    if  opts.specie.eq("human") {
-        // get all the human sample IDs into this.
-        samples.add( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG" );
-        samples.add( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG" );
-        samples.add( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT" );
-        samples.add( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT" );
-        samples.add( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG" );
-        samples.add( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC" );
-        samples.add( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT" );
-        samples.add( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT" );
-        samples.add( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG" );
-        samples.add( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC" );
-        samples.add( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC" );
-        samples.add( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG" );
-
-    }
-    else if opts.specie.eq("mouse") {
-        // and the mouse ones
-        samples.add( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG" );
-        samples.add( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC" );
-        samples.add( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC" );
-        samples.add( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT" );
-        samples.add( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT" );
-        samples.add( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC" );
-        samples.add( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC" );
-        samples.add( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG" );
-        samples.add( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC" );
-        samples.add( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC" );
-        samples.add( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT" );
-        samples.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC" );
-
-    } else {
-        println!("Sorry, but I have no primers for species {}", &opts.specie);
-        std::process::exit(1)
-    }
-
     // let mut file1_path = PathBuf::from(&opts.outpath).join("ambig.R1.fq.gz");
     // let mut file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
 
@@ -373,6 +243,7 @@ fn cell_ident( opts:&Opts ){
     let mut cells = CellIds::new();
 
     let mut unknown = 0;
+    let mut no_sample = 0;
 
     {
         // need better error handling here too    
@@ -392,27 +263,33 @@ fn cell_ident( opts:&Opts ){
                 }
                 //let seq = seqrec.seq().into_owned();
 
-                match samples.get( &seqrec.seq(), 9, 10 ){
-                    Ok(id) => {
-                        match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                            Ok(val) => {
+                // first match the cell id - if that does not work the read is unusable
+                match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+                    Ok(val) => {
+                        // OK the read is usable - check if it is a sample
+                        match samples.get( &seqrec.seq(), 9, 10 ){
+                            Ok(id) => {
                                 cell2sample[id as usize].insert( val ); // will never insert one element twice. Great!
                             },
                             Err(_err) => {
+                                // so here we add the new gene detection!
+
                                 //println!("{}",err);
-                                continue
-                            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+                                //seqrec1.write(&mut file1_ambig_out, None)?;
+                                //seqrec.write(&mut file2_ambig_out, None)?;
+                                //seqrec1.write(&mut outBuff1, None)?;
+                                //seqrec.write(&mut outBuff2, None)?;
+                                unknown +=1;
+                            }
                         };
                     },
                     Err(_err) => {
-                        //println!("{}",err);
-                        //seqrec1.write(&mut file1_ambig_out, None)?;
-                        //seqrec.write(&mut file2_ambig_out, None)?;
-                        //seqrec1.write(&mut outBuff1, None)?;
-                        //seqrec.write(&mut outBuff2, None)?;
-                        unknown +=1;
-                    }
-                }
+                        // cell id could not be recovered
+                        // println!("Cell ID could not be recovered from {:?}:\n{}", std::str::from_utf8(&seqrec1.seq()), _err);
+                        no_sample +=1;
+                        continue
+                    }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+                };
             } else {
                 println!("file 2 had reads remaining, but file 1 ran out of reads!");
             }
@@ -448,7 +325,8 @@ fn cell_ident( opts:&Opts ){
                 }
             }
         }
-        println!(     "genomic reads: {} reads", unknown );
+        println!(     "no sample ID reads: {} reads", no_sample );
+        println!(     "genomic reads     : {} reads", unknown );
     }
 
 }

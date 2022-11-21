@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 use kmers::naive_impl::Kmer;
+use std::collections::HashSet;
 
 //mod cellIDsError;
 //use crate::cellids::cellIDsError::NnuclError;
@@ -36,7 +37,8 @@ pub struct SampleIds{
     kmers: BTreeMap<u64, u32>,
     kmer_size: usize,
     max_value: u32,
-    pub read: BTreeMap<u32, Reads>
+    pub read: BTreeMap<u32, Reads>,
+    bad_entries: HashSet<u64>
 }
 
 // here the functions
@@ -45,12 +47,56 @@ impl SampleIds{
         let kmers = BTreeMap::<u64, u32>::new();
         let max_value:u32 = 0;
         let read = BTreeMap::<u32, Reads>::new();
+        let bad_entries = HashSet::<u64>::new();
+
         Self {
             kmers,
             kmer_size: kmer_size,
             max_value,
-            read
+            read,
+            bad_entries
         }
+    }
+
+    /// adds the BD Rhapsody sample primers to the object
+    pub fn init_rhapsody(&mut self, specie:&str ){
+
+        if  specie.eq("human") {
+            // get all the human sample IDs into this.
+            self.add( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG" );
+            self.add( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG" );
+            self.add( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT" );
+            self.add( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT" );
+            self.add( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG" );
+            self.add( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC" );
+            self.add( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT" );
+            self.add( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT" );
+            self.add( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG" );
+            self.add( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC" );
+            self.add( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC" );
+            self.add( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG" );
+
+        }
+        else if specie.eq("mouse") {
+            // and the mouse ones
+            self.add( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG" );
+            self.add( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC" );
+            self.add( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC" );
+            self.add( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT" );
+            self.add( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT" );
+            self.add( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC" );
+            self.add( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC" );
+            self.add( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG" );
+            self.add( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC" );
+            self.add( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC" );
+            self.add( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT" );
+            self.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC" );
+
+        } else {
+            println!("Sorry, but I have no primers for species {}", specie);
+            std::process::exit(1)
+        }
+
     }
 
     pub fn read_get(&self, i: u32) -> Option<&Reads> {
@@ -63,9 +109,23 @@ impl SampleIds{
 
     pub fn add(&mut self, seq: &[u8] ){
         for kmer in needletail::kmer::Kmers::new(seq, self.kmer_size as u8 ) {
+            for nuc in kmer {
+                if *nuc ==b'N'{
+                    continue;
+                }
+            }
+            //println!("Adding a gene id os length {} with seq {:?}", self.kmer_size, std::str::from_utf8(kmer) );
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
             let km = Kmer::from(kmer).into_u64();
-            self.kmers.insert(km, self.max_value);
+            if self.bad_entries.contains( &km ){
+                continue
+            }
+            if self.kmers.contains_key ( &km ){
+                self.bad_entries.insert( km.clone() );
+                self.kmers.remove( &km );
+            }else {
+                self.kmers.insert(km, self.max_value);
+            }        
         }
         self.read.insert( self.max_value, Reads::new() );
         self.max_value += 1;
