@@ -7,6 +7,8 @@ use kmers::naive_impl::Kmer;
 
 use crate::sampleids::SampleIds;
 
+//use std::thread;
+
 //mod cellIDsError;
 //use crate::cellids::cellIDsError::NnuclError;
 
@@ -203,7 +205,7 @@ impl CellIds<'_>{
                     },
                 None => {
                     //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
-                    match self.csl1kmer.get( &kmer, 1, 2, 1 ){
+                    match self.csl1kmer.get( &kmer, 1, 0 ){
                         Ok(c1) => {
                             //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
                             c1 * max * max
@@ -229,7 +231,7 @@ impl CellIds<'_>{
                 None => {
                     //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
                     //return  Err::<u32, &str>( "Cells no match 1" )
-                    match self.csl2kmer.get( &kmer, 1, 2, 1 ){
+                    match self.csl2kmer.get( &kmer, 1, 0 ){ // jump = 1 and start = 0 =>take every kmer you can get
                         Ok(c1) => {
                             //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
                             c1 * max
@@ -252,7 +254,7 @@ impl CellIds<'_>{
                 },
                 None => {
                     //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
-                    match self.csl3kmer.get( &kmer, 1, 2, 1 ){
+                    match self.csl3kmer.get( &kmer, 1, 0 ){
                         Ok(c1) => {
                             //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
                             c1
