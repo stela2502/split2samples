@@ -152,6 +152,7 @@ struct Ofiles {
     pub buff2: BufWriter<GzEncoder<File>>
 }
 
+/// Ofiles encapsulates two BufWriter<GzEncoder<File>> objects to make handling of 20 of these more convenient.
 impl Ofiles{
     pub fn new(id: usize, opts: &Opts )->Self {
 
@@ -200,6 +201,7 @@ impl Ofiles{
 }
 
 
+// the main function nowadays just calls the other data handling functions
 fn main() {
     // parse the options
 
@@ -218,7 +220,17 @@ fn main() {
         "sampleSplit" => sample_split( &opts ),
         "analysis" => {
             cell_ident( &opts );
-            sample_split( &opts )
+
+            match now.elapsed() {
+                Ok(elapsed) => {println!("split2samples cellIdent finished in {} sec", elapsed.as_secs());},
+                Err(e) => {println!("Error: {e:?}");}
+            }
+            let loc_now = SystemTime::now();
+            sample_split( &opts );
+            match loc_now.elapsed() {
+                Ok(elapsed) => {println!("split2samples sampleSplit finished in {} sec", elapsed.as_secs());},
+                Err(e) => {println!("Error: {e:?}");}
+            }
         }
         &_ => eprintln!("mode {} is not supported:\nfastqSplit splits a fastq file into 10 subsets\ncellIdent captures the cells<->sample info\nsampleSplit splits the fastq file based on the collective results from the cellIdent runs", &opts.mode) 
     };
@@ -231,6 +243,9 @@ fn main() {
 }
 
 
+/// Split both fastq files into 10 smaller fastq files to process them in paralele.
+/// This function is less perfcormant than the fastqsplit python package.
+/// It is not developed further
 fn fastq_split( opts:&Opts){
     // this will at the moment just split it into 10 files.
 
@@ -284,6 +299,9 @@ fn fastq_split( opts:&Opts){
     }
 }
 
+
+/// cell_ident idetifes the cells in a sample. It therfore checks the R2 reads for the sample strings and 
+/// identifies the cellid for these reads only. The cell ids are written to simple human readable text files with one cellid per line.
 fn cell_ident( opts:&Opts ){
     // for now just write some tests to the stdout!
     // thanks to Rob I can now skip the stdout part!
@@ -435,7 +453,8 @@ fn cell_ident( opts:&Opts ){
 
 }
 
-
+/// This function does the main work. It takes about three times the time to finish as the cell_ident function.
+/// All in all the combination of the two functions needed about 4 to 5 hours to finish two fastq.gz files of 
 fn sample_split( opts: &Opts){
 
     println!("Splitting the real data");

@@ -86,10 +86,18 @@ To run the test data (a tiny bit of a real dataset):
 
 Or the bigger test data with 1e+5 reads:
 ```
-
-./target/debug/split2samples -m fastqSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
+#./target/release/split2samples -m fastqSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
+./target/release/split2samples -m cellIdent -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
+./target/release/split2samples -m sampleSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
+# or the two together:
+./target/release/split2samples -m analysis -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
 ```
 # Limitations / differences
 
 This program is totally untested and under heavy development.
 This is only the first draft - let's see where this heads to.
+
+
+./target/release/split2samples -m cellIdent -r testData/output_1e5/fastqSplit.1.1e5_mRNA_S1_R1_001.fastq.gz -f testData/output_1e5/fastqSplit.1.1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
+
+
