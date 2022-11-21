@@ -141,6 +141,7 @@ fn main() {
 
     let mut unknown = 0;
     let mut no_sample = 0;
+    let mut ok_reads = 0;
 
     {
         // need better error handling here too    
@@ -180,6 +181,7 @@ fn main() {
                             Some(gene_id) =>{
                                 match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
                                     Ok(cell_info) => {
+                                        ok_reads += 1;
                                         cell_info.add( gene_id, umi );
                                     },
                                     Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
@@ -219,11 +221,12 @@ fn main() {
             Err(err) => panic!("Error in the data write: {}", err)
         };
 
+        let total = no_sample+ unknown + ok_reads;
         println!(     "no sample ID reads: {} reads", no_sample );
-        println!(     "genomic reads     : {} reads", unknown );
-        println!(     "no sample ID reads: {} reads", no_sample );
-        println!(     "genomic reads     : {} reads", unknown );
-        let file_path2 = format!("{}/BD_Rhapsody_expression_and_sample_ids.{}.tsv", opts.reads.clone(), fp1.file_name().unwrap().to_str().unwrap() );
+        println!(     "N's or too short  : {}", unknown );
+        println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) );
+
+        let file_path2 = format!("{}/BD_Rhapsody_expression_and_sample_ids.{}.tsv", opts.outpath, fp1.file_name().unwrap().to_str().unwrap() );
         println!( "written to {:?}", file_path2);
     }
 
