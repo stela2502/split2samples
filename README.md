@@ -9,6 +9,7 @@ The `split2sample` program takes several arguments.  The usage can be printed
 from the command line using `split2sample -h`.
 
 ```
+./target/debug/split2samples -h
 split2samples 0.1.0
 Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>
 Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
