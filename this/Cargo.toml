@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
 needletail = "0.4"
+flate2 = "1.0.24"
