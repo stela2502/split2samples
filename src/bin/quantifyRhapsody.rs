@@ -179,8 +179,21 @@ fn main() {
 
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {
-                let seqrec = record2.expect("invalid record");
-                let seqrec1 = record1.expect("invalid record");
+
+                let seqrec = match record2{
+                    Ok( res ) => res,
+                    Err(err) => {
+                        eprintln!("could not read from R2:\n{}", err);
+                        continue 'main;
+                    }
+                };
+                let seqrec1 = match record1{
+                    Ok(res) => res,
+                    Err(err) => {
+                        eprintln!("could not read from R1:\n{}", err);
+                        continue 'main;
+                    }
+                };
 
                 // totally unusable sequence
                 // as described in the BD rhapsody Bioinformatic Handbook
