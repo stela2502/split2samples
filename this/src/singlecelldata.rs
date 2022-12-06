@@ -57,6 +57,14 @@ impl CellData{
         }
     }
 
+    pub fn n_umi( &self ) -> usize {
+        let mut n = 0;
+        for (_id, hash ) in &self.genes {
+            n += hash.len();
+        }
+        return n; 
+    }
+
     
     pub fn to_str<'live>(&mut self, gene_info:&GeneIds, min_count:usize ) -> Result< String, &str> {
 
@@ -99,10 +107,10 @@ impl CellData{
 
 
 
-// This CellIds10x needs to copy some of the logics from split2samples - no it actually is totally dufferent
+// This SingleCellData needs to copy some of the logics from split2samples - no it actually is totally dufferent
 // Here we look for new sample ids and each sample id needs to be a total match to the previousely identified sample id
 // Of cause I could also implement something with a whitelist. But that is for the future.
-pub struct CellIds10x{    
+pub struct SingleCellData{    
     kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
     cells: BTreeMap<u64, CellData>
@@ -110,7 +118,7 @@ pub struct CellIds10x{
 
 
 // here the functions
-impl <'a> CellIds10x{
+impl <'a> SingleCellData{
 
     pub fn new(kmer_size:usize )-> Self {
 
@@ -269,17 +277,13 @@ impl <'a> CellIds10x{
                 gene_id +=1;
                 match cell_obj.genes.get(  g_id ){
                     Some(hash) => {
-                        let n = hash.len();
-                        if n > min_count{
-                            //println!("      and a value {}", n );
-                            match writeln!( writer, "{} {} {}", gene_id, cell_id, n ){
-                                Ok(_) => passed +=1,
-                                Err(err) => {
-                                    eprintln!("write error: {}", err);
-                                    return Err::<(), &str>("cell data could not be written")   
-                                }   
-                            }
-                        } 
+                        match writeln!( writer, "{} {} {}", gene_id, cell_id, hash.len() ){
+                            Ok(_) => passed +=1,
+                            Err(err) => {
+                                eprintln!("write error: {}", err);
+                                return Err::<(), &str>("cell data could not be written")   
+                            }   
+                        }
                     },
                     None => ()
                 }
@@ -296,21 +300,22 @@ impl <'a> CellIds10x{
         genes.max_id = 0; // reset to collect the passing genes
 
         for ( _id,  cell_obj ) in &mut self.cells {
+            if cell_obj.n_umi() > min_count{
+                cell_obj.passing = true;
+                ncell += 1;
+            }else {
+                continue;
+            }
             for (name, id) in &genes.names {
                 match cell_obj.genes.get( id  ){
                     Some(hash) => {
                         let n = hash.len();
-                        if n > min_count{
+                        if n > 0{
                             if ! genes.names4sparse.contains_key ( name ){
                                 genes.max_id +=1;
                                 genes.names4sparse.insert( name.to_string() , genes.max_id );
                             }
                             nentry +=1;
-
-                            if ! cell_obj.passing {
-                                cell_obj.passing = true;
-                                ncell +=1;
-                            }
                         }
                     },
                     None => ()

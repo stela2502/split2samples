@@ -4,7 +4,7 @@ use kmers::naive_impl::Kmer;
 use this::cellids::CellIds;
 
 use this::sampleids::SampleIds;
-use this::cellids10x::CellIds10x;
+use this::singlecelldata::SingleCellData;
 use this::geneids::GeneIds;
 
 use std::path::PathBuf;
@@ -165,7 +165,7 @@ fn main() {
     // that is a class to strore gene expression data.
     // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
     // and umi's are u64 again
-    let mut gex = CellIds10x::new( 9 );
+    let mut gex = SingleCellData::new( 9 );
 
     let mut unknown = 0;
     let mut no_sample = 0;

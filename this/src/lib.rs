@@ -19,4 +19,4 @@ mod tests {
 pub mod cellids;
 pub mod geneids;
 pub mod sampleids;
-pub mod cellids10x;
+pub mod singlecelldata;
