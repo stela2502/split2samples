@@ -81,7 +81,8 @@ cp target/release/quantifyRhapsody /usr/bin
 ``` 
 
 Do not forget the --release while building the tool. 
-The test case for quantifyRhapsody would finish in 7 sec instead of ~0.5 sec (x14!).
+The test case for quantifyRhapsody would finish in 7 sec instead of ~0.5 sec (x14!)
+using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 
 To run the test data (a tiny bit of a real dataset):
 
