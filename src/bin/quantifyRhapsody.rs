@@ -271,7 +271,21 @@ fn main() {
 
 
     match now.elapsed() {
-       Ok(elapsed) => {println!("quantifyRhapsody finished in {} sec", elapsed.as_secs());},
+        Ok(elapsed) => {
+            let mut milli = elapsed.as_millis();
+            let sec:u128;
+            let min:u128;
+
+            let mil = milli % 1000;
+            milli= (milli - mil) /1000;
+
+            sec = milli % 60;
+            milli= (milli -sec) /60;
+
+            min = milli % 60;
+            milli= (milli -min) /60;
+
+            println!("quantifyRhapsody finished in {}h {}min {} sec {}milli sec", milli, min, sec, mil );},
        Err(e) => {println!("Error: {e:?}");}
     }
 

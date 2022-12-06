@@ -80,6 +80,9 @@ cp target/release/demux10x /usr/bin
 cp target/release/quantifyRhapsody /usr/bin
 ``` 
 
+Do not forget the --release while building the tool. 
+The test case for quantifyRhapsody would finish in 7 sec instead of ~0.5 sec (x14!).
+
 To run the test data (a tiny bit of a real dataset):
 
 ```
@@ -98,7 +101,7 @@ Or the bigger test data with 1e+5 reads:
 Test case for the quantifyRhapsody:
 
 ```
-target/release/quantifyRhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 3
+target/release/quantifyRhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30
 ```
 
 
