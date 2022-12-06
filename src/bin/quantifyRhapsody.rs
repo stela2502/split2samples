@@ -4,7 +4,7 @@ use kmers::naive_impl::Kmer;
 use this::cellids::CellIds;
 
 use this::sampleids::SampleIds;
-use this::cellids10x::CellIds10x;
+use this::singlecelldata::SingleCellData;
 use this::geneids::GeneIds;
 
 use std::path::PathBuf;
@@ -60,12 +60,13 @@ fn main() {
     println!("starting to collect the expression data can take a LONG time");
 
     let sub_len = 9;
-    let mut samples = SampleIds::new( sub_len );// = Vec::with_capacity(12);
-    samples.init_rhapsody( &opts.specie );
+    let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
+    cells.init_rhapsody( &opts.specie );
 
 
     let mut genes:GeneIds = GeneIds::new(9); // split them into 9 bp kmers
-
+    let mut samples:GeneIds = GeneIds::new(9);
+    let mut not_samples:GeneIds = GeneIds::new(9);
     let mut expr_file = parse_fastx_file(&opts.expression).expect("valid path/file");
 
     if  opts.specie.eq("human") {
@@ -82,7 +83,19 @@ fn main() {
         genes.add( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", "Sample10".to_string() );
         genes.add( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", "Sample11".to_string() );
         genes.add( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", "Sample12".to_string() );
-
+        
+        samples.add( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", "Sample1".to_string() );
+        samples.add( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", "Sample2".to_string() );
+        samples.add( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", "Sample3".to_string() );
+        samples.add( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", "Sample4".to_string() );
+        samples.add( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", "Sample5".to_string() );
+        samples.add( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", "Sample6".to_string() );
+        samples.add( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", "Sample7".to_string() );
+        samples.add( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", "Sample8".to_string() );
+        samples.add( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", "Sample9".to_string() );
+        samples.add( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", "Sample10".to_string() );
+        samples.add( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", "Sample11".to_string() );
+        samples.add( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", "Sample12".to_string() );
     }
     else if opts.specie.eq("mouse") {
         // and the mouse ones
@@ -99,6 +112,19 @@ fn main() {
         genes.add( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", "Sample11".to_string() );
         genes.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", "Sample12".to_string() );
 
+        samples.add( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", "Sample1".to_string() );
+        samples.add( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", "Sample2".to_string() );
+        samples.add( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", "Sample3".to_string() );
+        samples.add( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", "Sample4".to_string() );
+        samples.add( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", "Sample5".to_string() );
+        samples.add( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", "Sample6".to_string() );
+        samples.add( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", "Sample7".to_string() );
+        samples.add( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", "Sample8".to_string() );
+        samples.add( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", "Sample9".to_string() );
+        samples.add( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", "Sample10".to_string() );
+        samples.add( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", "Sample11".to_string() );
+        samples.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", "Sample12".to_string() );
+
     } else {
         println!("Sorry, but I have no primers for species {}", &opts.specie);
         std::process::exit(1)
@@ -110,6 +136,7 @@ fn main() {
             Ok(st) => {
                 for id in st.to_string().split("|"){
                     genes.add( &seqrec.seq(), id.to_string() );
+                    not_samples.add( &seqrec.seq(), id.to_string() );
                     break;
                 }
             },
@@ -124,6 +151,7 @@ fn main() {
             Ok(st) => {
                 for id in st.to_string().split("|"){
                     genes.add( &seqrec.seq(), id.to_string() );
+                    not_samples.add( &seqrec.seq(), id.to_string() );
                     break;
                 }
             },
@@ -137,7 +165,7 @@ fn main() {
     // that is a class to strore gene expression data.
     // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
     // and umi's are u64 again
-    let mut gex = CellIds10x::new( 9 );
+    let mut gex = SingleCellData::new( 9 );
 
     let mut unknown = 0;
     let mut no_sample = 0;
@@ -216,10 +244,21 @@ fn main() {
             format!("BD_Rhapsody_expression_and_sample_ids.{}.tsv", fp1.file_name().unwrap().to_str().unwrap() )
         );
 
-        match gex.write ( file_path, &genes, opts.min_umi ) {
+        let file_path_sp = PathBuf::from(&opts.outpath).join(
+            format!("BD_Rhapsody_expression_and_sample_ids.{}", fp1.file_name().unwrap().to_str().unwrap() )
+        );
+        // this always first as this will decide which cells are OK ones!
+        match gex.write_sparse ( file_path_sp, &mut not_samples, opts.min_umi ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
+
+        match gex.write ( file_path, &samples, 0 ) {
+            Ok(_) => (),
+            Err(err) => panic!("Error in the data write: {}", err)
+        };
+
+        
 
         let total = no_sample+ unknown + ok_reads;
         println!(     "no sample ID reads: {} reads", no_sample );

@@ -41,8 +41,10 @@ pub struct GeneIds{
     pub seq_len: usize, // size of the sequence that has been split into kmers
     kmer_size: usize, // size of the kmers
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
+    pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     bad_entries: HashSet<u64>, // non unique u64 values that will not be recoreded.
-    max_id: usize // hope I get the ids right this way...
+    pub good_entries: HashSet<u64>, // upon export as sparse matrix it has to be checked if a gene has a value
+    pub max_id: usize // hope I get the ids right this way...
 }
 
 // here the functions
@@ -50,7 +52,9 @@ impl GeneIds{
     pub fn new(kmer_size: usize )-> Self {
         let kmers = BTreeMap::<u64, usize>::new();
         let names = BTreeMap::<std::string::String, usize>::new();
+        let names4sparse = BTreeMap::<std::string::String, usize>::new();
         let bad_entries = HashSet::<u64>::new();
+        let good_entries = HashSet::<u64>::new();
         let seq_len = 0;
         let max_id = 0;
         Self {
@@ -58,7 +62,9 @@ impl GeneIds{
             seq_len,
             kmer_size: kmer_size,
             names,
+            names4sparse,
             bad_entries,
+            good_entries,
             max_id
         }
     }

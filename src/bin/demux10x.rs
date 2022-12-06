@@ -12,9 +12,9 @@ use kmers::naive_impl::Kmer;
 // use std::str;
 
 use this::geneids::GeneIds;
-use this::cellids10x::CellIds10x;
+use this::singlecelldata::SingleCellData;
 
-//use self::super::cellids10x::CellIds10x;
+//use self::super::cellids10x::SingleCellData;
 //use self::super::split2samples::geneids::GeneIds;
 
 use std::path::PathBuf;
@@ -123,7 +123,7 @@ fn main() {
 
 
     //  now we need to get a CellIDs object, too
-    let mut cells = CellIds10x::new(sub_len);
+    let mut cells = SingleCellData::new(sub_len);
 
     let mut unknown:u32 = 0;
     let mut ok:u32 = 0;

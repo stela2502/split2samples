@@ -15,6 +15,7 @@ use crate::geneids::GeneIds;
 use std::io::BufWriter;
 use std::fs::File;
 use std::io::Write;
+use std::fs;
 
 use std::path::PathBuf;
 
@@ -25,17 +26,20 @@ use std::path::PathBuf;
 pub struct CellData{
     pub kmer_size: usize,
     pub name: std::string::String,
-    pub genes: BTreeMap<usize, HashSet<u64>>
+    pub genes: BTreeMap<usize, HashSet<u64>>,
+    pub passing: bool // check if this cell is worth exporting. Late game
 }
 
 impl CellData{
     pub fn new( kmer_size:usize, name: std::string::String ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
         let loc_name = name.clone();
+        let passing = false;
         Self{
             kmer_size,
             name: loc_name,
-            genes
+            genes,
+            passing
         }
     }
 
@@ -53,6 +57,13 @@ impl CellData{
         }
     }
 
+    pub fn n_umi( &self ) -> usize {
+        let mut n = 0;
+        for (_id, hash ) in &self.genes {
+            n += hash.len();
+        }
+        return n; 
+    }
 
     
     pub fn to_str<'live>(&mut self, gene_info:&GeneIds, min_count:usize ) -> Result< String, &str> {
@@ -91,14 +102,15 @@ impl CellData{
         let ret = data.join( "\t" );
         Ok( format!( "{}",ret) )
     }
+
 }
 
 
 
-// This CellIds10x needs to copy some of the logics from split2samples - no it actually is totally dufferent
+// This SingleCellData needs to copy some of the logics from split2samples - no it actually is totally dufferent
 // Here we look for new sample ids and each sample id needs to be a total match to the previousely identified sample id
 // Of cause I could also implement something with a whitelist. But that is for the future.
-pub struct CellIds10x{    
+pub struct SingleCellData{    
     kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
     cells: BTreeMap<u64, CellData>
@@ -106,13 +118,11 @@ pub struct CellIds10x{
 
 
 // here the functions
-impl <'a> CellIds10x{
+impl <'a> SingleCellData{
 
     pub fn new(kmer_size:usize )-> Self {
 
         let cells = BTreeMap::new();
-        // let kmer_len = 5;
-        // TACAGAACA
 
         Self {
             kmer_size,
@@ -137,6 +147,7 @@ impl <'a> CellIds10x{
         Ok( ret )
     }
 
+
     pub fn write (&mut self, file_path: PathBuf, genes: &GeneIds, min_count:usize) -> Result< (), &str>{
         
         let file = match File::create( file_path ){
@@ -155,13 +166,17 @@ impl <'a> CellIds10x{
             }
         };
 
-        let mut failed = 0;
         let mut passed = 0;
+        let mut failed = 0;
         for ( _id,  cell_obj ) in &mut self.cells {
-
+            if ! cell_obj.passing {
+                //println!("failed cell {}", cell_obj.name );
+                failed +=1;
+                continue;
+            }
             //println!( "get something here?: {}", cell_obj.to_str( &gene_ids ) );
             match cell_obj.to_str( genes, min_count ){
-                Ok(text) => match writeln!( writer, "{}", text){
+                Ok(text) => match writeln!( writer, "{}",text ){
                     Ok(_) => passed +=1,
                     Err(err) => {
                         eprintln!("write error: {}", err);
@@ -174,6 +189,143 @@ impl <'a> CellIds10x{
         println!( "{} cell written - {} cells too view umis", passed, failed );
         Ok( () )
     }
+
+
+    /// this will create a path and populate that with 10x kind of files.
+    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize) -> Result< (), &str>{
+        
+        match fs::create_dir ( file_path.clone() ){
+            Ok(_file) => (),
+            Err(err) => {
+                eprintln!("Error?: {:#?}", err);
+            }
+        };
+
+        let file = match File::create( file_path.clone().join("matrix.mtx") ){
+            Ok(file) => file,
+            Err(err) => {
+                panic!("Error creating the path?: {:#?}", err);
+            }
+        };
+        let mut writer = BufWriter::new(&file);
+
+        let file_b = match File::create( file_path.clone().join("barcodes.tsv") ){
+            Ok(file) => file,
+            Err(err) => {
+                panic!("Error creating the path?: {:#?}", err);
+            }
+        };
+        let mut writer_b = BufWriter::new(&file_b);
+
+        match writeln!( writer, "{}\n{}", 
+            "%%MatrixMarket matrix coordinate integer general",
+             self.mtx_counts( genes, min_count ) ){
+            Ok(_) => (),
+            Err(err) => {
+                eprintln!("write error: {}", err);
+                return Err::<(), &str>("Header could not be written")
+            }
+        };
+
+        let file_f = match File::create( file_path.clone().join("features.tsv") ){
+            Ok(file) => file,
+            Err(err) => {
+                panic!("Error creating the path?: {:#?}", err);
+            }
+        };
+        let mut writer_f = BufWriter::new(&file_f);
+
+        for (name, _id) in &genes.names4sparse {
+            match writeln!( writer_f, "{} {} {}",name, name , "Gene Expression" ){
+                Ok(_) => (),
+                Err(err) => {
+                    eprintln!("write error: {}", err);
+                    return Err::<(), &str>("feature could not be written")   
+                }
+            }
+        }
+
+        let mut cell_id = 0;
+        let mut gene_id;
+        let mut failed = 0;
+        let mut passed = 0;
+        for ( _id,  cell_obj ) in &self.cells {
+            if ! cell_obj.passing {
+                //println!("failed cell {}", cell_obj.name );
+                failed +=1;
+                continue;
+            }
+            match writeln!( writer_b, "{}",cell_obj.name ){
+                Ok(_) => (),
+                Err(err) => {
+                    eprintln!("write error: {}", err);
+                    return Err::<(), &str>("cell barcode could not be written")   
+                }
+            };
+            //println!("got the cell {}", cell_obj.name );
+            passed +=1;
+            cell_id += 1;
+            gene_id = 0;
+            let mut g_id;
+
+            for (name, _id) in &genes.names4sparse {
+                //println!("   got the gene {}", name );
+                g_id = match genes.names.get( &name.to_string() ){
+                    Some(g_id) => g_id,
+                    None => return Err::<(), &str>("gene could not be resolved to id")
+                };
+                gene_id +=1;
+                match cell_obj.genes.get(  g_id ){
+                    Some(hash) => {
+                        match writeln!( writer, "{} {} {}", gene_id, cell_id, hash.len() ){
+                            Ok(_) => passed +=1,
+                            Err(err) => {
+                                eprintln!("write error: {}", err);
+                                return Err::<(), &str>("cell data could not be written")   
+                            }   
+                        }
+                    },
+                    None => ()
+                }
+            }
+        }
+        println!( "{} cell written - {} cells too view umis", passed, failed );
+        return Ok( () );
+    }
+
+    pub fn mtx_counts(&mut self, genes: &mut GeneIds, min_count:usize ) -> String{
+        let mut ncell =0 ;
+        let mut nentry=0;
+
+        genes.max_id = 0; // reset to collect the passing genes
+
+        for ( _id,  cell_obj ) in &mut self.cells {
+            if cell_obj.n_umi() > min_count{
+                cell_obj.passing = true;
+                ncell += 1;
+            }else {
+                continue;
+            }
+            for (name, id) in &genes.names {
+                match cell_obj.genes.get( id  ){
+                    Some(hash) => {
+                        let n = hash.len();
+                        if n > 0{
+                            if ! genes.names4sparse.contains_key ( name ){
+                                genes.max_id +=1;
+                                genes.names4sparse.insert( name.to_string() , genes.max_id );
+                            }
+                            nentry +=1;
+                        }
+                    },
+                    None => ()
+                }
+            }
+        }
+
+        format!("{} {} {}", genes.names4sparse.len(), ncell, nentry ) 
+    }
+
 }
 
 
