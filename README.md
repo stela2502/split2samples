@@ -1,3 +1,20 @@
+# This is seriousely broken!
+
+try to really understand what is going on there:
+
+```
+ target/release/quantifyRhapsody -r  .\testData\OneSingleCell.369083.R2.fastq.gz -f .\testData\OneSingleCell.369083.R1.fastq.gz -o testData/output_one -s mouse  -e testData/genes.fasta
+ -a testData/MyAbSeqPanel.fasta -m 0
+```
+
+This should have quite some Igha reads. And I do not get why they do not show. I have manually checked these sequences:
+
+* GCGTGTATCA
+* ACTCTGGAA
+* ACTCTGGAAACAGGGT
+
+Why does that not show in the results?! This is total bullshit what I have done here?!?
+
 # split2sample
 
 This program is forked and based on the splitp Rust SPLiT-seq read pre-processing script.

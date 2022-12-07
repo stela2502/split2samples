@@ -131,7 +131,9 @@ impl GeneIds{
                     if max < sums[*c1]{
                         //println!("the new max is {}", max);
                         max =  sums[*c1];
-                        if max > 1{
+                        if max > 2{
+                            // 2 hits gave me really really strange results.
+                            // need to check for 3 again.
                             break // 2 unique hits should be enough
                         }
                     };

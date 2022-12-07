@@ -246,8 +246,8 @@ impl <'a> SingleCellData{
         }
 
         let mut cell_id = 0;
-        let mut gene_id;
         let mut failed = 0;
+        let mut gene_id = 0;
         let mut passed = 0;
         for ( _id,  cell_obj ) in &self.cells {
             if ! cell_obj.passing {
@@ -265,18 +265,19 @@ impl <'a> SingleCellData{
             //println!("got the cell {}", cell_obj.name );
             passed +=1;
             cell_id += 1;
-            gene_id = 0;
             let mut g_id;
-
+            gene_id = 0;
             for (name, _id) in &genes.names4sparse {
-                //println!("   got the gene {}", name );
                 g_id = match genes.names.get( &name.to_string() ){
                     Some(g_id) => g_id,
                     None => return Err::<(), &str>("gene could not be resolved to id")
                 };
                 gene_id +=1;
+
                 match cell_obj.genes.get(  g_id ){
                     Some(hash) => {
+                        println!("   got the gene {} and id {}", name, gene_id );
+
                         match writeln!( writer, "{} {} {}", gene_id, cell_id, hash.len() ){
                             Ok(_) => passed +=1,
                             Err(err) => {
