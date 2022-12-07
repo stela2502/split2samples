@@ -49,6 +49,7 @@ pub struct GeneIds{
 
 // here the functions
 impl GeneIds{
+    /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
     pub fn new(kmer_size: usize )-> Self {
         let kmers = BTreeMap::<u64, usize>::new();
         let names = BTreeMap::<std::string::String, usize>::new();
