@@ -218,6 +218,8 @@ impl <'a> SingleCellData{
 
     pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
         
+        self.checked = false;
+
         match fs::create_dir ( file_path.clone() ){
             Ok(_file) => (),
             Err(err) => {
@@ -406,7 +408,8 @@ impl <'a> SingleCellData{
             for (name, _id ) in &genes.names4sparse{
                 new_names.push( name.to_string() );
             }
-
+            let ret = format!("{} {} {}", genes.names4sparse.len(), ncell, nentry );
+            println!("mtx_counts: {}", ret );
             println!("restart mtx_counts using only {} genes instead of {} and the genes max id = {}", new_names.len(), names.len(), genes.max_id);
             return self.mtx_counts( genes, &new_names, min_count)
         }
