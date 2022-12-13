@@ -1,6 +1,5 @@
 use clap::Parser;
 use needletail::parse_fastx_file;
-use kmers::naive_impl::Kmer;
 use this::cellids::CellIds;
 
 use this::ofiles::Ofiles;
@@ -79,7 +78,7 @@ fn main() {
             			};
             		}
             	},
-            	Err(err) => (),
+            	Err(_) => (),
             };
         }
     }

@@ -3,8 +3,7 @@
 try to really understand what is going on there:
 
 ```
- target/release/quantifyRhapsody -r  .\testData\OneSingleCell.369083.R2.fastq.gz -f .\testData\OneSingleCell.369083.R1.fastq.gz -o testData/output_one -s mouse  -e testData/genes.fasta
- -a testData/MyAbSeqPanel.fasta -m 0
+ target/release/quantifyRhapsody -r  testData/OneSingleCell.369083.R2.fastq.gz -f testData/OneSingleCell.369083.R1.fastq.gz -o testData/output_one -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 0
 ```
 
 This should have quite some Igha reads. And I do not get why they do not show. I have manually checked these sequences:

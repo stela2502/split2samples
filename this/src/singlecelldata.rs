@@ -66,7 +66,7 @@ impl CellData{
     }
 
     
-    pub fn to_str<'live>(&mut self, gene_info:&GeneIds, min_count:usize ) -> Result< String, &str> {
+    pub fn to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String>, min_count:usize ) -> Result< String, &str> {
 
         let mut data = Vec::<std::string::String>::with_capacity( gene_info.names.len()+3 );
         data.push(self.name.clone());
@@ -75,16 +75,21 @@ impl CellData{
         let mut total = 0;
         let mut max = 0;
         let mut max_name:std::string::String = "na".to_string();
+        let mut id: &usize;
 
-        for (name, id) in &gene_info.names {
-            //println!("I collect expression for id {}", id);
+        for name in names {
+            //println!("I collect expression for gene {}", name);
+            id = match gene_info.names.get( &name.to_string() ){
+                Some(g_id) => g_id,
+                None => return Err::<String, &str>("gene could not be resolved to id")
+            };
             match self.genes.get( id  ){
                 Some(hash) => {
                     let n = hash.len();
                     total += n;
                     if  n > max{
                         max = n;
-                        max_name = name.clone();
+                        max_name = name.to_string();
                     }
                     data.push( n.to_string() )
                 },
@@ -113,7 +118,8 @@ impl CellData{
 pub struct SingleCellData{    
     kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
-    cells: BTreeMap<u64, CellData>
+    cells: BTreeMap<u64, CellData>,
+    checked: bool
 }
 
 
@@ -123,10 +129,12 @@ impl <'a> SingleCellData{
     pub fn new(kmer_size:usize )-> Self {
 
         let cells = BTreeMap::new();
+        let checked:bool = false;
 
         Self {
             kmer_size,
-            cells
+            cells,
+            checked
         }
     }
 
@@ -147,8 +155,16 @@ impl <'a> SingleCellData{
         Ok( ret )
     }
 
-
     pub fn write (&mut self, file_path: PathBuf, genes: &GeneIds, min_count:usize) -> Result< (), &str>{
+
+        let mut names: Vec<String> = Vec::with_capacity(genes.names.len());
+        for ( name, _id ) in &genes.names {
+            names.push( name.to_string() );
+        }
+        return self.write_sub( file_path, &genes, &names, min_count);
+    }
+
+    pub fn write_sub (&mut self, file_path: PathBuf, genes: &GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
         
         let file = match File::create( file_path ){
             Ok(file) => file,
@@ -175,7 +191,7 @@ impl <'a> SingleCellData{
                 continue;
             }
             //println!( "get something here?: {}", cell_obj.to_str( &gene_ids ) );
-            match cell_obj.to_str( genes, min_count ){
+            match cell_obj.to_str( genes, names,  0){
                 Ok(text) => match writeln!( writer, "{}",text ){
                     Ok(_) => passed +=1,
                     Err(err) => {
@@ -186,13 +202,21 @@ impl <'a> SingleCellData{
                 Err(_) => failed +=1 ,
             }
         }
-        println!( "{} cell written - {} cells too view umis", passed, failed );
+        println!( "dense matrix: {} cell written - {} cells too view umis", passed, failed );
         Ok( () )
     }
 
 
     /// this will create a path and populate that with 10x kind of files.
     pub fn write_sparse (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize) -> Result< (), &str>{
+        let mut names: Vec<String> = Vec::with_capacity(genes.names.len());
+        for ( name, _id ) in &genes.names {
+            names.push( name.to_string() );
+        }
+        return self.write_sparse_sub( file_path, genes, &names, min_count);
+    }
+
+    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
         
         match fs::create_dir ( file_path.clone() ){
             Ok(_file) => (),
@@ -219,7 +243,7 @@ impl <'a> SingleCellData{
 
         match writeln!( writer, "{}\n{}", 
             "%%MatrixMarket matrix coordinate integer general",
-             self.mtx_counts( genes, min_count ) ){
+             self.mtx_counts( genes, names, min_count ) ){
             Ok(_) => (),
             Err(err) => {
                 eprintln!("write error: {}", err);
@@ -236,7 +260,7 @@ impl <'a> SingleCellData{
         let mut writer_f = BufWriter::new(&file_f);
 
         for (name, _id) in &genes.names4sparse {
-            match writeln!( writer_f, "{} {} {}",name, name , "Gene Expression" ){
+            match writeln!( writer_f, "{}\t{}\t{}",name, name , "Gene Expression" ){
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {}", err);
@@ -247,8 +271,11 @@ impl <'a> SingleCellData{
 
         let mut cell_id = 0;
         let mut failed = 0;
-        let mut gene_id = 0;
+        let mut gene_id;
         let mut passed = 0;
+        let mut entry = 0;
+        let mut g_id;
+        gene_id = 0;
         for ( _id,  cell_obj ) in &self.cells {
             if ! cell_obj.passing {
                 //println!("failed cell {}", cell_obj.name );
@@ -263,23 +290,25 @@ impl <'a> SingleCellData{
                 }
             };
             //println!("got the cell {}", cell_obj.name );
-            passed +=1;
             cell_id += 1;
-            let mut g_id;
+            passed +=1;
             gene_id = 0;
             for (name, _id) in &genes.names4sparse {
+            //for name in names{
                 g_id = match genes.names.get( &name.to_string() ){
-                    Some(g_id) => g_id,
+                    Some(g_id) => {
+                        //println!("I got the id {} for the gene {} - it will get id {} in the sparse M", g_id, &name, gene_id );
+                        g_id
+                    },
                     None => return Err::<(), &str>("gene could not be resolved to id")
                 };
                 gene_id +=1;
 
                 match cell_obj.genes.get(  g_id ){
                     Some(hash) => {
-                        println!("   got the gene {} and id {}", name, gene_id );
-
+                        //println!("   got the gene {} and id {}", name, gene_id );
                         match writeln!( writer, "{} {} {}", gene_id, cell_id, hash.len() ){
-                            Ok(_) => passed +=1,
+                            Ok(_) => entry +=1,
                             Err(err) => {
                                 eprintln!("write error: {}", err);
                                 return Err::<(), &str>("cell data could not be written")   
@@ -290,41 +319,100 @@ impl <'a> SingleCellData{
                 }
             }
         }
-        println!( "{} cell written - {} cells too view umis", passed, failed );
+        println!( "sparse Matrix: {} cell and {} genes written ({} cells too view umis) to path {:?}; n={}", passed, gene_id, failed,  file_path.into_os_string().into_string(), entry);
+
         return Ok( () );
     }
 
-    pub fn mtx_counts(&mut self, genes: &mut GeneIds, min_count:usize ) -> String{
+    pub fn mtx_counts(&mut self, genes: &mut GeneIds, names: &Vec<String>, min_count:usize ) -> String{
         let mut ncell =0 ;
         let mut nentry=0;
+        let mut id:&usize;
+
+        let mut gene_id = 0;
 
         genes.max_id = 0; // reset to collect the passing genes
+        genes.names4sparse.clear();
 
-        for ( _id,  cell_obj ) in &mut self.cells {
-            if cell_obj.n_umi() > min_count{
-                cell_obj.passing = true;
-                ncell += 1;
-            }else {
-                continue;
-            }
-            for (name, id) in &genes.names {
-                match cell_obj.genes.get( id  ){
-                    Some(hash) => {
-                        let n = hash.len();
-                        if n > 0{
-                            if ! genes.names4sparse.contains_key ( name ){
-                                genes.max_id +=1;
-                                genes.names4sparse.insert( name.to_string() , genes.max_id );
-                            }
-                            nentry +=1;
+        if self.checked{
+            //eprintln!("The cells have already been checked!");
+            for ( _id,  cell_obj ) in &mut self.cells {
+                if cell_obj.passing {
+                    ncell += 1;
+                    gene_id = 0;
+                    for name in names {
+                        id = match genes.names.get( &name.to_string() ){
+                            Some(g_id) => g_id,
+                            None => panic!("I could not resolve the gene {}", name ),
+                        };
+                        match cell_obj.genes.get( id  ){
+                            Some(_hash) => {
+                                //let n = hash.len();
+                                if ! genes.names4sparse.contains_key ( name ){
+                                    genes.max_id +=1;
+                                    genes.names4sparse.insert( name.to_string() , genes.max_id );
+                                }
+                                nentry +=1;
+                            },
+                            None => ()
                         }
-                    },
-                    None => ()
+                    }
                 }
             }
         }
+        else  {
 
-        format!("{} {} {}", genes.names4sparse.len(), ncell, nentry ) 
+            let file_f = match File::create( "check_matrix.mtx") {
+                Ok(file) => file,
+                Err(err) => {
+                    panic!("Error creating the path?: {:#?}", err);
+                }
+            };
+            let mut writer_f = BufWriter::new(&file_f);
+            writeln!( writer_f, "no ckeck");
+            //eprintln!("Checking cell for min umi count!");
+            'main: for ( _id,  cell_obj ) in &mut self.cells {
+                if cell_obj.n_umi() > min_count{
+                    cell_obj.passing = true;
+                    ncell += 1;
+
+                    for name in names {
+                        gene_id += 1;
+                        id = match genes.names.get( &name.to_string() ){
+                            Some(g_id) => g_id,
+                            None => panic!("I could not resolve the gene {}", name ),
+                        };
+                        match cell_obj.genes.get( id  ){
+                            Some(hash) => {
+                                //let n = hash.len();
+                                if ! genes.names4sparse.contains_key ( name ){
+                                    genes.max_id +=1;
+                                    genes.names4sparse.insert( name.to_string() , genes.max_id );
+                                }
+                                nentry +=1;
+                                
+                            },
+                            None => ()
+                        }
+                    }
+                }else {
+                    continue 'main;
+                }
+                
+            }
+            self.checked = true;
+
+            let mut new_names:Vec<String> = Vec::with_capacity( genes.names4sparse.len() );
+            for (name, _id ) in &genes.names4sparse{
+                new_names.push( name.to_string() );
+            }
+
+            println!("restart mtx_counts using only {} genes instead of {} and the genes max id = {}", new_names.len(), names.len(), genes.max_id);
+            return self.mtx_counts( genes, &new_names, min_count)
+        }
+        let ret = format!("{} {} {}", genes.names4sparse.len(), ncell, nentry );
+        println!("mtx_counts: {}", ret );
+        return ret;
     }
 
 }
