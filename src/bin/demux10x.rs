@@ -193,7 +193,7 @@ fn main() {
             format!("Cell2Sample.{}.tsv", fp1.file_name().unwrap().to_str().unwrap() )
         );
 
-        match cells.write ( file_path, &genes, opts.min_umi ) {
+        match cells.write ( file_path, &mut genes, opts.min_umi ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };

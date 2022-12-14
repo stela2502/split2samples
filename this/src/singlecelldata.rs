@@ -155,16 +155,16 @@ impl <'a> SingleCellData{
         Ok( ret )
     }
 
-    pub fn write (&mut self, file_path: PathBuf, genes: &GeneIds, min_count:usize) -> Result< (), &str>{
+    pub fn write (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize) -> Result< (), &str>{
 
         let mut names: Vec<String> = Vec::with_capacity(genes.names.len());
         for ( name, _id ) in &genes.names {
             names.push( name.to_string() );
         }
-        return self.write_sub( file_path, &genes, &names, min_count);
+        return self.write_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sub (&mut self, file_path: PathBuf, genes: &GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
+    pub fn write_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
         
         let file = match File::create( file_path ){
             Ok(file) => file,
@@ -184,6 +184,11 @@ impl <'a> SingleCellData{
 
         let mut passed = 0;
         let mut failed = 0;
+
+        if ! self.checked{
+            self.mtx_counts( genes, names, min_count );
+        }
+
         for ( _id,  cell_obj ) in &mut self.cells {
             if ! cell_obj.passing {
                 //println!("failed cell {}", cell_obj.name );
@@ -363,15 +368,6 @@ impl <'a> SingleCellData{
             }
         }
         else  {
-
-            let file_f = match File::create( "check_matrix.mtx") {
-                Ok(file) => file,
-                Err(err) => {
-                    panic!("Error creating the path?: {:#?}", err);
-                }
-            };
-            let mut writer_f = BufWriter::new(&file_f);
-            writeln!( writer_f, "no ckeck");
             //eprintln!("Checking cell for min umi count!");
             'main: for ( _id,  cell_obj ) in &mut self.cells {
                 if cell_obj.n_umi() > min_count{
