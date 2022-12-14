@@ -385,7 +385,7 @@ impl <'a> SingleCellData{
                             None => panic!("I could not resolve the gene {}", name ),
                         };
                         match cell_obj.genes.get( id  ){
-                            Some(hash) => {
+                            Some(_hash) => {
                                 //let n = hash.len();
                                 if ! genes.names4sparse.contains_key ( name ){
                                     genes.max_id +=1;
@@ -408,13 +408,13 @@ impl <'a> SingleCellData{
             for (name, _id ) in &genes.names4sparse{
                 new_names.push( name.to_string() );
             }
-            let ret = format!("{} {} {}", genes.names4sparse.len(), ncell, nentry );
-            println!("mtx_counts: {}", ret );
-            println!("restart mtx_counts using only {} genes instead of {} and the genes max id = {}", new_names.len(), names.len(), genes.max_id);
+            //let ret = format!("{} {} {}", genes.names4sparse.len(), ncell, nentry );
+            //println!("mtx_counts: {}", ret );
+            //println!("restart mtx_counts using only {} genes instead of {} and the genes max id = {}", new_names.len(), names.len(), genes.max_id);
             return self.mtx_counts( genes, &new_names, min_count)
         }
         let ret = format!("{} {} {}", genes.names4sparse.len(), ncell, nentry );
-        println!("mtx_counts: {}", ret );
+        //println!("mtx_counts: {}", ret );
         return ret;
     }
 

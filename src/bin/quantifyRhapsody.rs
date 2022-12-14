@@ -111,7 +111,7 @@ fn main() {
         std::process::exit(1)
     }
     
-    let mut i = 0;
+    let mut i = 1;
 
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
