@@ -1,89 +1,12 @@
-# This is seriousely broken!
+# Rustody - a tool to quickly analyze tarketed BD-Rhapsody sequencings
 
-try to really understand what is going on there:
+This tool replaces the official 7-Bridges BD analysis programs first steps.
 
-```
- target/release/quantifyRhapsody -r  testData/OneSingleCell.369083.R2.fastq.gz -f testData/OneSingleCell.369083.R1.fastq.gz -o testData/output_one -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 0
-```
+The final output from this tool is a sparse matrix of gene expression values, antibody tags and in addition a dense matrix with read counts for the sample reads.
 
-This should have quite some Igha reads. And I do not get why they do not show. I have manually checked these sequences:
+I found the sample table most helpful in the detection of duplicate populations.
 
-* GCGTGTATCA
-* ACTCTGGAA
-* ACTCTGGAAACAGGGT
-
-Why does that not show in the results?! This is total bullshit what I have done here?!?
-
-# split2sample
-
-This program is forked and based on the splitp Rust SPLiT-seq read pre-processing script.
-Initial implementation was performed by Rob P. Idea, logics and later implementations came from Stefan L.
-
-# Usage
-
-The `split2sample` program takes several arguments.  The usage can be printed 
-from the command line using `split2sample -h`.
-
-```
-./target/debug/split2samples -h
-split2samples 0.1.0
-Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>
-Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
-
-USAGE:
-    split2samples --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --mode <MODE>
-
-OPTIONS:
-    -f, --file <FILE>          the input R2 samples file
-    -h, --help                 Print help information
-    -m, --mode <MODE>          the mode of the program [fastqSplit, cellIdent, sampleSplit]
-    -o, --outpath <OUTPATH>    the outpath
-    -r, --reads <READS>        the input R1 reads file
-    -s, --specie <SPECIE>      the specie of the library [mouse, human]
-    -V, --version              Print version information
-
-```
-
-This debug branch is meant to implement simple a multi processor approach:
-Instead of implementing this in the script the script will check for the exisance of files before finiching a analysis.
-
-The analysis is split up in two parts:
-1. the fastq files get scanned for sample tags. For each sample tag the cell ids connected to this sample tag are stored.
-2. the fastq file gets processed again identifying all cells and writing them out into sample specific fastq files.
-
-The way I want to make this muliti processor is to split the program into two run modes:
-1. identifyCells will identify the cell<->sample conectios and write them to disk
-2. splitFastq will use the before collected cell<->sample data and split the fastq.
-
-Applying this to smaller fastq files should speed up the process.
-
-## Splitting a set of two fastq files
-
-into 10 (20) fastq files. Each of the 10 fastq files gets 100 fastq entries. Afterwads the script switches to the next ansd so on.
-I have tried to copy the function of fastqsplitter. I have not tested this part.
-
-```
-split2samples -m fastqSplit  -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
-```
-
-This will (hopefully) create a total of 20 fastq files in the outpath
-
-## Identifying sample -> cell links
-
-```
-split2samples -m cellIdent -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
-```
-
-This will create a set of 12 Data_R1.fastq.gz.sample[1-12].ints.txt files that are necessary for the next step.
-
-## Split the Fastq files into sample specififc fastq files
-
-```
-split2samples -m sampleSplit -r Data_R1.fastq.gz -f Data_R2.fastq.gz -o output -s mouse
-```
-
-This will create a set of 24 (12 +12) fastq files - two for each sample.
-
+The output from here can easily be read into any single cell analysis package for downstream analysis like Seurat or Scanpy.
 
 # Installation
 
@@ -94,40 +17,63 @@ cargo build --release
 cp target/release/split2samples /usr/bin
 cp target/release/demux10x /usr/bin
 cp target/release/quantifyRhapsody /usr/bin
+cp target/release/bd_cell_id_2_seq /usr/bin
+cp target/release/bd_get_single_cell /usr/bin
 ``` 
 
 Do not forget the --release while building the tool. 
 The test case for quantifyRhapsody would finish in 7 sec instead of ~0.5 sec (x14!)
 using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 
+
+## Testing
+
 To run the test data (a tiny bit of a real dataset):
-
-```
-./target/debug/split2samples -r testData/testData_R1.fastq.gz -f testData/testData_R2.fastq.gz -o testData/output -s mouse
-```
-
-Or the bigger test data with 1e+5 reads:
-```
-#./target/release/split2samples -m fastqSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
-./target/release/split2samples -m cellIdent -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
-./target/release/split2samples -m sampleSplit -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
-# or the two together
-./target/release/split2samples -m analysis -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
-```
-
-Test case for the quantifyRhapsody:
 
 ```
 target/release/quantifyRhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30
 ```
+
+This will produce an output consisting of two cells. and it should run super fast.
+
+
+# Usage
+
+The `quantifyRhapsody` program takes several arguments.  The usage can be printed 
+from the command line using `quantifyRhapsody -h`.
+
+```
+./target/debug/quantifyRhapsody -h
+
+USAGE:
+    quantifyRhapsody.exe --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antybody <ANTYBODY> --min-umi <MIN_UMI>
+
+OPTIONS:
+    -a, --antibody <ANTIBODY>        the fastq database containing the antibody tags
+    -e, --expression <EXPRESSION>    the fastq database containing the genes
+    -f, --file <FILE>                the input R2 samples file
+    -h, --help                       Print help information
+    -m, --min-umi <MIN_UMI>          the minimum reads (sample + genes + antibody combined)
+    -o, --outpath <OUTPATH>          the outpath
+    -r, --reads <READS>              the input R1 reads file
+    -s, --specie <SPECIE>            the specie of the library [mouse, human]
+    -V, --version                    Print version information
+```
+
+
+# further programs
+
+There are several other programs in this package:
+
+ 1. split2samples will split the BD Rhapsody fastq files into sample spceific fastq files. This script is older and ~4 times slower in creating just the fastq files when compared to quantifyRhapsody quantifying the data.
+ 2. demux10x is a small spin off that actually processes 10x single cell data and searches for a set fasta entries.
+ 3. bd_cell_id_2_seq BD Rhapsody cells do get an ID in the results. If you want to get the sequences coding for this cells you can use this program
+ 4. bd_get_single_cell will select only one single cell from the fastq files.
 
 
 # Limitations / differences
 
 This program is totally untested and under heavy development.
 This is only the first draft - let's see where this heads to.
-
-
-./target/release/split2samples -m cellIdent -r testData/output_1e5/fastqSplit.1.1e5_mRNA_S1_R1_001.fastq.gz -f testData/output_1e5/fastqSplit.1.1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse
 
 

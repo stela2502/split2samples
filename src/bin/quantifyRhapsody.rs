@@ -36,8 +36,8 @@ struct Opts {
     expression: String,
     /// the fastq database containing the antibody tags
     #[clap(short, long)]
-    antybody: String,
-    /// the minimum reads (sample + genes + antybody combined)
+    antibody: String,
+    /// the minimum reads (sample + genes + antibody combined)
     #[clap(short, long)]
     min_umi: usize,
 }
@@ -129,7 +129,7 @@ fn main() {
         }
     }
 
-    let mut ab_file = parse_fastx_file(&opts.antybody).expect("valid path/file");
+    let mut ab_file = parse_fastx_file(&opts.antibody).expect("valid path/file");
     while let Some(ab_record) = ab_file.next() {
         let seqrec = ab_record.expect("invalid record");
         match std::str::from_utf8(seqrec.id()){
