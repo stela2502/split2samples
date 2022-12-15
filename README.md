@@ -1,14 +1,21 @@
-# Rustody - a tool to quickly analyze tarketed BD-Rhapsody sequencings
+# Rustody - a tool to quickly analyze targeted BD-Rhapsody sequencings
 
 This tool replaces the official 7-Bridges BD analysis programs first steps.
 
 The final output from this tool is a sparse matrix of gene expression values, antibody tags and in addition a dense matrix with read counts for the sample reads.
 
-I found the sample table most helpful in the detection of duplicate populations.
+I found the sample table most helpful in the detection of populations containing duplicate cells.
 
 The output from here can easily be read into any single cell analysis package for downstream analysis like Seurat or Scanpy.
 
 # Installation
+
+You need the Rust compiler: https://www.rust-lang.org/tools/install
+
+
+Then you can clone this repo and complie the code (example for a Linux system).
+But it also compiles on Windows. I just never use that for actual work.
+
 
 ```
 git clone https://github.com/stela2502/split2samples
@@ -43,7 +50,7 @@ The `quantifyRhapsody` program takes several arguments.  The usage can be printe
 from the command line using `quantifyRhapsody -h`.
 
 ```
-./target/debug/quantifyRhapsody -h
+./target/release/quantifyRhapsody -h
 
 USAGE:
     quantifyRhapsody.exe --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antybody <ANTYBODY> --min-umi <MIN_UMI>
@@ -60,8 +67,10 @@ OPTIONS:
     -V, --version                    Print version information
 ```
 
+You see - this is the one I compiled on Windows 11.
 
-# further programs
+
+# Additional Programs
 
 There are several other programs in this package:
 
