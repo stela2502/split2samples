@@ -13,7 +13,10 @@ use std::fs;
 use std::time::SystemTime;
 
 /// Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles.
-/// You need quite long R1 and R2 reads for this! (>70R1 and >70R2)
+/// THIS PROGRAM WILL IGNORE THE UMI INFORMATION
+/// DO NOT USE THIS IF YOU HAVE GOOD SEQUENCES (>70R1 and >70R2)
+/// IN FACT DO NOT USE IT IS YOU DO NOT KNOW WHAT YOU ARE DOING
+/// JUST DO NOT USE IT :-D
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>")]
@@ -154,6 +157,7 @@ fn main() {
     let mut unknown = 0;
     let mut no_sample = 0;
     let mut ok_reads = 0;
+    let mut umi:u64 = 0;
 
     {
         // need better error handling here too    
@@ -182,22 +186,26 @@ fn main() {
                 // totally unusable sequence
                 // as described in the BD rhapsody Bioinformatic Handbook
                 // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
-                if seqrec1.seq().len() < 66 {
+                if seqrec1.seq().len() < 52 {
                     unknown +=1;
                     continue;
                 }
-                if seqrec.seq().len() < 64 {
+                if seqrec.seq().len() < 52 {
                     unknown +=1;
                     continue;
                 }
-                //let seq = seqrec.seq().into_owned();
-                for nuc in &seqrec1.seq()[52..60] {  
-                    if *nuc ==b'N'{
-                        unknown +=1;
-                        continue 'main;
-                    }
-                }
-                let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
+
+                umi += 1;
+
+                // //let seq = seqrec.seq().into_owned();
+                // for nuc in &seqrec1.seq()[52..60] {  
+                //     if *nuc ==b'N'{
+                //         unknown +=1;
+                //         continue 'main;
+                //     }
+                // }
+
+                // let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
 
                 // first match the cell id - if that does not work the read is unusable
                 match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
