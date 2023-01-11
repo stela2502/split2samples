@@ -197,10 +197,12 @@ fn main() {
                         continue 'main;
                     }
                 }
-                let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
+                //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
+                let umi = Kmer::from( &seqrec1.seq()[36..42]).into_u64();
 
                 // first match the cell id - if that does not work the read is unusable
-                match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+                //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+                match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![13,22], vec![26,35]){
                     Ok(cell_id) => {
                         match genes.get( &seqrec.seq() ){
                             Some(gene_id) =>{
