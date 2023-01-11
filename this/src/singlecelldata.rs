@@ -174,7 +174,7 @@ impl <'a> SingleCellData{
         };
         let mut writer = BufWriter::new(&file);
 
-        match writeln!( writer, "{}", genes.to_header() ){
+        match writeln!( writer, "{}", genes.to_header_n( names ) ){
             Ok(_) => (),
             Err(err) => {
                 eprintln!("write error: {}", err);

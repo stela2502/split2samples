@@ -282,7 +282,7 @@ fn main() {
         println!(     "N's or too short  : {}", unknown );
         println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) );
 
-        let file_path2 = format!("{}/BD_Rhapsody_expression_and_sample_ids.{}.tsv", opts.outpath, fp1.file_name().unwrap().to_str().unwrap() );
+        let file_path2 = format!("{}/SampleCounts.tsv", opts.outpath );
         println!( "written to {:?}", file_path2);
     }
 
