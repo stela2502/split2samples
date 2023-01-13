@@ -39,6 +39,9 @@ struct Opts {
     /// the minimum reads (sample + genes + antibody combined)
     #[clap(short, long)]
     min_umi: usize,
+    /// the version of beads you used v1, v2.96 or v2.384
+    #[clap(short, long)]
+    version: String,
 }
 
 
@@ -56,6 +59,7 @@ fn main() {
         Err(e) => panic!("I could not create the outpath: {}", e)
     };
 
+    println!( "Extenden Bead primer structure wil be used." );
     println!("starting to collect the expression data can take a LONG time");
 
     let sub_len = 9;
@@ -144,7 +148,7 @@ fn main() {
     }
 
     //  now we need to get a CellIDs object, too
-    let mut cells = CellIds::new();
+    let mut cells = CellIds::new(&opts.version);
 
     // that is a class to strore gene expression data.
     // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
@@ -154,6 +158,18 @@ fn main() {
     let mut unknown = 0;
     let mut no_sample = 0;
     let mut ok_reads = 0;
+
+    let pos:Vec<usize>;
+    let min_sizes:Vec<usize>;
+
+    if &opts.version == "v1"{
+        pos = vec![0,9, 21,30, 43,52, 52,60 ];
+        min_sizes = vec![ 66, 60 ];
+    }
+    else {
+        pos = vec![0,9, 12,22, 26,35 , 36,42 ];
+        min_sizes = vec![ 51, 51 ];
+    }
 
     {
         // need better error handling here too    
@@ -182,27 +198,27 @@ fn main() {
                 // totally unusable sequence
                 // as described in the BD rhapsody Bioinformatic Handbook
                 // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
-                if seqrec1.seq().len() < 66 {
+                if seqrec1.seq().len() < min_sizes[0] {
                     unknown +=1;
                     continue;
                 }
-                if seqrec.seq().len() < 64 {
+                if seqrec.seq().len() < min_sizes[1] {
                     unknown +=1;
                     continue;
                 }
                 //let seq = seqrec.seq().into_owned();
-                for nuc in &seqrec1.seq()[52..60] {  
+                for nuc in &seqrec1.seq()[pos[6]..pos[7]] {  
                     if *nuc ==b'N'{
                         unknown +=1;
                         continue 'main;
                     }
                 }
                 //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
-                let umi = Kmer::from( &seqrec1.seq()[36..42]).into_u64();
+                let umi = Kmer::from( &seqrec1.seq()[pos[6]..pos[7]]).into_u64();
 
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![13,22], vec![26,35]){
+                match cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
                     Ok(cell_id) => {
                         match genes.get( &seqrec.seq() ){
                             Some(gene_id) =>{
@@ -224,7 +240,7 @@ fn main() {
                     },
                     Err(_err) => {
                         // cell id could not be recovered
-                        // println!("Cell ID could not be recovered from {:?}:\n{}", std::str::from_utf8(&seqrec1.seq()), _err);
+                        //println!("Cell ID could not be recovered from {:?}:\n{}", std::str::from_utf8(&seqrec1.seq()), _err);
                         no_sample +=1;
                         continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.

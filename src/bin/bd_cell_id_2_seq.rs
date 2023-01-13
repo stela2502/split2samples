@@ -7,12 +7,15 @@ struct Opts {
     /// the cell id you want converted
     #[clap(short, long)]
     id: u32,
+    /// the version of beads you used v1, v2.96 or v2.384
+    #[clap(short, long)]
+    version: String,
 }
 
 fn main() {
 	let opts: Opts = Opts::parse();
 
-	let cells = CellIds::new();
+	let cells = CellIds::new(&opts.version);
 	let seq: Vec<&[u8; 9]> = cells.to_sequence( opts.id );
 	
 
