@@ -71,8 +71,8 @@ fn main() {
     
 
     let sub_len = 9;
-    let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
-    cells.init_rhapsody( &opts.specie );
+    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
+    //cells.init_rhapsody( &opts.specie );
 
 
     let mut genes:GeneIds = GeneIds::new(9); // split them into 9 bp kmers
@@ -157,7 +157,7 @@ fn main() {
     }
 
     //  now we need to get a CellIDs object, too
-    let mut cells = CellIds::new(&opts.version);
+    let mut cells = CellIds::new(&opts.version, 7);
 
     // that is a class to strore gene expression data.
     // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
@@ -259,11 +259,13 @@ fn main() {
                     },
                     Err(_err) => {
                         // cell id could not be recovered
+                        /*
                         println!("Cell ID could not be recovered from {:?}:\n{}\n{:?}, {:?}, {:?}", std::str::from_utf8(&seqrec1.seq()), _err, 
                             std::str::from_utf8( &seqrec1.seq()[pos[0]..pos[1]]),
                             std::str::from_utf8( &seqrec1.seq()[pos[2]..pos[3]]),
                             std::str::from_utf8( &seqrec1.seq()[pos[4]..pos[5]])
                         );
+                        */
                         no_sample +=1;
                         continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.

@@ -3,6 +3,7 @@
 /// It should also fix some read errors in the cell ids. But that will come a little later
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use kmers::naive_impl::Kmer;
 
 use crate::sampleids::SampleIds;
@@ -30,7 +31,16 @@ pub struct CellIds<'a>{
 // here the functions
 impl CellIds<'_>{
 
-    pub fn new( ver:&String )-> Self {
+    pub fn new( ver:&String, mut size: u8 )-> Self {
+
+        if size < 5{
+            size = 5;
+            println!( "CellIDs::new size was set to 5");
+        }
+        else if size > 9{
+            size = 9;
+            println!( "CellIDs::new size set to 9");
+        }
         let  c1s: Vec<&[u8; 9]>;
         let  c2s: Vec<&[u8; 9]>;
         let  c3s: Vec<&[u8; 9]>;
@@ -38,6 +48,9 @@ impl CellIds<'_>{
         let mut csl1 = BTreeMap::<u64, u32>::new();
         let mut csl2 = BTreeMap::<u64, u32>::new();
         let mut csl3 = BTreeMap::<u64, u32>::new();
+
+        let mut bad_entries = HashSet::<u64>::new();
+
         let kmer_len = 5;
         // TACAGAACA
 
@@ -400,27 +413,63 @@ impl CellIds<'_>{
         }
 
         let mut i: u32 = 0;
+
         for kmer_u8 in &c1s{
-            for kmer in needletail::kmer::Kmers::new( *kmer_u8, 9 ) { // exactly 1
+            for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
-                csl1.insert( km, i );
-                i += 1;
+
+                if bad_entries.contains( &km ){
+                    continue
+                }
+                if csl1.contains_key ( &km ){
+                    bad_entries.insert( km.clone() );
+                    csl1.remove( &km );
+                    println!( "CellIDs start cls1 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ))
+                }else {
+                    //let info = Info::new(km, name.clone() );
+                    csl1.insert(km, i );
+                    i +=1;
+                }
             }
         }
+
         i = 0;
+        bad_entries.clear();
         for kmer_u8 in &c2s{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, 9 ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
-                csl2.insert( km, i );
-                i += 1;
+                if bad_entries.contains( &km ){
+                    continue
+                }
+                if csl2.contains_key ( &km ){
+                    bad_entries.insert( km.clone() );
+                    csl2.remove( &km );
+                    println!( "CellIDs start cls2 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ))
+                }else {
+                    //let info = Info::new(km, name.clone() );
+                    csl2.insert(km, i );
+                    i +=1;
+                }
             }
         }
+
         i = 0;
+        bad_entries.clear();
         for kmer_u8 in &c3s{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, 9 ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
-                csl3.insert( km, i );
-                i += 1;
+                if bad_entries.contains( &km ){
+                    continue
+                }
+                if csl3.contains_key ( &km ){
+                    bad_entries.insert( km.clone() );
+                    csl3.remove( &km );
+                    println!( "CellIDs start cls3 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ))
+                }else {
+                    //let info = Info::new(km, name.clone() );
+                    csl3.insert(km, i );
+                    i +=1;
+                }
             }
         }
 
