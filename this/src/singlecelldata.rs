@@ -18,6 +18,7 @@ use std::io::Write;
 use std::fs;
 
 use std::path::PathBuf;
+use std::path::Path;
 
 
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
@@ -165,6 +166,13 @@ impl <'a> SingleCellData{
     }
 
     pub fn write_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
+
+        let mut rs:bool=true;
+    
+        rs = Path::new( &file_path.clone() ).exists();
+        if rs{
+            fs::remove_file( &file_path );
+        }
         
         let file = match File::create( file_path ){
             Ok(file) => file,
@@ -225,12 +233,17 @@ impl <'a> SingleCellData{
         
         self.checked = false;
 
-        match fs::create_dir ( file_path.clone() ){
-            Ok(_file) => (),
-            Err(err) => {
-                eprintln!("Error?: {:#?}", err);
-            }
-        };
+        let mut rs:bool=true;
+    
+        rs = Path::new( &file_path.clone() ).exists();
+        if ! rs {
+            match fs::create_dir ( file_path.clone() ){
+                Ok(_file) => (),
+                Err(err) => {
+                     eprintln!("Error?: {:#?}", err);
+                 }
+            };
+        }
 
         let file = match File::create( file_path.clone().join("matrix.mtx") ){
             Ok(file) => file,

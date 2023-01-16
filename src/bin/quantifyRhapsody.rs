@@ -12,6 +12,9 @@ use std::fs;
 
 use std::time::SystemTime;
 
+use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use std::time::Duration;
+
 /// Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles.
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2)
 
@@ -54,12 +57,18 @@ fn main() {
     
     let opts: Opts = Opts::parse();
 
-    match fs::create_dir_all(&opts.outpath){
-        Ok(_) => (),
-        Err(e) => panic!("I could not create the outpath: {}", e)
-    };
 
-    println!("starting to collect the expression data can take a LONG time");
+    println!("init models");    
+
+    fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
+    // match fs::create_dir_all(&opts.outpath).expect("AlreadyExists"){
+    //     Ok(_) => (),
+    //     Err(e) => {
+    //         panic!("I could not create the outpath: {}", e);
+    //     }
+    // };
+
+    
 
     let sub_len = 9;
     let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
@@ -113,6 +122,7 @@ fn main() {
         std::process::exit(1)
     }
     
+
     let mut i = 1;
 
     while let Some(e_record) = expr_file.next() {
@@ -157,6 +167,7 @@ fn main() {
     let mut unknown = 0;
     let mut no_sample = 0;
     let mut ok_reads = 0;
+    let split:usize = 1000*1000;
 
     let pos:Vec<usize>;
     let min_sizes:Vec<usize>;
@@ -170,11 +181,20 @@ fn main() {
         min_sizes = vec![ 51, 51 ];
     }
 
+
     {
+        let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
+            .unwrap()
+            .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
+
         // need better error handling here too    
         // for now, we're assuming FASTQ and not FASTA.
         let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
         let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
+        let m = MultiProgress::new();
+        let pb = m.add(ProgressBar::new(5000));
+        pb.set_style(spinner_style.clone());
+        pb.set_prefix(format!("[{}/?]", i + 1));
 
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {
@@ -239,16 +259,28 @@ fn main() {
                     },
                     Err(_err) => {
                         // cell id could not be recovered
-                        //println!("Cell ID could not be recovered from {:?}:\n{}", std::str::from_utf8(&seqrec1.seq()), _err);
+                        println!("Cell ID could not be recovered from {:?}:\n{}\n{:?}, {:?}, {:?}", std::str::from_utf8(&seqrec1.seq()), _err, 
+                            std::str::from_utf8( &seqrec1.seq()[pos[0]..pos[1]]),
+                            std::str::from_utf8( &seqrec1.seq()[pos[2]..pos[3]]),
+                            std::str::from_utf8( &seqrec1.seq()[pos[4]..pos[5]])
+                        );
                         no_sample +=1;
                         continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
                 };
+
+                if ok_reads % split == 0{
+                    pb.set_message(format!("{}: {:?}", ok_reads, std::str::from_utf8(&seqrec1.seq()) ));
+                    pb.inc(1);
+                    //std::thread::sleep(Duration::from_millis(100));
+                }
             } else {
                 println!("file 2 had reads remaining, but file 1 ran out of reads!");
             }
         }
         
+        pb.finish_with_message("writing files...");
+
         // calculating a little bit wrong - why? no idea...
         println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
 
