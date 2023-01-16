@@ -2,7 +2,7 @@ use clap::Parser;
 use this::cellids::CellIds;
 
 #[derive(Parser)]
-#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>")]
+#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the cell id you want converted
     #[clap(short, long)]

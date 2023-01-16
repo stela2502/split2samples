@@ -59,7 +59,6 @@ fn main() {
         Err(e) => panic!("I could not create the outpath: {}", e)
     };
 
-    println!( "Extenden Bead primer structure wil be used." );
     println!("starting to collect the expression data can take a LONG time");
 
     let sub_len = 9;

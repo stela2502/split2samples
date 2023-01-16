@@ -33,7 +33,7 @@ use std::time::SystemTime;
 
 /// Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
 #[derive(Parser)]
-#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>")]
+#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
