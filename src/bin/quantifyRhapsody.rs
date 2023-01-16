@@ -7,6 +7,8 @@ use this::sampleids::SampleIds;
 use this::singlecelldata::SingleCellData;
 use this::geneids::GeneIds;
 
+use this::last5::Last5;
+
 use std::path::PathBuf;
 use std::fs;
 
@@ -167,7 +169,10 @@ fn main() {
     let mut unknown = 0;
     let mut no_sample = 0;
     let mut ok_reads = 0;
+    let mut pcr_duplicates = 0;
+    let mut local_dup = 0;
     let split:usize = 1000*1000;
+    let split:usize = 1000;
 
     let pos:Vec<usize>;
     let min_sizes:Vec<usize>;
@@ -244,7 +249,20 @@ fn main() {
                                 match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
                                     Ok(cell_info) => {
                                         ok_reads += 1;
-                                        cell_info.add( gene_id, umi );
+                                        if cell_info.add( gene_id, umi ) == false {
+                                            pcr_duplicates += 1;
+                                            local_dup += 1;
+                                        }
+                                        if ok_reads % split == 0{
+                                            pb.set_message(format!("{} ({:.4}% total; {:.4}% PCR duplicates [{:.4}% in last iteration]): {:?} -> gene id: {}, cell id: {}",
+                                                ok_reads , 
+                                                ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 , 
+                                                pcr_duplicates as f32 / ok_reads as f32,
+                                                local_dup as f32 / split as f32,
+                                                std::str::from_utf8(&seqrec1.seq()), gene_id , cell_id ) );
+                                            pb.inc(1);
+                                            std::thread::sleep(Duration::from_millis(100));
+                                        }
                                     },
                                     Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
                                 }
@@ -259,23 +277,17 @@ fn main() {
                     },
                     Err(_err) => {
                         // cell id could not be recovered
-                        /*
-                        println!("Cell ID could not be recovered from {:?}:\n{}\n{:?}, {:?}, {:?}", std::str::from_utf8(&seqrec1.seq()), _err, 
-                            std::str::from_utf8( &seqrec1.seq()[pos[0]..pos[1]]),
-                            std::str::from_utf8( &seqrec1.seq()[pos[2]..pos[3]]),
-                            std::str::from_utf8( &seqrec1.seq()[pos[4]..pos[5]])
-                        );
-                        */
+                        
+                        // println!("Cell ID could not be recovered from {:?}:\n{}\n{:?}, {:?}, {:?}", std::str::from_utf8(&seqrec1.seq()), _err, 
+                        //     std::str::from_utf8( &seqrec1.seq()[pos[0]..pos[1]]),
+                        //     std::str::from_utf8( &seqrec1.seq()[pos[2]..pos[3]]),
+                        //     std::str::from_utf8( &seqrec1.seq()[pos[4]..pos[5]])
+                        // );
+                        
                         no_sample +=1;
                         continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
                 };
-
-                if ok_reads % split == 0{
-                    pb.set_message(format!("{}: {:?}", ok_reads, std::str::from_utf8(&seqrec1.seq()) ));
-                    pb.inc(1);
-                    //std::thread::sleep(Duration::from_millis(100));
-                }
             } else {
                 println!("file 2 had reads remaining, but file 1 ran out of reads!");
             }
@@ -324,6 +336,7 @@ fn main() {
         println!(     "no sample ID reads: {} reads", no_sample );
         println!(     "N's or too short  : {}", unknown );
         println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) );
+        println!(     "pcr duplicates    : {} ({:.2}%)", pcr_duplicates, ( pcr_duplicates as f32 / ok_reads as f32 ) );
 
         let file_path2 = format!("{}/SampleCounts.tsv", opts.outpath );
         println!( "written to {:?}", file_path2);

@@ -26,6 +26,7 @@ pub struct CellIds<'a>{
     csl1kmer: SampleIds,
     csl2kmer: SampleIds,
     csl3kmer: SampleIds,
+    size:u8
 }
 
 // here the functions
@@ -419,6 +420,7 @@ impl CellIds<'_>{
                 let km = Kmer::from(kmer).into_u64();
 
                 if bad_entries.contains( &km ){
+                    println!( "CellIDs start cls1 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ));
                     continue
                 }
                 if csl1.contains_key ( &km ){
@@ -436,9 +438,10 @@ impl CellIds<'_>{
         i = 0;
         bad_entries.clear();
         for kmer_u8 in &c2s{
-            for kmer in needletail::kmer::Kmers::new( *kmer_u8, 9 ) { // exactly 1
+            for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
                 if bad_entries.contains( &km ){
+                    println!( "CellIDs start cls2 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ));
                     continue
                 }
                 if csl2.contains_key ( &km ){
@@ -456,9 +459,10 @@ impl CellIds<'_>{
         i = 0;
         bad_entries.clear();
         for kmer_u8 in &c3s{
-            for kmer in needletail::kmer::Kmers::new( *kmer_u8, 9 ) { // exactly 1
+            for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
                 if bad_entries.contains( &km ){
+                    println!( "CellIDs start cls3 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ));
                     continue
                 }
                 if csl3.contains_key ( &km ){
@@ -483,7 +487,8 @@ impl CellIds<'_>{
             csl3,
             csl1kmer,
             csl2kmer,
-            csl3kmer
+            csl3kmer,
+            size
         }
     }
 
@@ -506,78 +511,109 @@ impl CellIds<'_>{
             }
         }
 
-        for kmer in needletail::kmer::Kmers::new(&r1[c1[0]..c1[1]], 9 ) { // exactly 1
+        let mut ok = false;
+
+        for kmer in needletail::kmer::Kmers::new(&r1[c1[0]..c1[1]], self.size ) { // exactly 1 if size == 9
             let km = Kmer::from(kmer).into_u64();
             
             cell_id += match self.csl1.get( &km ){
                 Some(c1) => {
                         //println!("to_cellid the c1 {}", c1 );
+                        ok = true;
                         *c1 * max * max
                     },
                 None => {
-                    //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
-                    match self.csl1kmer.get( &kmer, 1, 0 ){
-                        Ok(c1) => {
-                            //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
-                            c1 * max * max
-                        },
-                        Err(_err) => {
-                            //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
-                            return  Err::<u32, &str>( "Cells no match 1" )
-                        }
-                    }
+                    0
+                    // //println!("trying to fix a problem: {:?}", std::str::from_utf8(kmer));
+                    // match self.csl1kmer.get( &kmer, 1, 0 ){
+                    //     Ok(c1) => {
+                    //         //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
+                    //         c1 * max * max
+                    //     },
+                    //     Err(_err) => {
+                    //         //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
+                    //         return  Err::<u32, &str>( "Cells no match 1" )
+                    //     }
+                    // }
                 }
             };
+            if ok {
+                break
+            }
             //println!("to_cellid 1: {}", cell_id);
         }
-        for kmer in needletail::kmer::Kmers::new(&r1[c2[0]..c2[1]], 9 ) {
+        if ok == false{
+            return  Err::<u32, &str>( "Cells no match 1" )
+        }
+        ok = false;
+
+        for kmer in needletail::kmer::Kmers::new(&r1[c2[0]..c2[1]], self.size ) {
             
             let km = Kmer::from(kmer).into_u64();
             cell_id +=match self.csl2.get( &km ){
                 Some(c2) => {
                         //println!("to_cellid the c2 {}", c2 );
+                        ok = true;
                          *c2 * max 
                     }
                     ,
                 None => {
-                    //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
-                    //return  Err::<u32, &str>( "Cells no match 1" )
-                    match self.csl2kmer.get( &kmer, 1, 0 ){ // jump = 1 and start = 0 =>take every kmer you can get
-                        Ok(c1) => {
-                            //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
-                            c1 * max
-                        },
-                        Err(_err) => {
-                            //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
-                            return  Err::<u32, &str>( "Cells no match 1" )
-                        }
-                    }
+                    // println!("{:?}\ntrying to find a problem in the csl2 object - could not find id for seq: {:?}",std::str::from_utf8(&r1), std::str::from_utf8(kmer));
+                    0
+                    
+                    // //return  Err::<u32, &str>( "Cells no match 1" )
+                    // match self.csl2kmer.get( &kmer, 1, 0 ){ // jump = 1 and start = 0 =>take every kmer you can get
+                    //     Ok(c1) => {
+                    //         //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
+                    //         c1 * max
+                    //     },
+                    //     Err(_err) => {
+                    //         //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
+                    //         return  Err::<u32, &str>( "Cells no match 1" )
+                    //     }
+                    // }
                 }
             };
+            if ok {
+                break
+            }
             //println!("to_cellid 2: {}", cell_id);
         }
-        for kmer in needletail::kmer::Kmers::new(&r1[c3[0]..c3[1]], 9 ) {
+        if ok == false{
+            return  Err::<u32, &str>( "Cells no match 2" )
+        }
+        ok = false;
+
+        for kmer in needletail::kmer::Kmers::new(&r1[c3[0]..c3[1]], self.size ) {
             let km = Kmer::from(kmer).into_u64();
             cell_id +=match self.csl3.get( &km ){
                 Some(c3) => {
                     //println!("to_cellid the c3 {}", c3 );
+                    ok = true;
                     *c3
                 },
                 None => {
-                    //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
-                    match self.csl3kmer.get( &kmer, 1, 0 ){
-                        Ok(c1) => {
-                            //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
-                            c1
-                        },
-                        Err(_err) => {
-                            //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
-                            return  Err::<u32, &str>( "Cells no match 1" )
-                        }
-                    }
+                    0
+                    // //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
+                    // match self.csl3kmer.get( &kmer, 1, 0 ){
+                    //     Ok(c1) => {
+                    //         //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
+                    //         c1
+                    //     },
+                    //     Err(_err) => {
+                    //         //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
+                    //         return  Err::<u32, &str>( "Cells no match 1" )
+                    //     }
+                    // }
                 }
             };
+            if ok {
+                break
+            }
             //println!("to_cellid 3: {}", cell_id);
+        }
+        if ok == false{
+            return  Err::<u32, &str>( "Cells no match 3" )
         }
 
         cell_id += 1;

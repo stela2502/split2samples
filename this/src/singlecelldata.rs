@@ -44,16 +44,17 @@ impl CellData{
         }
     }
 
-    pub fn add(&mut self, geneid: usize, umi:u64 ){
+    pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
         //println!("adding gene id {}", geneid );
-        match self.genes.get_mut( &geneid ) {
+        return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
-                gene.insert( umi ); // the gene has already been added - check if umi matters
+                gene.insert( umi ) // the gene has already been added - check if umi matters
                 }, 
             None => {
                 let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
                 gc.insert( umi );
                 self.genes.insert( geneid, gc );
+                true
             }
         }
     }
