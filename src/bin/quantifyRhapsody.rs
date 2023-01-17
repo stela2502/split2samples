@@ -275,9 +275,9 @@ fn main() {
                                         if ok_reads % split == 0{
                                             let log_str = format!("{} ({:.4}% total; {:.4}% PCR duplicates [{:.4}% in last iteration]): {:?} -> gene id: {}, cell id: {}",
                                                 ok_reads , 
-                                                ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 , 
-                                                pcr_duplicates as f32 / ok_reads as f32,
-                                                local_dup as f32 / split as f32,
+                                                ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
+                                                pcr_duplicates as f32 / ok_reads as f32 * 100.0,
+                                                local_dup as f32 / split as f32 * 100.0,
                                                 std::str::from_utf8(&seqrec1.seq()), gene_id , cell_id 
                                             );
                                             pb.set_message( log_str.clone() );
@@ -363,8 +363,8 @@ fn main() {
         let total = no_sample+ unknown + ok_reads;
         println!(     "no sample ID reads: {} reads", no_sample );
         println!(     "N's or too short  : {}", unknown );
-        println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) );
-        println!(     "pcr duplicates    : {} ({:.2}%)", pcr_duplicates, ( pcr_duplicates as f32 / ok_reads as f32 ) );
+        println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
+        println!(     "pcr duplicates    : {} ({:.2}%)", pcr_duplicates, ( pcr_duplicates as f32 / ok_reads as f32 ) * 100.0 );
 
         let file_path2 = format!("{}/SampleCounts.tsv", opts.outpath );
         println!( "written to {:?}", file_path2);
