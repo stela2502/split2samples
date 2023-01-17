@@ -17,6 +17,12 @@ use std::time::SystemTime;
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use std::time::Duration;
 
+
+use std::io::BufWriter;
+use std::fs::File;
+use std::io::Write;
+
+
 /// Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles.
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2)
 
@@ -172,7 +178,7 @@ fn main() {
     let mut pcr_duplicates = 0;
     let mut local_dup = 0;
     let split:usize = 1000*1000;
-    let split:usize = 1000;
+    //let split:usize = 1000;
 
     let pos:Vec<usize>;
     let min_sizes:Vec<usize>;
@@ -186,6 +192,19 @@ fn main() {
         min_sizes = vec![ 51, 51 ];
     }
 
+    let log_file_str = PathBuf::from(&opts.outpath).join(
+        format!("Mapping_log.txt" )
+    );
+
+    println!( "the log file: {}", log_file_str.file_name().unwrap().to_str().unwrap() );
+    
+    let log_file = match File::create( log_file_str ){
+        Ok(file) => file,
+        Err(err) => {
+            panic!("Error: {:#?}", err);
+        }
+    };
+    let mut log_writer = BufWriter::new(&log_file);
 
     {
         let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
@@ -254,14 +273,22 @@ fn main() {
                                             local_dup += 1;
                                         }
                                         if ok_reads % split == 0{
-                                            pb.set_message(format!("{} ({:.4}% total; {:.4}% PCR duplicates [{:.4}% in last iteration]): {:?} -> gene id: {}, cell id: {}",
+                                            let log_str = format!("{} ({:.4}% total; {:.4}% PCR duplicates [{:.4}% in last iteration]): {:?} -> gene id: {}, cell id: {}",
                                                 ok_reads , 
                                                 ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 , 
                                                 pcr_duplicates as f32 / ok_reads as f32,
                                                 local_dup as f32 / split as f32,
-                                                std::str::from_utf8(&seqrec1.seq()), gene_id , cell_id ) );
+                                                std::str::from_utf8(&seqrec1.seq()), gene_id , cell_id 
+                                            );
+                                            pb.set_message( log_str.clone() );
                                             pb.inc(1);
-                                            std::thread::sleep(Duration::from_millis(100));
+                                            match writeln!( log_writer, "{}", log_str ){
+                                                Ok(_) => (),
+                                                Err(err) => {
+                                                    eprintln!("write error: {}", err);
+                                                }
+                                            };
+                                            //std::thread::sleep(Duration::from_millis(100));
                                         }
                                     },
                                     Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
