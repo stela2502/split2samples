@@ -288,6 +288,7 @@ fn main() {
                                                     eprintln!("write error: {}", err);
                                                 }
                                             };
+                                            local_dup = 0;
                                             //std::thread::sleep(Duration::from_millis(100));
                                         }
                                     },
