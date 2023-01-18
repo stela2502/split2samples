@@ -17,6 +17,10 @@ use std::fs::File;
 use std::io::Write;
 use std::fs;
 
+use flate2::Compression;
+use flate2::write::GzEncoder;
+
+
 use std::path::PathBuf;
 use std::path::Path;
 
@@ -246,21 +250,24 @@ impl <'a> SingleCellData{
             };
         }
 
-        let file = match File::create( file_path.clone().join("matrix.mtx") ){
+        let mut file = match File::create( file_path.clone().join("matrix.mtx.gz") ){
             Ok(file) => file,
             Err(err) => {
                 panic!("Error creating the path?: {:#?}", err);
             }
         };
-        let mut writer = BufWriter::new(&file);
 
-        let file_b = match File::create( file_path.clone().join("barcodes.tsv") ){
+        let mut file1 = GzEncoder::new(file, Compression::default());
+        let mut writer = BufWriter::new(file1);
+
+        let file_b = match File::create( file_path.clone().join("barcodes.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
                 panic!("Error creating the path?: {:#?}", err);
             }
         };
-        let mut writer_b = BufWriter::new(&file_b);
+        let mut file2 = GzEncoder::new(file_b, Compression::default());
+        let mut writer_b = BufWriter::new(file2);
 
         match writeln!( writer, "{}\n{}", 
             "%%MatrixMarket matrix coordinate integer general",
@@ -272,13 +279,14 @@ impl <'a> SingleCellData{
             }
         };
 
-        let file_f = match File::create( file_path.clone().join("features.tsv") ){
+        let file_f = match File::create( file_path.clone().join("features.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
                 panic!("Error creating the path?: {:#?}", err);
             }
         };
-        let mut writer_f = BufWriter::new(&file_f);
+        let mut file3 = GzEncoder::new(file_f, Compression::default());
+        let mut writer_f = BufWriter::new(file3);
 
         for (name, _id) in &genes.names4sparse {
             match writeln!( writer_f, "{}\t{}\t{}",name, name , "Gene Expression" ){
@@ -341,6 +349,10 @@ impl <'a> SingleCellData{
             }
         }
         println!( "sparse Matrix: {} cell and {} genes written ({} cells too view umis) to path {:?}; n={}", passed, gene_id, failed,  file_path.into_os_string().into_string(), entry);
+
+        //file.flush();
+        //file1.flush();
+        //file2.flush();
 
         return Ok( () );
     }
