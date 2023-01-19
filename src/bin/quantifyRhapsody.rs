@@ -3,11 +3,11 @@ use needletail::parse_fastx_file;
 use kmers::naive_impl::Kmer;
 use this::cellids::CellIds;
 
-use this::sampleids::SampleIds;
+//use this::sampleids::SampleIds;
 use this::singlecelldata::SingleCellData;
 use this::geneids::GeneIds;
 
-use this::last5::Last5;
+//use this::last5::Last5;
 
 use std::path::PathBuf;
 use std::fs;
@@ -15,7 +15,7 @@ use std::fs;
 use std::time::SystemTime;
 
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
-use std::time::Duration;
+//use std::time::Duration;
 
 
 use std::io::BufWriter;
@@ -47,9 +47,12 @@ struct Opts {
     /// the fastq database containing the antibody tags
     #[clap(short, long)]
     antibody: String,
-    /// the minimum reads (sample + genes + antibody combined)
+    /// the minimum reads per cell (sample + genes + antibody combined)
     #[clap(short, long)]
     min_umi: usize,
+    /// UMI min count - use every umi (per gene) or only reoccuring ones ?
+    #[clap(short, long)]
+    umi_count: u8,
     /// the version of beads you used v1, v2.96 or v2.384
     #[clap(short, long)]
     version: String,
@@ -78,7 +81,7 @@ fn main() {
 
     
 
-    let sub_len = 9;
+    //let sub_len = 9;
     //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
     //cells.init_rhapsody( &opts.specie );
 
@@ -324,7 +327,7 @@ fn main() {
         pb.finish_with_message("writing files...");
 
         // calculating a little bit wrong - why? no idea...
-        println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
+        println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi , opts.umi_count) );
 
 
         let fp1 = PathBuf::from(opts.reads.clone());
@@ -336,8 +339,9 @@ fn main() {
         let file_path_sp = PathBuf::from(&opts.outpath).join(
             format!("BD_Rhapsody_expression" )
         );
+
         // this always first as this will decide which cells are OK ones!
-        match gex.write_sparse_sub ( file_path_sp, &mut genes , &gene_names, opts.min_umi ) {
+        match gex.write_sparse_sub ( file_path_sp, &mut genes , &gene_names, opts.min_umi, opts.umi_count ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
@@ -345,15 +349,14 @@ fn main() {
         let file_path_sp = PathBuf::from(&opts.outpath).join(
             format!("BD_Rhapsody_antibodies" )
         );
-        // this always first as this will decide which cells are OK ones!
-        
-        match gex.write_sparse_sub ( file_path_sp, &mut genes, &ab_names, opts.min_umi / 2 ) {
+
+        match gex.write_sparse_sub ( file_path_sp, &mut genes, &ab_names, opts.min_umi / 2, opts.umi_count ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
 
     
-        match gex.write_sub ( file_path, &mut genes, &sample_names, 0 ) {
+        match gex.write_sub ( file_path, &mut genes, &sample_names, 0, 0 ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };

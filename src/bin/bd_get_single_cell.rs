@@ -42,9 +42,23 @@ fn main() {
 
     let mut ofile = Ofiles::new( opts.id as usize, "OneSingleCell", "R2.fastq.gz", "R1.fastq.gz",  &opts.outpath.as_str() );
 
-    'main: while let Some(record2) = readefile.next() {
+    let pos:Vec<usize>;
+    let min_sizes:Vec<usize>;
 
+    if &opts.version == "v1"{
+        pos = vec![0,9, 21,30, 43,52, 52,60 ];
+        min_sizes = vec![ 66, 60 ];
+    }
+    else {
+        pos = vec![0,9, 12,22, 26,35 , 36,42 ];
+        min_sizes = vec![ 51, 51 ];
+    }
+
+
+
+    'main: while let Some(record2) = readefile.next() {
         if let Some(record1) = readereads.next() {
+
             let seqrec = match record2{
                 Ok( res ) => res,
                 Err(err) => {
@@ -60,15 +74,25 @@ fn main() {
                 }
             };
 
-
-            if seqrec1.seq().len() < 66 {
+            if seqrec1.seq().len() < min_sizes[0] {
                 continue;
             }
-            if seqrec.seq().len() < 64 {
+            if seqrec.seq().len() < min_sizes[1] {
                 continue;
             }
+            //let seq = seqrec.seq().into_owned();
+            for nuc in &seqrec1.seq()[pos[6]..pos[7]] {  
+                if *nuc ==b'N'{
+                    continue 'main;
+                }
+            }
+            //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
+            // let umi = Kmer::from( &seqrec1.seq()[pos[6]..pos[7]]).into_u64();
 
-            match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+            // first match the cell id - if that does not work the read is unusable
+            //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+            match cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
+        
             	Ok(cell_id) => {
             		if cell_id == opts.id{
             			match seqrec1.write(&mut ofile.buff1, None){
