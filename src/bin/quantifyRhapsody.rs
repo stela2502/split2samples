@@ -22,6 +22,8 @@ use std::io::BufWriter;
 use std::fs::File;
 use std::io::Write;
 
+// use std::collections::HashSet;
+// use std::convert::TryInto;
 
 /// Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles.
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2)
@@ -59,6 +61,11 @@ struct Opts {
 }
 
 
+// fn read_be_u128(input: &[u8]) -> u128 {
+//     let (int_bytes, rest) = input.split_at(std::mem::size_of::<u128>());
+//     //*input = rest;
+//     u128::from_be_bytes(int_bytes.try_into().unwrap())
+// }
 
 // the main function nowadays just calls the other data handling functions
 fn main() {
@@ -85,7 +92,7 @@ fn main() {
     //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
     //cells.init_rhapsody( &opts.specie );
 
-
+    // let mut cell_umi:HashSet<u128> = HashSet::new();
     let mut genes:GeneIds = GeneIds::new(9); // split them into 9 bp kmers
 
     let mut expr_file = parse_fastx_file(&opts.expression).expect("valid path/file");
@@ -266,6 +273,11 @@ fn main() {
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 match cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
                     Ok(cell_id) => {
+                        // this is removing complexity from the data - in the test dataset 111 reads are ignored.
+                        // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );
+                        // if ! cell_umi.insert( cell_id_umi ){
+                        //     continue 'main;
+                        // }
                         match genes.get( &seqrec.seq() ){
                             Some(gene_id) =>{
                                 match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
@@ -340,7 +352,7 @@ fn main() {
         //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi , opts.umi_count) );
 
 
-        let fp1 = PathBuf::from(opts.reads.clone());
+        //let fp1 = PathBuf::from(opts.reads.clone());
         //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
         let file_path = PathBuf::from(&opts.outpath).join(
             format!("SampleCounts.tsv" )

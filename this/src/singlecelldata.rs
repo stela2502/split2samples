@@ -362,7 +362,7 @@ impl <'a> SingleCellData{
                     //println!("Gene {} included in output", name );
                     entries +=1;
                 }
-            //}
+                //}
             }
         }
         return entries;
