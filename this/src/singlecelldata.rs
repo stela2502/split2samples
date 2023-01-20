@@ -72,6 +72,7 @@ impl CellData{
         for name in gnames{
             n += self.n_umi_4_gene( gene_info, name, min_umi_count );
         }
+        //println!("I got {} umis for cell {}", n, self.name );
         return n; 
     }
 
@@ -83,16 +84,17 @@ impl CellData{
         };
         n += match self.genes.get( id  ){
             Some( map ) => {
-                let mut n = 0;
+                let mut h = 0;
                 for (_key, value) in map.iter() {
                     if value >= &min_umi_count{
-                        n += 1;                        
+                        h += 1;                        
                     }
                 }
-                return n
+                return h
             }
             None => 0
         };
+        if n > 0 { println!("I got {} umis for gene{}", n, gname ); }
         return n;
     }
 
@@ -305,12 +307,13 @@ impl <'a> SingleCellData{
         let mut cell_id = 0;
 
         for ( _id,  cell_obj ) in &self.cells {
-            if cell_obj.passing {
+            if ! cell_obj.passing {
                 //println!("failed cell {}", cell_obj.name );
                 failed +=1;
                 continue;
             }
             passed += 1;
+            cell_id += 1;
             match writeln!( writer_b, "{}",cell_obj.name ){
                 Ok(_) => (),
                 Err(err) => {
@@ -319,9 +322,6 @@ impl <'a> SingleCellData{
                 }
             };
 
-            //println!("got the cell {}", cell_obj.name );
-            cell_id += 1;
-            passed +=1;
             for (name, gene_id) in &genes.names4sparse {
                 let n = cell_obj.n_umi_4_gene( genes, name, min_umi_count );
                 if n > 0{
@@ -335,7 +335,7 @@ impl <'a> SingleCellData{
                 }
             }
         }
-        println!( "sparse Matrix: {} cell and {} genes written ({} cells too view umis) to path {:?}; ", passed,  failed, genes.names4sparse.len(), file_path.into_os_string().into_string());
+        println!( "sparse Matrix: {} cell(s) and {} gene(s) written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), failed, file_path.into_os_string().into_string());
         return Ok( () );
     }
     /// Update the gene names for export to sparse
@@ -375,7 +375,7 @@ impl <'a> SingleCellData{
 
         if ! self.checked{
 
-            println!("Checking cell for min umi count!");
+            //println!("Checking cell for min umi count!");
 
             for ( _id,  cell_obj ) in &mut self.cells {
                 // total umi check
@@ -388,13 +388,13 @@ impl <'a> SingleCellData{
                 }
             }
             self.checked = true;
-            println!("{} cells have passed the cutoff of {} counts per cell and {} occurances per umi",ncell, min_count, min_umi_count ); 
+            //println!("{} cells have passed the cutoff of {} counts per cell and {} occurances per umi",ncell, min_count, min_umi_count ); 
         }
         
         let nentry = self.update_names_4_sparse( genes, names, min_umi_count );
 
         let ret = format!("{} {} {}", genes.names4sparse.len(), ncell, nentry );
-        println!("final return: mtx_counts: {}", ret );
+        //println!("final return: mtx_counts: {}", ret );
         return ret;
     }
 }

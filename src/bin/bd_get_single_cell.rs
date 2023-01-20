@@ -5,6 +5,8 @@ use this::cellids::CellIds;
 use this::ofiles::Ofiles;
 use std::fs;
 
+use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
@@ -55,6 +57,21 @@ fn main() {
     }
 
 
+    let mut count = 0;
+
+    println!("writing all reads from the cell {}", opts.id );
+
+    let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
+            .unwrap()
+            .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
+    let m = MultiProgress::new();
+    let pb = m.add(ProgressBar::new(5000));
+    pb.set_style(spinner_style.clone());
+    pb.set_prefix(format!("[{}/?]", 100));
+
+    let split = 1000 * 1000;
+    //let split = 1000 ;
+    let mut total = 0;
 
     'main: while let Some(record2) = readefile.next() {
         if let Some(record1) = readereads.next() {
@@ -86,15 +103,24 @@ fn main() {
                     continue 'main;
                 }
             }
+
             //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
             // let umi = Kmer::from( &seqrec1.seq()[pos[6]..pos[7]]).into_u64();
 
             // first match the cell id - if that does not work the read is unusable
             //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+            
             match cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
         
             	Ok(cell_id) => {
+                    total += 1;
+                    if total % split == 0{
+                        let log_str = format!("cell read (any/{}) {}/{} here I have cell {}", opts.id, total, count, cell_id );
+                        pb.set_message( log_str.clone() );
+                        pb.inc(1);
+                    }
             		if cell_id == opts.id{
+                        count += 1;
             			match seqrec1.write(&mut ofile.buff1, None){
                 			Ok(_) => (),
                 			Err(err) => println!("{}",err)
@@ -107,7 +133,8 @@ fn main() {
             	},
             	Err(_) => (),
             };
-        }
+        } 
     }
 
+    println!("I found {} reads for the cell {}", count, opts.id );
 }

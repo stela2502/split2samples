@@ -270,8 +270,10 @@ fn main() {
                             Some(gene_id) =>{
                                 match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
                                     Ok(cell_info) => {
+                                        //println!("I got gene {} for cell {}", gene_id , cell_info.name);
                                         ok_reads += 1;
                                         if cell_info.add( gene_id, umi ) == false {
+                                            //println!("  -> pcr duplicate");
                                             pcr_duplicates += 1;
                                             local_dup += 1;
                                         }
@@ -324,14 +326,22 @@ fn main() {
             }
         }
         
-        pb.finish_with_message("writing files...");
+        let log_str = format!("{} cell reads ({:.4}% with gene info; {:.4}% of which are PCR duplicates [{:.4}% in last iteration])",
+            ok_reads , 
+            ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
+            pcr_duplicates as f32 / ok_reads as f32 * 100.0,
+            local_dup as f32 / split as f32 * 100.0,
+        );
+
+        pb.finish_with_message( log_str );
+        println!("\n\nWriting outfiles ...");
 
         // calculating a little bit wrong - why? no idea...
-        println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi , opts.umi_count) );
+        //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi , opts.umi_count) );
 
 
         let fp1 = PathBuf::from(opts.reads.clone());
-        println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
+        //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
         let file_path = PathBuf::from(&opts.outpath).join(
             format!("SampleCounts.tsv" )
         );
@@ -350,7 +360,7 @@ fn main() {
             format!("BD_Rhapsody_antibodies" )
         );
 
-        match gex.write_sparse_sub ( file_path_sp, &mut genes, &ab_names, opts.min_umi / 2, opts.umi_count ) {
+        match gex.write_sparse_sub ( file_path_sp, &mut genes, &ab_names, 1, 1 ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
@@ -364,13 +374,15 @@ fn main() {
         
 
         let total = no_sample+ unknown + ok_reads;
+        println!( "\nSummary:");
         println!(     "no sample ID reads: {} reads", no_sample );
         println!(     "N's or too short  : {}", unknown );
         println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
         println!(     "pcr duplicates    : {} ({:.2}%)", pcr_duplicates, ( pcr_duplicates as f32 / ok_reads as f32 ) * 100.0 );
 
         let file_path2 = format!("{}/SampleCounts.tsv", opts.outpath );
-        println!( "written to {:?}", file_path2);
+        println!( "\nCell->Sample table written to {:?}\n", file_path2);
+
     }
 
 
@@ -389,7 +401,7 @@ fn main() {
             min = milli % 60;
             milli= (milli -min) /60;
 
-            println!("quantifyRhapsody finished in {}h {}min {} sec {}milli sec", milli, min, sec, mil );},
+            println!("quantifyRhapsody finished in {}h {}min {} sec {}milli sec\n", milli, min, sec, mil );},
        Err(e) => {println!("Error: {e:?}");}
     }
 
