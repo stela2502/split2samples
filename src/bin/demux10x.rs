@@ -229,32 +229,3 @@ pub fn fill_kmer_vec<'a>( seq: needletail::kmer::Kmers<'a>, kmer_vec: &mut Vec<u
    }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]    
-    fn test_genes_names_ids () {
-        let mut genes = super::parse_bc_map( "testData/HTOs.csv", 9 );
-
-        let exp = vec![0,1,2,3,4,5 ];
-        let mut data = Vec::<usize>::with_capacity(7);
-        for ( _name, id ) in &genes.names{
-            eprintln!( "{}", id);
-            data.push(*id);
-        }
-        assert_eq!( exp, data);
-    }
-    fn test_genes_get (){
-
-        let  genes = super::parse_bc_map( "testData/HTOs.csv", 9 );
-        // Hope I get the correct id:
-        let mut val = genes.get( b"CTTGCCGCATGTCAT" );
-        assert_eq!( Some(2), val );
-        val = genes.get( b"ACCCACCAGTAAGAC" );
-        assert_eq!( Some(0), val );
-        val = genes.get( b"NNNGCCGCATGTCAN" );
-        assert_eq!( Some(2), val );
-        val = genes.get( b"NNNGCCNCATGTCAN" );
-        let val2:Option<usize> = None;
-        assert_eq!( val2, val );
-    }
-}

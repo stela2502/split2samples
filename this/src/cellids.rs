@@ -420,19 +420,20 @@ impl CellIds<'_>{
                 let km = Kmer::from(kmer).into_u64();
 
                 if bad_entries.contains( &km ){
-                    println!( "CellIDs start cls1 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ));
+                    println!( "CellIDs start cls1 found a duplicate entry #3 at id={}: {:?}", i, std::str::from_utf8( &kmer ));
                     continue
                 }
                 if csl1.contains_key ( &km ){
                     bad_entries.insert( km.clone() );
                     csl1.remove( &km );
-                    println!( "CellIDs start cls1 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ))
+                    println!( "CellIDs start cls1 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ))
                 }else {
                     //let info = Info::new(km, name.clone() );
                     csl1.insert(km, i );
-                    i +=1;
+                    
                 }
             }
+            i +=1;
         }
 
         i = 0;
@@ -441,19 +442,20 @@ impl CellIds<'_>{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
                 if bad_entries.contains( &km ){
-                    println!( "CellIDs start cls2 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ));
+                    println!( "CellIDs start cls2 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ));
                     continue
                 }
                 if csl2.contains_key ( &km ){
                     bad_entries.insert( km.clone() );
                     csl2.remove( &km );
-                    println!( "CellIDs start cls2 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ))
+                    println!( "CellIDs start cls2 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ))
                 }else {
                     //let info = Info::new(km, name.clone() );
                     csl2.insert(km, i );
-                    i +=1;
+                    
                 }
             }
+            i +=1;
         }
 
         i = 0;
@@ -462,19 +464,20 @@ impl CellIds<'_>{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
                 if bad_entries.contains( &km ){
-                    println!( "CellIDs start cls3 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ));
+                    println!( "CellIDs start cls3 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ));
                     continue
                 }
                 if csl3.contains_key ( &km ){
                     bad_entries.insert( km.clone() );
                     csl3.remove( &km );
-                    println!( "CellIDs start cls3 found a duplicate entry: {:?}", std::str::from_utf8( &kmer ))
+                    println!( "CellIDs start cls3 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ))
                 }else {
                     //let info = Info::new(km, name.clone() );
                     csl3.insert(km, i );
-                    i +=1;
+                    
                 }
             }
+            i +=1;
         }
 
         Self {
@@ -494,7 +497,7 @@ impl CellIds<'_>{
 
     pub fn to_cellid (&mut self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
         let mut cell_id:u32 = 0;
-        let max:u32 = 96;
+        let max:u32 = self.c1s.len() as u32;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
         
         //println!("to_cellid the c1 seq: {:?}", std::str::from_utf8( &r1[c1[0]..c1[1]] ) );
@@ -518,7 +521,7 @@ impl CellIds<'_>{
             
             cell_id += match self.csl1.get( &km ){
                 Some(c1) => {
-                        //println!("to_cellid the c1 {}", c1 );
+                        println!("to_cellid the c1 {}", c1 );
                         ok = true;
                         *c1 * max * max
                     },
@@ -552,7 +555,7 @@ impl CellIds<'_>{
             let km = Kmer::from(kmer).into_u64();
             cell_id +=match self.csl2.get( &km ){
                 Some(c2) => {
-                        //println!("to_cellid the c2 {}", c2 );
+                        println!("to_cellid the c2 {}", c2 );
                         ok = true;
                          *c2 * max 
                     }
@@ -588,7 +591,7 @@ impl CellIds<'_>{
             let km = Kmer::from(kmer).into_u64();
             cell_id +=match self.csl3.get( &km ){
                 Some(c3) => {
-                    //println!("to_cellid the c3 {}", c3 );
+                    println!("to_cellid the c3 {}", c3 );
                     ok = true;
                     *c3
                 },
@@ -623,10 +626,11 @@ impl CellIds<'_>{
 
     pub fn to_sequence(&self, index:u32) -> Vec<&[u8; 9]>{
         let mut idx: u32 = index - 1;
-        let code1 = ((idx / (96 * 96)) as f64).floor() as u32;
-        idx = idx - code1 * (96 * 96);
-        let code2 = ((idx / 96) as f64).floor() as u32;
-        idx = idx - code2 * 96;
+        let max:u32 = self.c1s.len() as u32;
+        let code1 = ((idx / (max * max)) as f64).floor() as u32;
+        idx = idx - code1 * (max * max);
+        let code2 = ((idx / max) as f64).floor() as u32;
+        idx = idx - code2 * max;
         //println!("index {} -> I translated to the ids {}, {}, {}", index, code1, code2, idx );
         let ret = vec![ self.c1s[code1 as usize], self.c2s[code2 as usize], self.c3s[idx as usize]];
         return ret;
@@ -644,16 +648,19 @@ impl CellIds<'_>{
 
 #[cfg(test)]
 mod tests {
+    use crate::cellids::CellIds;
+
     #[test]
-    fn getsamples() {
-        let cells = crate::cell_ids::new();
+    //
+    fn getcells_9(){
+        let mut cells = CellIds::new(&"v1".to_string(), 9 as u8 );
 
         let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
         let mut id:u32 = 1;
         let mut exp= ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
         match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
-            Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+            Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
         
         let mut exp2 = vec![b"GTCGCTATA", b"TACAGGATA", b"AAGCCTTCT"];
@@ -665,7 +672,7 @@ mod tests {
         exp2 = vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"];
         match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
-            Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+            Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
         //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
         assert_eq!( cells.to_sequence( exp ), exp2 );
@@ -678,7 +685,47 @@ mod tests {
         assert_eq!( 884735+1 , exp);
         match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
-            Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+            Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+        };
+        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        assert_eq!( cells.to_sequence( exp ), exp2 );
+    }
+    //
+    #[test]
+    fn getcells_7() {
+        let mut cells = CellIds::new(&"v1".to_string(), 7 as u8 );
+
+        let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
+        let mut id:u32 = 1;
+        let mut exp= ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
+        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+            Ok(val) => assert_eq!( val , exp ),
+            Err(_err) => (),
+        };
+        
+        let mut exp2 = vec![b"GTCGCTATA", b"TACAGGATA", b"AAGCCTTCT"];
+        assert_eq!( cells.to_sequence( exp ), exp2 );
+        // 3, 3, 3
+        primer = b"CTTCACATANNNNNNNNNNNNTGTGAAGAANNNNNNNNNNNNNCACAAGTAT";
+        id = 3;
+        exp = ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
+        exp2 = vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"];
+        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+            Ok(val) => assert_eq!( val , exp ), 
+            Err(_err) => (), 
+        };
+        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        assert_eq!( cells.to_sequence( exp ), exp2 );
+
+        // and the last one
+        primer = b"TGCGATCTANNNNNNNNNNNNCAACAACGGNNNNNNNNNNNNNCATAGGTCA";
+        id = 96;
+        exp = ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
+        exp2 = vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"];
+        assert_eq!( 884735+1 , exp);
+        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+            Ok(val) => assert_eq!( val , exp ), 
+            Err(_err) => (),
         };
         //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
         assert_eq!( cells.to_sequence( exp ), exp2 );        
