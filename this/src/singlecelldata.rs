@@ -337,7 +337,7 @@ impl <'a> SingleCellData{
                 }
             }
         }
-        println!( "min UMI count in export function: {}", min_umi_count);
+        //println!( "min UMI count in export function: {}", min_umi_count);
         println!( "sparse Matrix: {} cell(s) and {} gene(s) and {} entries written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), entries, failed, file_path.into_os_string().into_string());
         return Ok( () );
     }
@@ -373,9 +373,8 @@ impl <'a> SingleCellData{
         }
         if genes.max_id  ==0{
             eprintln!( "None of the genes have data:\n{}", names.join( ", " ) );
-        }else {
-            println!("{} genes requested and {} with data found", names.len(), genes.max_id);
         }
+        //else { println!("{} genes requested and {} with data found", names.len(), genes.max_id); }
         if names.len() != genes.max_id{
             // better to run this once more - this does somehow not create the same count if more genes are checked for
             let mut used:Vec<String> = Vec::with_capacity( genes.max_id );
@@ -409,7 +408,7 @@ impl <'a> SingleCellData{
         let ncell_and_entries = self.update_names_4_sparse( genes, names, min_umi_count );
 
         let ret = format!("{} {} {}", genes.names4sparse.len(), ncell_and_entries[0], ncell_and_entries[1] );
-        println!("mtx_counts -> final return: mtx_counts: {}", ret );
+        //println!("mtx_counts -> final return: mtx_counts: {}", ret );
         return ret;
     }
 }

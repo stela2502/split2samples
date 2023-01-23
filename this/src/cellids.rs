@@ -521,7 +521,7 @@ impl CellIds<'_>{
             
             cell_id += match self.csl1.get( &km ){
                 Some(c1) => {
-                        println!("to_cellid the c1 {}", c1 );
+                        //println!("to_cellid the c1 {}", c1 );
                         ok = true;
                         *c1 * max * max
                     },
@@ -555,7 +555,7 @@ impl CellIds<'_>{
             let km = Kmer::from(kmer).into_u64();
             cell_id +=match self.csl2.get( &km ){
                 Some(c2) => {
-                        println!("to_cellid the c2 {}", c2 );
+                        //println!("to_cellid the c2 {}", c2 );
                         ok = true;
                          *c2 * max 
                     }
@@ -591,7 +591,7 @@ impl CellIds<'_>{
             let km = Kmer::from(kmer).into_u64();
             cell_id +=match self.csl3.get( &km ){
                 Some(c3) => {
-                    println!("to_cellid the c3 {}", c3 );
+                    //println!("to_cellid the c3 {}", c3 );
                     ok = true;
                     *c3
                 },
@@ -727,6 +727,22 @@ mod tests {
             Ok(val) => assert_eq!( val , exp ), 
             Err(_err) => (),
         };
+        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        assert_eq!( cells.to_sequence( exp ), exp2 );        
+    }
+    #[test]
+    fn getcells_384_9() {
+        let mut cells = CellIds::new(&"v2.384".to_string(), 9 as u8 );
+
+        let mut primer = b"TGTCTAGCGNNNNNNNNNNNNTTGTGCGGANNNNNNNNNNNNNTTGTGCGAC"; // totally artificial - primer design wrong... - lazy
+        let exp2 = vec![b"TGTCTAGCG", b"TTGTGCGGA", b"TTGTGCGAC"];
+        let mut id:u32 = 3;
+        let mut exp= ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) +1) as u32;
+        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+            Ok(val) => assert_eq!( val , exp ),
+            Err(_err) => (),
+        };
+        
         //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
         assert_eq!( cells.to_sequence( exp ), exp2 );        
     }
