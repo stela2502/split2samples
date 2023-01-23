@@ -1,6 +1,6 @@
 [package]
 name = "split2samples"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2018"
 license-file = "LICENSE"
 description = "Split BD rapsody fastq files into sample specific fastq files"
@@ -20,3 +20,4 @@ kmers = { git="https://github.com/COMBINE-lab/kmers" }
 glob = "0.3.0"
 regex = "1"
 this = { path = "this" }
+indicatif = {version = "*", features = ["rayon"]}

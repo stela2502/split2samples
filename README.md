@@ -24,6 +24,7 @@ cargo build --release
 cp target/release/split2samples /usr/bin
 cp target/release/demux10x /usr/bin
 cp target/release/quantifyRhapsody /usr/bin
+cp target/release/quantifyRhapsody_noUMI /usr/bin
 cp target/release/bd_cell_id_2_seq /usr/bin
 cp target/release/bd_get_single_cell /usr/bin
 ``` 
@@ -38,7 +39,7 @@ using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 To run the test data (a tiny bit of a real dataset):
 
 ```
-target/release/quantifyRhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30
+target/release/quantifyRhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30 -v v1
 ```
 
 This will produce an output consisting of two cells. and it should run super fast.

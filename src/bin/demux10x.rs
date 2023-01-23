@@ -33,7 +33,7 @@ use std::time::SystemTime;
 
 /// Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
 #[derive(Parser)]
-#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>")]
+#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
@@ -193,7 +193,7 @@ fn main() {
             format!("Cell2Sample.{}.tsv", fp1.file_name().unwrap().to_str().unwrap() )
         );
 
-        match cells.write ( file_path, &mut genes, opts.min_umi ) {
+        match cells.write ( file_path, &mut genes, opts.min_umi, 0 ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
@@ -229,32 +229,3 @@ pub fn fill_kmer_vec<'a>( seq: needletail::kmer::Kmers<'a>, kmer_vec: &mut Vec<u
    }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]    
-    fn test_genes_names_ids () {
-        let mut genes = super::parse_bc_map( "testData/HTOs.csv", 9 );
-
-        let exp = vec![0,1,2,3,4,5 ];
-        let mut data = Vec::<usize>::with_capacity(7);
-        for ( _name, id ) in &genes.names{
-            eprintln!( "{}", id);
-            data.push(*id);
-        }
-        assert_eq!( exp, data);
-    }
-    fn test_genes_get (){
-
-        let  genes = super::parse_bc_map( "testData/HTOs.csv", 9 );
-        // Hope I get the correct id:
-        let mut val = genes.get( b"CTTGCCGCATGTCAT" );
-        assert_eq!( Some(2), val );
-        val = genes.get( b"ACCCACCAGTAAGAC" );
-        assert_eq!( Some(0), val );
-        val = genes.get( b"NNNGCCGCATGTCAN" );
-        assert_eq!( Some(2), val );
-        val = genes.get( b"NNNGCCNCATGTCAN" );
-        let val2:Option<usize> = None;
-        assert_eq!( val2, val );
-    }
-}

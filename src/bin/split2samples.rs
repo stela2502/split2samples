@@ -47,6 +47,9 @@ struct Opts {
     /// the mode of the program [fastqSplit, cellIdent, sampleSplit]
     #[clap(short, long)]
     mode: String,
+    /// the version of beads you used v1, v2.96 or v2.384
+    #[clap(short, long)]
+    version: String,
 }
 
 struct Ofiles {
@@ -240,7 +243,7 @@ fn cell_ident( opts:&Opts ){
     // let mut file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
 
     //  now we need to get a CellIDs object, too
-    let mut cells = CellIds::new();
+    let mut cells = CellIds::new( &opts.version, 9);
 
     let mut unknown = 0;
     let mut no_sample = 0;
@@ -340,7 +343,7 @@ fn sample_split( opts: &Opts){
     let mut cells2sample =  BTreeMap::<u32, u32>::new(); //: BTreeMap<u32, u32>;
 
     //  now we need to get a CellIDs object, too
-    let mut cells = CellIds::new();
+    let mut cells = CellIds::new(&opts.version, 9);
 
     // and we need to collect all cell2sample data
     let re = Regex::new(r"sample(\d*).int").unwrap();

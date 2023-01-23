@@ -171,6 +171,18 @@ impl GeneIds{
         return "CellID\t".to_owned()+&ret.join("\t")
     }
 
+    pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
+        let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
+        //println!( "I get try to push into a {} sized vector", self.names.len());
+        for name in names {
+            //println!( "Pushing {} -> {}", obj, *id-1);
+            ret.push( format!( "{}", name)) ;
+        }
+        ret.push("AsignedSampleName".to_string());
+        ret.push("FractionTotal".to_string());
+        return "CellID\t".to_owned()+&ret.join("\t")
+    }
+
 }
 
 
