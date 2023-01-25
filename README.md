@@ -57,13 +57,13 @@ USAGE:
     quantifyRhapsody.exe --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antybody <ANTYBODY> --min-umi <MIN_UMI>
 
 OPTIONS:
-    -a, --antibody <ANTIBODY>        the fastq database containing the antibody tags
-    -e, --expression <EXPRESSION>    the fastq database containing the genes
-    -f, --file <FILE>                the input R2 samples file
+    -a, --antibody <ANTIBODY>        the fasta database containing the antibody tags
+    -e, --expression <EXPRESSION>    the fasta database containing the genes
+    -f, --file <FILE>                the input R2 fastq file
     -h, --help                       Print help information
     -m, --min-umi <MIN_UMI>          the minimum reads (sample + genes + antibody combined)
     -o, --outpath <OUTPATH>          the outpath
-    -r, --reads <READS>              the input R1 reads file
+    -r, --reads <READS>              the input R1 fastq file
     -s, --specie <SPECIE>            the specie of the library [mouse, human]
     -V, --version                    Print version information
 ```

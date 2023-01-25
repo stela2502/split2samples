@@ -26,10 +26,10 @@ use std::io::Write;
 // use std::convert::TryInto;
 
 /// Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles.
-/// You need quite long R1 and R2 reads for this! (>70R1 and >70R2)
+/// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 [v1] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
-#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>, Rob P. <rob@cs.umd.edu>")]
+#[clap(version = "0.3.1", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
@@ -52,20 +52,16 @@ struct Opts {
     /// the minimum reads per cell (sample + genes + antibody combined)
     #[clap(short, long)]
     min_umi: usize,
-    /// UMI min count - use every umi (per gene) or only reoccuring ones ?
-    #[clap(short, long)]
+    /// UMI min count - use every umi (per gene; 1) or only reoccuring ones (>1)
+    #[clap(default_value_t=1,short, long)]
     umi_count: u8,
     /// the version of beads you used v1, v2.96 or v2.384
     #[clap(short, long)]
     version: String,
+    /// Optional: end the analysis after processing <max_reads> cell fastq entries 
+    #[clap(default_value_t=usize::MAX, long)]
+    max_reads: usize,
 }
-
-
-// fn read_be_u128(input: &[u8]) -> u128 {
-//     let (int_bytes, rest) = input.split_at(std::mem::size_of::<u128>());
-//     //*input = rest;
-//     u128::from_be_bytes(int_bytes.try_into().unwrap())
-// }
 
 // the main function nowadays just calls the other data handling functions
 fn main() {
@@ -74,6 +70,14 @@ fn main() {
     let now = SystemTime::now();
     
     let opts: Opts = Opts::parse();
+
+
+    // let max_reads = match &opts.max_reads {
+    //     Some(val) => val,
+    //     None => &usize::MAX,
+    // };
+
+    println!("Analysis will stop after having processed {} fastq entries containing a cell info\n", opts.max_reads);
 
 
     println!("init models");    
@@ -288,6 +292,9 @@ fn main() {
                                             //println!("  -> pcr duplicate");
                                             pcr_duplicates += 1;
                                             local_dup += 1;
+                                        }
+                                        if ok_reads == opts.max_reads{
+                                            break 'main;
                                         }
                                         if ok_reads % split == 0{
                                             let log_str = format!("{} ({:.4}% total; {:.4}% PCR duplicates [{:.4}% in last iteration]): {:?} -> gene id: {}, cell id: {}",
