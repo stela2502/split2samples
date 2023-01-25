@@ -54,7 +54,7 @@ from the command line using `quantifyRhapsody -h`.
 ./target/release/quantifyRhapsody -h
 
 USAGE:
-    quantifyRhapsody.exe --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antybody <ANTYBODY> --min-umi <MIN_UMI>
+    quantifyRhapsody [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antibody <ANTIBODY> --min-umi <MIN_UMI> --version <VERSION>
 
 OPTIONS:
     -a, --antibody <ANTIBODY>        the fasta database containing the antibody tags
@@ -62,9 +62,13 @@ OPTIONS:
     -f, --file <FILE>                the input R2 fastq file
     -h, --help                       Print help information
     -m, --min-umi <MIN_UMI>          the minimum reads (sample + genes + antibody combined)
+        --max-reads <MAX_READS>      Optional: end the analysis after processing <max_reads> cell
+                                     fastq entries [default: 18446744073709551615]
     -o, --outpath <OUTPATH>          the outpath
     -r, --reads <READS>              the input R1 fastq file
     -s, --specie <SPECIE>            the specie of the library [mouse, human]
+    -u, --umi-count <UMI_COUNT>      UMI min count - use every umi (per gene; 1) or only reoccuring
+                                     ones (>1) [default: 1]
     -V, --version                    Print version information
 ```
 
