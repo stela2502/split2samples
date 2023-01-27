@@ -43,7 +43,8 @@ impl CellData{
     }
 
     pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
-        //println!("adding gene id {}", geneid );
+        println!("adding gene id {}", geneid );
+
         return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
                 match gene.get_mut( &umi ) {
@@ -76,6 +77,36 @@ impl CellData{
         return n; 
     }
 
+    pub fn n_reads( &self, gene_info:&GeneIds, gnames: &Vec<String> ) -> usize {
+        let mut n = 0;
+
+        for name in gnames{
+            n += self.n_reads_4_gene( gene_info, name, min_umi_count );
+        }
+        //println!("I got {} umis for cell {}", n, self.name );
+        return n; 
+    }
+
+    pub fn n_reads_4_gene( &self, gene_info:&GeneIds, gname:&String) -> usize {
+        let mut n = 0;
+        let id = match gene_info.names.get( gname ){
+            Some(g_id) => g_id,
+            None => panic!("I could not resolve the gene name {}", gname ),
+        };
+        n += match self.genes.get( id  ){
+            Some( map ) => {
+                let mut h = 0;
+                for (_key, value) in map.iter() {
+                    h += value;
+                }
+                h
+            }
+            None => 0
+        };
+        //if n > 0 { println!("I got {} umis for gene {}", n, gname ); }
+        return n;
+    }
+
     pub fn n_umi_4_gene( &self, gene_info:&GeneIds, gname:&String, min_umi_count:u8 ) -> usize {
         let mut n = 0;
         let id = match gene_info.names.get( gname ){
@@ -94,7 +125,7 @@ impl CellData{
             }
             None => 0
         };
-        // if n > 0 { println!("I got {} umis for gene {}", n, gname ); }
+        //if n > 0 { println!("I got {} umis for gene {}", n, gname ); }
         return n;
     }
 
@@ -110,8 +141,9 @@ impl CellData{
         let mut max_name:std::string::String = "na".to_string();
 
         for name in names {
-            //println!("I collect expression for gene {}", name);
+            
             let n = self.n_umi_4_gene(gene_info, name, min_umi_count );
+            println!("I collected expression for gene {}: n={}", name, n);
             if max < n {
                 max_name = name.to_string();
                 max = n;
@@ -161,6 +193,7 @@ impl <'a> SingleCellData{
     pub fn get(&mut self, cell_id: u64, name: std::string::String ) -> Result< &mut CellData, &str>{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
+        self.checked= false;
         if ! self.cells.contains_key( &cell_id ){
             let data = CellData::new(self.kmer_size, name );
             self.cells.insert( cell_id, data );
@@ -186,7 +219,11 @@ impl <'a> SingleCellData{
     
         let rs:bool = Path::new( &file_path.clone() ).exists();
         if rs{
-            fs::remove_file( &file_path );
+
+            match fs::remove_file( &file_path ) {
+                Ok(_) => {},
+                Err(_) => {} ,
+            }
         }
         
         let file = match File::create( file_path ){
@@ -378,7 +415,7 @@ impl <'a> SingleCellData{
         if names.len() != genes.max_id{
             // better to run this once more - this does somehow not create the same count if more genes are checked for
             let mut used:Vec<String> = Vec::with_capacity( genes.max_id );
-            for (name, gene_id) in &genes.names4sparse {
+            for (name, _gene_id) in &genes.names4sparse {
                 used.push(name.to_string());
             }
             return self.update_names_4_sparse(genes, &used, min_umi_count );
@@ -411,57 +448,233 @@ impl <'a> SingleCellData{
         //println!("mtx_counts -> final return: mtx_counts: {}", ret );
         return ret;
     }
+
+    pub fn n_reads( &mut self, genes: &mut GeneIDs, names: &mut &Vec<String> ) -> usize {
+        let mut count = 0;
+        for ( _id,  cell_obj ) in &self.cells {
+            count += cell_obj.n_reads( genes, names )
+        }
+        return count;
+    }
 }
 
 
-// macro_rules! to_cellid {
-//    ($r1: expr, $r2: expr) => {
-//       //1-9,22-30,44-52
-//       $r1.to_cellid($r1, $r2, [0,8], [21,29], [43,51]  )
-//    };
-// }
 
-// #[cfg(test)]
-// mod tests {
-//     #[test]
-//     fn getsamples() {
-//         let cells = crate::cell_ids::new();
+#[cfg(test)]
+mod tests {
+    use crate::singlecelldata::CellData;
+    use crate::singlecelldata::GeneIds;
 
-//         let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
-//         let mut id:u32 = 1;
-//         let mut exp= ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
-//         match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
-//             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
-//             Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-//         };
+     #[test]
+    fn cell_to_str() {
+        let mut cell1 = CellData::new( 7, "Cell1".to_string() );
+        let mut genes = GeneIds::new( 7 );
+
+        let mut geneid = 0;
         
-//         let mut exp2 = vec![b"GTCGCTATA", b"TACAGGATA", b"AAGCCTTCT"];
-//         assert_eq!( cells.to_sequence( exp ), exp2 );
-//         // 3, 3, 3
-//         primer = b"CTTCACATANNNNNNNNNNNNTGTGAAGAANNNNNNNNNNNNNCACAAGTAT";
-//         id = 3;
-//         exp = ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
-//         exp2 = vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"];
-//         match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
-//             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
-//             Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-//         };
-//         //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
-//         assert_eq!( cells.to_sequence( exp ), exp2 );
+        genes.add( b"AGCTGCTAGCCGATATT", "Gene1".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        genes.add( b"CTGTGTAGATACTATAGATAA", "Gene2".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        // the next two should not be in the output
+        genes.add( b"CGCGATCGGATAGCTAGATAGG", "Gene3".to_string() );
+        genes.add( b"CATACAACTACGATCGAATCG", "Gene4".to_string() );
 
-//         // and the last one
-//         primer = b"TGCGATCTANNNNNNNNNNNNCAACAACGGNNNNNNNNNNNNNCATAGGTCA";
-//         id = 96;
-//         exp = ((id-1)* 96 * 96 + (id-1) * 96 + (id-1) +1) as u32;
-//         exp2 = vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"];
-//         assert_eq!( 884735+1 , exp);
-//         match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
-//             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
-//             Err(err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-//         };
-//         //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
-//         assert_eq!( cells.to_sequence( exp ), exp2 );        
-//     }
-// }
+        geneid = genes.get_id( "Gene1".to_string() );
+        println!("Gene id == {}", geneid);
+        for umi in 0..20 {
+            println!("I add Gene1 ({}) umi {}", geneid, umi );
+            cell1.add( geneid, umi as u64);
+        }
+        geneid = genes.get_id( "Gene3".to_string() );
+        for umi in 0..20 {
+            cell1.add( geneid, umi as u64);
+        }
+
+
+
+        //to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String>, min_umi_count:u8 ) 
+        let names= vec!("Gene1".to_string(), "Gene2".to_string() );
+        let exp2:String = "Cell1\t20\t0\tGene1\t1".to_string();
+        let val = cell1.to_str( &genes, &names, 1 as u8 ).to_string();
+        println!( "{}", val );
+        assert_eq!( val,  exp2 ); 
+    }
+
+    use crate::singlecelldata::SingleCellData;
+    #[test]
+    fn singlecelldata_to_sparse() {
+        let mut celldata = SingleCellData::new( 7 );
+
+        let mut cell1 = match celldata.get( 1 , "Cell1".to_string() ){
+            Ok( cell) => cell,
+            Err(err) => panic!("{}", err ),
+        };
+
+        let mut genes = GeneIds::new( 7 );
+
+        let mut geneid = 0;
+        
+        genes.add( b"AGCTGCTAGCCGATATT", "Gene1".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        genes.add( b"CTGTGTAGATACTATAGATAA", "Gene2".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        // the next two should not be in the output
+        genes.add( b"CGCGATCGGATAGCTAGATAGG", "Gene3".to_string() );
+        genes.add( b"CATACAACTACGATCGAATCG", "Gene4".to_string() );
+
+        geneid = genes.get_id( "Gene1".to_string() );
+        println!("Gene id == {}", geneid);
+        for umi in 0..20 {
+            println!("I add Gene1 ({}) umi {}", geneid, umi );
+            cell1.add( geneid, umi as u64);
+        }
+        geneid = genes.get_id( "Gene3".to_string() );
+        for umi in 0..20 {
+            cell1.add( geneid, umi as u64);
+        }
+
+
+        //to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String>, min_umi_count:u8 ) 
+        let  names= vec!("Gene1".to_string(), "Gene3".to_string() );
+        let  exp2:String = "2 1 2".to_string();
+        let  val = celldata.mtx_counts( &mut genes, &names, 1 as usize , 1 as u8);
+        //to_str( &genes, &names, 1 as u8 ).to_string();
+
+        assert_eq!( val,  exp2 ); 
+
+    }
+
+    #[test]
+    fn singlecelldata_to_sparse2cells() {
+        let mut celldata = SingleCellData::new( 7 );
+
+        let mut cell1 = match celldata.get( 1 , "Cell1".to_string() ){
+            Ok( cell) => cell,
+            Err(err) => panic!("{}", err ),
+        };
+
+        let mut genes = GeneIds::new( 7 );
+
+        let mut geneid = 0;
+        
+        genes.add( b"AGCTGCTAGCCGATATT", "Gene1".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        genes.add( b"CTGTGTAGATACTATAGATAA", "Gene2".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        // the next two should not be in the output
+        genes.add( b"CGCGATCGGATAGCTAGATAGG", "Gene3".to_string() );
+        genes.add( b"CATACAACTACGATCGAATCG", "Gene4".to_string() );
+
+        geneid = genes.get_id( "Gene1".to_string() );
+        println!("Gene id == {}", geneid);
+        for umi in 0..20 {
+            println!("I add Gene1 ({}) umi {}", geneid, umi );
+            cell1.add( geneid, umi as u64);
+        }
+        geneid = genes.get_id( "Gene3".to_string() );
+        for umi in 0..20 {
+            cell1.add( geneid, umi as u64);
+        }
+
+        cell1 = match celldata.get( 2 , "Cell2".to_string() ){
+            Ok( cell) => cell,
+            Err(err) => panic!("{}", err ),
+        };
+
+        geneid = genes.get_id( "Gene3".to_string() );
+        for umi in 0..20 {
+            cell1.add( geneid, umi as u64);
+        }
+
+        let names = vec!("Gene3".to_string());
+        let val = celldata.mtx_counts( &mut genes, &names, 1 as usize , 1 as u8);
+        let exp2 = "1 2 2".to_string();
+        
+        assert_eq!( val,  exp2 ); 
+
+    }
+    use std::fs;
+    use std::fs::File;
+    use std::path::PathBuf;
+    use flate2::read::GzDecoder;
+    use std::io::Read;
+
+    #[test]
+    fn singlecelldata_to_sparse2cells_outfiles() {
+        let mut celldata = SingleCellData::new( 7 );
+
+        let mut cell1 = match celldata.get( 1 , "Cell1".to_string() ){
+            Ok( cell) => cell,
+            Err(err) => panic!("{}", err ),
+        };
+
+        let mut genes = GeneIds::new( 7 );
+
+        let mut geneid = 0;
+        
+        genes.add( b"AGCTGCTAGCCGATATT", "Gene1".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        genes.add( b"CTGTGTAGATACTATAGATAA", "Gene2".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        // the next two should not be in the output
+        genes.add( b"CGCGATCGGATAGCTAGATAGG", "Gene3".to_string() );
+        genes.add( b"CATACAACTACGATCGAATCG", "Gene4".to_string() );
+
+        geneid = genes.get_id( "Gene1".to_string() );
+        println!("Gene id == {}", geneid);
+        for umi in 0..20 {
+            println!("I add Gene1 ({}) umi {}", geneid, umi );
+            cell1.add( geneid, umi as u64);
+        }
+        geneid = genes.get_id( "Gene3".to_string() );
+        for umi in 0..20 {
+            cell1.add( geneid, umi as u64);
+        }
+
+        cell1 = match celldata.get( 2 , "Cell2".to_string() ){
+            Ok( cell) => cell,
+            Err(err) => panic!("{}", err ),
+        };
+
+        geneid = genes.get_id( "Gene3".to_string() );
+        for umi in 0..10 {
+            cell1.add( geneid, umi as u64);
+        }
+
+        let names = vec!("Gene3".to_string());
+
+        let file_path_sp = PathBuf::from( "../testData/output_sparse");
+
+        match celldata.write_sparse_sub ( file_path_sp, &mut genes, &names, 1, 1 ) {
+            Ok(_) => (),
+            Err(err) => panic!("Error in the data write: {}", err)
+        };
+
+        match fs::create_dir("../testData/output_sparse/"){
+            Ok(_) => (),
+            Err(err) => println!("{}", err),
+        };
+
+        let file = match File::open("../testData/output_sparse/matrix.mtx.gz"){
+            Ok(f) => f,
+            Err(_err) => panic!("expected outfile is missing"),
+        };
+        let mut gz = GzDecoder::new(file);
+
+        let val = "%%MatrixMarket matrix coordinate integer general\n1 2 2\n1 1 20\n1 2 10\n".to_string();
+
+        let mut buffer = String::new();
+
+        match gz.read_to_string(&mut buffer) {
+            Ok(string) => {},
+            Err(_err) => {},
+        };
+
+        assert_eq!( val,  buffer ); 
+
+    }
+
+}
 
 

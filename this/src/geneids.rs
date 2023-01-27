@@ -102,6 +102,14 @@ impl GeneIds{
         }
     }
 
+    pub fn get_id( &mut self, name: String ) -> usize{
+        let id = match self.names.get( &name ) {
+            Some( id ) => id,
+            None => panic!("Gene {} not defined in the GeneID object", name),
+        };
+        return *id ;
+    }
+
     pub fn get(&mut self, seq: &[u8] ) -> Option< usize >{
         
         // let min_value = 2;
@@ -205,4 +213,32 @@ fn fill_kmer_vec<'a>(seq: needletail::kmer::Kmers<'a>, kmer_vec: &mut Vec<u64>) 
             kmer_vec.push(Kmer::from(km).into_u64());
         }
    }
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use crate::geneids::GeneIds;
+     #[test]
+    fn check_geneids() {
+        let mut genes = GeneIds::new( 7 );
+
+        let mut geneid = 0;
+        
+        genes.add( b"AGCTGCTAGCCGATATT", "Gene1".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        genes.add( b"CTGTGTAGATACTATAGATAA", "Gene2".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        // the next two should not be in the output
+        genes.add( b"CGCGATCGGATAGCTAGATAGG", "Gene3".to_string() );
+        genes.add( b"CATACAACTACGATCGAATCG", "Gene4".to_string() );
+
+        geneid = genes.get_id( "Gene1".to_string() );
+        assert_eq!( geneid,  0 ); 
+
+        geneid = genes.get_id( "Gene3".to_string() );
+        assert_eq!( geneid,  2 ); 
+            
+    }
 }

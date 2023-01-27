@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 use kmers::naive_impl::Kmer;
 
-use crate::sampleids::SampleIds;
+//use crate::sampleids::SampleIds;
 
 //use std::thread;
 
@@ -23,9 +23,9 @@ pub struct CellIds<'a>{
     csl1: BTreeMap<u64, u32>,
     csl2: BTreeMap<u64, u32>,
     csl3: BTreeMap<u64, u32>,
-    csl1kmer: SampleIds,
-    csl2kmer: SampleIds,
-    csl3kmer: SampleIds,
+    //csl1kmer: SampleIds,
+    //csl2kmer: SampleIds,
+    //csl3kmer: SampleIds,
     size:u8
 }
 
@@ -52,7 +52,6 @@ impl CellIds<'_>{
 
         let mut bad_entries = HashSet::<u64>::new();
 
-        let kmer_len = 5;
         // TACAGAACA
 
         if ver == "v1"{
@@ -398,20 +397,20 @@ impl CellIds<'_>{
             panic!( "The version '{}' is unknown!", ver );
         }
 
-        let mut csl1kmer= SampleIds::new( kmer_len );
-        for kmer in &c1s{
-            csl1kmer.add( *kmer );
-        }
+        // let mut csl1kmer= SampleIds::new( kmer_len );
+        // for kmer in &c1s{
+        //     csl1kmer.add( *kmer );
+        // }
 
-        let mut csl2kmer= SampleIds::new( kmer_len );
-        for kmer in &c2s{
-            csl2kmer.add( *kmer );
-        }
+        // let mut csl2kmer= SampleIds::new( kmer_len );
+        // for kmer in &c2s{
+        //     csl2kmer.add( *kmer );
+        // }
 
-        let mut csl3kmer= SampleIds::new( kmer_len );
-        for kmer in &c3s{
-            csl3kmer.add( *kmer );
-        }
+        // let mut csl3kmer= SampleIds::new( kmer_len );
+        // for kmer in &c3s{
+        //     csl3kmer.add( *kmer );
+        // }
 
         let mut i: u32 = 0;
 
@@ -488,9 +487,9 @@ impl CellIds<'_>{
             csl1,
             csl2,
             csl3,
-            csl1kmer,
-            csl2kmer,
-            csl3kmer,
+            //csl1kmer,
+            //csl2kmer,
+            //csl3kmer,
             size
         }
     }

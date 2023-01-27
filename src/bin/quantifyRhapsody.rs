@@ -179,7 +179,7 @@ fn main() {
     }
 
     //  now we need to get a CellIDs object, too
-    let mut cells = CellIds::new(&opts.version, 7);
+    let mut cells = CellIds::new(&opts.version, 9);
 
     // that is a class to strore gene expression data.
     // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
@@ -191,6 +191,7 @@ fn main() {
     let mut ok_reads = 0;
     let mut pcr_duplicates = 0;
     let mut local_dup = 0;
+    let mut sample_reads = 0;
     let split:usize = 1000*1000;
     //let split:usize = 1000;
 
@@ -322,6 +323,7 @@ fn main() {
                             },
                             None => {
                                 unknown +=1;
+                                // all - samples genes and antibodies are classed as genes here.
                                 //eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) );
                             }
                         };
@@ -394,10 +396,13 @@ fn main() {
 
         let total = no_sample+ unknown + ok_reads;
         println!( "\nSummary:");
-        println!(     "no sample ID reads: {} reads", no_sample );
+        println!(     "no cell ID reads: {} reads", no_sample );
         println!(     "N's or too short  : {}", unknown );
         println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
         println!(     "pcr duplicates    : {} ({:.2}%)", pcr_duplicates, ( pcr_duplicates as f32 / ok_reads as f32 ) * 100.0 );
+        println!(   "\nexpression reads  : {}", gex.n_reads( &mut genes , &gene_names ) );
+        println!(     "antibody reads    : {}", gex.n_reads( &mut genes , &ab_names ) );
+        println!(     "sample tag reads  : {}", gex.n_reads( &mut genes , &sample_names ) );
 
         let file_path2 = format!("{}/SampleCounts.tsv", opts.outpath );
         println!( "\nCell->Sample table written to {:?}\n", file_path2);
