@@ -23,19 +23,18 @@ use std::path::Path;
 /// But I do not correct the UMIs here - even with sequencing errors 
 /// we should get a relatively correct picture as these folow normal distribution.
 pub struct CellData{
-    pub kmer_size: usize,
+    //pub kmer_size: usize,
     pub name: std::string::String,
     pub genes: BTreeMap<usize, BTreeMap<u64, u8 >>, // I want to know how many times I got the same UMI
     pub passing: bool // check if this cell is worth exporting. Late game
 }
 
 impl CellData{
-    pub fn new( kmer_size:usize, name: std::string::String ) -> Self{
+    pub fn new(  name: std::string::String ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
         let loc_name = name.clone();
         let passing = false;
         Self{
-            kmer_size,
             name: loc_name,
             genes,
             passing
@@ -166,7 +165,7 @@ impl CellData{
 // Here we look for new sample ids and each sample id needs to be a total match to the previousely identified sample id
 // Of cause I could also implement something with a whitelist. But that is for the future.
 pub struct SingleCellData{    
-    kmer_size: usize,
+    //kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
     cells: BTreeMap<u64, CellData>,
     checked: bool,
@@ -176,13 +175,14 @@ pub struct SingleCellData{
 // here the functions
 impl <'a> SingleCellData{
 
-    pub fn new(kmer_size:usize )-> Self {
+    //pub fn new(kmer_size:usize )-> Self {
+    pub fn new( )-> Self {
 
         let cells = BTreeMap::new();
         let checked:bool = false;
 
         Self {
-            kmer_size,
+            //kmer_size,
             cells,
             checked
         }
@@ -195,7 +195,8 @@ impl <'a> SingleCellData{
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
         if ! self.cells.contains_key( &cell_id ){
-            let data = CellData::new(self.kmer_size, name );
+            //let data = CellData::new(self.kmer_size, name );
+            let data = CellData::new( name );
             self.cells.insert( cell_id, data );
         }
 

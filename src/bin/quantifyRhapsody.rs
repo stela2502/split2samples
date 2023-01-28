@@ -97,7 +97,16 @@ fn main() {
     //cells.init_rhapsody( &opts.specie );
 
     // let mut cell_umi:HashSet<u128> = HashSet::new();
-    let mut genes:GeneIds = GeneIds::new(9); // split them into 9 bp kmers
+    let mut genes:GeneIds = GeneIds::new(12); // split them into 9 bp kmers
+
+    //  now we need to get a CellIDs object, too
+    let mut cells = CellIds::new(&opts.version, 7);
+
+    // that is a class to strore gene expression data.
+    // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
+    // and umi's are u64 again
+    // here I need the cell kmer site.
+    let mut gex = SingleCellData::new( );
 
     let mut expr_file = parse_fastx_file(&opts.expression).expect("valid path/file");
 
@@ -177,14 +186,6 @@ fn main() {
             Err(err) => eprintln!("The expression entry's id could not be read: {}", err),
         }
     }
-
-    //  now we need to get a CellIDs object, too
-    let mut cells = CellIds::new(&opts.version, 9);
-
-    // that is a class to strore gene expression data.
-    // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
-    // and umi's are u64 again
-    let mut gex = SingleCellData::new( 9 );
 
     let mut unknown = 0;
     let mut no_sample = 0;
