@@ -43,7 +43,7 @@ impl CellData{
     }
 
     pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
-        println!("adding gene id {}", geneid );
+        //println!("adding gene id {}", geneid );
 
         return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
@@ -81,7 +81,7 @@ impl CellData{
         let mut n = 0;
 
         for name in gnames{
-            n += self.n_reads_4_gene( gene_info, name, min_umi_count );
+            n += self.n_reads_4_gene( gene_info, name );
         }
         //println!("I got {} umis for cell {}", n, self.name );
         return n; 
@@ -97,7 +97,7 @@ impl CellData{
             Some( map ) => {
                 let mut h = 0;
                 for (_key, value) in map.iter() {
-                    h += value;
+                    h += *value as usize;
                 }
                 h
             }
@@ -117,7 +117,7 @@ impl CellData{
             Some( map ) => {
                 let mut h = 0;
                 for (_key, value) in map.iter() {
-                    if value >= &min_umi_count{
+                    if *value >= min_umi_count{
                         h += 1;                        
                     }
                 }
@@ -143,7 +143,7 @@ impl CellData{
         for name in names {
             
             let n = self.n_umi_4_gene(gene_info, name, min_umi_count );
-            println!("I collected expression for gene {}: n={}", name, n);
+            //println!("I collected expression for gene {}: n={}", name, n);
             if max < n {
                 max_name = name.to_string();
                 max = n;
@@ -409,7 +409,9 @@ impl <'a> SingleCellData{
             }
         }
         if genes.max_id  ==0{
-            eprintln!( "None of the genes have data:\n{}", names.join( ", " ) );
+            if names.len() > 0{
+                eprintln!( "None of the genes have data:\n{}", names.join( ", " ) );
+            }
         }
         //else { println!("{} genes requested and {} with data found", names.len(), genes.max_id); }
         if names.len() != genes.max_id{
@@ -449,7 +451,7 @@ impl <'a> SingleCellData{
         return ret;
     }
 
-    pub fn n_reads( &mut self, genes: &mut GeneIDs, names: &mut &Vec<String> ) -> usize {
+    pub fn n_reads( &mut self, genes: &mut GeneIds, names: &Vec<String> ) -> usize {
         let mut count = 0;
         for ( _id,  cell_obj ) in &self.cells {
             count += cell_obj.n_reads( genes, names )

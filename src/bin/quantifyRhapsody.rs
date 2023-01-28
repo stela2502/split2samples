@@ -191,7 +191,6 @@ fn main() {
     let mut ok_reads = 0;
     let mut pcr_duplicates = 0;
     let mut local_dup = 0;
-    let mut sample_reads = 0;
     let split:usize = 1000*1000;
     //let split:usize = 1000;
 
@@ -395,14 +394,20 @@ fn main() {
         
 
         let total = no_sample+ unknown + ok_reads;
+        let reads_genes = gex.n_reads( &mut genes , &gene_names );
+        let reads_ab = gex.n_reads( &mut genes , &ab_names );
+        let reads_samples = gex.n_reads( &mut genes , &sample_names );
+
         println!( "\nSummary:");
-        println!(     "no cell ID reads: {} reads", no_sample );
-        println!(     "N's or too short  : {}", unknown );
-        println!(     "usable reads      : {} ({:.2}%)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
-        println!(     "pcr duplicates    : {} ({:.2}%)", pcr_duplicates, ( pcr_duplicates as f32 / ok_reads as f32 ) * 100.0 );
-        println!(   "\nexpression reads  : {}", gex.n_reads( &mut genes , &gene_names ) );
-        println!(     "antibody reads    : {}", gex.n_reads( &mut genes , &ab_names ) );
-        println!(     "sample tag reads  : {}", gex.n_reads( &mut genes , &sample_names ) );
+        println!(     "total      reads  : {} reads", total );
+        println!(     "no cell ID reads  : {} reads", no_sample );
+        println!(     "N's or too short  : {} reads", unknown );
+        println!(     "usable reads      : {} reads ({:.2}% of total)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
+        println!(     "expression reads  : {} reads ({:.2}% of total)", reads_genes, (reads_genes as f32 / total as f32) * 100.0 );
+        println!(     "antibody reads    : {} reads ({:.2}% of total)", reads_ab, (reads_ab as f32 / total as f32) * 100.0 );
+        println!(     "sample tag reads  : {} reads ({:.2}% of total)", reads_samples, (reads_samples as f32 / total as f32) * 100.0 );
+        println!(     "pcr duplicates    : {} reads ({:.2}% of usable)", pcr_duplicates, ( pcr_duplicates as f32 / ok_reads as f32 ) * 100.0 );
+        
 
         let file_path2 = format!("{}/SampleCounts.tsv", opts.outpath );
         println!( "\nCell->Sample table written to {:?}\n", file_path2);
