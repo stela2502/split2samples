@@ -733,10 +733,10 @@ mod tests {
     fn getcells_384_9() {
         let mut cells = CellIds::new(&"v2.384".to_string(), 9 as u8 );
 
-        let mut primer = b"TGTCTAGCGNNNNNNNNNNNNTTGTGCGGANNNNNNNNNNNNNTTGTGCGAC"; // totally artificial - primer design wrong... - lazy
+        let primer = b"TGTCTAGCGNNNNNNNNNNNNTTGTGCGGANNNNNNNNNNNNNTTGTGCGAC"; // totally artificial - primer design wrong... - lazy
         let exp2 = vec![b"TGTCTAGCG", b"TTGTGCGGA", b"TTGTGCGAC"];
-        let mut id:u32 = 3;
-        let mut exp= ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) +1) as u32;
+        let id:u32 = 3;
+        let exp= ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) +1) as u32;
         match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
             Ok(val) => assert_eq!( val , exp ),
             Err(_err) => (),

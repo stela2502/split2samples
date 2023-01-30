@@ -281,7 +281,7 @@ impl <'a> SingleCellData{
 
     pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize, min_umi_count:u8) -> Result< (), &str>{
             
-        let rs = Path::new( &file_path.clone() ).exists();
+        let mut rs = Path::new( &file_path.clone() ).exists();
 
         let mut passed = 0;
         let mut failed = 0;
@@ -294,16 +294,28 @@ impl <'a> SingleCellData{
             };
         }
 
+        match fs::remove_file( &file_path.clone().join("matrix.mtx.gz") ){
+            Ok(_) =>(),
+            Err(_) =>(),
+        };
         let file = match File::create( file_path.clone().join("matrix.mtx.gz") ){
             Ok(file) => file,
             Err(err) => {
                 panic!("Error creating the path?: {:#?}", err);
             }
         };
-
         let file1 = GzEncoder::new(file, Compression::default());
         let mut writer = BufWriter::new(file1);
 
+
+        //rs = Path::new( &file_path.clone().join("barcodes.tsv.gz") );
+        //if rs {
+        //    fs::remove_file( rs );
+        //}
+        match fs::remove_file(&file_path.clone().join("barcodes.tsv.gz") ){
+            Ok(_) =>(),
+            Err(_) =>(),
+        };
         let file_b = match File::create( file_path.clone().join("barcodes.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
@@ -312,7 +324,6 @@ impl <'a> SingleCellData{
         };
         let file2 = GzEncoder::new(file_b, Compression::default());
         let mut writer_b = BufWriter::new(file2);
-
         match writeln!( writer, "{}\n{}", 
             "%%MatrixMarket matrix coordinate integer general",
              self.mtx_counts( genes, names, min_count, min_umi_count ) ){
@@ -323,6 +334,11 @@ impl <'a> SingleCellData{
             }
         };
 
+
+        match fs::remove_file(&file_path.clone().join("features.tsv.gz") ){
+            Ok(_) =>(),
+            Err(_) =>(),
+        };
         let file_f = match File::create( file_path.clone().join("features.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
@@ -437,7 +453,7 @@ impl <'a> SingleCellData{
             for ( _id,  cell_obj ) in &mut self.cells {
                 // total umi check
                 let n = cell_obj.n_umi( genes, names, min_umi_count );
-                if  n > min_count{
+                if  n >= min_count{
                     cell_obj.passing = true;
                 }
             }
@@ -470,7 +486,7 @@ mod tests {
 
      #[test]
     fn cell_to_str() {
-        let mut cell1 = CellData::new( 7, "Cell1".to_string() );
+        let mut cell1 = CellData::new( "Cell1".to_string() );
         let mut genes = GeneIds::new( 7 );
 
         let mut geneid = 0;
@@ -507,9 +523,9 @@ mod tests {
     use crate::singlecelldata::SingleCellData;
     #[test]
     fn singlecelldata_to_sparse() {
-        let mut celldata = SingleCellData::new( 7 );
+        let mut celldata = SingleCellData::new(  );
 
-        let mut cell1 = match celldata.get( 1 , "Cell1".to_string() ){
+        let cell1 = match celldata.get( 1 , "Cell1".to_string() ){
             Ok( cell) => cell,
             Err(err) => panic!("{}", err ),
         };
@@ -550,7 +566,7 @@ mod tests {
 
     #[test]
     fn singlecelldata_to_sparse2cells() {
-        let mut celldata = SingleCellData::new( 7 );
+        let mut celldata = SingleCellData::new( );
 
         let mut cell1 = match celldata.get( 1 , "Cell1".to_string() ){
             Ok( cell) => cell,
@@ -605,14 +621,14 @@ mod tests {
 
     #[test]
     fn singlecelldata_to_sparse2cells_outfiles() {
-        let mut celldata = SingleCellData::new( 7 );
+        let mut celldata = SingleCellData::new( );
 
         let mut cell1 = match celldata.get( 1 , "Cell1".to_string() ){
             Ok( cell) => cell,
             Err(err) => panic!("{}", err ),
         };
 
-        let mut genes = GeneIds::new( 7 );
+        let mut genes = GeneIds::new( 12 );
 
         let mut geneid = 0;
         
@@ -626,10 +642,13 @@ mod tests {
 
         geneid = genes.get_id( "Gene1".to_string() );
         println!("Gene id == {}", geneid);
+
         for umi in 0..20 {
-            println!("I add Gene1 ({}) umi {}", geneid, umi );
-            cell1.add( geneid, umi as u64);
+            //println!("I add Gene1 ({}) umi {}", geneid, umi );
+            assert_eq!( cell1.add( geneid, umi as u64), true);
         }
+        assert_eq!( cell1.add( geneid, 1 as u64), false);
+
         geneid = genes.get_id( "Gene3".to_string() );
         for umi in 0..20 {
             cell1.add( geneid, umi as u64);
@@ -670,7 +689,7 @@ mod tests {
         let mut buffer = String::new();
 
         match gz.read_to_string(&mut buffer) {
-            Ok(string) => {},
+            Ok(_string) => {},
             Err(_err) => {},
         };
 
@@ -678,6 +697,76 @@ mod tests {
 
     }
 
+
+#[test]
+    fn singlecelldata_only_one_call_to_cellid_add() {
+        let mut celldata = SingleCellData::new( );
+
+        let mut cell1 = match celldata.get( 1 , "Cell1".to_string() ){
+            Ok( cell) => cell,
+            Err(err) => panic!("{}", err ),
+        };
+
+        let mut genes = GeneIds::new( 12 );
+
+        let mut geneid = 0;
+        
+        genes.add( b"AGCTGCTAGCCGATATT", "Gene1".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        genes.add( b"CTGTGTAGATACTATAGATAA", "Gene2".to_string() );
+        genes.names4sparse.insert( "Gene1".to_string(), geneid );
+        // the next two should not be in the output
+        genes.add( b"CGCGATCGGATAGCTAGATAGG", "Gene3".to_string() );
+        genes.add( b"CATACAACTACGATCGAATCG", "Gene4".to_string() );
+
+        geneid = genes.get_id( "Gene1".to_string() );
+        assert_eq!( cell1.add( geneid, 1 as u64), true);
+
+        geneid = genes.get_id( "Gene3".to_string() );
+        assert_eq!( cell1.add( geneid, 1 as u64), true);
+
+        cell1 = match celldata.get( 2 , "Cell2".to_string() ){
+            Ok( cell) => cell,
+            Err(err) => panic!("{}", err ),
+        };
+
+        geneid = genes.get_id( "Gene3".to_string() );
+        for umi in 0..10 {
+            cell1.add( geneid, umi as u64);
+        }
+
+        let names = vec!("Gene1".to_string(), "Gene3".to_string());
+
+        let file_path_sp = PathBuf::from( "../testData/output_sparse2");
+
+        match celldata.write_sparse_sub ( file_path_sp, &mut genes, &names, 1, 1 ) {
+            Ok(_) => (),
+            Err(err) => panic!("Error in the data write: {}", err)
+        };
+
+        match fs::create_dir("../testData/output_sparse2/"){
+            Ok(_) => (),
+            Err(err) => println!("{}", err),
+        };
+
+        let file = match File::open("../testData/output_sparse2/matrix.mtx.gz"){
+            Ok(f) => f,
+            Err(_err) => panic!("expected outfile is missing"),
+        };
+        let mut gz = GzDecoder::new(file);
+
+        let val = "%%MatrixMarket matrix coordinate integer general\n2 2 3\n1 1 1\n2 1 1\n2 2 10\n".to_string();
+
+        let mut buffer = String::new();
+
+        match gz.read_to_string(&mut buffer) {
+            Ok(_string) => {},
+            Err(_err) => {},
+        };
+
+        assert_eq!( val,  buffer ); 
+
+    }
 }
 
 
