@@ -123,7 +123,7 @@ fn main() {
 
 
     //  now we need to get a CellIDs object, too
-    let mut cells = SingleCellData::new(sub_len);
+    let mut cells = SingleCellData::new( );
 
     let mut unknown:u32 = 0;
     let mut ok:u32 = 0;
