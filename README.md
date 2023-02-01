@@ -23,14 +23,13 @@ cd split2samples
 cargo build --release
 cp target/release/split2samples /usr/bin
 cp target/release/demux10x /usr/bin
-cp target/release/quantifyRhapsody /usr/bin
-cp target/release/quantifyRhapsody_noUMI /usr/bin
+cp target/release/quantify_rhapsody /usr/bin
 cp target/release/bd_cell_id_2_seq /usr/bin
 cp target/release/bd_get_single_cell /usr/bin
 ``` 
 
 Do not forget the --release while building the tool. 
-The test case for quantifyRhapsody would finish in 30 sec instead of 2 sec (x15!)
+The test case for quantify_rhapsody would finish in 30 sec instead of 2 sec (x15!)
 using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 
 
@@ -39,7 +38,7 @@ using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 To run the test data (a tiny bit of a real dataset):
 
 ```
-target/release/quantifyRhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30 -v v1
+target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30 -v v1
 ```
 
 This will produce an output consisting of two cells. and it should run super fast.
@@ -54,7 +53,7 @@ from the command line using `quantifyRhapsody -h`.
 ./target/release/quantifyRhapsody -h
 
 USAGE:
-    quantifyRhapsody [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antibody <ANTIBODY> --min-umi <MIN_UMI> --version <VERSION>
+    quantify_rhapsody [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antibody <ANTIBODY> --min-umi <MIN_UMI> --version <VERSION>
 
 OPTIONS:
     -a, --antibody <ANTIBODY>        the fasta database containing the antibody tags

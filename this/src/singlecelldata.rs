@@ -169,6 +169,7 @@ pub struct SingleCellData{
     //kmers: BTreeMap<u64, u32>,
     cells: BTreeMap<u64, CellData>,
     checked: bool,
+    passing: usize,
 }
 
 
@@ -180,11 +181,13 @@ impl <'a> SingleCellData{
 
         let cells = BTreeMap::new();
         let checked:bool = false;
+        let passing = 0;
 
         Self {
             //kmer_size,
             cells,
-            checked
+            checked,
+            passing
         }
     }
 
@@ -281,7 +284,7 @@ impl <'a> SingleCellData{
 
     pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize, min_umi_count:u8) -> Result< (), &str>{
             
-        let mut rs = Path::new( &file_path.clone() ).exists();
+        let rs = Path::new( &file_path.clone() ).exists();
 
         let mut passed = 0;
         let mut failed = 0;
@@ -358,8 +361,9 @@ impl <'a> SingleCellData{
             }
         }
 
-        let mut cell_id = 0;
         let mut entries = 0;
+        let mut passing_cells: Vec<&CellData> = Vec::with_capacity( self.passing );
+
         for ( _id,  cell_obj ) in &self.cells {
             if ! cell_obj.passing {
                 //println!("failed cell {}", cell_obj.name );
@@ -367,7 +371,7 @@ impl <'a> SingleCellData{
                 continue;
             }
             passed += 1;
-            cell_id += 1;
+
             match writeln!( writer_b, "{}",cell_obj.name ){
                 Ok(_) => (),
                 Err(err) => {
@@ -376,21 +380,57 @@ impl <'a> SingleCellData{
                 }
             };
 
-            for (name, gene_id) in &genes.names4sparse {
-                //if cell_id == 1{ println!("writing gene info -> Gene {} included in output", name ); }
-                let n = cell_obj.n_umi_4_gene( genes, name, min_umi_count );
+            passing_cells.push( cell_obj );
+        }
+
+        let mut gene_id = 0;
+        for (name, _gene_id) in &genes.names4sparse {
+            gene_id += 1; // the one in the object is crap!
+            //if cell_id == 1{ println!("writing gene info -> Gene {} included in output", name ); }
+            for id in 0..self.passing {
+                let n = passing_cells[id].n_umi_4_gene( genes, name, min_umi_count );
                 if n > 0{
-                    match writeln!( writer, "{} {} {}", gene_id, cell_id, n ){
+                    match writeln!( writer, "{} {} {}", gene_id, id+1, n ){
                         Ok(_) => {entries += 1;},
                         Err(err) => {
                             eprintln!("write error: {}", err);
                             return Err::<(), &str>("cell data could not be written")   
                         }   
                     }
-
                 }
             }
         }
+        // for ( _id,  cell_obj ) in &self.cells {
+        //     if ! cell_obj.passing {
+        //         //println!("failed cell {}", cell_obj.name );
+        //         failed +=1;
+        //         continue;
+        //     }
+        //     passed += 1;
+        //     cell_id += 1;
+        //     match writeln!( writer_b, "{}",cell_obj.name ){
+        //         Ok(_) => (),
+        //         Err(err) => {
+        //             eprintln!("write error: {}", err);
+        //             return Err::<(), &str>("cell barcode could not be written")   
+        //         }
+        //     };
+
+        //     for (name, gene_id) in &genes.names4sparse {
+        //         //if cell_id == 1{ println!("writing gene info -> Gene {} included in output", name ); }
+        //         let n = cell_obj.n_umi_4_gene( genes, name, min_umi_count );
+        //         if n > 0{
+        //             match writeln!( writer, "{} {} {}", gene_id, cell_id, n ){
+        //                 Ok(_) => {entries += 1;},
+        //                 Err(err) => {
+        //                     eprintln!("write error: {}", err);
+        //                     return Err::<(), &str>("cell data could not be written")   
+        //                 }   
+        //             }
+
+        //         }
+        //     }
+        // }
         //println!( "min UMI count in export function: {}", min_umi_count);
         println!( "sparse Matrix: {} cell(s) and {} gene(s) and {} entries written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), entries, failed, file_path.into_os_string().into_string());
         return Ok( () );
@@ -448,6 +488,8 @@ impl <'a> SingleCellData{
 
         if ! self.checked{
 
+            self.passing= 0;
+
             //println!("Checking cell for min umi count!");
 
             for ( _id,  cell_obj ) in &mut self.cells {
@@ -462,6 +504,7 @@ impl <'a> SingleCellData{
         }
         
         let ncell_and_entries = self.update_names_4_sparse( genes, names, min_umi_count );
+        self.passing = ncell_and_entries[0];
 
         let ret = format!("{} {} {}", genes.names4sparse.len(), ncell_and_entries[0], ncell_and_entries[1] );
         //println!("mtx_counts -> final return: mtx_counts: {}", ret );
