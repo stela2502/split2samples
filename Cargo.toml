@@ -1,6 +1,6 @@
 [package]
-name = "split2samples"
-version = "0.3.3"
+name = "Rustody"
+version = "0.3.4"
 edition = "2018"
 license-file = "LICENSE"
 description = "Split BD rapsody fastq files into sample specific fastq files"
