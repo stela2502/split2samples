@@ -400,6 +400,7 @@ impl <'a> SingleCellData{
                 }
             }
         }
+        // let mut gene_id = 0;
         // for ( _id,  cell_obj ) in &self.cells {
         //     if ! cell_obj.passing {
         //         //println!("failed cell {}", cell_obj.name );
@@ -415,8 +416,9 @@ impl <'a> SingleCellData{
         //             return Err::<(), &str>("cell barcode could not be written")   
         //         }
         //     };
-
-        //     for (name, gene_id) in &genes.names4sparse {
+        //     gene_id = 0
+        //     for (name, _gene_id) in &genes.names4sparse {
+        //         gene_id += 1;
         //         //if cell_id == 1{ println!("writing gene info -> Gene {} included in output", name ); }
         //         let n = cell_obj.n_umi_4_gene( genes, name, min_umi_count );
         //         if n > 0{
