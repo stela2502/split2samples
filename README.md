@@ -29,7 +29,7 @@ cp target/release/bd_get_single_cell /usr/bin
 ``` 
 
 Do not forget the --release while building the tool. 
-The test case for quantify_rhapsody would finish in 30 sec instead of 2 sec (x15!)
+The test case for quantify_rhapsody would finish in 55 sec instead of 3 sec (> x15!)
 using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 
 

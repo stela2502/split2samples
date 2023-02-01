@@ -193,6 +193,7 @@ fn main() {
     let mut pcr_duplicates = 0;
     let mut local_dup = 0;
     let split:usize = 1000*1000;
+    let log_iter = 0;
     //let split:usize = 1000;
 
     let pos:Vec<usize>;
@@ -298,8 +299,10 @@ fn main() {
                                             break 'main;
                                         }
                                         if ok_reads % split == 0{
-                                            let log_str = format!("{} ({:.4}% total; {:.4}% PCR duplicates [{:.4}% in last iteration]): {:?} -> gene id: {}, cell id: {}",
-                                                ok_reads , 
+                                            log_iter+=1;
+
+                                            let log_str = format!("{} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch]): {:?} -> gene id: {}, cell id: {}",
+                                                log_iter , 
                                                 ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
                                                 pcr_duplicates as f32 / ok_reads as f32 * 100.0,
                                                 local_dup as f32 / split as f32 * 100.0,
@@ -431,7 +434,7 @@ fn main() {
             min = milli % 60;
             milli= (milli -min) /60;
 
-            println!("quantifyRhapsody finished in {}h {}min {} sec {}milli sec\n", milli, min, sec, mil );},
+            println!("quantify_rhapsody finished in {}h {}min {} sec {}milli sec\n", milli, min, sec, mil );},
        Err(e) => {println!("Error: {e:?}");}
     }
 
