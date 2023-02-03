@@ -29,7 +29,7 @@ use std::io::Write;
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 [v1] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
-#[clap(version = "0.3.4", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "0.3.5", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
@@ -43,18 +43,15 @@ struct Opts {
     /// the outpath
     #[clap(short, long)]
     outpath: String,
-    /// the fastq database containing the genes
+    /// the fasta database containing the genes
     #[clap(short, long)]
     expression: String,
-    /// the fastq database containing the antibody tags
+    /// the fasta database containing the antibody tags
     #[clap(short, long)]
     antibody: String,
     /// the minimum reads per cell (sample + genes + antibody combined)
     #[clap(short, long)]
     min_umi: usize,
-    /// UMI min count - use every umi (per gene; 1) or only reoccuring ones (>1)
-    #[clap(default_value_t=1,short, long)]
-    umi_count: u8,
     /// the version of beads you used v1, v2.96 or v2.384
     #[clap(short, long)]
     version: String,
@@ -62,6 +59,12 @@ struct Opts {
     #[clap(default_value_t=usize::MAX, long)]
     max_reads: usize,
 }
+
+/*
+    /// UMI min count - use every umi (per gene; 1) or only reoccuring ones (>1)
+    #[clap(default_value_t=1,short, long)]
+    umi_count: u8,
+*/
 
 // the main function nowadays just calls the other data handling functions
 fn main() {
@@ -361,7 +364,7 @@ fn main() {
         println!("\n\nWriting outfiles ...");
 
         // calculating a little bit wrong - why? no idea...
-        //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi , opts.umi_count) );
+        //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
 
 
         //let fp1 = PathBuf::from(opts.reads.clone());
@@ -375,7 +378,7 @@ fn main() {
         );
 
         // this always first as this will decide which cells are OK ones!
-        match gex.write_sparse_sub ( file_path_sp, &mut genes , &gene_names, opts.min_umi, opts.umi_count ) {
+        match gex.write_sparse_sub ( file_path_sp, &mut genes , &gene_names, opts.min_umi ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
@@ -384,13 +387,13 @@ fn main() {
             format!("BD_Rhapsody_antibodies" )
         );
 
-        match gex.write_sparse_sub ( file_path_sp, &mut genes, &ab_names, 1, 1 ) {
+        match gex.write_sparse_sub ( file_path_sp, &mut genes, &ab_names, 1 ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
 
     
-        match gex.write_sub ( file_path, &mut genes, &sample_names, 0, 0 ) {
+        match gex.write_sub ( file_path, &mut genes, &sample_names, 0 ) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };

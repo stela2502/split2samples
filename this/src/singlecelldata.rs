@@ -3,6 +3,7 @@
 /// It should also fix some read errors in the cell ids. But that will come a little later
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 use crate::geneids::GeneIds;
 
@@ -25,7 +26,8 @@ use std::path::Path;
 pub struct CellData{
     //pub kmer_size: usize,
     pub name: std::string::String,
-    pub genes: BTreeMap<usize, BTreeMap<u64, u8 >>, // I want to know how many times I got the same UMI
+    pub genes: BTreeMap<usize, HashSet<u64>>, // I want to know how many times I got the same UMI
+    pub total_reads: usize, // instead of the per umi counting
     pub passing: bool // check if this cell is worth exporting. Late game
 }
 
@@ -33,60 +35,48 @@ impl CellData{
     pub fn new(  name: std::string::String ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
         let loc_name = name.clone();
+        let total_reads = 0;
         let passing = false;
         Self{
             name: loc_name,
             genes,
+            total_reads,
             passing
         }
     }
 
     pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
         //println!("adding gene id {}", geneid );
-
+        self.total_reads += 1;
         return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
-                match gene.get_mut( &umi ) {
-                    Some( count ) => {
-                        *count += 1;
-                        false
-                    },
-                    None =>{
-                        gene.insert( umi, 1 ); 
-                        true
-                    }
-                }
+                gene.insert( umi )
             }, 
             None => {
-                let mut gc:BTreeMap<u64, u8> = BTreeMap::new(); //to store the umis
-                gc.insert( umi, 1 );
+                let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
+                gc.insert( umi );
                 self.genes.insert( geneid, gc );
                 true
             }
         }
     }
 
-    pub fn n_umi( &self, gene_info:&GeneIds, gnames: &Vec<String>,  min_umi_count:u8 ) -> usize {
+    pub fn n_umi( &self, gene_info:&GeneIds, gnames: &Vec<String> ) -> usize {
         let mut n = 0;
 
         for name in gnames{
-            n += self.n_umi_4_gene( gene_info, name, min_umi_count );
+            n += self.n_umi_4_gene( gene_info, name );
         }
         //println!("I got {} umis for cell {}", n, self.name );
         return n; 
     }
 
-    pub fn n_reads( &self, gene_info:&GeneIds, gnames: &Vec<String> ) -> usize {
-        let mut n = 0;
-
-        for name in gnames{
-            n += self.n_reads_4_gene( gene_info, name );
-        }
+    pub fn n_reads( &self, _gene_info:&GeneIds, _gnames: &Vec<String> ) -> usize {
         //println!("I got {} umis for cell {}", n, self.name );
-        return n; 
+        return self.total_reads; 
     }
 
-    pub fn n_reads_4_gene( &self, gene_info:&GeneIds, gname:&String) -> usize {
+    pub fn n_umi_4_gene( &self, gene_info:&GeneIds, gname:&String) -> usize {
         let mut n = 0;
         let id = match gene_info.names.get( gname ){
             Some(g_id) => g_id,
@@ -94,33 +84,7 @@ impl CellData{
         };
         n += match self.genes.get( id  ){
             Some( map ) => {
-                let mut h = 0;
-                for (_key, value) in map.iter() {
-                    h += *value as usize;
-                }
-                h
-            }
-            None => 0
-        };
-        //if n > 0 { println!("I got {} umis for gene {}", n, gname ); }
-        return n;
-    }
-
-    pub fn n_umi_4_gene( &self, gene_info:&GeneIds, gname:&String, min_umi_count:u8 ) -> usize {
-        let mut n = 0;
-        let id = match gene_info.names.get( gname ){
-            Some(g_id) => g_id,
-            None => panic!("I could not resolve the gene name {}", gname ),
-        };
-        n += match self.genes.get( id  ){
-            Some( map ) => {
-                let mut h = 0;
-                for (_key, value) in map.iter() {
-                    if *value >= min_umi_count{
-                        h += 1;                        
-                    }
-                }
-                h
+                map.len()
             }
             None => 0
         };
@@ -129,7 +93,7 @@ impl CellData{
     }
 
     
-    pub fn to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String>, min_umi_count:u8 ) -> String {
+    pub fn to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String> ) -> String {
 
         let mut data = Vec::<std::string::String>::with_capacity( gene_info.names.len()+3 ); 
         data.push(self.name.clone());
@@ -141,7 +105,7 @@ impl CellData{
 
         for name in names {
             
-            let n = self.n_umi_4_gene(gene_info, name, min_umi_count );
+            let n = self.n_umi_4_gene(gene_info, name );
             //println!("I collected expression for gene {}: n={}", name, n);
             if max < n {
                 max_name = name.to_string();
@@ -210,16 +174,16 @@ impl <'a> SingleCellData{
         Ok( ret )
     }
 
-    pub fn write (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize, min_umi_count:u8) -> Result< (), &str>{
+    pub fn write (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize) -> Result< (), &str>{
 
         let mut names: Vec<String> = Vec::with_capacity(genes.names.len());
         for ( name, _id ) in &genes.names {
             names.push( name.to_string() );
         }
-        return self.write_sub( file_path, genes, &names, min_count, min_umi_count);
+        return self.write_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize, min_umi_count:u8) -> Result< (), &str>{
+    pub fn write_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize ) -> Result< (), &str>{
     
         let rs:bool = Path::new( &file_path.clone() ).exists();
         if rs{
@@ -251,7 +215,7 @@ impl <'a> SingleCellData{
 
         if ! self.checked{
             println!("This is questionable - please run mtx_counts before write_sub!");
-            self.mtx_counts( genes, names, min_count, min_umi_count );
+            self.mtx_counts( genes, names, min_count );
         }
 
         for ( _id,  cell_obj ) in &mut self.cells {
@@ -259,7 +223,7 @@ impl <'a> SingleCellData{
                 failed +=1;
                 continue;
             }
-            let text = cell_obj.to_str( genes, names,  min_umi_count );
+            let text = cell_obj.to_str( genes, names );
             match writeln!( writer, "{}",text ){
                 Ok(_) => passed +=1,
                 Err(err) => {
@@ -274,15 +238,15 @@ impl <'a> SingleCellData{
 
 
     /// this will create a path and populate that with 10x kind of files.
-    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize, min_umi_count:u8) -> Result< (), &str>{
+    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize) -> Result< (), &str>{
         let mut names: Vec<String> = Vec::with_capacity(genes.names.len());
         for ( name, _id ) in &genes.names {
             names.push( name.to_string() );
         }
-        return self.write_sparse_sub( file_path, genes, &names, min_count, min_umi_count);
+        return self.write_sparse_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize, min_umi_count:u8) -> Result< (), &str>{
+    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
             
         let rs = Path::new( &file_path.clone() ).exists();
 
@@ -329,7 +293,7 @@ impl <'a> SingleCellData{
         let mut writer_b = BufWriter::new(file2);
         match writeln!( writer, "{}\n{}", 
             "%%MatrixMarket matrix coordinate integer general",
-             self.mtx_counts( genes, names, min_count, min_umi_count ) ){
+             self.mtx_counts( genes, names, min_count ) ){
             Ok(_) => (),
             Err(err) => {
                 eprintln!("write error: {}", err);
@@ -388,7 +352,7 @@ impl <'a> SingleCellData{
             gene_id += 1; // the one in the object is crap!
             //if cell_id == 1{ println!("writing gene info -> Gene {} included in output", name ); }
             for id in 0..self.passing {
-                let n = passing_cells[id].n_umi_4_gene( genes, name, min_umi_count );
+                let n = passing_cells[id].n_umi_4_gene( genes, name );
                 if n > 0{
                     match writeln!( writer, "{} {} {}", gene_id, id+1, n ){
                         Ok(_) => {entries += 1;},
@@ -421,7 +385,7 @@ impl <'a> SingleCellData{
         //     for (name, _gene_id) in &genes.names4sparse {
         //         gene_id += 1;
         //         //if cell_id == 1{ println!("writing gene info -> Gene {} included in output", name ); }
-        //         let n = cell_obj.n_umi_4_gene( genes, name, min_umi_count );
+        //         let n = cell_obj.n_umi_4_gene( genes, name );
         //         if n > 0{
         //             match writeln!( writer, "{} {} {}", gene_id, cell_id, n ){
         //                 Ok(_) => {entries += 1;},
@@ -434,12 +398,12 @@ impl <'a> SingleCellData{
         //         }
         //     }
         // }
-        //println!( "min UMI count in export function: {}", min_umi_count);
+        //println!( "min UMI count in export function: {}");
         println!( "sparse Matrix: {} cell(s) and {} gene(s) and {} entries written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), entries, failed, file_path.into_os_string().into_string());
         return Ok( () );
     }
     /// Update the gene names for export to sparse
-    pub fn update_names_4_sparse( &mut self, genes: &mut GeneIds, names:&Vec<String>, min_umi_count:u8 ) -> [usize; 2] {
+    pub fn update_names_4_sparse( &mut self, genes: &mut GeneIds, names:&Vec<String>) -> [usize; 2] {
         
         let mut entries = 0;
         let mut ncell = 0;
@@ -456,7 +420,7 @@ impl <'a> SingleCellData{
             ncell += 1;
             for name in names {
                 //if ! genes.names4sparse.contains_key ( name ){
-                n = cell_obj.n_umi_4_gene( genes, name, min_umi_count );
+                n = cell_obj.n_umi_4_gene( genes, name );
                 if n > 0{
                     if ! genes.names4sparse.contains_key ( name ){
                         genes.max_id +=1;
@@ -480,13 +444,13 @@ impl <'a> SingleCellData{
             for (name, _gene_id) in &genes.names4sparse {
                 used.push(name.to_string());
             }
-            return self.update_names_4_sparse(genes, &used, min_umi_count );
+            return self.update_names_4_sparse(genes, &used );
         }
         return [  ncell, entries ] ;
     }
 
 
-    pub fn mtx_counts(&mut self, genes: &mut GeneIds, names: &Vec<String>, min_count:usize, min_umi_count:u8 ) -> String{
+    pub fn mtx_counts(&mut self, genes: &mut GeneIds, names: &Vec<String>, min_count:usize) -> String{
         
 
         if ! self.checked{
@@ -497,16 +461,16 @@ impl <'a> SingleCellData{
 
             for ( _id,  cell_obj ) in &mut self.cells {
                 // total umi check
-                let n = cell_obj.n_umi( genes, names, min_umi_count );
+                let n = cell_obj.n_umi( genes, names );
                 if  n >= min_count{
                     cell_obj.passing = true;
                 }
             }
             self.checked = true;
-            //println!("{} cells have passed the cutoff of {} counts per cell and {} occurances per umi",ncell, min_count, min_umi_count ); 
+            //println!("{} cells have passed the cutoff of {} counts per cell and {} occurances per umi",ncell, min_count ); 
         }
         
-        let ncell_and_entries = self.update_names_4_sparse( genes, names, min_umi_count );
+        let ncell_and_entries = self.update_names_4_sparse( genes, names );
         self.passing = ncell_and_entries[0];
 
         let ret = format!("{} {} {}", genes.names4sparse.len(), ncell_and_entries[0], ncell_and_entries[1] );
@@ -558,7 +522,7 @@ mod tests {
 
 
 
-        //to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String>, min_umi_count:u8 ) 
+        //to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String> ) 
         let names= vec!("Gene1".to_string(), "Gene2".to_string() );
         let exp2:String = "Cell1\t20\t0\tGene1\t1".to_string();
         let val = cell1.to_str( &genes, &names, 1 as u8 ).to_string();
@@ -600,10 +564,10 @@ mod tests {
         }
 
 
-        //to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String>, min_umi_count:u8 ) 
+        //to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String> ) 
         let  names= vec!("Gene1".to_string(), "Gene3".to_string() );
         let  exp2:String = "2 1 2".to_string();
-        let  val = celldata.mtx_counts( &mut genes, &names, 1 as usize , 1 as u8);
+        let  val = celldata.mtx_counts( &mut genes, &names, 1 as usize );
         //to_str( &genes, &names, 1 as u8 ).to_string();
 
         assert_eq!( val,  exp2 ); 
@@ -653,7 +617,7 @@ mod tests {
         }
 
         let names = vec!("Gene3".to_string());
-        let val = celldata.mtx_counts( &mut genes, &names, 1 as usize , 1 as u8);
+        let val = celldata.mtx_counts( &mut genes, &names, 1 as usize );
         let exp2 = "1 2 2".to_string();
         
         assert_eq!( val,  exp2 ); 
@@ -714,7 +678,7 @@ mod tests {
 
         let file_path_sp = PathBuf::from( "../testData/output_sparse");
 
-        match celldata.write_sparse_sub ( file_path_sp, &mut genes, &names, 1, 1 ) {
+        match celldata.write_sparse_sub ( file_path_sp, &mut genes, &names, 1) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };
@@ -785,7 +749,7 @@ mod tests {
 
         let file_path_sp = PathBuf::from( "../testData/output_sparse2");
 
-        match celldata.write_sparse_sub ( file_path_sp, &mut genes, &names, 1, 1 ) {
+        match celldata.write_sparse_sub ( file_path_sp, &mut genes, &names, 1) {
             Ok(_) => (),
             Err(err) => panic!("Error in the data write: {}", err)
         };

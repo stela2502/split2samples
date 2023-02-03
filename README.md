@@ -41,7 +41,11 @@ To run the test data (a tiny bit of a real dataset):
 target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse  -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30 -v v1
 ```
 
-This will produce an output consisting of two cells. and it should run super fast.
+Or to even validate this data you can run a R test script (which requires the R::Seurat package) like that:
+
+```
+Rscript Rtest/TestExample.R
+```
 
 
 # Usage
@@ -50,7 +54,11 @@ The `quantifyRhapsody` program takes several arguments.  The usage can be printe
 from the command line using `quantifyRhapsody -h`.
 
 ```
-./target/release/quantifyRhapsody -h
+target/release/quantify_rhapsody  -h
+Rustody 0.3.4
+Stefan L. <stefan.lang@med.lu.se>
+Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles. You need quite long R1 and
+R2 reads for this! (>70R1 and >70R2 [v1] and 52 bp reads for v2.96 and v2.384)
 
 USAGE:
     quantify_rhapsody [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antibody <ANTIBODY> --min-umi <MIN_UMI> --version <VERSION>
@@ -58,17 +66,16 @@ USAGE:
 OPTIONS:
     -a, --antibody <ANTIBODY>        the fasta database containing the antibody tags
     -e, --expression <EXPRESSION>    the fasta database containing the genes
-    -f, --file <FILE>                the input R2 fastq file
+    -f, --file <FILE>                the input R2 samples file
     -h, --help                       Print help information
-    -m, --min-umi <MIN_UMI>          the minimum reads (sample + genes + antibody combined)
+    -m, --min-umi <MIN_UMI>          the minimum reads per cell (sample + genes + antibody combined)
         --max-reads <MAX_READS>      Optional: end the analysis after processing <max_reads> cell
                                      fastq entries [default: 18446744073709551615]
     -o, --outpath <OUTPATH>          the outpath
-    -r, --reads <READS>              the input R1 fastq file
+    -r, --reads <READS>              the input R1 reads file
     -s, --specie <SPECIE>            the specie of the library [mouse, human]
-    -u, --umi-count <UMI_COUNT>      UMI min count - use every umi (per gene; 1) or only reoccuring
-                                     ones (>1) [default: 1]
-    -V, --version                    Print version information
+    -v, --version <VERSION>          the version of beads you used v1, v2.96 or v2.384
+
 ```
 
 You see - this is the one I compiled on Windows 11.
