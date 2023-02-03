@@ -27,7 +27,7 @@ pub struct CellData{
     //pub kmer_size: usize,
     pub name: std::string::String,
     pub genes: BTreeMap<usize, HashSet<u64>>, // I want to know how many times I got the same UMI
-    pub total_reads: usize, // instead of the per umi counting
+    pub total_reads: BTreeMap<usize, usize>, // instead of the per umi counting
     pub passing: bool // check if this cell is worth exporting. Late game
 }
 
@@ -35,7 +35,7 @@ impl CellData{
     pub fn new(  name: std::string::String ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
         let loc_name = name.clone();
-        let total_reads = 0;
+        let total_reads = BTreeMap::new();
         let passing = false;
         Self{
             name: loc_name,
@@ -47,14 +47,19 @@ impl CellData{
 
     pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
         //println!("adding gene id {}", geneid );
-        self.total_reads += 1;
+        
         return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
+                match self.total_reads.get_mut( &geneid ){
+                    Some( count ) => *count += 1,
+                    None => panic!("This must not happen - libraray error"),
+                }
                 gene.insert( umi )
             }, 
             None => {
                 let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
                 gc.insert( umi );
+                self.total_reads.insert( geneid, 1 );
                 self.genes.insert( geneid, gc );
                 true
             }
@@ -71,9 +76,22 @@ impl CellData{
         return n; 
     }
 
-    pub fn n_reads( &self, _gene_info:&GeneIds, _gnames: &Vec<String> ) -> usize {
+    pub fn n_reads( &self, gene_info:&GeneIds, gnames: &Vec<String> ) -> usize {
         //println!("I got {} umis for cell {}", n, self.name );
-        return self.total_reads; 
+        let mut n = 0;
+        for gname in gnames{
+            let id = match gene_info.names.get( gname ){
+                Some(g_id) => g_id,
+                None => panic!("I could not resolve the gene name {}", gname ),
+            };
+            n += match self.total_reads.get( id  ){
+            Some( reads ) => {
+                *reads
+            }
+            None => 0
+        };
+        }
+        return n; 
     }
 
     pub fn n_umi_4_gene( &self, gene_info:&GeneIds, gname:&String) -> usize {
