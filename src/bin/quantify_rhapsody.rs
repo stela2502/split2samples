@@ -193,7 +193,7 @@ fn main() {
     let mut pcr_duplicates = 0;
     let mut local_dup = 0;
     let split:usize = 1000*1000;
-    let log_iter = 0;
+    let mut log_iter = 0;
     //let split:usize = 1000;
 
     let pos:Vec<usize>;
@@ -350,11 +350,11 @@ fn main() {
             }
         }
         
-        let log_str = format!("{} cell reads ({:.4}% with gene info; {:.4}% of which are PCR duplicates [{:.4}% in last iteration])",
-            ok_reads , 
+        let log_str = format!("{} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch])",
+            log_iter , 
             ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
             pcr_duplicates as f32 / ok_reads as f32 * 100.0,
-            local_dup as f32 / split as f32 * 100.0,
+            local_dup as f32 / split as f32 * 100.0
         );
 
         pb.finish_with_message( log_str );
