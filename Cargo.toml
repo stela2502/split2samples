@@ -1,6 +1,6 @@
 [package]
 name = "Rustody"
-version = "0.3.5"
+version = "0.3.6"
 edition = "2018"
 license-file = "LICENSE"
 description = "Split BD rapsody fastq files into sample specific fastq files"

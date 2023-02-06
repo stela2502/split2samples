@@ -95,12 +95,12 @@ impl GeneIds{
                     continue;
                 }
             }
-            if checker.len() < 2{
+            if checker.len() < 3{
                 //println!( "kmer for gene {} is too simple/not enough diff nucs): {:?}", name, std::str::from_utf8(kmer)  );
                 continue;
             }
             for ( _key, value ) in checker.iter(){
-                if *value as f32 / self.kmer_size as f32 > 0.8 {
+                if *value as f32 / self.kmer_size as f32 > 0.6 {
                     //println!( "kmer for gene {} is too simple/too many nucs same: {:?}", name, std::str::from_utf8(kmer)  );
                     continue;
                 } 
@@ -126,7 +126,7 @@ impl GeneIds{
                 total +=1;
             }
         }
-        if total < 10{
+        if total < 3{
             eprintln!( "Sequence for gene {} is too simple/sontains to many simple sequences!", name);
         }
         println!( "{} kmers for gene {}", total, name );
@@ -170,7 +170,7 @@ impl GeneIds{
                     if max < sums[*c1]{
                         //println!("the new max is {}", max);
                         max =  sums[*c1];
-                        if max > 2{
+                        if max > 4{
                             // 2 hits gave me really really strange results.
                             // need to check for 3 again.
                             break // 2 unique hits should be enough
