@@ -20,43 +20,14 @@ use std::path::PathBuf;
 use std::path::Path;
 
 
-/// SingelGeneData - I want to store both the umis and the total reads for the single genes.
-/// Storing it in two different BTreeMap might slow the system down a lot.
-// to store it in one BTreeMap instead I need a new class: SingelGeneData
-pub struct SingelGeneData{
-    umis:HashSet<u64>,
-    n_read:usize,
-}
-
-impl SingelGeneData{
-    pub fn new ( umi:u64 ) -> Self {
-        let n_read = 1;
-        let mut umis = HashSet::new();
-        umis.insert( umi );
-        Self{
-            umis,
-            n_read
-        }
-    }
-    pub fn add (&mut self,  umi:u64 ) ->bool {
-        self.n_read +=1;
-        self.umis.insert( umi )
-    }
-    pub fn n_umi(&self, ) -> usize {
-        self.umis.len()
-    }
-    pub fn n_reads(&self, ) -> usize {
-        self.n_read
-    }
-}
-
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
 /// But I do not correct the UMIs here - even with sequencing errors 
 /// we should get a relatively correct picture as these folow normal distribution.
 pub struct CellData{
     //pub kmer_size: usize,
     pub name: std::string::String,
-    pub genes: BTreeMap<usize, SingelGeneData>, // I want to know how many times I got the same UMI
+    pub genes: BTreeMap<usize, HashSet<u64>>, // I want to know how many times I got the same UMI
+    pub total_reads: BTreeMap<usize, usize>, // instead of the per umi counting
     pub passing: bool // check if this cell is worth exporting. Late game
 }
 
@@ -64,10 +35,12 @@ impl CellData{
     pub fn new(  name: std::string::String ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
         let loc_name = name.clone();
+        let total_reads = BTreeMap::new();
         let passing = false;
         Self{
             name: loc_name,
             genes,
+            total_reads,
             passing
         }
     }
@@ -77,11 +50,17 @@ impl CellData{
         
         return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
-                gene.add( umi )
+                match self.total_reads.get_mut( &geneid ){
+                    Some( count ) => *count += 1,
+                    None => panic!("This must not happen - libraray error"),
+                }
+                gene.insert( umi )
             }, 
             None => {
-                let gene = SingelGeneData::new( umi );
-                self.genes.insert( geneid, gene );
+                let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
+                gc.insert( umi );
+                self.total_reads.insert( geneid, 1 );
+                self.genes.insert( geneid, gc );
                 true
             }
         }
@@ -105,13 +84,12 @@ impl CellData{
                 Some(g_id) => g_id,
                 None => panic!("I could not resolve the gene name {}", gname ),
             };
-
-            n += match self.genes.get( id  ){
-            Some( gene ) => {
-                gene.n_reads()
-                },
-            None => 0,
-            };
+            n += match self.total_reads.get( id  ){
+            Some( reads ) => {
+                *reads
+            }
+            None => 0
+        };
         }
         return n; 
     }
@@ -123,9 +101,9 @@ impl CellData{
             None => panic!("I could not resolve the gene name {}", gname ),
         };
         n += match self.genes.get( id  ){
-            Some( gene ) => {
-                gene.n_umi()
-            },
+            Some( map ) => {
+                map.len()
+            }
             None => 0
         };
         //if n > 0 { println!("I got {} umis for gene {}", n, gname ); }
