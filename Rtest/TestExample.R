@@ -14,8 +14,8 @@ data = Read10X( "testData/output_1e5/BD_Rhapsody_expression")
 
 good = readRDS(file = "Rtest/validatesRes.rds")
 
-if ( all.equal( data, good ) ){
-	print ( "Test OK" )
+if ( length( all.equal( data, good ) ) == 1 ){
+	print ("OK")
 }else {
-	print ( "Test FAIL")
+	print ("FAIL")
 }

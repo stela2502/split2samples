@@ -75,12 +75,37 @@ impl GeneIds{
         if seq.len() > self.seq_len{
             self.seq_len = seq.len() 
         }
+
+        let mut checker = BTreeMap::<u8, usize>::new();
+        let mut total = 0;
+
         for kmer in needletail::kmer::Kmers::new(seq, self.kmer_size as u8 ) {
+            checker.clear();
             for nuc in kmer {
+                match checker.get_mut( nuc ){
+                    Some( map ) => *map += 1,
+                    None => {
+                        match checker.insert( nuc.clone(), 1){
+                            Some(_) => (),
+                            None => (),
+                        }
+                    }
+                }
                 if *nuc ==b'N'{
                     continue;
                 }
             }
+            if checker.len() < 2{
+                //println!( "kmer for gene {} is too simple/not enough diff nucs): {:?}", name, std::str::from_utf8(kmer)  );
+                continue;
+            }
+            for ( _key, value ) in checker.iter(){
+                if *value as f32 / self.kmer_size as f32 > 0.8 {
+                    //println!( "kmer for gene {} is too simple/too many nucs same: {:?}", name, std::str::from_utf8(kmer)  );
+                    continue;
+                } 
+            }
+
             //println!("Adding a gene id os length {} with seq {:?}", self.kmer_size, std::str::from_utf8(kmer) );
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
             let km = Kmer::from(kmer).into_u64();
@@ -98,8 +123,14 @@ impl GeneIds{
                 }
                 //println!("I insert a kmer for id {}", self.max_id-1 );
                 self.kmers.insert(km, self.max_id-1 );
+                total +=1;
             }
         }
+        if total < 10{
+            eprintln!( "Sequence for gene {} is too simple/sontains to many simple sequences!", name);
+        }
+        println!( "{} kmers for gene {}", total, name );
+
     }
 
     pub fn get_id( &mut self, name: String ) -> usize{
