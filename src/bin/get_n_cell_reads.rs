@@ -13,6 +13,7 @@ use std::fs;
 
 use std::time::SystemTime;
 
+use serde::Deserialize;
 
 // use std::collections::HashSet;
 // use std::convert::TryInto;
@@ -35,8 +36,46 @@ struct Opts {
     #[clap(short, long)]
     version: String,
     /// Optional: end the analysis after processing <max_reads> cell fastq entries 
-    #[clap(default_value_t=usize::MAX, long)]
+    #[clap(default_value_t=usize::MAX, short, long)]
     max_reads: usize,
+    /// Optional: CellIDs you want to get into the outfile 
+    #[clap(default_value="no file", short, long)]
+    cell_ids: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BCMapRecord {
+    id: String,
+    cellid: String,
+}
+
+
+fn parse_bc_map(bc_map: &str ) -> HashSet<u32> {
+
+    let mut rdr = csv::ReaderBuilder::new()
+        .delimiter(b'\t')
+        .comment(Some(b'#'))
+        .has_headers(true)
+        .from_path(bc_map)
+        .expect("cannot open cellIDs");
+
+    //let sub_len = 9;
+    let mut hash = HashSet::new();
+
+    for result in rdr.deserialize() {
+        // Notice that we need to provide a type hint for automatic
+        // deserialization.
+        let record: BCMapRecord = result.expect("could not deserialize barcode map record.");
+
+        // now I need to get the seq into a [&u8] vector....
+        // from https://gist.github.com/jimmychu0807/strinf-conversion.rs 
+        // let byte1: Vec<u8> = src1.iter().map(|c| *c as u8).collect::<Vec<_>>();
+        //println!("what do I have here: {}", record.bc);
+        let cellid: u32 =  record.cellid.parse().unwrap();
+        hash.insert( cellid );
+    }
+
+    hash
 }
 
 // the main function nowadays just calls the other data handling functions
@@ -59,14 +98,8 @@ fn main() {
     println!("init models");    
 
     fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
-    // match fs::create_dir_all(&opts.outpath).expect("AlreadyExists"){
-    //     Ok(_) => (),
-    //     Err(e) => {
-    //         panic!("I could not create the outpath: {}", e);
-    //     }
-    // };
-
-        let pos:Vec<usize>;
+    
+    let pos:Vec<usize>;
     let min_sizes:Vec<usize>;
 
     if &opts.version == "v1"{
@@ -78,14 +111,68 @@ fn main() {
         min_sizes = vec![ 51, 51 ];
     }
 
+
     //let sub_len = 9;
     //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
     //cells.init_rhapsody( &opts.specie );
 
-    // let mut cell_umi:HashSet<u128> = HashSet::new();
+    let cell_umi;
+    if opts.cell_ids != "no file" {
+        cell_umi = parse_bc_map( &opts.cell_ids );
+    }
+    else{
+        cell_umi = HashSet::new();
+    }
 
     //  now we need to get a CellIDs object, too
     let mut cells = CellIds::new(&opts.version, 7);
+
+    // let mut gex = SingleCellData::new( );
+
+    // let mut expr_file = parse_fastx_file(&opts.expression).expect("valid path/file");
+
+    // let mut sample_names:Vec<String> = Vec::with_capacity(12);
+    // let mut gene_names:Vec<String> = Vec::with_capacity(600);
+    // let mut ab_names:Vec<String> = Vec::with_capacity(30);
+
+    // for i in 1..13{
+    //     sample_names.push( format!("Sample{}",i) )
+    // }
+
+    // if  opts.specie.eq("human") {
+    //     // get all the human sample IDs into this.
+    //     genes.add( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", "Sample1".to_string() );
+    //     genes.add( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", "Sample2".to_string() );
+    //     genes.add( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", "Sample3".to_string() );
+    //     genes.add( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", "Sample4".to_string() );
+    //     genes.add( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", "Sample5".to_string() );
+    //     genes.add( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", "Sample6".to_string() );
+    //     genes.add( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", "Sample7".to_string() );
+    //     genes.add( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", "Sample8".to_string() );
+    //     genes.add( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", "Sample9".to_string() );
+    //     genes.add( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", "Sample10".to_string() );
+    //     genes.add( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", "Sample11".to_string() );
+    //     genes.add( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", "Sample12".to_string() );
+    // }
+    // else if opts.specie.eq("mouse") {
+    //     // and the mouse ones
+    //     genes.add( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", "Sample1".to_string() );
+    //     genes.add( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", "Sample2".to_string() );
+    //     genes.add( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", "Sample3".to_string() );
+    //     genes.add( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", "Sample4".to_string() );
+    //     genes.add( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", "Sample5".to_string() );
+    //     genes.add( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", "Sample6".to_string() );
+    //     genes.add( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", "Sample7".to_string() );
+    //     genes.add( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", "Sample8".to_string() );
+    //     genes.add( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", "Sample9".to_string() );
+    //     genes.add( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", "Sample10".to_string() );
+    //     genes.add( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", "Sample11".to_string() );
+    //     genes.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", "Sample12".to_string() );
+
+    // } else {
+    //     println!("Sorry, but I have no primers for species {}", &opts.specie);
+    //     std::process::exit(1)
+    // }
 
     // that is a class to strore gene expression data.
     // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
@@ -150,17 +237,24 @@ fn main() {
                         continue 'main;
                     }
                 }
+
                 //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
 
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 match cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-                    Ok(_cell_id) => {
+                    Ok(cell_id) => {
                         // this is removing complexity from the data - in the test dataset 111 reads are ignored.
                         // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );
                         // if ! cell_umi.insert( cell_id_umi ){
                         //     continue 'main;
                         // }
+
+                        if opts.cell_ids != "no file" {
+                            if ! cell_umi.contains( &cell_id ){
+                                continue 'main;
+                            }
+                        }
 
                         match seqrec1.write(&mut ofile.buff1, None){
                             Ok(_) => (),
