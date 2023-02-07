@@ -26,6 +26,7 @@ cp target/release/demux10x /usr/bin
 cp target/release/quantify_rhapsody /usr/bin
 cp target/release/bd_cell_id_2_seq /usr/bin
 cp target/release/bd_get_single_cell /usr/bin
+cp target/release/get_n_cell_reads /usr/bin
 ``` 
 
 Do not forget the --release while building the tool. 

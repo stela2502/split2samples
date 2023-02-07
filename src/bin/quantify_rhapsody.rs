@@ -66,6 +66,18 @@ struct Opts {
     umi_count: u8,
 */
 
+
+// fn mean_u8( data:&[u8] ) -> f32 {
+//     let mut total = 0;
+//     let mut sum = 0;
+//     for ent in data {
+//         sum += *ent as usize;
+//         total += 1;
+//     }
+//     sum as f32 / total as f32
+// }
+
+
 // the main function nowadays just calls the other data handling functions
 fn main() {
     // parse the options
@@ -256,6 +268,20 @@ fn main() {
                         continue 'main;
                     }
                 };
+
+                // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
+                // println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
+
+                // if mean_u8( seqrec.qual().unwrap() ) < 50.0 {
+                //     unknown +=1;
+                //     println!("filtered a read");
+                //     continue 'main;
+                // }
+                // if mean_u8( seqrec1.qual().unwrap() ) < 50.0 {
+                //     unknown +=1;
+                //     println!("filtered a read");
+                //     continue 'main;
+                // }
 
                 // totally unusable sequence
                 // as described in the BD rhapsody Bioinformatic Handbook
