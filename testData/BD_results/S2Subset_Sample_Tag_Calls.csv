@@ -1,0 +1,39 @@
+####################
+## BD Rhapsody Targeted Analysis Pipeline Version 1.11.1
+## Analysis Date - Tue Feb 07 2023 13:42:29 GMT+0000 (UTC)
+## Libraries - cells - Bead version detected: Enhanced
+## References - 2276_20220531_chang_to_rpl36a_amplicons.fasta | MyAbSeqPanel.fasta
+## Parameters - Sample Tag Version: mm | Sample Tag Names:  | VDJ Version: None | Subsample Reads: None | Putative Cell Calling Type: mRNA | Refined Putative Cell Calling: Off | Exclude Intronic Reads: Off | Exact Cell Count: None
+####################
+Cell_Index,Sample_Tag,Sample_Name
+6193184,Undetermined,Undetermined
+3569368,Undetermined,Undetermined
+7546029,Undetermined,Undetermined
+8143512,Undetermined,Undetermined
+1787564,Undetermined,Undetermined
+157841,Undetermined,Undetermined
+4885340,Undetermined,Undetermined
+5463585,SampleTag01_mm,SampleTag01_mm
+25040,Undetermined,Undetermined
+6348767,Undetermined,Undetermined
+5018926,SampleTag08_mm,SampleTag08_mm
+7972283,Undetermined,Undetermined
+10187216,Undetermined,Undetermined
+4283522,Undetermined,Undetermined
+3268694,Undetermined,Undetermined
+4305474,Undetermined,Undetermined
+5331545,Undetermined,Undetermined
+3103568,SampleTag02_mm,SampleTag02_mm
+6228103,SampleTag08_mm,SampleTag08_mm
+9732142,SampleTag02_mm,SampleTag02_mm
+7243433,SampleTag03_mm,SampleTag03_mm
+5753122,SampleTag02_mm,SampleTag02_mm
+8116618,SampleTag01_mm,SampleTag01_mm
+7107103,Undetermined,Undetermined
+7236933,Undetermined,Undetermined
+5166047,SampleTag01_mm,SampleTag01_mm
+1509915,SampleTag08_mm,SampleTag08_mm
+10329694,Undetermined,Undetermined
+11079622,Undetermined,Undetermined
+2522963,SampleTag04_mm,SampleTag04_mm
+1799438,SampleTag10_mm,SampleTag10_mm
