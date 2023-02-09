@@ -8,7 +8,7 @@ I found the sample table most helpful in the detection of populations containing
 
 The output from here can easily be read into any single cell analysis package for downstream analysis like Seurat or Scanpy.
 
-You can inspect the state of the program using this (deatiled comparison between the seven bridges BD Rhapsody pipeline and the Rhapsody output here)[ ./testData/BD_results/CombinedAnalysis_scanpy.ipynb].
+You can inspect the state of the program using this [deatiled comparison between the seven bridges BD Rhapsody pipeline and the Rhapsody output here]( ./testData/BD_results/CombinedAnalysis_scanpy.ipynb).
 
 # Installation
 
