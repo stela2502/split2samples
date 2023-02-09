@@ -72,6 +72,7 @@ fn parse_bc_map(bc_map: &str ) -> HashSet<u32> {
         // let byte1: Vec<u8> = src1.iter().map(|c| *c as u8).collect::<Vec<_>>();
         //println!("what do I have here: {}", record.bc);
         let cellid: u32 =  record.cellid.parse().unwrap();
+        println!("{}", record.id );
         hash.insert( cellid );
     }
 

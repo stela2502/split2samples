@@ -496,7 +496,10 @@ impl CellIds<'_>{
 
     pub fn to_cellid (&mut self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
         let mut cell_id:u32 = 0;
-        let max:u32 = self.c1s.len() as u32;
+        // This has to be a static 384 to reproduce what BD has...
+        // I would use that for v2.384 only...
+        let max:u32 = 384;
+        //let max:u32 = self.c1s.len() as u32;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
         
         //println!("to_cellid the c1 seq: {:?}", std::str::from_utf8( &r1[c1[0]..c1[1]] ) );
@@ -625,7 +628,8 @@ impl CellIds<'_>{
 
     pub fn to_sequence(&self, index:u32) -> Vec<&[u8; 9]>{
         let mut idx: u32 = index - 1;
-        let max:u32 = self.c1s.len() as u32;
+        let max:u32 = 384;
+        //let max:u32 = self.c1s.len() as u32;
         let code1 = ((idx / (max * max)) as f64).floor() as u32;
         idx = idx - code1 * (max * max);
         let code2 = ((idx / max) as f64).floor() as u32;

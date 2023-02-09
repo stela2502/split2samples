@@ -22,6 +22,7 @@ use std::io::BufWriter;
 use std::fs::File;
 use std::io::Write;
 
+
 // use std::collections::HashSet;
 // use std::convert::TryInto;
 
@@ -58,6 +59,9 @@ struct Opts {
     /// Optional: end the analysis after processing <max_reads> cell fastq entries 
     #[clap(default_value_t=usize::MAX, long)]
     max_reads: usize,
+    /// minimal sequencing quality 
+    #[clap(default_value_t=25.0, long)]
+    min_quality: f32,
 }
 
 /*
@@ -67,15 +71,23 @@ struct Opts {
 */
 
 
-// fn mean_u8( data:&[u8] ) -> f32 {
-//     let mut total = 0;
-//     let mut sum = 0;
-//     for ent in data {
-//         sum += *ent as usize;
-//         total += 1;
-//     }
-//     sum as f32 / total as f32
-// }
+fn mean_u8( data:&[u8] ) -> f32 {
+    let this = b"!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+    let mut total = 0;
+    let mut sum = 0;
+    for ent in data {
+        for i in 0..this.len() {
+            if *ent == this[i] {
+                sum += i;
+                total += 1;
+                break;
+            }
+        }
+        //total += 1;
+    }
+    sum as f32 / total as f32
+}
 
 
 // the main function nowadays just calls the other data handling functions
@@ -112,8 +124,8 @@ fn main() {
     //cells.init_rhapsody( &opts.specie );
 
     // let mut cell_umi:HashSet<u128> = HashSet::new();
-    let mut genes:GeneIds = GeneIds::new(32); // split them into 9 bp kmers
-
+    let mut genes :GeneIds = GeneIds::new(32); // split them into 9 bp kmers
+    let mut genes2:GeneIds = GeneIds::new(20); 
     //  now we need to get a CellIDs object, too
     let mut cells = CellIds::new(&opts.version, 7);
 
@@ -180,6 +192,7 @@ fn main() {
                     //println!("Adding gene #{} {}",i, id );
                     genes.add( &seqrec.seq(), id.to_string() );
                     gene_names.push( id.to_string() );
+                    genes2.add_unchecked( &seqrec.seq(), id.to_string() );
                     break;
                 }
             },
@@ -195,6 +208,7 @@ fn main() {
                 for id in st.to_string().split("|"){
                     genes.add( &seqrec.seq(), id.to_string() );
                     ab_names.push( id.to_string() );
+                    genes2.add_unchecked( &seqrec.seq(), id.to_string() );
                     break;
                 }
             },
@@ -207,6 +221,7 @@ fn main() {
     let mut ok_reads = 0;
     let mut pcr_duplicates = 0;
     let mut local_dup = 0;
+    let mut bad_qual = 0;
     let split:usize = 1000*1000;
     let mut log_iter = 0;
     //let split:usize = 1000;
@@ -270,18 +285,18 @@ fn main() {
                 };
 
                 // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
-                // println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
+                //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
 
-                // if mean_u8( seqrec.qual().unwrap() ) < 50.0 {
-                //     unknown +=1;
-                //     println!("filtered a read");
-                //     continue 'main;
-                // }
-                // if mean_u8( seqrec1.qual().unwrap() ) < 50.0 {
-                //     unknown +=1;
-                //     println!("filtered a read");
-                //     continue 'main;
-                // }
+                if mean_u8( seqrec.qual().unwrap() ) < opts.min_quality {
+                    bad_qual +=1;
+                    //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec.seq()), mean_u8( seqrec.qual().unwrap()  ) );
+                    continue 'main;
+                }
+                if mean_u8( seqrec1.qual().unwrap() ) < opts.min_quality {
+                    bad_qual +=1;
+                    //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec1.seq()), mean_u8( seqrec1.qual().unwrap() ) );
+                    continue 'main;
+                }
 
                 // totally unusable sequence
                 // as described in the BD rhapsody Bioinformatic Handbook
@@ -324,30 +339,6 @@ fn main() {
                                             pcr_duplicates += 1;
                                             local_dup += 1;
                                         }
-                                        if ok_reads == opts.max_reads{
-                                            break 'main;
-                                        }
-                                        if ok_reads % split == 0{
-                                            log_iter+=1;
-
-                                            let log_str = format!("{} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch]): {:?} -> gene id: {}, cell id: {}",
-                                                log_iter , 
-                                                ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
-                                                pcr_duplicates as f32 / ok_reads as f32 * 100.0,
-                                                local_dup as f32 / split as f32 * 100.0,
-                                                std::str::from_utf8(&seqrec1.seq()), gene_id , cell_id 
-                                            );
-                                            pb.set_message( log_str.clone() );
-                                            pb.inc(1);
-                                            match writeln!( log_writer, "{}", log_str ){
-                                                Ok(_) => (),
-                                                Err(err) => {
-                                                    eprintln!("write error: {}", err);
-                                                }
-                                            };
-                                            local_dup = 0;
-                                            //std::thread::sleep(Duration::from_millis(100));
-                                        }
                                     },
                                     Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
                                 }
@@ -355,8 +346,26 @@ fn main() {
                             },
                             None => {
                                 unknown +=1;
+                                // match genes2.get_unchecked( &seqrec.seq() ){
+                                //     Some(gene_id) =>{ 
+                                //         match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
+                                //             Ok(cell_info) => {
+                                //                 //let name = genes2.get_name ( gene_id );
+                                //                 //println!("I got gene {} ({}) in this read: {:?} (quality {})", name, gene_id , std::str::from_utf8( &seqrec.seq() ), mean_u8( seqrec.qual().unwrap() )  );
+                                //                 ok_reads += 1;
+                                //                 if cell_info.add( gene_id, umi ) == false {
+                                //                     //println!("  -> pcr duplicate");
+                                //                     pcr_duplicates += 1;
+                                //                     local_dup += 1;
+                                //                 }
+                                //             },
+                                //             Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
+                                //         }
+                                //     },
+                                //     None => { //eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) ); 
+                                //     },
+                                // };
                                 // all - samples genes and antibodies are classed as genes here.
-                                //eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) );
                             }
                         };
 
@@ -374,6 +383,30 @@ fn main() {
                         continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
                 };
+                if ok_reads == opts.max_reads{
+                    break 'main;
+                }
+                if ok_reads % split == 0{
+                    log_iter+=1;
+
+                    let log_str = format!("{} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch]): {:?}",
+                        log_iter , 
+                        ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
+                        pcr_duplicates as f32 / ok_reads as f32 * 100.0,
+                        local_dup as f32 / split as f32 * 100.0,
+                        std::str::from_utf8(&seqrec1.seq())
+                    );
+                    pb.set_message( log_str.clone() );
+                    pb.inc(1);
+                    match writeln!( log_writer, "{}", log_str ){
+                        Ok(_) => (),
+                        Err(err) => {
+                            eprintln!("write error: {}", err);
+                        }
+                    };
+                    local_dup = 0;
+                    //std::thread::sleep(Duration::from_millis(100));
+                }
             } else {
                 println!("file 2 had reads remaining, but file 1 ran out of reads!");
             }
@@ -434,8 +467,9 @@ fn main() {
         println!( "\nSummary:");
         println!(     "total      reads  : {} reads", total );
         println!(     "no cell ID reads  : {} reads", no_sample );
+        println!(     "bad quality       : {} reads", bad_qual );
         println!(     "N's or too short  : {} reads", unknown );
-        println!(     "usable reads      : {} reads ({:.2}% of total)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
+        println!(     "cellular reads    : {} reads ({:.2}% of total)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
         println!(     "expression reads  : {} reads ({:.2}% of total)", reads_genes, (reads_genes as f32 / total as f32) * 100.0 );
         println!(     "antibody reads    : {} reads ({:.2}% of total)", reads_ab, (reads_ab as f32 / total as f32) * 100.0 );
         println!(     "sample tag reads  : {} reads ({:.2}% of total)", reads_samples, (reads_samples as f32 / total as f32) * 100.0 );
