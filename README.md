@@ -84,6 +84,11 @@ OPTIONS:
 You see - this is the one I compiled on Windows 11.
 
 
+# Speed comparisons to local BD software installation
+
+The BD rhapsody software is available for Mac and Linux, not for Windows. Whereas this rust program here also compiles and runs on Windows.
+
+
 # Additional Programs
 
 There are several other programs in this package:
