@@ -1,2 +1,5 @@
 *.cwl
 *.yml
+*.sif
+/S1_local_BD/
+/S2_local_BD/

@@ -1,0 +1,87 @@
+#!/usr/bin/env cwl-runner
+
+cwl:tool: rhapsody
+
+# This is a template YML file used to specify the inputs for a BD Genomics Rhapsody Targeted Analysis pipeline run. See the
+# BD Genomics Analysis Setup User Guide (Doc ID: 47383) for more details. Enter the following information:
+
+
+## Reads (required) - Path to your read files in the FASTQ.GZ format. You may specify as many R1/R2 read pairs as you want.
+Reads:
+
+ - class: File
+   location: "cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz"
+
+ - class: File
+   location: "cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz"
+
+
+## Although both the Reference and AbSeq_Reference files are optional, one reference file is required.
+## For putative cell calling using an mRNA dataset, please provide an mRNA reference fasta file as the Reference.
+## For putative cell calling using an AbSeq dataset, please provide an AbSeq reference fasta file as the AbSeq_Reference.
+
+## Reference (optional) - Path to mRNA reference file for pre-designed, supplemental, or custom panel, in FASTA format.
+## For putative cell calling using an mRNA dataset, please provide an mRNA reference fasta file as the Reference.
+## For putative cell calling using an AbSeq dataset, please provide an AbSeq reference fasta file as the AbSeq_Reference below.
+Reference:
+ - class: File
+   location: "2276_20220531_chang_to_rpl36a_amplicons.fasta"
+
+## AbSeq_Reference (optional) - Path to the AbSeq reference file in FASTA format.  Only needed if BD AbSeq Ab-Oligos are used.
+## For putative cell calling using an mRNA dataset, please provide an mRNA reference fasta file as the Reference above.
+## For putative cell calling using an AbSeq dataset, please provide an AbSeq reference fasta file as the AbSeq_Reference.
+AbSeq_Reference:
+ - class: File
+   location: "MyAbSeqPanel.fasta"
+
+####################################
+## Putative Cell Calling Settings ##
+####################################
+
+## Putative cell calling dataset (optional) - Specify the dataset to be used for putative cell calling: mRNA or AbSeq_Experimental.
+## For putative cell calling using an mRNA dataset, please provide a Reference fasta file above.
+## For putative cell calling using an AbSeq dataset, please provide an AbSeq_Reference fasta file above.
+## By default, the mRNA data will be used for putative cell calling.
+#Putative_Cell_Call: mRNA
+
+## Exact cell count (optional) - Set a specific number (>=1) of cells as putative, based on those with the highest error-corrected read count
+#Exact_Cell_Count: 10000
+
+## Disable Refined Putative Cell Calling (optional) - Determine putative cells using only the basic algorithm (minimum second derivative along the cumulative reads curve).  The refined algorithm attempts to remove false positives and recover false negatives, but may not be ideal for certain complex mixtures of cell types.  Does not apply if Exact Cell Count is set.
+## The values can be true or false. By default, the refined algorithm is used.
+#Basic_Algo_Only: true
+
+########################
+## Subsample Settings ##
+########################
+
+## Subsample (optional) - A number >1 or fraction (0 < n < 1) to indicate the number or percentage of reads to subsample.
+#Subsample: 0.01
+
+## Subsample seed (optional) - A seed for replicating a previous subsampled run.
+#Subsample_seed: 3445
+
+#######################
+## Multiplex options ##
+#######################
+
+## Sample Tags Version (optional) - Specify if multiplexed run: human, hs, mouse or mm
+#Sample_Tags_Version: human
+
+## Tag_Names (optional) - Specify the tag number followed by '-' and the desired sample name to appear in Sample_Tag_Metrics.csv
+# Do not use the special characters: &, (), [], {},  <>, ?, |
+#Tag_Names: [4-mySample, 9-myOtherSample, 6-alsoThisSample]
+
+################
+## VDJ option ##
+################
+
+## VDJ Version (optional) - Specify if VDJ run: human, mouse, humanBCR, humanTCR, mouseBCR, mouseTCR
+#VDJ_Version: human
+
+########################
+## Additional Options ##
+########################
+
+## Run Name (optional)-  Specify a run name to use as the output file base name. Use only letters, numbers, or hyphens. Do not use special characters or spaces.
+#Run_Name: run-name
