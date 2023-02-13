@@ -106,7 +106,7 @@ storage         : Samsung SSD 970 EVO Plus 2TB
 
 The test dataset consists of 500.000 reads with cell information.
 
-## time for a BD analysis S2
+## time for a BD analysis 500k reads S2
 
 ```
 # in the testData folder:
@@ -119,7 +119,7 @@ user    16m48,953s
 
 OK I assume we get the point ~ 17min.
 
-## time for a Rustody analysis S2
+## time for a Rustody analysis 500k reads S2
 
 ```
  time ../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96
