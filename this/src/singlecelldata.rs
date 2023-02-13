@@ -417,7 +417,7 @@ impl <'a> SingleCellData{
         //     }
         // }
         //println!( "min UMI count in export function: {}");
-        println!( "sparse Matrix: {} cell(s) and {} gene(s) and {} entries written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), entries, failed, file_path.into_os_string().into_string());
+        println!( "sparse Matrix: {} cell(s), {} gene(s) and {} entries written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), entries, failed, file_path.into_os_string().into_string());
         return Ok( () );
     }
     /// Update the gene names for export to sparse

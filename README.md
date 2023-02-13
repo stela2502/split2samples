@@ -131,11 +131,14 @@ user    0m4,020s
 
 So ~ 4 sec. I do not think it makes sense to calculate the difference here.
 
-How does it look for a real dataset?
+The two results from this small example are compared [here]( ./testData/BD_results/CombinedAnalysis_scanpy.ipynb).
+
+And the performance on a real dataset?
 
 ## Rustody on S2
 
-In total 781.213.661 reads.
+The full fastq file for this data has in total 781.213.661 reads.
+
 ```
 Writing outfiles ...
 sparse Matrix: 18925 cell(s) and 432 gene(s) and 1903979 entries written (460277 cells too view umis) to path Ok("Sample2_Rustody/BD_Rhapsody_expression");
@@ -171,7 +174,7 @@ quantify_rhapsody finished in 1h 36min 8 sec 767milli sec
 72K feb 10 12:13 ./Sample2_Rustody/Mapping_log.txt
 ```
 
-Little less than 2h. Let's check how much time BD's version doe need...
+Little less than 2h. Let's check how much time BD's version does need...
 
 ## And BD software for the S2 sample
 
