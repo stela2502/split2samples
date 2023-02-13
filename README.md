@@ -193,7 +193,7 @@ stderr was: 'evalmachine.<anonymous>:40
 (function(){return ((JSON.parse(self[0].contents).max_count));})()
 ```
 
-    </summary>
+</summary>
 
 ```
 Running RSEC on Cxcr6
