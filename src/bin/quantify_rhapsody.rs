@@ -22,6 +22,8 @@ use std::io::BufWriter;
 use std::fs::File;
 use std::io::Write;
 
+use this::ofiles::Ofiles;
+
 
 // use std::collections::HashSet;
 // use std::convert::TryInto;
@@ -62,6 +64,9 @@ struct Opts {
     /// minimal sequencing quality 
     #[clap(default_value_t=25.0, long)]
     min_quality: f32,
+    /// minimal sequencing quality 
+    #[clap(default_value_t=32, long)]
+    gene_kmers: usize,
 }
 
 /*
@@ -117,6 +122,7 @@ fn main() {
     //     }
     // };
 
+    let mut ofile = Ofiles::new( 1, "Unknown", "R2.fastq.gz", "R1.fastq.gz",  &opts.outpath.as_str() );
     
 
     //let sub_len = 9;
@@ -124,8 +130,15 @@ fn main() {
     //cells.init_rhapsody( &opts.specie );
 
     // let mut cell_umi:HashSet<u128> = HashSet::new();
-    let mut genes :GeneIds = GeneIds::new(32); // split them into 9 bp kmers
-    let mut genes2:GeneIds = GeneIds::new(20); 
+    let mut genes :GeneIds = GeneIds::new(opts.gene_kmers); // split them into 9 bp kmers
+    let mut genes2:GeneIds;
+    if opts.gene_kmers <= 15{
+        genes2 = GeneIds::new( 5 ); 
+    }
+    else {
+        genes2 = GeneIds::new(opts.gene_kmers -10); 
+    }
+     
     //  now we need to get a CellIDs object, too
     let mut cells = CellIds::new(&opts.version, 7);
 
@@ -342,29 +355,38 @@ fn main() {
                                     },
                                     Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
                                 }
-                                //println!("Cool I got a gene id: {}", id);
+                                //println!("Cool I got a gene id: {gene_id}", );
                             },
                             None => {
                                 unknown +=1;
-                                // match genes2.get_unchecked( &seqrec.seq() ){
-                                //     Some(gene_id) =>{ 
-                                //         match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
-                                //             Ok(cell_info) => {
-                                //                 //let name = genes2.get_name ( gene_id );
-                                //                 //println!("I got gene {} ({}) in this read: {:?} (quality {})", name, gene_id , std::str::from_utf8( &seqrec.seq() ), mean_u8( seqrec.qual().unwrap() )  );
-                                //                 ok_reads += 1;
-                                //                 if cell_info.add( gene_id, umi ) == false {
-                                //                     //println!("  -> pcr duplicate");
-                                //                     pcr_duplicates += 1;
-                                //                     local_dup += 1;
-                                //                 }
-                                //             },
-                                //             Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
-                                //         }
-                                //     },
-                                //     None => { //eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) ); 
-                                //     },
-                                // };
+                                match seqrec1.write(&mut ofile.buff1, None){
+                                    Ok(_) => (),
+                                    Err(err) => println!("{}",err)
+                                };
+                                match seqrec.write( &mut ofile.buff2, None){
+                                    Ok(_) => (),
+                                    Err(err) => println!("{}",err)
+                                };
+                                match genes2.get_unchecked( &seqrec.seq() ){
+                                    Some(gene_id) =>{ 
+                                        match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
+                                            Ok(cell_info) => {
+                                                let name = genes2.get_name ( gene_id );
+
+                                                //println!("Gid {:0>4} in this read: {:?} I got the gene {} (quality {}, matches {}) and these kmers: {}", gene_id, std::str::from_utf8( &seqrec.seq() ), name,  mean_u8( seqrec.qual().unwrap() ), genes2.last_count, genes2.last_kmers.join("-")  );
+                                                ok_reads += 1;
+                                                if cell_info.add( gene_id, umi ) == false {
+                                                    //println!("  -> pcr duplicate");
+                                                    pcr_duplicates += 1;
+                                                    local_dup += 1;
+                                                }
+                                            },
+                                            Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
+                                        }
+                                    },
+                                    None => { //eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) ); 
+                                    },
+                                };
                                 // all - samples genes and antibodies are classed as genes here.
                             }
                         };
@@ -374,9 +396,9 @@ fn main() {
                         // cell id could not be recovered
                         
                         // println!("Cell ID could not be recovered from {:?}:\n{}\n{:?}, {:?}, {:?}", std::str::from_utf8(&seqrec1.seq()), _err, 
-                        //     std::str::from_utf8( &seqrec1.seq()[pos[0]..pos[1]]),
-                        //     std::str::from_utf8( &seqrec1.seq()[pos[2]..pos[3]]),
-                        //     std::str::from_utf8( &seqrec1.seq()[pos[4]..pos[5]])
+                        //      std::str::from_utf8( &seqrec1.seq()[pos[0]..pos[1]]),
+                        //      std::str::from_utf8( &seqrec1.seq()[pos[2]..pos[3]]),
+                        //      std::str::from_utf8( &seqrec1.seq()[pos[4]..pos[5]])
                         // );
                         
                         no_sample +=1;

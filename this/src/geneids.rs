@@ -41,12 +41,15 @@ pub struct GeneIds{
     pub seq_len: usize, // size of the sequence that has been split into kmers
     kmer_size: usize, // size of the kmers
     names_store: BTreeMap< usize, std::string::String>,
+    kmer_store: BTreeMap< u64, std::string::String>,
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     bad_entries: HashSet<u64>, // non unique u64 values that will not be recoreded.
     pub good_entries: HashSet<u64>, // upon export as sparse matrix it has to be checked if a gene has a value
     pub max_id: usize,// hope I get the ids right this way...
-    unchecked: bool, //if add_unchecked was used results should always be as get_unchecked
+    unchecked: bool, //if add_unchecked was used results should always be as get_unchecked,
+    pub last_count: usize,
+    pub last_kmers: Vec<String>,
 }
 
 // here the functions
@@ -56,23 +59,29 @@ impl GeneIds{
         let kmers = BTreeMap::<u64, usize>::new();
         let names = BTreeMap::<std::string::String, usize>::new();
         let names_store = BTreeMap::< usize, std::string::String>::new();
+        let kmer_store = BTreeMap::< u64, std::string::String>::new();
         let names4sparse = BTreeMap::<std::string::String, usize>::new();
         let bad_entries = HashSet::<u64>::new();
         let good_entries = HashSet::<u64>::new();
         let seq_len = 0;
         let max_id = 0;
         let unchecked = false;
+        let last_count = 0;
+        let last_kmers = Vec::with_capacity(60);
         Self {
             kmers,
             seq_len,
             kmer_size: kmer_size,
             names_store,
+            kmer_store,
             names,
             names4sparse,
             bad_entries,
             good_entries,
             max_id,
-            unchecked
+            unchecked,
+            last_count,
+            last_kmers
         }
     }
 
@@ -128,7 +137,8 @@ impl GeneIds{
                     self.names_store.insert( self.max_id, name.clone() );
                     self.max_id += 1;
                 }
-                //println!("I insert a kmer for id {}", self.max_id-1 );
+                //println!("I insert a kmer {} for name {}", std::str::from_utf8(kmer).unwrap().to_string(), name );
+                self.kmer_store.insert( km.clone() , std::str::from_utf8(kmer).unwrap().to_string() );
                 self.kmers.insert(km, self.max_id-1 );
                 total +=1;
             }
@@ -140,9 +150,6 @@ impl GeneIds{
 
     }
 
-
-    // TTTATTCATACAGTGCATCGAAATTGGTGTTGCGGTATAGGGACTCCAAAAAAAAAAAAAAAAAAAAAAAT
-    //TAAAACACTTCTGTGCATCGAAATTGGTGTTGACGGTATAGGGACTCCAAAAAAAAAAAAAAAAAAAAAAA
 
     pub fn add_unchecked(&mut self, seq: &[u8], name: std::string::String ){
         
@@ -184,11 +191,13 @@ impl GeneIds{
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
             let km = Kmer::from(kmer).into_u64();
             if self.bad_entries.contains( &km ){
+                //println!("failing kmer {:?} for gene {} #2", std::str::from_utf8(kmer), name );
                 continue
             }
             if self.kmers.contains_key ( &km ){
                 self.bad_entries.insert( km.clone() );
                 self.kmers.remove( &km );
+                //println!("failing kmer {:?} for gene {}", std::str::from_utf8(kmer), name );
             }else {
                 //let info = Info::new(km, name.clone() );
                 if ! self.names.contains_key( &name ){
@@ -197,6 +206,7 @@ impl GeneIds{
                     self.max_id += 1;
                 }
                 //println!("I insert a kmer for id {}", self.max_id-1 );
+                self.kmer_store.insert( km , std::str::from_utf8(kmer).unwrap().to_string() );
                 self.kmers.insert(km, self.max_id-1 );
                 total +=1;
             }
@@ -250,6 +260,7 @@ impl GeneIds{
         }  
         let mut sums = vec![0 ;self.names.len()];
         let mut max = 0;
+        self.last_kmers.clear();
 
         for km in kmer_vec{
             //println!( "searching for kmer {}", km);
@@ -266,10 +277,12 @@ impl GeneIds{
                             break // 2 unique hits should be enough
                         }
                     };
-                }
+                    self.last_kmers.push(  self.kmer_store.get( &km ).unwrap().to_string() );
+                },
                 None => ()
             };
         }
+        self.last_count = max;
         if max >4 {
             for i in 0..sums.len(){
                 if sums[i] == max{
@@ -306,6 +319,7 @@ impl GeneIds{
         }  
         let mut sums = vec![0 ;self.names.len()];
         let mut max = 0;
+        self.last_kmers.clear();
 
         for km in kmer_vec{
             //println!( "searching for kmer {}", km);
@@ -317,11 +331,12 @@ impl GeneIds{
                         //println!("the new max is {}", max);
                         max =  sums[*c1];
                     };
-                }
+                    self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
+                },
                 None => ()
             };
         }
-
+        self.last_count = max;
         if max >3 {
             for i in 0..sums.len(){
                 if sums[i] == max{

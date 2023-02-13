@@ -179,9 +179,13 @@ Little less than 2h. Let's check how much time BD's version does need...
 ## And BD software for the S2 sample
 
 
-Repeated runs on my desktop did faile after up tpo 38h of calculations.
+Repeated runs on my desktop did faile after up to 38h runtime.
 Therefore I report the seven bridges run time here: 7 hours, 39 minutes.
-That is significantly faster than the 38h on my system, but it nevertheless is ~4x slower than my Rhapsody implementation.
+That is significantly faster than the 38h on my system, but it nevertheless is ~4x slower than my Rhapsody implementation on a single core.
+
+Why single core? The system IO does affect the Rust implementation. 
+The splitting of large gzipped fastq files can easiliy take more than halve an hour and  given the fast processing time
+the additional work to implement mutiprocessor capabilities for Rustody seams unnecessary.
 
 
 ## The last run on my desktop:
