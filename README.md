@@ -185,12 +185,14 @@ Maximum memory requirement over this time: ~ 22.03 Gb.
 More than 38 hours the BD system stopped with this error:
 <details>
     <summary>
+
 ```
 40 (function(){return ((JSON.parse(self[0].contents).max_count));})()
 stdout was: ''
 stderr was: 'evalmachine.<anonymous>:40
 (function(){return ((JSON.parse(self[0].contents).max_count));})()
 ```
+
     </summary>
 
 ```
