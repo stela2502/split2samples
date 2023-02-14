@@ -64,30 +64,32 @@ from the command line using `quantifyRhapsody -h`.
 
 ```
 target/release/quantify_rhapsody  -h
-Rustody 0.3.4
+Rustody 1.0.0
 Stefan L. <stefan.lang@med.lu.se>
 Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles. You need quite long R1 and
 R2 reads for this! (>70R1 and >70R2 [v1] and 52 bp reads for v2.96 and v2.384)
 
 USAGE:
-    quantify_rhapsody [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antibody <ANTIBODY> --min-umi <MIN_UMI> --version <VERSION>
+    quantify_rhapsody.exe [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antibody <ANTIBODY> --min-umi <MIN_UMI> --version <VERSION>
 
 OPTIONS:
-    -a, --antibody <ANTIBODY>        the fasta database containing the antibody tags
-    -e, --expression <EXPRESSION>    the fasta database containing the genes
-    -f, --file <FILE>                the input R2 samples file
-    -h, --help                       Print help information
-    -m, --min-umi <MIN_UMI>          the minimum reads per cell (sample + genes + antibody combined)
-        --max-reads <MAX_READS>      Optional: end the analysis after processing <max_reads> cell
-                                     fastq entries [default: 18446744073709551615]
-    -o, --outpath <OUTPATH>          the outpath
-    -r, --reads <READS>              the input R1 reads file
-    -s, --specie <SPECIE>            the specie of the library [mouse, human]
-    -v, --version <VERSION>          the version of beads you used v1, v2.96 or v2.384
+    -a, --antibody <ANTIBODY>          the fasta database containing the antibody tags
+    -e, --expression <EXPRESSION>      the fasta database containing the genes
+    -f, --file <FILE>                  the input R2 samples file
+    -h, --help                         Print help information
+    -m, --min-umi <MIN_UMI>            the minimum reads per cell (sample + genes + antibody
+                                       combined)
+        --max-reads <MAX_READS>        Optional: end the analysis after processing <max_reads> cell
+                                       fastq entries [default: 18446744073709551615]
+        --min-quality <MIN_QUALITY>    minimal sequencing quality [default: 25]
+    -o, --outpath <OUTPATH>            the outpath
+    -r, --reads <READS>                the input R1 reads file
+    -s, --specie <SPECIE>              the specie of the library [mouse, human]
+    -v, --version <VERSION>            the version of beads you used v1, v2.96 or v2.384
 
 ```
 
-You see - this is the one I compiled on Windows 11.
+This one has actually been compiled and run on Windows 11.
 
 
 # Speed comparisons to local BD software installation
