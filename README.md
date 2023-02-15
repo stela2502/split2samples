@@ -515,15 +515,61 @@ WARNING Final process status is permanentFail
 
 There are several other programs in this package:
 
- 1. split2samples will split the BD Rhapsody fastq files into sample spceific fastq files. This script is older and ~4 times slower in creating just the fastq files when compared to quantifyRhapsody quantifying the data.
- 2. demux10x is a small spin off that actually processes 10x single cell data and searches for a set fasta entries.
- 3. bd_cell_id_2_seq BD Rhapsody cells do get an ID in the results. If you want to get the sequences coding for this cells you can use this program
- 4. bd_get_single_cell will select only one single cell from the fastq files.
+ ## split2samples 
 
+ This will split the BD Rhapsody fastq files into sample spceific fastq files. This script is older and ~4 times slower in creating just the fastq files when compared to quantifyRhapsody quantifying the data.
+
+```
+target/release/split2samples -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_split -s mouse -v v1 -m fastqSplit
+```
+ ## demux10x 
+
+ This is a small spin off that actually processes 10x single cell data and searches for a set fasta entries. (no test data included)
+
+ ```
+ target/release/demux10x  -h
+Rustody 0.1.0
+Stefan L. <stefan.lang@med.lu.se>
+Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
+
+USAGE:
+    demux10x --reads <READS> --file <FILE> --bc <BC> --outpath <OUTPATH> --min-umi <MIN_UMI>
+
+OPTIONS:
+    -b, --bc <BC>              the barcodes table name<tab>bc
+    -f, --file <FILE>          the input R2 genes file
+    -h, --help                 Print help information
+    -m, --min-umi <MIN_UMI>    the minimum reads (sample + genes + antybody combined)
+    -o, --outpath <OUTPATH>    the outpath
+    -r, --reads <READS>        the input R1 reads file
+    -V, --version              Print version information
+```
+
+ ## bd_cell_id_2_seq 
+
+ BD Rhapsody cells do get an ID in the results. If you want to get the sequences coding for one cell you can use this program:
+ 
+ ```
+target/release/bd_cell_id_2_seq -i 3857748 -v v1
+The sequence is:
+Ok("ACCAAGGAC")
+Ok("TTGGAGGTA")
+Ok("AATTCGGCG")
+```
+
+
+## bd_get_single_cell 
+
+This will select only one single cell from the fastq files.
+
+```
+target/release/bd_get_single_cell -i 3857748 -v v1 -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_getCell
+writing all reads from the cell 3857748
+[100/?] ⠁                                                                                                                                                                                                  I found 14 reads for the cell 3857748
+```
 
 # Limitations / differences
 
-This program is totally untested and under heavy development.
-This is only the first draft - let's see where this heads to.
+Neither whole genome Rhapsody data nor TCR / BRC analyses are supported.
 
 

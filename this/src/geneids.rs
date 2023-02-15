@@ -287,7 +287,7 @@ impl GeneIds{
             // };
         }
         self.last_count = max;
-        if max >4 {
+        if max >2 {
             for (i, sum) in sums.iter().enumerate() {
                 if *sum == max{
                     //println!("Now the ret hould have the value {} resp {:?}", i, Some(i));

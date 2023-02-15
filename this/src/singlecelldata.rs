@@ -548,7 +548,7 @@ mod tests {
         //to_str<'live>(&mut self, gene_info:&GeneIds, names: &Vec<String> ) 
         let names= vec!("Gene1".to_string(), "Gene2".to_string() );
         let exp2:String = "Cell1\t20\t0\tGene1\t1".to_string();
-        let val = cell1.to_str( &genes, &names, 1 as u8 ).to_string();
+        let val = cell1.to_str( &genes, &names).to_string();
         println!( "{}", val );
         assert_eq!( val,  exp2 ); 
     }
