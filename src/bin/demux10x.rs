@@ -113,7 +113,7 @@ fn main() {
 
     match fs::create_dir_all(&opts.outpath){
         Ok(_) => (),
-        Err(e) => panic!("I could not create the outpath: {}", e)
+        Err(e) => panic!("I could not create the outpath: {e}")
     };
 
     println!("starting to collect the cell ids per sample");
@@ -157,7 +157,7 @@ fn main() {
                 let cell:u64  = Kmer::from( &seq[0..16] ).into_u64();
                 let cell_name = match std::str::from_utf8( &seq[0..16] ){
                     Ok(t) => t,
-                    Err(err) => panic!("the cellID could not be converted to string! {}",err)
+                    Err(err) => panic!("the cellID could not be converted to string! {err}",)
                 };
 
                 let gene_read = &seq2[0..genes.seq_len];
@@ -195,11 +195,11 @@ fn main() {
 
         match cells.write ( file_path, &mut genes, opts.min_umi ) {
             Ok(_) => (),
-            Err(err) => panic!("Error in the data write: {}", err)
+            Err(err) => panic!("Error in the data write: {err}", )
         };
         
-        println!("usable: {} reads", ok );
-        println!("bad   : {} reads", unknown );
+        println!("usable: {ok} reads",  );
+        println!("bad   : {unknown} reads",  );
     }
 
     match now.elapsed() {

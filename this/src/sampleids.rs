@@ -14,6 +14,11 @@ pub struct Reads {
         pub part: i32, 
 }
 
+impl Default for Reads {
+    fn default() -> Self {
+     Self::new()
+    }
+}
 
 impl Reads{
         pub fn new( )-> Self {
@@ -51,7 +56,7 @@ impl SampleIds{
 
         Self {
             kmers,
-            kmer_size: kmer_size,
+            kmer_size,
             max_value,
             read,
             bad_entries
@@ -93,7 +98,7 @@ impl SampleIds{
             self.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC" );
 
         } else {
-            println!("Sorry, but I have no primers for species {}", specie);
+            println!("Sorry, but I have no primers for species {specie}" );
             std::process::exit(1)
         }
 
@@ -120,12 +125,13 @@ impl SampleIds{
             if self.bad_entries.contains( &km ){
                 continue
             }
-            if self.kmers.contains_key ( &km ){
-                self.bad_entries.insert( km.clone() );
+
+            if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(km) {
+                e.insert(self.max_value);
+            } else {
+                self.bad_entries.insert( km );
                 self.kmers.remove( &km );
-            }else {
-                self.kmers.insert(km, self.max_value);
-            }        
+            }       
         }
         self.read.insert( self.max_value, Reads::new() );
         self.max_value += 1;
@@ -150,63 +156,46 @@ impl SampleIds{
         while id < kmer_vec.len() {
             let km = kmer_vec[id];
             //println!("SampleIds::get - checking this sequence: {} and the at pos {}", km, id );
-            match self.kmers.get_mut(&km){
-                Some(c1) => {
-                        //println!("to_cellid the c1 {}", c1 );
-                        match self.read.get_mut(c1){
-                            Some(read) => {
-                                read.add_part();
-                            }
-                            None => ()
-                        };
-                    },
-                None => (), 
-            }
+            if let Some(c1) = self.kmers.get_mut(&km) {
+                        if let Some(read) = self.read.get_mut(c1) { read.add_part() };
+            };
             id += jump;
         }
 
         for i in 0..self.max_value{
-            match self.read.get(&i){
-                Some(value) => {
-                    if value.part > max_value{
-                        max_value = value.part;
-                    }
-                },
-                None => (),
-            };
+            if let Some(value) = self.read.get(&i) {
+                if value.part > max_value{
+                    max_value = value.part;
+                }
+            }
         }
 
         let mut z = 0;
-        if max_value > min_value as i32 {
+        if max_value > min_value  {
             for i in 0..self.max_value{
-                match self.read.get(&i){
-                    Some(value) => {
-                        if value.part == max_value{
-                            ret = i;
-                            z += 1;
-                        }
-                    },
-                    None => (),
-                };
+                if let Some(value) = self.read.get(&i) {
+                    if value.part == max_value{
+                        ret = i;
+                        z += 1;
+                    }
+                }
             }
         }else {
             return Err::<u32, &str>( "Samples NoMatch - likely data read");
         }
 
-        if z > min_z as i32{
-            println!("Error: I got {} ids with {} matches", z, max_value);
+        if z > min_z {
+            println!("Error: I got {z} ids with {max_value} matches", );
             return Err::<u32, &str>( "MultiMatch");
         }
-        match self.read.get_mut( &ret ) {
-            Some(val) => val.add_total(),
-            None => (),
-        };
+
+        if let Some(val) = self.read.get_mut( &ret ) { val.add_total() }
         Ok(ret)
     }
 }
 
 
-fn fill_kmer_vec<'a>(seq: needletail::kmer::Kmers<'a>, kmer_vec: &mut Vec<u64>) {
+fn fill_kmer_vec(seq: needletail::kmer::Kmers, kmer_vec: &mut Vec<u64>) {
    kmer_vec.clear();
    let mut bad = 0;
    for km in seq {

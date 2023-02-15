@@ -14,7 +14,7 @@ use kmers::naive_impl::Kmer;
 //use crate::cellids::cellIDsError::NnuclError;
 
 
-// and here the data
+/// and here the data
 pub struct CellIds<'a>{    
     //kmer_len: usize,
     c1s: Vec<&'a [u8; 9]>,
@@ -54,88 +54,8 @@ impl CellIds<'_>{
 
         // TACAGAACA
 
-        if ver == "v1"{
 
-            c1s = vec![
-              b"GTCGCTATA", b"CTTGTACTA", b"CTTCACATA", b"ACACGCCGG",
-              b"CGGTCCAGG", b"AATCGAATG", b"CCTAGTATA", b"ATTGGCTAA",
-              b"AAGACATGC", b"AAGGCGATC", b"GTGTCCTTA", b"GGATTAGGA",
-              b"ATGGATCCA", b"ACATAAGCG", b"AACTGTATT", b"ACCTTGCGG",
-              b"CAGGTGTAG", b"AGGAGATTA", b"GCGATTACA", b"ACCGGATAG",
-              b"CCACTTGGA", b"AGAGAAGTT", b"TAAGTTCGA", b"ACGGATATT",
-              b"TGGCTCAGA", b"GAATCTGTA", b"ACCAAGGAC", b"AGTATCTGT",
-              b"CACACACTA", b"ATTAAGTGC", b"AAGTAACCC", b"AAATCCTGT",
-              b"CACATTGCA", b"GCACTGTCA", b"ATACTTAGG", b"GCAATCCGA",
-              b"ACGCAATCA", b"GAGTATTAG", b"GACGGATTA", b"CAGCTGACA",
-              b"CAACATATT", b"AACTTCTCC", b"CTATGAAAT", b"ATTATTACC",
-              b"TACCGAGCA", b"TCTCTTCAA", b"TAAGCGTTA", b"GCCTTACAA",
-              b"AGCACACAG", b"ACAGTTCCG", b"AGTAAAGCC", b"CAGTTTCAC",
-              b"CGTTACTAA", b"TTGTTCCAA", b"AGAAGCACT", b"CAGCAAGAT",
-              b"CAAACCGCC", b"CTAACTCGC", b"AATATTGGG", b"AGAACTTCC",
-              b"CAAAGGCAC", b"AAGCTCAAC", b"TCCAGTCGA", b"AGCCATCAC",
-              b"AACGAGAAG", b"CTACAGAAC", b"AGAGCTATG", b"GAGGATGGA",
-              b"TGTACCTTA", b"ACACACAAA", b"TCAGGAGGA", b"GAGGTGCTA",
-              b"ACCCTGACC", b"ACAAGGATC", b"ATCCCGGAG", b"TATGTGGCA",
-              b"GCTGCCAAT", b"ATCAGAGCT", b"TCGAAGTGA", b"ATAGACGAG",
-              b"AGCCCAATC", b"CAGAATCGT", b"ATCTCCACA", b"ACGAAAGGT",
-              b"TAGCTTGTA", b"ACACGAGAT", b"AACCGCCTC", b"ATTTAGATG",
-              b"CAAGCAAGC", b"CAAAGTGTG", b"GGCAAGCAA", b"GAGCCAATA",
-              b"ATGTAATGG", b"CCTGAGCAA", b"GAGTACATT", b"TGCGATCTA"
-            ];
-            c2s = vec![
-              b"TACAGGATA", b"CACCAGGTA", b"TGTGAAGAA", b"GATTCATCA",
-              b"CACCCAAAG", b"CACAAAGGC", b"GTGTGTCGA", b"CTAGGTCCT",
-              b"ACAGTGGTA", b"TCGTTAGCA", b"AGCGACACC", b"AAGCTACTT",
-              b"TGTTCTCCA", b"ACGCGAAGC", b"CAGAAATCG", b"ACCAAAATG",
-              b"AGTGTTGTC", b"TAGGGATAC", b"AGGGCTGGT", b"TCATCCTAA",
-              b"AATCCTGAA", b"ATCCTAGGA", b"ACGACCACC", b"TTCCATTGA",
-              b"TAGTCTTGA", b"ACTGTTAGA", b"ATTCATCGT", b"ACTTCGAGC",
-              b"TTGCGTACA", b"CAGTGCCCG", b"GACACTTAA", b"AGGAGGCGC",
-              b"GCCTGTTCA", b"GTACATCTA", b"AATCAGTTT", b"ACGATGAAT",
-              b"TGACAGACA", b"ATTAGGCAT", b"GGAGTCTAA", b"TAGAACACA",
-              b"AAATAAATA", b"CCGACAAGA", b"CACCTACCC", b"AAGAGTAGA",
-              b"TCATTGAGA", b"GACCTTAGA", b"CAAGACCTA", b"GGAATGATA",
-              b"AAACGTACC", b"ACTATCCTC", b"CCGTATCTA", b"ACACATGTC",
-              b"TTGGTATGA", b"GTGCAGTAA", b"AGGATTCAA", b"AGAATGGAG",
-              b"CTCTCTCAA", b"GCTAACTCA", b"ATCAACCGA", b"ATGAGTTAC",
-              b"ACTTGATGA", b"ACTTTAACT", b"TTGGAGGTA", b"GCCAATGTA",
-              b"ATCCAACCG", b"GATGAACTG", b"CCATGCACA", b"TAGTGACTA",
-              b"AAACTGCGC", b"ATTACCAAG", b"CACTCGAGA", b"AACTCATTG",
-              b"CTTGCTTCA", b"ACCTGAGTC", b"AGGTTCGCT", b"AAGGACTAT",
-              b"CGTTCGGTA", b"AGATAGTTC", b"CAATTGATC", b"GCATGGCTA",
-              b"ACCAGGTGT", b"AGCTGCCGT", b"TATAGCCCT", b"AGAGGACCA",
-              b"ACAATATGG", b"CAGCACTTC", b"CACTTATGT", b"AGTGAAAGG",
-              b"AACCCTCGG", b"AGGCAGCTA", b"AACCAAAGT", b"GAGTGCGAA",
-              b"CGCTAAGCA", b"AATTATAAC", b"TACTAGTCA", b"CAACAACGG"
-            ];
-            c3s = vec![
-              b"AAGCCTTCT", b"ATCATTCTG", b"CACAAGTAT", b"ACACCTTAG",
-              b"GAACGACAA", b"AGTCTGTAC", b"AAATTACAG", b"GGCTACAGA",
-              b"AATGTATCG", b"CAAGTAGAA", b"GATCTCTTA", b"AACAACGCG",
-              b"GGTGAGTTA", b"CAGGGAGGG", b"TCCGTCTTA", b"TGCATAGTA",
-              b"ACTTACGAT", b"TGTATGCGA", b"GCTCCTTGA", b"GGCACAACA",
-              b"CTCAAGACA", b"ACGCTGTTG", b"ATATTGTAA", b"AAGTTTACG",
-              b"CAGCCTGGC", b"CTATTAGCC", b"CAAACGTGG", b"AAAGTCATT",
-              b"GTCTTGGCA", b"GATCAGCGA", b"ACATTCGGC", b"AGTAATTAG",
-              b"TGAAGCCAA", b"TCTACGACA", b"CATAACGTT", b"ATGGGACTC",
-              b"GATAGAGGA", b"CTACATGCG", b"CAACGATCT", b"GTTAGCCTA",
-              b"AGTTGCATC", b"AAGGGAACT", b"ACTACATAT", b"CTAAGCTTC",
-              b"ACGAACCAG", b"TACTTCGGA", b"AACATCCAT", b"AGCCTGGTT",
-              b"CAAGTTTCC", b"CAGGCATTT", b"ACGTGGGAG", b"TCTCACGGA",
-              b"GCAACATTA", b"ATGGTCCGT", b"CTATCATGA", b"CAATACAAG",
-              b"AAAGAGGCC", b"GTAGAAGCA", b"GCTATGGAA", b"ACTCCAGGG",
-              b"ACAAGTGCA", b"GATGGTCCA", b"TCCTCAATA", b"AATAAACAA",
-              b"CTGTACGGA", b"CTAGATAGA", b"AGCTATGTG", b"AAATGGAGG",
-              b"AGCCGCAAG", b"ACAGTAAAC", b"AACGTGTGA", b"ACTGAATTC",
-              b"AAGGGTCAG", b"TGTCTATCA", b"TCAGATTCA", b"CACGATCCG",
-              b"AACAGAAAC", b"CATGAATGA", b"CGTACTACG", b"TTCAGCTCA",
-              b"AAGGCCGCA", b"GGTTGGACA", b"CGTCTAGGT", b"AATTCGGCG",
-              b"CAACCTCCA", b"CAATAGGGT", b"ACAGGCTCC", b"ACAACTAGT",
-              b"AGTTGTTCT", b"AATTACCGG", b"ACAAACTTT", b"TCTCGGTTA",
-              b"ACTAGACCG", b"ACTCATACG", b"ATCGAGTCT", b"CATAGGTCA"
-            ];
-        }
-        else if ver == "v2.96"{
+        if ver == "v2.96" || ver == "v1"{
             c1s = vec![ 
             b"GTCGCTATA", b"CTTGTACTA", b"CTTCACATA",
             b"ACACGCCGG", b"CGGTCCAGG", b"AATCGAATG", b"CCTAGTATA", b"ATTGGCTAA", b"AAGACATGC",
@@ -394,7 +314,7 @@ impl CellIds<'_>{
             b"ACACACCTA" ] ;
         }
         else {
-            panic!( "The version '{}' is unknown!", ver );
+            panic!( "The version '{ver}' is unknown!" );
         }
 
         // let mut csl1kmer= SampleIds::new( kmer_len );
@@ -418,19 +338,31 @@ impl CellIds<'_>{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
 
-                if bad_entries.contains( &km ){
-                    println!( "CellIDs start cls1 found a duplicate entry #3 at id={}: {:?}", i, std::str::from_utf8( &kmer ));
-                    continue
-                }
-                if csl1.contains_key ( &km ){
-                    bad_entries.insert( km.clone() );
-                    csl1.remove( &km );
-                    println!( "CellIDs start cls1 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ))
-                }else {
+                if let std::collections::btree_map::Entry::Vacant(e) = csl1.entry(km) {
                     //let info = Info::new(km, name.clone() );
-                    csl1.insert(km, i );
-                    
+                    e.insert(i);
+                } else {
+                    bad_entries.insert( km );
+                    csl1.remove( &km );
+                    println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
+                        std::str::from_utf8( kmer ))
                 }
+
+                // if bad_entries.contains( &km ){
+                //     println!( "CellIDs start cls1 found a duplicate entry #3 at id={i}: {:?}",
+                //         std::str::from_utf8( kmer ));
+                //     continue
+                // }
+                // if csl1.contains_key ( &km ){
+                //     bad_entries.insert( km );
+                //     csl1.remove( &km );
+                //     println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}", 
+                //         std::str::from_utf8( kmer ))
+                // }else {
+                //     //let info = Info::new(km, name.clone() );
+                //     csl1.insert(km, i );
+                    
+                // }
             }
             i +=1;
         }
@@ -440,19 +372,16 @@ impl CellIds<'_>{
         for kmer_u8 in &c2s{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
-                if bad_entries.contains( &km ){
-                    println!( "CellIDs start cls2 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ));
-                    continue
-                }
-                if csl2.contains_key ( &km ){
-                    bad_entries.insert( km.clone() );
-                    csl2.remove( &km );
-                    println!( "CellIDs start cls2 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ))
-                }else {
+                if let std::collections::btree_map::Entry::Vacant(e) = csl2.entry(km) {
                     //let info = Info::new(km, name.clone() );
-                    csl2.insert(km, i );
-                    
+                    e.insert(i);
+                } else {
+                    bad_entries.insert( km );
+                    csl2.remove( &km );
+                    println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
+                        std::str::from_utf8( kmer ))
                 }
+
             }
             i +=1;
         }
@@ -462,18 +391,14 @@ impl CellIds<'_>{
         for kmer_u8 in &c3s{
             for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
                 let km = Kmer::from(kmer).into_u64();
-                if bad_entries.contains( &km ){
-                    println!( "CellIDs start cls3 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ));
-                    continue
-                }
-                if csl3.contains_key ( &km ){
-                    bad_entries.insert( km.clone() );
-                    csl3.remove( &km );
-                    println!( "CellIDs start cls3 found a duplicate entry at id={}: {:?}", i, std::str::from_utf8( &kmer ))
-                }else {
+                if let std::collections::btree_map::Entry::Vacant(e) = csl3.entry(km) {
                     //let info = Info::new(km, name.clone() );
-                    csl3.insert(km, i );
-                    
+                    e.insert(i);
+                } else {
+                    bad_entries.insert( km );
+                    csl3.remove( &km );
+                    println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
+                        std::str::from_utf8( kmer ))
                 }
             }
             i +=1;
@@ -547,7 +472,7 @@ impl CellIds<'_>{
             }
             //println!("to_cellid 1: {}", cell_id);
         }
-        if ok == false{
+        if !ok {
             return  Err::<u32, &str>( "Cells no match 1" )
         }
         ok = false;
@@ -584,7 +509,7 @@ impl CellIds<'_>{
             }
             //println!("to_cellid 2: {}", cell_id);
         }
-        if ok == false{
+        if !ok {
             return  Err::<u32, &str>( "Cells no match 2" )
         }
         ok = false;
@@ -617,13 +542,13 @@ impl CellIds<'_>{
             }
             //println!("to_cellid 3: {}", cell_id);
         }
-        if ok == false{
+        if !ok {
             return  Err::<u32, &str>( "Cells no match 3" )
         }
 
         cell_id += 1;
         //println!("to_cellid final id {}", cell_id);
-        return Ok(cell_id)
+        Ok(cell_id)
     }
 
     pub fn to_sequence(&self, index:u32) -> Vec<&[u8; 9]>{
@@ -631,12 +556,12 @@ impl CellIds<'_>{
         let max:u32 = 384;
         //let max:u32 = self.c1s.len() as u32;
         let code1 = ((idx / (max * max)) as f64).floor() as u32;
-        idx = idx - code1 * (max * max);
+        idx -= code1 * (max * max);
         let code2 = ((idx / max) as f64).floor() as u32;
-        idx = idx - code2 * max;
+        idx -= code2 * max;
         //println!("index {} -> I translated to the ids {}, {}, {}", index, code1, code2, idx );
         let ret = vec![ self.c1s[code1 as usize], self.c2s[code2 as usize], self.c3s[idx as usize]];
-        return ret;
+        ret
     }
 
 }

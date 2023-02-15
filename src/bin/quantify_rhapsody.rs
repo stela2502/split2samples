@@ -82,8 +82,8 @@ fn mean_u8( data:&[u8] ) -> f32 {
     let mut total = 0;
     let mut sum = 0;
     for ent in data {
-        for i in 0..this.len() {
-            if *ent == this[i] {
+        for (i, entry) in this.iter().enumerate() {
+            if ent == entry {
                 sum += i;
                 total += 1;
                 break;
@@ -122,7 +122,7 @@ fn main() {
     //     }
     // };
 
-    let mut ofile = Ofiles::new( 1, "Unknown", "R2.fastq.gz", "R1.fastq.gz",  &opts.outpath.as_str() );
+    let mut ofile = Ofiles::new( 1, "Unknown", "R2.fastq.gz", "R1.fastq.gz",  opts.outpath.as_str() );
     
 
     //let sub_len = 9;
@@ -148,14 +148,14 @@ fn main() {
     // here I need the cell kmer site.
     let mut gex = SingleCellData::new( );
 
-    let mut expr_file = parse_fastx_file(&opts.expression).expect("valid path/file");
+    let mut expr_file = parse_fastx_file(opts.expression).expect("valid path/file");
 
     let mut sample_names:Vec<String> = Vec::with_capacity(12);
     let mut gene_names:Vec<String> = Vec::with_capacity(600);
     let mut ab_names:Vec<String> = Vec::with_capacity(30);
 
     for i in 1..13{
-        sample_names.push( format!("Sample{}",i) )
+        sample_names.push( format!("Sample{i}") )
     }
 
     if  opts.specie.eq("human") {
@@ -189,27 +189,22 @@ fn main() {
         genes.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", "Sample12".to_string() );
 
     } else {
-        println!("Sorry, but I have no primers for species {}", &opts.specie);
+        println!("Sorry, but I have no primers for species {}", opts.specie);
         std::process::exit(1)
     }
     
-
-    let mut i = 1;
 
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
         match std::str::from_utf8(seqrec.id()){
             Ok(st) => {
-                for id in st.to_string().split("|"){
-                    i += 1;
-                    //println!("Adding gene #{} {}",i, id );
+                if let Some(id) = st.to_string().split('|').next(){
                     genes.add( &seqrec.seq(), id.to_string() );
                     gene_names.push( id.to_string() );
                     genes2.add_unchecked( &seqrec.seq(), id.to_string() );
-                    break;
                 }
             },
-            Err(err) => eprintln!("The expression entry's id could not be read: {}", err),
+            Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
         }
     }
 
@@ -218,14 +213,13 @@ fn main() {
         let seqrec = ab_record.expect("invalid record");
         match std::str::from_utf8(seqrec.id()){
             Ok(st) => {
-                for id in st.to_string().split("|"){
+                if let Some(id) = st.to_string().split('|').next(){
                     genes.add( &seqrec.seq(), id.to_string() );
                     ab_names.push( id.to_string() );
                     genes2.add_unchecked( &seqrec.seq(), id.to_string() );
-                    break;
-                }
+                };
             },
-            Err(err) => eprintln!("The expression entry's id could not be read: {}", err),
+            Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
         }
     }
 
@@ -237,6 +231,7 @@ fn main() {
     let mut bad_qual = 0;
     let split:usize = 1000*1000;
     let mut log_iter = 0;
+    //let i = 0;
     //let split:usize = 1000;
 
     let pos:Vec<usize>;
@@ -252,7 +247,7 @@ fn main() {
     }
 
     let log_file_str = PathBuf::from(&opts.outpath).join(
-        format!("Mapping_log.txt" )
+        "Mapping_log.txt"
     );
 
     println!( "the log file: {}", log_file_str.file_name().unwrap().to_str().unwrap() );
@@ -260,7 +255,7 @@ fn main() {
     let log_file = match File::create( log_file_str ){
         Ok(file) => file,
         Err(err) => {
-            panic!("Error: {:#?}", err);
+            panic!("Error: {err:#?}" );
         }
     };
     let mut log_writer = BufWriter::new(&log_file);
@@ -276,8 +271,8 @@ fn main() {
         let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
         let m = MultiProgress::new();
         let pb = m.add(ProgressBar::new(5000));
-        pb.set_style(spinner_style.clone());
-        pb.set_prefix(format!("[{}/?]", i + 1));
+        pb.set_style(spinner_style);
+        //pb.set_prefix(format!("[{}/?]", i + 1));
 
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {
@@ -285,14 +280,14 @@ fn main() {
                 let seqrec = match record2{
                     Ok( res ) => res,
                     Err(err) => {
-                        eprintln!("could not read from R2:\n{}", err);
+                        eprintln!("could not read from R2:\n{err}");
                         continue 'main;
                     }
                 };
                 let seqrec1 = match record1{
                     Ok(res) => res,
                     Err(err) => {
-                        eprintln!("could not read from R1:\n{}", err);
+                        eprintln!("could not read from R1:\n{err}");
                         continue 'main;
                     }
                 };
@@ -343,17 +338,17 @@ fn main() {
                         // }
                         match genes.get( &seqrec.seq() ){
                             Some(gene_id) =>{
-                                match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
+                                match gex.get( cell_id as u64, format!( "Cell{cell_id}",  ) ){
                                     Ok(cell_info) => {
                                         //println!("I got gene {} for cell {}", gene_id , cell_info.name);
                                         ok_reads += 1;
-                                        if cell_info.add( gene_id, umi ) == false {
+                                        if ! cell_info.add( gene_id, umi ) {
                                             //println!("  -> pcr duplicate");
                                             pcr_duplicates += 1;
                                             local_dup += 1;
                                         }
                                     },
-                                    Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
+                                    Err(err) => panic!("Could not add a gene expression: gene_id = {gene_id}, umi = {} and err= {err}", Kmer::from( &seqrec1.seq()[52..60]).into_u64() ),
                                 }
                                 //println!("Cool I got a gene id: {gene_id}", );
                             },
@@ -361,27 +356,26 @@ fn main() {
                                 unknown +=1;
                                 match seqrec1.write(&mut ofile.buff1, None){
                                     Ok(_) => (),
-                                    Err(err) => println!("{}",err)
+                                    Err(err) => println!("{err}")
                                 };
                                 match seqrec.write( &mut ofile.buff2, None){
                                     Ok(_) => (),
-                                    Err(err) => println!("{}",err)
+                                    Err(err) => println!("{err}")
                                 };
                                 match genes2.get_unchecked( &seqrec.seq() ){
                                     Some(gene_id) =>{ 
-                                        match gex.get( cell_id as u64, format!( "Cell{}", cell_id ) ){
+                                        match gex.get( cell_id as u64, format!( "Cell{cell_id}",  ) ){
                                             Ok(cell_info) => {
-                                                let name = genes2.get_name ( gene_id );
-
+                                                //let name = genes2.get_name ( gene_id );
                                                 //println!("Gid {:0>4} in this read: {:?} I got the gene {} (quality {}, matches {}) and these kmers: {}", gene_id, std::str::from_utf8( &seqrec.seq() ), name,  mean_u8( seqrec.qual().unwrap() ), genes2.last_count, genes2.last_kmers.join("-")  );
                                                 ok_reads += 1;
-                                                if cell_info.add( gene_id, umi ) == false {
+                                                if ! cell_info.add( gene_id, umi ) {
                                                     //println!("  -> pcr duplicate");
                                                     pcr_duplicates += 1;
                                                     local_dup += 1;
                                                 }
                                             },
-                                            Err(err) => panic!("Could not add a gene expression: gene_id = {}, umi = {} and err= {}",gene_id, Kmer::from( &seqrec1.seq()[52..60]).into_u64(),  err),
+                                            Err(err) => panic!("Could not add a gene expression: gene_id = {gene_id}, umi = {} and err= {err}", Kmer::from( &seqrec1.seq()[52..60]).into_u64() ),
                                         }
                                     },
                                     None => { //eprintln!("I could not identify a gene in this read: {:?}", std::str::from_utf8( &seqrec.seq() ) ); 
@@ -411,8 +405,7 @@ fn main() {
                 if ok_reads % split == 0{
                     log_iter+=1;
 
-                    let log_str = format!("{} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch]): {:?}",
-                        log_iter , 
+                    let log_str = format!("{log_iter} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch]): {:?}",
                         ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
                         pcr_duplicates as f32 / ok_reads as f32 * 100.0,
                         local_dup as f32 / split as f32 * 100.0,
@@ -420,10 +413,10 @@ fn main() {
                     );
                     pb.set_message( log_str.clone() );
                     pb.inc(1);
-                    match writeln!( log_writer, "{}", log_str ){
+                    match writeln!( log_writer, "{log_str}" ){
                         Ok(_) => (),
                         Err(err) => {
-                            eprintln!("write error: {}", err);
+                            eprintln!("write error: {err}" );
                         }
                     };
                     local_dup = 0;
@@ -434,8 +427,7 @@ fn main() {
             }
         }
         
-        let log_str = format!("{} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch])",
-            log_iter , 
+        let log_str = format!("{log_iter} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch])",
             ok_reads as f32 / (ok_reads +no_sample+ unknown) as f32 * 100.0 , 
             pcr_duplicates as f32 / ok_reads as f32 * 100.0,
             local_dup as f32 / split as f32 * 100.0
@@ -451,32 +443,32 @@ fn main() {
         //let fp1 = PathBuf::from(opts.reads.clone());
         //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
         let file_path = PathBuf::from(&opts.outpath).join(
-            format!("SampleCounts.tsv" )
+            "SampleCounts.tsv"
         );
 
         let file_path_sp = PathBuf::from(&opts.outpath).join(
-            format!("BD_Rhapsody_expression" )
+            "BD_Rhapsody_antibodies"
         );
 
         // this always first as this will decide which cells are OK ones!
         match gex.write_sparse_sub ( file_path_sp, &mut genes , &gene_names, opts.min_umi ) {
             Ok(_) => (),
-            Err(err) => panic!("Error in the data write: {}", err)
+            Err(err) => panic!("Error in the data write: {err}")
         };
 
         let file_path_sp = PathBuf::from(&opts.outpath).join(
-            format!("BD_Rhapsody_antibodies" )
+            "BD_Rhapsody_antibodies"
         );
 
         match gex.write_sparse_sub ( file_path_sp, &mut genes, &ab_names, 1 ) {
             Ok(_) => (),
-            Err(err) => panic!("Error in the data write: {}", err)
+            Err(err) => panic!("Error in the data write: {err}")
         };
 
     
         match gex.write_sub ( file_path, &mut genes, &sample_names, 0 ) {
             Ok(_) => (),
-            Err(err) => panic!("Error in the data write: {}", err)
+            Err(err) => panic!("Error in the data write: {err}" )
         };
 
         
@@ -487,10 +479,10 @@ fn main() {
         let reads_samples = gex.n_reads( &mut genes , &sample_names );
 
         println!( "\nSummary:");
-        println!(     "total      reads  : {} reads", total );
-        println!(     "no cell ID reads  : {} reads", no_sample );
-        println!(     "bad quality       : {} reads", bad_qual );
-        println!(     "N's or too short  : {} reads", unknown );
+        println!(     "total      reads  : {total} reads",  );
+        println!(     "no cell ID reads  : {no_sample} reads",  );
+        println!(     "bad quality       : {bad_qual} reads",  );
+        println!(     "N's or too short  : {unknown} reads",  );
         println!(     "cellular reads    : {} reads ({:.2}% of total)", ok_reads, (ok_reads as f32 / total as f32) * 100.0 );
         println!(     "expression reads  : {} reads ({:.2}% of total)", reads_genes, (reads_genes as f32 / total as f32) * 100.0 );
         println!(     "antibody reads    : {} reads ({:.2}% of total)", reads_ab, (reads_ab as f32 / total as f32) * 100.0 );
@@ -499,7 +491,7 @@ fn main() {
         
 
         let file_path2 = format!("{}/SampleCounts.tsv", opts.outpath );
-        println!( "\nCell->Sample table written to {:?}\n", file_path2);
+        println!( "\nCell->Sample table written to {file_path2:?}\n" );
 
     }
 
@@ -507,19 +499,17 @@ fn main() {
     match now.elapsed() {
         Ok(elapsed) => {
             let mut milli = elapsed.as_millis();
-            let sec:u128;
-            let min:u128;
 
             let mil = milli % 1000;
             milli= (milli - mil) /1000;
 
-            sec = milli % 60;
+            let sec = milli % 60;
             milli= (milli -sec) /60;
 
-            min = milli % 60;
+            let min = milli % 60;
             milli= (milli -min) /60;
 
-            println!("quantify_rhapsody finished in {}h {}min {} sec {}milli sec\n", milli, min, sec, mil );},
+            println!("quantify_rhapsody finished in {milli}h {min}min {sec} sec {mil}milli sec\n" );},
        Err(e) => {println!("Error: {e:?}");}
     }
 

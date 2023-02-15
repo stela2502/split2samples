@@ -71,7 +71,7 @@ impl GeneIds{
         Self {
             kmers,
             seq_len,
-            kmer_size: kmer_size,
+            kmer_size,
             names_store,
             kmer_store,
             names,
@@ -97,13 +97,11 @@ impl GeneIds{
         for kmer in needletail::kmer::Kmers::new(seq, self.kmer_size as u8 ) {
             checker.clear();
             for nuc in kmer {
+
                 match checker.get_mut( nuc ){
                     Some( map ) => *map += 1,
                     None => {
-                        match checker.insert( nuc.clone(), 1){
-                            Some(_) => (),
-                            None => (),
-                        }
+                        if checker.insert( *nuc, 1).is_some(){};
                     }
                 }
                 if *nuc ==b'N'{
@@ -124,13 +122,12 @@ impl GeneIds{
             //println!("Adding a gene id os length {} with seq {:?}", self.kmer_size, std::str::from_utf8(kmer) );
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
             let km = Kmer::from(kmer).into_u64();
+
             if self.bad_entries.contains( &km ){
                 continue
             }
-            if self.kmers.contains_key ( &km ){
-                self.bad_entries.insert( km.clone() );
-                self.kmers.remove( &km );
-            }else {
+
+            if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(km) {
                 //let info = Info::new(km, name.clone() );
                 if ! self.names.contains_key( &name ){
                     self.names.insert( name.clone(), self.max_id );
@@ -138,13 +135,17 @@ impl GeneIds{
                     self.max_id += 1;
                 }
                 //println!("I insert a kmer {} for name {}", std::str::from_utf8(kmer).unwrap().to_string(), name );
-                self.kmer_store.insert( km.clone() , std::str::from_utf8(kmer).unwrap().to_string() );
-                self.kmers.insert(km, self.max_id-1 );
+                self.kmer_store.insert( km , std::str::from_utf8(kmer).unwrap().to_string() );
+                e.insert(self.max_id-1);
                 total +=1;
+            } 
+            else {
+                self.bad_entries.insert( km );
+                self.kmers.remove( &km );
             }
         }
         if total < 3{
-            eprintln!( "Sequence for gene {} has too little OK kmers to match!", name);
+            eprintln!( "Sequence for gene {name} has too little OK kmers to match!");
         }
         //println!( "{} kmers for gene {}", total, name );
 
@@ -166,10 +167,7 @@ impl GeneIds{
                 match checker.get_mut( nuc ){
                     Some( map ) => *map += 1,
                     None => {
-                        match checker.insert( nuc.clone(), 1){
-                            Some(_) => (),
-                            None => (),
-                        }
+                        checker.insert( *nuc, 1);
                     }
                 }
                 if *nuc ==b'N'{
@@ -191,31 +189,29 @@ impl GeneIds{
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
             let km = Kmer::from(kmer).into_u64();
             if self.bad_entries.contains( &km ){
-                //println!("failing kmer {:?} for gene {} #2", std::str::from_utf8(kmer), name );
                 continue
             }
-            if self.kmers.contains_key ( &km ){
-                self.bad_entries.insert( km.clone() );
-                self.kmers.remove( &km );
-                //println!("failing kmer {:?} for gene {}", std::str::from_utf8(kmer), name );
-            }else {
+
+            if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(km) {
                 //let info = Info::new(km, name.clone() );
                 if ! self.names.contains_key( &name ){
                     self.names.insert( name.clone(), self.max_id );
                     self.names_store.insert( self.max_id, name.clone() );
                     self.max_id += 1;
                 }
-                //println!("I insert a kmer for id {}", self.max_id-1 );
+                //println!("I insert a kmer {} for name {}", std::str::from_utf8(kmer).unwrap().to_string(), name );
                 self.kmer_store.insert( km , std::str::from_utf8(kmer).unwrap().to_string() );
-                self.kmers.insert(km, self.max_id-1 );
+                e.insert(self.max_id-1);
                 total +=1;
+            } 
+            else {
+                self.bad_entries.insert( km );
+                self.kmers.remove( &km );
             }
             //println!("I insert a kmer for id {}", self.max_id-1 );
-            self.kmers.insert(km, self.max_id-1 );
-            total +=1;
         }
         if total < 3{
-            eprintln!( "Sequence for gene {} has too little OK kmers to match!", name);
+            eprintln!( "Sequence for gene {name} has too little OK kmers to match!");
         }
         //println!( "{} kmers for gene {}", total, name );
 
@@ -223,17 +219,17 @@ impl GeneIds{
     pub fn get_id( &mut self, name: String ) -> usize{
         let id = match self.names.get( &name ) {
             Some( id ) => id,
-            None => panic!("Gene {} not defined in the GeneID object", name),
+            None => panic!("Gene {name} not defined in the GeneID object"),
         };
-        return *id ;
+        *id
     }
 
     pub fn get_name( &self, id:usize) -> String{
         let name = match self.names_store.get( &id ){
             Some( na ) => na,
-            None => panic!("GeneID {} not defined in the GeneID object", id),
+            None => panic!("GeneID {id} not defined in the GeneID object"),
         };
-        return name.to_string()
+        name.to_string()
     }
 
     pub fn get(&mut self, seq: &[u8] ) -> Option< usize >{
@@ -254,7 +250,7 @@ impl GeneIds{
 
         let mut ret:Option<usize> = None;
 
-        if kmer_vec.len() == 0 {
+        if kmer_vec.is_empty() {
             //eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
             return ret
         }  
@@ -264,30 +260,38 @@ impl GeneIds{
 
         for km in kmer_vec{
             //println!( "searching for kmer {}", km);
-            match self.kmers.get(&km){
-                Some(c1) => {
-                    //println!("And got a match: {}", c1);
-                    sums[*c1] += 1;
-                    if max < sums[*c1]{
-                        //println!("the new max is {}", max);
-                        max =  sums[*c1];
-                        if max > 4{
-                            // 2 hits gave me really really strange results.
-                            // need to check for 3 again.
-                            break // 2 unique hits should be enough
-                        }
-                    };
-                    self.last_kmers.push(  self.kmer_store.get( &km ).unwrap().to_string() );
-                },
-                None => ()
-            };
+            if let Some(c1) = self.kmers.get(&km) {
+                sums[*c1] += 1;
+                if max < sums[*c1]{
+                    max =  sums[*c1];
+                }
+                self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
+            }
+
+            // match self.kmers.get(&km){
+            //     Some(c1) => {
+            //         //println!("And got a match: {}", c1);
+            //         sums[*c1] += 1;
+            //         if max < sums[*c1]{
+            //             //println!("the new max is {}", max);
+            //             max =  sums[*c1];
+            //             if max > 4{
+            //                 // 2 hits gave me really really strange results.
+            //                 // need to check for 3 again.
+            //                 break // 2 unique hits should be enough
+            //             }
+            //         };
+            //         self.last_kmers.push(  self.kmer_store.get( &km ).unwrap().to_string() );
+            //     },
+            //     None => ()
+            // };
         }
         self.last_count = max;
         if max >4 {
-            for i in 0..sums.len(){
-                if sums[i] == max{
+            for (i, sum) in sums.iter().enumerate() {
+                if *sum == max{
                     //println!("Now the ret hould have the value {} resp {:?}", i, Some(i));
-                    if ! ret.is_none() {
+                    if ret.is_some() {
                         //eprintln!("I have two genes matching with max value of {}: {:?} and {}", max, ret, i);
                         ret =None;
                         return ret
@@ -297,7 +301,7 @@ impl GeneIds{
             }
         }
         //println!("return geneid {:?}", ret);
-        return ret
+        ret
     }
 
     pub fn get_unchecked(&mut self, seq: &[u8] ) -> Option< usize >{
@@ -313,7 +317,7 @@ impl GeneIds{
 
         let mut ret:Option<usize> = None;
 
-        if kmer_vec.len() == 0 {
+        if kmer_vec.is_empty() {
             //eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
             return ret
         }  
@@ -323,24 +327,31 @@ impl GeneIds{
 
         for km in kmer_vec{
             //println!( "searching for kmer {}", km);
-            match self.kmers.get(&km){
-                Some(c1) => {
-                    //println!("And got a match: {}", c1);
-                    sums[*c1] += 1;
-                    if max < sums[*c1]{
-                        //println!("the new max is {}", max);
-                        max =  sums[*c1];
-                    };
-                    self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
-                },
-                None => ()
-            };
+            if let Some(c1) = self.kmers.get(&km) {
+                sums[*c1] += 1;
+                if max < sums[*c1]{
+                    max =  sums[*c1];
+                }
+                self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
+            }
+            // match self.kmers.get(&km){
+            //     Some(c1) => {
+            //         //println!("And got a match: {}", c1);
+            //         sums[*c1] += 1;
+            //         if max < sums[*c1]{
+            //             //println!("the new max is {}", max);
+            //             max =  sums[*c1];
+            //         };
+            //         self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
+            //     },
+            //     None => ()
+            // };
         }
         self.last_count = max;
         if max >3 {
-            for i in 0..sums.len(){
-                if sums[i] == max{
-                    if ! ret.is_none() {
+            for (i, sum) in sums.iter().enumerate(){
+                if *sum == max{
+                    if ret.is_some() {
                         //eprintln!("I have two genes matching with max value of {}: {:?} and {}", max, ret, i);
                         ret =None;
                         return ret
@@ -355,7 +366,7 @@ impl GeneIds{
         //     eprintln!("The max was {} => no (good) gene found", max);
         // }
         //println!("return geneid {:?}", ret);
-        return ret
+        ret
     }
     // pub fn to_ids( &self,  ret:&mut Vec<Info> )  {
     //     ret.clear();
@@ -367,13 +378,13 @@ impl GeneIds{
     pub fn to_header( &self ) -> std::string::String {
         let mut ret= Vec::<std::string::String>::with_capacity( self.names.len() +2 );
         //println!( "I get try to push into a {} sized vector", self.names.len());
-        for (obj, _id) in &self.names {
+        for obj in self.names.keys() {
             //println!( "Pushing {} -> {}", obj, *id-1);
-            ret.push( format!( "{}", obj)) ;
+            ret.push(  obj.to_string() ) ;
         }
         ret.push("Most likely name".to_string());
         ret.push("Faction total".to_string());
-        return "CellID\t".to_owned()+&ret.join("\t")
+        "CellID\t".to_owned()+&ret.join("\t")
     }
 
     pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
@@ -381,11 +392,11 @@ impl GeneIds{
         //println!( "I get try to push into a {} sized vector", self.names.len());
         for name in names {
             //println!( "Pushing {} -> {}", obj, *id-1);
-            ret.push( format!( "{}", name)) ;
+            ret.push( name.to_string() ) ;
         }
         ret.push("AsignedSampleName".to_string());
         ret.push("FractionTotal".to_string());
-        return "CellID\t".to_owned()+&ret.join("\t")
+        "CellID\t".to_owned()+&ret.join("\t")
     }
 
 }
@@ -393,7 +404,7 @@ impl GeneIds{
 
 
 
-fn fill_kmer_vec<'a>(seq: needletail::kmer::Kmers<'a>, kmer_vec: &mut Vec<u64>) {
+fn fill_kmer_vec(seq: needletail::kmer::Kmers, kmer_vec: &mut Vec<u64>) {
    kmer_vec.clear();
    let mut bad = 0;
    for km in seq {
