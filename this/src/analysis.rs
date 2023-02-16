@@ -33,7 +33,7 @@ pub struct MappingInfo{
     /// the amount of ok_reads after which to write a entry into the log file
    	pub split:usize,
    	/// the others are explained in the quantify_rhapsody.rs file.
-    pub log_iter:usize,
+    log_iter:usize,
     pub log_writer:File,
     pub min_quality:f32, 
     pub max_reads:usize, 
@@ -49,7 +49,7 @@ impl MappingInfo{
 		let no_data = 0;
 		let ok_reads = 0;
 		let pcr_duplicates = 0;
-		let split = 1000*1000;
+		let split = 1_000_000;
 		let log_iter = 0;
 		let local_dup = 0;
 		let total = 0;
@@ -70,7 +70,7 @@ impl MappingInfo{
 		}
 	}
 	pub fn log( &mut self, pb:&ProgressBar ){
-		if self.ok_reads % self.split == 0{
+		if self.total % self.split == 0{
 			self.log_iter+=1;
             let log_str = self.log_str();
             pb.set_message( log_str.clone() );
@@ -86,8 +86,8 @@ impl MappingInfo{
 		}
 	}
 	pub fn log_str( &mut self ) -> String{
-		format!("{} mio usable ({:.2}% total; {:.2}% PCR dupl. [{:.2}% for last batch])",
-            self.log_iter,
+		format!("{:.2} mio reads ({:.2}% usable; {:.2}% PCR dupl. [usable] [{:.2}% for last batch])",
+            self.total as f32 / self.split as f32,
             self.ok_reads as f32 / (self.ok_reads +self.no_sample+ self.unknown) as f32 * 100.0 , 
             self.pcr_duplicates as f32 / self.ok_reads as f32 * 100.0,
             self.local_dup as f32 / self.split as f32 * 100.0
