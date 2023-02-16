@@ -86,6 +86,16 @@ OPTIONS:
 
 This was both compiled and run under Windows11.
 
+
+Both R1 and R2 files can also be comma separated lists of fastq files.
+As always the same order must be preserved in both lists.
+
+The benefit between running both files separately is that the umis are controlled for both fastq files and therefore a 'better' result is obtained than running the fastq files separately and merging the resulting data.
+
+```
+target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz,testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz,testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
+```
+
 # Speed comparisons to local BD software installation
 
 The BD rhapsody software is available for Mac and Linux, not for Windows. Whereas this rust program here also compiles and runs on Windows.

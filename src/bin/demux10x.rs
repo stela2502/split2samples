@@ -13,17 +13,17 @@ use kmers::naive_impl::Kmer;
 
 use this::geneids::GeneIds;
 use this::singlecelldata::SingleCellData;
-
+use this::analysis::MappingInfo;
 //use self::super::cellids10x::SingleCellData;
 //use self::super::split2samples::geneids::GeneIds;
 
 use std::path::PathBuf;
-//use std::fs::File;
+use std::fs::File;
 use std::fs;
 
 //use std::io::prelude::*;
 use std::time::SystemTime;
-
+use this::ofiles::Ofiles;
 //use crate::glob;
 //use glob::glob; // to search for files
 //use regex::Regex;
@@ -118,6 +118,20 @@ fn main() {
 
     println!("starting to collect the cell ids per sample");
 
+    let log_file_str = PathBuf::from(&opts.outpath).join(
+        "Mapping_log.txt"
+    );
+
+    println!( "the log file: {}", log_file_str.file_name().unwrap().to_str().unwrap() );
+    
+    let log_file = match File::create( log_file_str ){
+        Ok(file) => file,
+        Err(err) => {
+            panic!("Error: {err:#?}" );
+        }
+    };
+
+
     let sub_len = 9;
     let mut genes = parse_bc_map( &opts.bc, sub_len );// = Vec::with_capacity(12);
 
@@ -125,8 +139,15 @@ fn main() {
     //  now we need to get a CellIDs object, too
     let mut cells = SingleCellData::new( );
 
+    let ofile = Ofiles::new( 1, "Unknown", "R2.fastq.gz", "R1.fastq.gz",  opts.outpath.as_str() );
+    
+    // needs log_writer:BufWriter<File>, min_quality:f32, max_reads:usize, ofile:Ofiles
+    let mut results = MappingInfo::new( log_file, 0.0 , usize::MAX, ofile );
+    
+
     let mut unknown:u32 = 0;
     let mut ok:u32 = 0;
+    let mut dups:u32 = 0;
 
     {
         // need better error handling here too    
@@ -165,17 +186,11 @@ fn main() {
                 match genes.get( gene_read ){
                     Some(gene_id) => {
                         //println!("Gene has matched");
-                        match cells.get( cell, cell_name.to_string() ){
-                            Ok(cell_data) => {
-                                ok += 1;
-                                cell_data.add(gene_id, umi);
-                            },
-                            Err(_err) => {
-                                //eprintln!("But somehow we could not get the entry added!?! {} ", err);
-                                unknown +=1;
-                                //continue 'main; //not necessary here
-                            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-                        };
+                        if cells.try_insert( cell, cell_name.to_string(), &gene_id, umi, &mut results ) {
+                            ok += 1;
+                        }else {
+                            dups += 1;
+                        }
                     },
                     None => unknown +=1,
                 }
@@ -198,8 +213,9 @@ fn main() {
             Err(err) => panic!("Error in the data write: {err}", )
         };
         
-        println!("usable: {ok} reads",  );
-        println!("bad   : {unknown} reads",  );
+        println!("usable   : {ok} reads",  );
+        println!("duplocate: {dups}");
+        println!("bad      : {unknown} reads",  );
     }
 
     match now.elapsed() {

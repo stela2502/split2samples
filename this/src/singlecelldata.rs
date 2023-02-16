@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 
 use crate::geneids::GeneIds;
+use crate::analysis::MappingInfo;
 
 use std::io::BufWriter;
 use std::fs::File;
@@ -191,24 +192,27 @@ impl SingleCellData{
 
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
-    pub fn get(&mut self, cell_id: u64, name: std::string::String ) -> Result< &mut CellData, &str>{
+    pub fn try_insert(&mut self, cell_id: u64, name: std::string::String, gene_id:&usize,umi:u64, report: &mut MappingInfo ) ->bool{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
 
         self.cells.entry(cell_id).or_insert_with( || { CellData::new( name ) });
-
-        // if ! self.cells.contains_key( &cell_id ){
-        //     //let data = CellData::new(self.kmer_size, name );
-        //     let data = CellData::new( name );
-        //     self.cells.insert( cell_id, data );
-        // }
-
-        let ret = match self.cells.get_mut(&cell_id){
-            Some(c1) => c1, 
-            None => return Err::< &mut CellData, &str>("BTreeMap Upstream error")
+        let mut ret = true;
+        match self.cells.get_mut(&cell_id){
+            Some(cell_info) =>  {
+                //println!("I got gene {} for cell {}", gene_id , cell_info.name);
+                report.ok_reads += 1;
+                if ! &cell_info.add( *gene_id, umi ) {
+                    //println!("  -> pcr duplicate");
+                    report.pcr_duplicates += 1;
+                    report.local_dup += 1;
+                    ret = false;
+                }
+            },
+            None => panic!("Could not add a gene expression: gene_id = {gene_id}, umi = {umi}" ),
         };
-        Ok( ret )
+        ret
     }
 
     pub fn write (&mut self, file_path: PathBuf, genes: &mut GeneIds, min_count:usize) -> Result< (), &str>{
@@ -245,7 +249,7 @@ impl SingleCellData{
         let mut failed = 0;
 
         if ! self.checked{
-            println!("This is questionable - please run mtx_counts before write_sub!");
+            println!("Both mRNA and antibody did not generate data - useless, but exporting all cells!");
             self.mtx_counts( genes, names, min_count );
         }
 
@@ -280,6 +284,11 @@ impl SingleCellData{
     pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut GeneIds, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
             
         let rs = Path::new( &file_path ).exists();
+
+        if names.is_empty(){
+            eprintln!("No genes to report on - no data written to path {:?}", file_path.to_str());
+            return Ok(())
+        }
 
         let mut passed = 0;
         let mut failed = 0;

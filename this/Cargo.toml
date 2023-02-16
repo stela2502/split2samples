@@ -9,4 +9,4 @@ edition = "2021"
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
 needletail = "0.4"
 flate2 = "1.0.24"
-byteorder = "1.4.3"
+indicatif = {version = "*", features = ["rayon"]}
