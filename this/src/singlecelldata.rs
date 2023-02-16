@@ -15,7 +15,6 @@ use std::fs;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 
-
 use std::path::PathBuf;
 use std::path::Path;
 
@@ -155,7 +154,7 @@ impl CellData{
 
 
 
-// This SingleCellData needs to copy some of the logics from split2samples - no it actually is totally dufferent
+// This SingleCellData needs to copy some of the logics from split2samples - no it actually is totally different
 // Here we look for new sample ids and each sample id needs to be a total match to the previousely identified sample id
 // Of cause I could also implement something with a whitelist. But that is for the future.
 pub struct SingleCellData{    

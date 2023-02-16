@@ -31,4 +31,5 @@ pub mod geneids;
 pub mod sampleids;
 pub mod singlecelldata;
 pub mod ofiles;
+pub mod ifiles;
 pub mod last5;
