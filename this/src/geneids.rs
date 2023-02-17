@@ -13,34 +13,11 @@ use std::path::Path;
 use std::io::Write;
 use std::fs;
 
-use byteorder::{BigEndian, ReadBytesExt};
 use std::io::BufRead;
-use byteorder::LittleEndian;
 use std::io::Read;
 
-//mod cellIDsError;
-//use crate::cellids::cellIDsError::NnuclError;
 
-// #[derive(Debug)]
-// pub struct Info {
-// //    pub cells: CellIds10x,
-//     pub id: u64,
-//     pub name: std::string::String
-// }
-
-
-// impl  Info{
-//         pub fn new( id: u64, name: std::string::String )-> Self {
-//             let loc_name = name.clone();
-//             Self {
-//                 id,
-//                 name: loc_name,
-//             }
-//         }
-// }
-
-/// GeneIds harbors the antibody tags
-/// these sequences have (to my knowmledge) 15 bp os length
+/// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
 /// but that can be different, too. 
 /// Hence we store here 
 /// kmers       : the search object
@@ -48,8 +25,7 @@ use std::io::Read;
 /// kmer_size   : the length of the kmers
 /// names       : a hashset for the gene names
 /// bad_entries : a hash to save bad entries (repetetive ones)
-
-const WRITE_CHUNK_SIZE: usize = 1;
+/// and a lot of private ease of live id to name or vice versa BTreeMaps
 
 #[derive(Debug,PartialEq)]
 pub struct GeneIds{    
@@ -120,7 +96,7 @@ impl GeneIds{
                     None => {
                         if checker.insert( *nuc, 1).is_some(){};
                     }
-                }
+                };
                 if *nuc ==b'N'{
                     continue;
                 }
@@ -291,23 +267,6 @@ impl GeneIds{
                 self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
             }
 
-            // match self.kmers.get(&km){
-            //     Some(c1) => {
-            //         //println!("And got a match: {}", c1);
-            //         sums[*c1] += 1;
-            //         if max < sums[*c1]{
-            //             //println!("the new max is {}", max);
-            //             max =  sums[*c1];
-            //             if max > 4{
-            //                 // 2 hits gave me really really strange results.
-            //                 // need to check for 3 again.
-            //                 break // 2 unique hits should be enough
-            //             }
-            //         };
-            //         self.last_kmers.push(  self.kmer_store.get( &km ).unwrap().to_string() );
-            //     },
-            //     None => ()
-            // };
         }
         self.last_count = max;
         if max >2 {
@@ -357,18 +316,6 @@ impl GeneIds{
                 }
                 self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
             }
-            // match self.kmers.get(&km){
-            //     Some(c1) => {
-            //         //println!("And got a match: {}", c1);
-            //         sums[*c1] += 1;
-            //         if max < sums[*c1]{
-            //             //println!("the new max is {}", max);
-            //             max =  sums[*c1];
-            //         };
-            //         self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
-            //     },
-            //     None => ()
-            // };
         }
         self.last_count = max;
         if max >3 {
@@ -436,10 +383,18 @@ impl GeneIds{
 
         // remove the old files if they exist:
         let fpath = Path::new(&path ) ;
-        if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok();
-        if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok();
+        if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
+        if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-        let mut ofile = Ofilesr::new( 1, "index", "Index.gz", "gene.txt.gz",  &path );
+        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
+
+        let seq_len:u64 = self.kmer_size as u64;
+
+
+        match ofile.buff1.write( &seq_len.to_le_bytes() ){
+            Ok(_) => (),
+            Err(_err) => return Err::<(), &str>("seq_len could not be written"),
+        };
 
         for ( kmer, gene_id) in &self.kmers {
             match ofile.buff1.write( &kmer.to_le_bytes() ){
@@ -462,8 +417,8 @@ impl GeneIds{
 
     pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
 
-        let f1 = Path::new( &path ).join("index.1.Index.gz");
-        let f2 = Path::new( &path ).join("index.1.gene.txt.gz");
+        let f1 = Path::new( &path ).join("index.1.Index");
+        let f2 = Path::new( &path ).join("index.1.gene.txt");
         if ! f1.exists() {
             panic!("Index file {} does not exist", f1.to_str().unwrap() );
         }
@@ -471,18 +426,25 @@ impl GeneIds{
             panic!("kmer names file {} does not exist", f2.to_str().unwrap() );
         }
 
-        let mut ifile =Ifilesr::new( 1, "index", "Index.gz", "gene.txt.gz",  &path  );
+        let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  &path  );
         let mut id = 0;
 
-        'main : for name in ifile.buff2.lines() {
-            println!("I read this name: {name:?}");
-            let mut buff = [0_u8 ;8 * WRITE_CHUNK_SIZE ];
-            ifile.buff1.read_exact(&mut buff);
+        let mut buff = [0_u8 ;8 ];
+
+        ifile.buff1.read_exact(&mut buff).unwrap();
+        //println! ("I got the buff {buff:?}");
+        self.kmer_size = u64::from_le_bytes( buff ) as usize;
+
+        for name in ifile.buff2.lines() {
+            //println!("I read this name: {name:?}");
+            //let mut buff = [0_u8 ;8 ];
+            ifile.buff1.read_exact(&mut buff).unwrap();
 
             let km = &u64::from_le_bytes( buff );
             
-                //println!("I try to insert km {km} and gene name '{name}' ({len:?}) ");
+            //println!("I try to insert km {km} and gene name '{name}' ({len:?}) ");
             id += 1;
+            let mut data:String = "".to_string() ; // needs to be a constant...
             match name{
                 Ok(na) => {
                     if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(*km) {
@@ -493,7 +455,12 @@ impl GeneIds{
                             self.max_id += 1;
                         }
                         let gene_id = self.names.get( &na ).unwrap();
-                        self.kmer_store.insert( *km , "not recovered".to_string() );
+                        //self.kmer_store.insert( *km , "not recovered".to_string() );
+                        //println!("These are the bytes I need to work on: {:?}",&km.to_le_bytes());
+                        Self::u64_to_str(self.kmer_size, km, &mut data );
+                        println!( "({})Can I get that {km} to string? {:?}", self.seq_len, data );
+                        
+                        self.kmer_store.insert( *km , data.to_string() );
                         e.insert( *gene_id );
                     } 
                     else {
@@ -501,35 +468,108 @@ impl GeneIds{
                         self.kmers.remove( km );
                     }
                 },
-                Err(err) => panic!("This is not working: {e:?}"),
+                Err(err) => panic!("This is not working: {err:?}"),
             };
 
-                // if let na = Ok::<Result<String, std::io::Error>>(name) {
-                //     println!("{na:?}: {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
-                // }
-                // let na = format!("{}",&name);
-                // let na = na.trim();
-                 println!("{name:?}: {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
-                // if Ok(name) == Err(""){
-                //     panic!("Not a gene name! ({name:?})");
-                //     break 'main;
-                // }
-                
-            }
-            // else {
-            //     panic!( "{id} I got a gene name {name}, but no corresponding gene kmer!")
-            // }
+            //println!(" {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
         }
         if id == 0 {
             panic!("No data read!");
         }
 
-        &self.print();
+        //self.print();
         Ok(())
     }
 
+    /*
+    if that works here is the CatGPG discussion  that taught me that:
+    rust how to access bits of a u8 0,1 and 2,3 and so forth?
 
+    To access bits of a u8, use the bitwise operators & (AND) and | (OR). For example, to access the 0th and 1st bits of a u8, you can use the expression:
 
+    u8 & 0x03
+
+    What would be the result of this operation?
+
+    The result of this operation would be the 0th and 1st bits of the u8.
+
+    Can that be applioed multiple times to get the next 2 ans so on?
+
+    Yes, you can use this operation multiple times to get the next 2 bits and so on. For example, to access the 2nd and 3rd bits of a u8, you could use the expression:
+
+    u8 & 0x0C
+
+    Can I get that for the rest, too?
+
+    Yes, you can use this operation to get the rest of the bits as well. For example, to access the 4th and 5th bits of a u8, you could use the expression:
+
+    u8 & 0x30
+
+    and one more?
+
+    Yes, to access the 6th and 7th bits of a u8, you could use the expression:
+
+    u8 & 0xC0
+
+    That is it then - there are no more bits in an u8 - or?
+
+    Yes, that is it - there are no more bits in an u8.
+
+    EPIC! Thank you!
+
+    You're welcome!
+    */
+    fn u64_to_str (kmer_size:usize, km:&u64,  data:&mut String ){
+
+        let mut i = 0;
+        for u8_rep in km.to_le_bytes(){
+            if i < kmer_size{
+                match u8_rep & 0x03{
+                    0b00000000 => *data +="A",
+                    0b00000001 => *data +="C",
+                    0b00000010 => *data +="G",
+                    0b00000011 => *data +="T",
+                    _ => *data +="N",
+                };
+                i += 1;
+            }
+            if i < kmer_size{
+                match u8_rep & 0x0C{
+                    0b00000000 => *data +="A",
+                    0b00000100 => *data +="C",
+                    0b00001000 => *data +="G",
+                    0b00001100 => *data +="T",
+                    _ => *data +="N",
+                };
+                i += 1;
+            }
+            if i < kmer_size{
+                match u8_rep & 0x30{
+                    0b00000000 => *data +="A",
+                    0b00010000 => *data +="C",
+                    0b00100000 => *data +="G",
+                    0b00110000 => *data +="T",
+                    _ => *data +="N",
+                };
+                i += 1;
+            }
+            if i < kmer_size{
+                match u8_rep & 0xC0{
+                    0b00000000 => *data +="A",
+                    0b01000000 => *data +="C",
+                    0b10000000 => *data +="G",
+                    0b11000000 => *data +="T",
+                    _ => *data +="N",
+                };
+                i += 1;
+            }
+            if i == kmer_size{
+                break;
+            }
+
+        //println!( "({})Can I get that {u8_rep} to u2 ({i})? {:?}, {:?}, {:?}, {:?}, {:?}", self.seq_len, u8_rep & 0x03,  u8_rep & 0x0C, u8_rep & 0x30 , u8_rep & 0xC0, data );
+        }
+    }
 
 }
 
@@ -588,6 +628,17 @@ mod tests {
 
         genes2.load_index( Path::new("../testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
 
-        assert_eq!( genes,  genes2 ); 
+        assert_eq!( Vec::from_iter( genes.kmers.keys().cloned() ),  Vec::from_iter( genes2.kmers.keys().cloned()) );
+        assert_eq!( Vec::from_iter( genes.kmer_store.keys().cloned()),  Vec::from_iter( genes2.kmer_store.keys().cloned()) );
+        assert_eq!( genes.kmer_size, genes2.kmer_size )
     }
+
+    #[test]
+    fn test_u64_to_str(){
+
+        let num:u64 = 15561;
+        let mut data:String = "".to_string();
+        GeneIds::u64_to_str( 7, &num, &mut data );
+        assert_eq!( data, "CGATATT".to_string() )
+    } 
 }
