@@ -344,8 +344,8 @@ impl CellIds<'_>{
                 } else {
                     bad_entries.insert( km );
                     csl1.remove( &km );
-                    println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
-                        std::str::from_utf8( kmer ))
+                    // println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
+                    //     std::str::from_utf8( kmer ))
                 }
 
                 // if bad_entries.contains( &km ){
@@ -378,8 +378,8 @@ impl CellIds<'_>{
                 } else {
                     bad_entries.insert( km );
                     csl2.remove( &km );
-                    println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
-                        std::str::from_utf8( kmer ))
+                    // println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
+                    //     std::str::from_utf8( kmer ))
                 }
 
             }
@@ -397,8 +397,8 @@ impl CellIds<'_>{
                 } else {
                     bad_entries.insert( km );
                     csl3.remove( &km );
-                    println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
-                        std::str::from_utf8( kmer ))
+                    // println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
+                    //     std::str::from_utf8( kmer ))
                 }
             }
             i +=1;

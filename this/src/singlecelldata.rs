@@ -190,6 +190,28 @@ impl SingleCellData{
         }
     }
 
+    /// the old get funtion. Does not work in the new Analysis package. So only to make the tests work again.
+    pub fn get(&mut self, cell_id: u64, name: std::string::String ) -> Result< &mut CellData, &str>{
+        
+        //println!("CellIDs::get cell_id: {}", cell_id );
+        self.checked= false;
+
+        self.cells.entry(cell_id).or_insert_with( || { CellData::new( name ) });
+
+        // if ! self.cells.contains_key( &cell_id ){
+        //     //let data = CellData::new(self.kmer_size, name );
+        //     let data = CellData::new( name );
+        //     self.cells.insert( cell_id, data );
+        // }
+
+        let ret = match self.cells.get_mut(&cell_id){
+            Some(c1) => c1, 
+            None => return Err::< &mut CellData, &str>("BTreeMap Upstream error")
+        };
+        Ok( ret )
+    }
+
+
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
     pub fn try_insert(&mut self, cell_id: u64, name: std::string::String, gene_id:&usize,umi:u64, report: &mut MappingInfo ) ->bool{

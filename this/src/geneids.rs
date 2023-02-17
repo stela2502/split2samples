@@ -6,17 +6,17 @@ use std::collections::HashSet;
 
 use kmers::naive_impl::Kmer;
 
-// use crate::ofiles::Ofiles;
-// use crate::ifiles::Ifiles;
+use crate::ofiles::Ofilesr;
+use crate::ifiles::Ifilesr;
 
-// use std::path::Path;
-// use std::io::Write;
-// use std::fs;
+use std::path::Path;
+use std::io::Write;
+use std::fs;
 
-// use byteorder::{BigEndian, ReadBytesExt};
-// use std::io::BufRead;
-// use byteorder::LittleEndian;
-// use std::io::Read;
+use byteorder::{BigEndian, ReadBytesExt};
+use std::io::BufRead;
+use byteorder::LittleEndian;
+use std::io::Read;
 
 //mod cellIDsError;
 //use crate::cellids::cellIDsError::NnuclError;
@@ -48,6 +48,9 @@ use kmers::naive_impl::Kmer;
 /// kmer_size   : the length of the kmers
 /// names       : a hashset for the gene names
 /// bad_entries : a hash to save bad entries (repetetive ones)
+
+const WRITE_CHUNK_SIZE: usize = 1;
+
 #[derive(Debug,PartialEq)]
 pub struct GeneIds{    
     pub kmers: BTreeMap<u64, usize>, // the search map with kamer u64 reps.
@@ -419,6 +422,115 @@ impl GeneIds{
         "CellID\t".to_owned()+&ret.join("\t")
     }
 
+    pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
+        let rs = Path::new( &path ).exists();
+
+        if ! rs {
+            match fs::create_dir ( path.clone() ){
+                Ok(_file) => (),
+                Err(err) => {
+                     eprintln!("Error?: {err:#?}");
+                 }
+            };
+        }
+
+        // remove the old files if they exist:
+        let fpath = Path::new(&path ) ;
+        if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok();
+        if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok();
+
+        let mut ofile = Ofilesr::new( 1, "index", "Index.gz", "gene.txt.gz",  &path );
+
+        for ( kmer, gene_id) in &self.kmers {
+            match ofile.buff1.write( &kmer.to_le_bytes() ){
+                Ok(_) => println!("{} -> {:?} -> {:?}",kmer, &kmer.to_le_bytes(),  &u64::from_le_bytes(kmer.to_le_bytes())  ) ,
+                Err(_err) => return Err::<(), &str>("kmer could not be written"),
+            };
+
+            match self.names_store.get( &gene_id ){
+                Some(name) => {
+                    write!(ofile.buff2,"{name}\n" ).unwrap();
+                },
+                None => panic!("Gene id {gene_id} not found in this object!"),
+            };
+        }
+
+
+        ofile.close();
+        Ok(())
+    }
+
+    pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
+
+        let f1 = Path::new( &path ).join("index.1.Index.gz");
+        let f2 = Path::new( &path ).join("index.1.gene.txt.gz");
+        if ! f1.exists() {
+            panic!("Index file {} does not exist", f1.to_str().unwrap() );
+        }
+        if ! f2.exists() {
+            panic!("kmer names file {} does not exist", f2.to_str().unwrap() );
+        }
+
+        let mut ifile =Ifilesr::new( 1, "index", "Index.gz", "gene.txt.gz",  &path  );
+        let mut id = 0;
+
+        'main : for name in ifile.buff2.lines() {
+            println!("I read this name: {name:?}");
+            let mut buff = [0_u8 ;8 * WRITE_CHUNK_SIZE ];
+            ifile.buff1.read_exact(&mut buff);
+
+            let km = &u64::from_le_bytes( buff );
+            
+                //println!("I try to insert km {km} and gene name '{name}' ({len:?}) ");
+            id += 1;
+            match name{
+                Ok(na) => {
+                    if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(*km) {
+                        //let info = Info::new(km, name.clone() );
+                        if ! self.names.contains_key( &na ){
+                            self.names.insert( na.clone(), self.max_id );
+                            self.names_store.insert( self.max_id, na.clone() );
+                            self.max_id += 1;
+                        }
+                        let gene_id = self.names.get( &na ).unwrap();
+                        self.kmer_store.insert( *km , "not recovered".to_string() );
+                        e.insert( *gene_id );
+                    } 
+                    else {
+                        self.bad_entries.insert( *km );
+                        self.kmers.remove( km );
+                    }
+                },
+                Err(err) => panic!("This is not working: {e:?}"),
+            };
+
+                // if let na = Ok::<Result<String, std::io::Error>>(name) {
+                //     println!("{na:?}: {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
+                // }
+                // let na = format!("{}",&name);
+                // let na = na.trim();
+                 println!("{name:?}: {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
+                // if Ok(name) == Err(""){
+                //     panic!("Not a gene name! ({name:?})");
+                //     break 'main;
+                // }
+                
+            }
+            // else {
+            //     panic!( "{id} I got a gene name {name}, but no corresponding gene kmer!")
+            // }
+        }
+        if id == 0 {
+            panic!("No data read!");
+        }
+
+        &self.print();
+        Ok(())
+    }
+
+
+
+
 }
 
 
@@ -470,12 +582,12 @@ mod tests {
         geneid = genes.get_id( "Gene3".to_string() );
         assert_eq!( geneid,  2 ); 
 
-        // genes.write_index( Path::new("../testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
+        genes.write_index( Path::new("../testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
 
-        // let mut genes2 = GeneIds::new( 7 );
+        let mut genes2 = GeneIds::new( 7 );
 
-        // genes2.load_index( Path::new("../testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
+        genes2.load_index( Path::new("../testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
 
-        // assert_eq!( genes,  genes2 ); 
+        assert_eq!( genes,  genes2 ); 
     }
 }

@@ -10,3 +10,4 @@ kmers = { git="https://github.com/COMBINE-lab/kmers" }
 needletail = "0.4"
 flate2 = "1.0.24"
 indicatif = {version = "*", features = ["rayon"]}
+byteorder = "1.0"
