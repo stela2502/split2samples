@@ -354,14 +354,14 @@ impl Analysis<'_>{
                                         	);
                                     },
                                     None => {
-                                    	match seqrec1.write(&mut report.ofile.buff1, None){
-		                                    Ok(_) => (),
-		                                    Err(err) => println!("{err}")
-		                                };
-		                                match seqrec.write( &mut report.ofile.buff2, None){
-		                                    Ok(_) => (),
-		                                    Err(err) => println!("{err}")
-		                                };
+                                    	// match seqrec1.write(&mut report.ofile.buff1, None){
+		                                //     Ok(_) => (),
+		                                //     Err(err) => println!("{err}")
+		                                // };
+		                                // match seqrec.write( &mut report.ofile.buff2, None){
+		                                //     Ok(_) => (),
+		                                //     Err(err) => println!("{err}")
+		                                // };
                                     	report.no_data +=1;
                                     }
                                 };
