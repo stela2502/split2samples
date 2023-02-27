@@ -411,7 +411,7 @@ impl Analysis<'_>{
     );
 
     let file_path_sp = PathBuf::from(&outpath).join(
-        "BD_Rhapsody_antibodies"
+        "BD_Rhapsody_expression"
     );
 
     // this always first as this will decide which cells are OK ones!

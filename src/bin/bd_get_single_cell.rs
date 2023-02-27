@@ -120,8 +120,8 @@ fn main() {
                 }
                 if cell_id == opts.id{
                     count += 1;
-                    let mut id = seqrec1.id();
-                    id.push( cell_id.to_u8() )
+                    //let mut id = seqrec1.id();
+                    //id.push( cell_id.to_u8() )
                     match seqrec1.write(&mut ofile.buff1, None){
                         Ok(_) => (),
                         Err(err) => println!("{err}")
