@@ -343,28 +343,30 @@ impl Analysis<'_>{
                                 //println!("Cool I got a gene id: {gene_id}", );
                             },
                             None => {
-                                match &self.genes2.get_unchecked( &seqrec.seq() ){
-                                    Some(gene_id) =>{ 
-                                        self.gex.try_insert( 
-                                        	*cell_id as u64, 
-                                        	format!( "Cell{cell_id}"  ),
-                                        	gene_id,
-                                        	umi, 
-                                			report
-                                        	);
-                                    },
-                                    None => {
-                                    	// match seqrec1.write(&mut report.ofile.buff1, None){
-		                                //     Ok(_) => (),
-		                                //     Err(err) => println!("{err}")
-		                                // };
-		                                // match seqrec.write( &mut report.ofile.buff2, None){
-		                                //     Ok(_) => (),
-		                                //     Err(err) => println!("{err}")
-		                                // };
-                                    	report.no_data +=1;
-                                    }
-                                };
+                                // match &self.genes2.get_unchecked( &seqrec.seq() ){
+                                //     Some(gene_id) =>{ 
+                                //         self.gex.try_insert( 
+                                //         	*cell_id as u64, 
+                                //         	format!( "Cell{cell_id}"  ),
+                                //         	gene_id,
+                                //         	umi, 
+                                // 			report
+                                //         	);
+                                //     },
+                                //     None => {
+                                //     	// match seqrec1.write(&mut report.ofile.buff1, None){
+		                        //         //     Ok(_) => (),
+		                        //         //     Err(err) => println!("{err}")
+		                        //         // };
+		                        //         // match seqrec.write( &mut report.ofile.buff2, None){
+		                        //         //     Ok(_) => (),
+		                        //         //     Err(err) => println!("{err}")
+		                        //         // };
+                                //     	report.no_data +=1;
+                                //     }
+                                // };
+                                report.no_data +=1;
+
                                 // all - samples genes and antibodies are classed as genes here.
                             }
                         };
