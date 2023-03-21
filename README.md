@@ -41,13 +41,7 @@ using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 To run the test data (a tiny bit of a real dataset):
 
 ```
-target/release/quantify_rhapsody \
-    -r  testData/1e5_mRNA_S1_R1_001.fastq.gz \
-    -f testData/1e5_mRNA_S1_R2_001.fastq.gz \
-    -o testData/output_1e5 -s mouse  \
-    -e testData/genes.fasta \
-    -a testData/MyAbSeqPanel.fasta \
-    -m 30 -v v1
+target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30 -v v1
 ```
 
 Or to even validate this data you can run a R test script (which requires the R::Seurat package) like that:
@@ -76,6 +70,7 @@ OPTIONS:
     -a, --antibody <ANTIBODY>          the fasta database containing the antibody tags
     -e, --expression <EXPRESSION>      the fasta database containing the genes
     -f, --file <FILE>                  the input R2 samples file
+        --gene-kmers <GENE_KMERS>      minimal sequencing quality [default: 32]
     -h, --help                         Print help information
     -m, --min-umi <MIN_UMI>            the minimum reads per cell (sample + genes + antibody
                                        combined)
@@ -89,8 +84,17 @@ OPTIONS:
 
 ```
 
-This one has actually been compiled and run on Windows 11.
+This was both compiled and run under Windows11.
 
+
+Both R1 and R2 files can also be comma separated lists of fastq files.
+As always the same order must be preserved in both lists.
+
+The benefit between running both files separately is that the umis are controlled for both fastq files and therefore a 'better' result is obtained than running the fastq files separately and merging the resulting data.
+
+```
+target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz,testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz,testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
+```
 
 # Speed comparisons to local BD software installation
 
@@ -181,9 +185,13 @@ Little less than 2h. Let's check how much time BD's version does need...
 ## And BD software for the S2 sample
 
 
-Repeated runs on my desktop did faile after up tpo 38h of calculations.
+Repeated runs on my desktop did faile after up to 38h runtime.
 Therefore I report the seven bridges run time here: 7 hours, 39 minutes.
-That is significantly faster than the 38h on my system, but it nevertheless is ~4x slower than my Rhapsody implementation.
+That is significantly faster than the 38h on my system, but it nevertheless is ~4x slower than my Rhapsody implementation on a single core.
+
+Why single core? The system IO does affect the Rust implementation. 
+The splitting of large gzipped fastq files can easiliy take more than halve an hour and  given the fast processing time
+the additional work to implement mutiprocessor capabilities for Rustody seams unnecessary.
 
 
 ## The last run on my desktop:
@@ -517,15 +525,75 @@ WARNING Final process status is permanentFail
 
 There are several other programs in this package:
 
- 1. split2samples will split the BD Rhapsody fastq files into sample spceific fastq files. This script is older and ~4 times slower in creating just the fastq files when compared to quantifyRhapsody quantifying the data.
- 2. demux10x is a small spin off that actually processes 10x single cell data and searches for a set fasta entries.
- 3. bd_cell_id_2_seq BD Rhapsody cells do get an ID in the results. If you want to get the sequences coding for this cells you can use this program
- 4. bd_get_single_cell will select only one single cell from the fastq files.
+ ## split2samples 
 
+ This will split the BD Rhapsody fastq files into sample spceific fastq files. This script is older and ~4 times slower in creating just the fastq files when compared to quantifyRhapsody quantifying the data.
+
+```
+target/release/split2samples -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_split -s mouse -v v1 -m fastqSplit
+```
+ ## demux10x 
+
+ This is a small spin off that actually processes 10x single cell data and searches for a set fasta entries. (no test data included)
+
+ ```
+ target/release/demux10x  -h
+Rustody 0.1.0
+Stefan L. <stefan.lang@med.lu.se>
+Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
+
+USAGE:
+    demux10x --reads <READS> --file <FILE> --bc <BC> --outpath <OUTPATH> --min-umi <MIN_UMI>
+
+OPTIONS:
+    -b, --bc <BC>              the barcodes table name<tab>bc
+    -f, --file <FILE>          the input R2 genes file
+    -h, --help                 Print help information
+    -m, --min-umi <MIN_UMI>    the minimum reads (sample + genes + antybody combined)
+    -o, --outpath <OUTPATH>    the outpath
+    -r, --reads <READS>        the input R1 reads file
+    -V, --version              Print version information
+```
+
+ ## bd_cell_id_2_seq 
+
+ BD Rhapsody cells do get an ID in the results. If you want to get the sequences coding for one cell you can use this program:
+ 
+ ```
+target/release/bd_cell_id_2_seq -i 3857748 -v v1
+The sequence is:
+Ok("ACCAAGGAC")
+Ok("TTGGAGGTA")
+Ok("AATTCGGCG")
+```
+
+
+## bd_get_single_cell 
+
+This will select only one single cell from the fastq files.
+
+```
+target/release/bd_get_single_cell -i 3857748 -v v1 -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_getCell
+writing all reads from the cell 3857748
+[100/?] ⠁                                                                                                                                                                                                  I found 14 reads for the cell 3857748
+```
 
 # Limitations / differences
 
-This program is totally untested and under heavy development.
-This is only the first draft - let's see where this heads to.
+Neither whole genome Rhapsody data nor TCR / BRC analyses are supported.
 
 
+# specific test cases
+
+## Cd3e should not be in this cell - why is it detected
+
+Version 0.1.0 and likely previouse version do detect Cd3e in this cell, but it should not be expressed.
+
+```
+target/release/quantify_rhapsody -r  testData/OneSingleCell.66.R2.fastq.gz -f testData/OneSingleCell.66.R1.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
+
+zcat testData/output_one_cell
+```
+
+Actuall Cd3e is not detected in 1.0.0
+I need to update the singularity image...

@@ -117,13 +117,12 @@ fn main() {
     //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
     //cells.init_rhapsody( &opts.specie );
 
-    let cell_umi;
-    if opts.cell_ids != "no file" {
-        cell_umi = parse_bc_map( &opts.cell_ids );
-    }
+    let cell_umi = if opts.cell_ids != "no file" {
+        parse_bc_map( &opts.cell_ids )
+    }   
     else{
-        cell_umi = HashSet::new();
-    }
+        HashSet::new()
+    };
 
     //  now we need to get a CellIDs object, too
     let mut cells = CellIds::new(&opts.version, 7);
@@ -180,7 +179,7 @@ fn main() {
     // and umi's are u64 again
     // here I need the cell kmer site.
 
-    let mut ofile:Ofiles = Ofiles::new( 1, &"cells".to_string(), &opts.reads.to_string(), &opts.file.to_string(), &opts.outpath.to_string() );
+    let mut ofile:Ofiles = Ofiles::new( 1, "cells", &opts.reads.to_string(), &opts.file.to_string(), &opts.outpath.to_string() );
 
     let mut ok_reads = 0;
 
@@ -197,14 +196,14 @@ fn main() {
                 let seqrec = match record2{
                     Ok( res ) => res,
                     Err(err) => {
-                        eprintln!("could not read from R2:\n{}", err);
+                        eprintln!("could not read from R2:\n{err}");
                         continue 'main;
                     }
                 };
                 let seqrec1 = match record1{
                     Ok(res) => res,
                     Err(err) => {
-                        eprintln!("could not read from R1:\n{}", err);
+                        eprintln!("could not read from R1:\n{err}");
                         continue 'main;
                     }
                 };
@@ -251,19 +250,17 @@ fn main() {
                         //     continue 'main;
                         // }
 
-                        if opts.cell_ids != "no file" {
-                            if ! cell_umi.contains( &cell_id ){
-                                continue 'main;
-                            }
+                        if opts.cell_ids != "no file" && ! cell_umi.contains( &cell_id ) {
+                            continue 'main;
                         }
 
                         match seqrec1.write(&mut ofile.buff1, None){
                             Ok(_) => (),
-                            Err(err) => println!("{}",err)
+                            Err(err) => println!("{err}")
                         };
                         match seqrec.write( &mut ofile.buff2, None){
                             Ok(_) => (),
-                            Err(err) => println!("{}",err)
+                            Err(err) => println!("{err}")
                         };
                         ok_reads += 1;
                         if ok_reads == opts.max_reads{
@@ -288,7 +285,7 @@ fn main() {
 
 
         println!( "\nSummary:");
-        println!(     "total      reads  : {} reads", ok_reads );
+        println!(     "total      reads  : {ok_reads} reads" );
 
     }
 
@@ -296,19 +293,17 @@ fn main() {
     match now.elapsed() {
         Ok(elapsed) => {
             let mut milli = elapsed.as_millis();
-            let sec:u128;
-            let min:u128;
 
             let mil = milli % 1000;
             milli= (milli - mil) /1000;
 
-            sec = milli % 60;
+            let sec = milli % 60;
             milli= (milli -sec) /60;
 
-            min = milli % 60;
+            let min = milli % 60;
             milli= (milli -min) /60;
 
-            println!("quantify_rhapsody finished in {}h {}min {} sec {}milli sec\n", milli, min, sec, mil );},
+            println!("quantify_rhapsody finished in {milli}h {min}min {sec} sec {mil}milli sec\n" );},
        Err(e) => {println!("Error: {e:?}");}
     }
 

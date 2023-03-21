@@ -73,11 +73,11 @@ impl Ofiles{
         // println!( "why does this file break? {}", file1_path.display() );
         let f1 = match File::create(file1_path){
             Ok(file) => file,
-            Err(err) => panic!("The file {} cound not be created: {}", format!("{}.{}.{}", opts.mode, id, fp1.file_name().unwrap().to_str().unwrap() ), err)
+            Err(err) => panic!("The file {}.{id}.{} cound not be created: {err}", opts.mode,  fp1.file_name().unwrap().to_str().unwrap() )
         };
         let f2 = match File::create(file2_path){
             Ok(file) => file,
-            Err(err) => panic!("The file {} cound not be created: {}", format!("{}.{}.{}", opts.mode, id, fp2.file_name().unwrap().to_str().unwrap() ), err)
+            Err(err) =>panic!("The file {}.{id}.{} cound not be created: {err}", opts.mode,  fp2.file_name().unwrap().to_str().unwrap() )
         };
         
         let file1 = GzEncoder::new(f1, Compression::default());
@@ -99,11 +99,11 @@ impl Ofiles{
 
         match self.buff1.flush(){
             Ok(_) => (),
-            Err(e) => eprintln!("Could not flush R1: {}",e),
+            Err(e) => eprintln!("Could not flush R1: {e}"),
         };
         match self.buff2.flush(){
             Ok(_) => (),
-            Err(e) => eprintln!("Could not flush R2: {}",e),
+            Err(e) => eprintln!("Could not flush R2: {e}"),
         };
     }
 }
@@ -119,7 +119,7 @@ fn main() {
 
     match fs::create_dir_all(&opts.outpath){
         Ok(_) => (),
-        Err(e) => panic!("I could not create the outpath: {}", e)
+        Err(e) => panic!("I could not create the outpath: {e}")
     };
 
     match opts.mode.as_str() {
@@ -165,16 +165,16 @@ fn fastq_split( opts:&Opts){
 
     let mut ofiles: Vec<Ofiles>;
     ofiles = vec![
-        Ofiles::new(1, &opts),
-        Ofiles::new(2, &opts),
-        Ofiles::new(3, &opts),
-        Ofiles::new(4, &opts),
-        Ofiles::new(5, &opts),
-        Ofiles::new(6, &opts),
-        Ofiles::new(7, &opts),
-        Ofiles::new(8, &opts),
-        Ofiles::new(9, &opts),
-        Ofiles::new(10, &opts)
+        Ofiles::new(1, opts),
+        Ofiles::new(2, opts),
+        Ofiles::new(3, opts),
+        Ofiles::new(4, opts),
+        Ofiles::new(5, opts),
+        Ofiles::new(6, opts),
+        Ofiles::new(7, opts),
+        Ofiles::new(8, opts),
+        Ofiles::new(9, opts),
+        Ofiles::new(10, opts)
     ];
 
     let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
@@ -186,11 +186,11 @@ fn fastq_split( opts:&Opts){
             let seqrec1 = record1.expect("invalid record");
             match seqrec1.write(&mut ofiles[ fileid ].buff1, None){
                 Ok(_) => (),
-                Err(err) => println!("{}",err)
+                Err(err) => println!("{err}")
             };
             match seqrec.write( &mut ofiles[ fileid ].buff2, None){
                 Ok(_) => (),
-                Err(err) => println!("{}",err)
+                Err(err) => println!("{err}")
             };
             id += 1;
             if id > split{
@@ -299,12 +299,12 @@ fn cell_ident( opts:&Opts ){
         }
         
         println!( "collected sample info:");
-        for i in 0..cell2sample.len(){
-            if cell2sample[i].len() > 0 {
+        for (i, entry ) in cell2sample.iter().enumerate(){
+            if ! entry.is_empty() {
 
                 match samples.read_get( i as u32 )  {
                     Some(val) => println!( "    sample {}: {} reads and {} cells", i+1, val.total, cell2sample[i].len() ),
-                    None => println!( "    sample {}: {} reads and {} cells", i+1, "na", cell2sample[i].len() ),
+                    None => println!( "    sample {}: na reads and {} cells", i+1,  cell2sample[i].len() ),
                 };
 
                 let fp1 = PathBuf::from(opts.reads.clone());
@@ -315,7 +315,7 @@ fn cell_ident( opts:&Opts ){
                 let file = match File::create( file_path ){
                     Ok(file) => file,
                     Err(err) => {
-                        eprintln!("Error: {:#?}", err);
+                        eprintln!("Error: {err:#?}" );
                         std::process::exit(1)
                     }
                 };
@@ -323,13 +323,13 @@ fn cell_ident( opts:&Opts ){
                 for int in &cell2sample[i]{
                     //file.write( )
                     //BigEndian::write_u32(file, int).unwrap();
-                    writeln!(writer, "{}", int).unwrap();
+                    writeln!(writer, "{int}").unwrap();
                     //println!( "        with sample {}",int );
                 }
             }
         }
-        println!(     "no sample ID reads: {} reads", no_sample );
-        println!(     "genomic reads     : {} reads", unknown );
+        println!(     "no sample ID reads: {no_sample} reads" );
+        println!(     "genomic reads     : {unknown} reads" );
     }
 
 }
@@ -373,18 +373,18 @@ fn sample_split( opts: &Opts){
                             }
                         },
                         Err(err) => {
-                            eprintln!("file {} does not contain the sample id! patternmatch threw this error {}",  file_name, err );
+                            eprintln!("file {file_name} does not contain the sample id! patternmatch threw this error {err}" );
                             std::process::exit(1)
                         }
                     }
                 }
                                 
                 if id_loc == 0{
-                    eprintln!("file {} does not contain the sample id! patternmatch did not match",  file_name );
+                    eprintln!("file {file_name} does not contain the sample id! patternmatch did not match" );
                     std::process::exit(1)
                 }
             },
-            Err(e) => println!("{:?}", e),
+            Err(e) => println!("{e:?}"),
         }
     }
 
@@ -395,18 +395,18 @@ fn sample_split( opts: &Opts){
 
     let mut ofiles: Vec<Ofiles>;
     ofiles = vec![
-        Ofiles::new(1, &opts),
-        Ofiles::new(2, &opts),
-        Ofiles::new(3, &opts),
-        Ofiles::new(4, &opts),
-        Ofiles::new(5, &opts),
-        Ofiles::new(6, &opts),
-        Ofiles::new(7, &opts),
-        Ofiles::new(8, &opts),
-        Ofiles::new(9, &opts),
-        Ofiles::new(10, &opts),
-        Ofiles::new(11, &opts),
-        Ofiles::new(12, &opts)
+        Ofiles::new(1, opts),
+        Ofiles::new(2, opts),
+        Ofiles::new(3, opts),
+        Ofiles::new(4, opts),
+        Ofiles::new(5, opts),
+        Ofiles::new(6, opts),
+        Ofiles::new(7, opts),
+        Ofiles::new(8, opts),
+        Ofiles::new(9, opts),
+        Ofiles::new(10, opts),
+        Ofiles::new(11, opts),
+        Ofiles::new(12, opts)
     ];
 
     let mut missing:u32 = 0;
@@ -436,15 +436,10 @@ fn sample_split( opts: &Opts){
                             // here comes the seq
                             let mut seq = seqrec1.seq().into_owned();
                             let expected = cells.to_sequence( id );
-                            for i in 0..9{
-                                seq[i] = expected[0][i];
-                            }
-                            for i in 21..30{
-                                seq[i] = expected[0][i-21];
-                            }
-                            for i in 43..52{
-                                seq[i] = expected[0][i-43];
-                            }
+                            seq[..9].copy_from_slice(&expected[0][..9]);
+                            seq[21..30].copy_from_slice(&expected[1][..9]);
+                            seq[43..52].copy_from_slice(&expected[2][..9]);
+
                             ofiles[loc_id].buff1.write_all( &seq ).unwrap();
                             ofiles[loc_id].buff1.write_all(b"\n+\n").unwrap();
                             ofiles[loc_id].buff1.write_all(seqrec1.qual().unwrap()).unwrap();
@@ -453,7 +448,7 @@ fn sample_split( opts: &Opts){
                             //seqrec1.write(&mut ofiles[*cell_id as usize].file1, None)?;
                             match seqrec.write( &mut ofiles[loc_id].buff2, None){
                                 Ok(_) => (),
-                                Err(e) => eprintln!("sequence could nnot be written {}",e)
+                                Err(e) => eprintln!("sequence could not be written {e}")
                             };
                         },
                         None => {
@@ -477,15 +472,14 @@ fn sample_split( opts: &Opts){
 
     let mut i = 1;
     for mut f in ofiles{
-        println!( "{} reads in sample {}", f.count, i);
+        println!( "{} reads in sample {i}", f.count );
         f.close();
         i += 1;
     }
-    println!("{} reads did not match a sample",missing);
-    println!("{} reads had no cell id", unknown);
+    println!("{missing} reads did not match a sample");
+    println!("{unknown} reads had no cell id" );
 
     //Ok(())
-    ()
 }
 
 

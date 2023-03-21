@@ -29,10 +29,10 @@ impl Last5 {
     pub fn all(&mut self, val: f32 ) -> bool {
     	for dat in &self.data {
     		if *dat != val {
-    			return false
+    			return false;
     		}
     	}
-    	return true
+    	true
     }
 }
 

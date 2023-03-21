@@ -34,7 +34,7 @@ fn main() {
 
     match fs::create_dir_all(&opts.outpath){
         Ok(_) => (),
-        Err(e) => panic!("I could not create the outpath: {}", e)
+        Err(e) => panic!("I could not create the outpath: {e}")
     };
 
     let mut cells = CellIds::new(&opts.version, 9);
@@ -42,7 +42,7 @@ fn main() {
     let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
     let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
 
-    let mut ofile = Ofiles::new( opts.id as usize, "OneSingleCell", "R2.fastq.gz", "R1.fastq.gz",  &opts.outpath.as_str() );
+    let mut ofile = Ofiles::new( opts.id as usize, "OneSingleCell", "R2.fastq.gz", "R1.fastq.gz",  opts.outpath.as_str() );
 
     let pos:Vec<usize>;
     let min_sizes:Vec<usize>;
@@ -66,7 +66,7 @@ fn main() {
             .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
     let m = MultiProgress::new();
     let pb = m.add(ProgressBar::new(5000));
-    pb.set_style(spinner_style.clone());
+    pb.set_style(spinner_style);
     pb.set_prefix(format!("[{}/?]", 100));
 
     let split = 1000 * 1000;
@@ -79,14 +79,14 @@ fn main() {
             let seqrec = match record2{
                 Ok( res ) => res,
                 Err(err) => {
-                    eprintln!("could not read from R2:\n{}", err);
+                    eprintln!("could not read from R2:\n{err}");
                     continue 'main;
                 }
             };
             let seqrec1 = match record1{
                 Ok(res) => res,
                 Err(err) => {
-                    eprintln!("could not read from R1:\n{}", err);
+                    eprintln!("could not read from R1:\n{err}" );
                     continue 'main;
                 }
             };
@@ -110,31 +110,30 @@ fn main() {
             // first match the cell id - if that does not work the read is unusable
             //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
             
-            match cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
         
-            	Ok(cell_id) => {
-                    total += 1;
-                    if total % split == 0{
-                        let log_str = format!("cell read (any/{}) {}/{} here I have cell {}", opts.id, total, count, cell_id );
-                        pb.set_message( log_str.clone() );
-                        pb.inc(1);
-                    }
-            		if cell_id == opts.id{
-                        count += 1;
-            			match seqrec1.write(&mut ofile.buff1, None){
-                			Ok(_) => (),
-                			Err(err) => println!("{}",err)
-            			};
-            			match seqrec.write( &mut ofile.buff2, None){
-                			Ok(_) => (),
-                			Err(err) => println!("{}",err)
-            			};
-            		}
-            	},
-            	Err(_) => (),
-            };
+            if let Ok(cell_id) = cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]) {
+                total += 1;
+                if total % split == 0{
+                    let log_str = format!("cell read (any/{}) {total}/{count} here I have cell {cell_id}", opts.id );
+                    pb.set_message( log_str.clone() );
+                    pb.inc(1);
+                }
+                if cell_id == opts.id{
+                    count += 1;
+                    //let mut id = seqrec1.id();
+                    //id.push( cell_id.to_u8() )
+                    match seqrec1.write(&mut ofile.buff1, None){
+                        Ok(_) => (),
+                        Err(err) => println!("{err}")
+                    };
+                    match seqrec.write( &mut ofile.buff2, None){
+                        Ok(_) => (),
+                        Err(err) => println!("{err}")
+                    };
+                }
+            }
         } 
     }
 
-    println!("I found {} reads for the cell {}", count, opts.id );
+    println!("I found {count} reads for the cell {}", opts.id );
 }
