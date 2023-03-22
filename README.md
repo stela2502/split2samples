@@ -583,3 +583,17 @@ writing all reads from the cell 3857748
 Neither whole genome Rhapsody data nor TCR / BRC analyses are supported.
 
 
+# specific test cases
+
+## Cd3e should not be in this cell - why is it detected
+
+Version 0.1.0 and likely previouse version do detect Cd3e in this cell, but it should not be expressed.
+
+```
+target/release/quantify_rhapsody -r  testData/OneSingleCell.66.R2.fastq.gz -f testData/OneSingleCell.66.R1.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
+
+zcat testData/output_one_cell
+```
+
+Actuall Cd3e is not detected in 1.0.0
+I need to update the singularity image...
