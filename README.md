@@ -592,8 +592,36 @@ Version 0.1.0 and likely previouse version do detect Cd3e in this cell, but it s
 ```
 target/release/quantify_rhapsody -r  testData/OneSingleCell.66.R2.fastq.gz -f testData/OneSingleCell.66.R1.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
 
-zcat testData/output_one_cell
+zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
 ```
 
-Actuall Cd3e is not detected in 1.0.0
-I need to update the singularity image...
+This should not return a match. As actuall Cd3e is not detected in 1.0.0.
+
+But even in 1.0.01 there are a view cells where the expression of that gene is detected.
+
+```
+target/release/quantify_rhapsody -r  testData/OneSingleCell.11521.R1.fastq.gz -f testData/OneSingleCell.11521.R2.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
+
+zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
+```
+
+But this match can obviousely not be blamed on this software as the R1 read that causes this match is a 100% match using BLAST:
+```
+Query: None Query ID: lcl|Query_19287 Length: 71
+
+
+>Mus musculus strain C57BL/6J chromosome 9, GRCm39
+Sequence ID: NC_000075.7 Length: 124359700
+Range 1: 44910123 to 44910193
+
+Score:132 bits(71), Expect:2e-29, 
+Identities:71/71(100%),  Gaps:0/71(0%), Strand: Plus/Minus
+
+Query  1         ACAGGTCCTGCCCCATTTATAGATCCTGGCCCAGCCCCTGCCACAGGTGCCTCTCCAGAT  60
+                 ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  44910193  ACAGGTCCTGCCCCATTTATAGATCCTGGCCCAGCCCCTGCCACAGGTGCCTCTCCAGAT  44910134
+
+Query  61        TTCCCCTTAGA  71
+                 |||||||||||
+Sbjct  44910133  TTCCCCTTAGA  44910123
+```
