@@ -5,6 +5,8 @@ use crate::cellids::CellIds;
 use crate::singlecelldata::SingleCellData;
 use crate::geneids::GeneIds;
 use crate::ofiles::Ofiles;
+use std::io::BufReader;
+use flate2::write::GzDecoder;
 
 //use this::last5::Last5;
 
@@ -266,6 +268,8 @@ impl Analysis<'_>{
         pb.set_style(spinner_style);
         //pb.set_prefix(format!("[{}/?]", i + 1));
 
+        let report_gid = self.genes.get_id( "Cd3e".to_string() );
+
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {
 
@@ -340,7 +344,17 @@ impl Analysis<'_>{
                                 	umi,
                                 	report
                                 );
-                                //println!("Cool I got a gene id: {gene_id}", );
+                                if *gene_id == report_gid {
+                                	match seqrec1.write(&mut report.ofile.buff1, None){
+	                                    Ok(_) => (),
+	                                    Err(err) => println!("{err}")
+	                                };
+	                                match seqrec.write( &mut report.ofile.buff2, None){
+	                                    Ok(_) => (),
+	                                    Err(err) => println!("{err}")
+	                                };                              
+                            		println!("Cool I got a gene id: {gene_id}", );
+                            	}
                             },
                             None => {
                                 // match &self.genes2.get_unchecked( &seqrec.seq() ){
@@ -352,9 +366,20 @@ impl Analysis<'_>{
                                 //         	umi, 
                                 // 			report
                                 //         	);
-                                //     },
-                                //     None => {
-                                //     	// match seqrec1.write(&mut report.ofile.buff1, None){
+                                //         if *gene_id == report_gid {
+		                                	match seqrec1.write(&mut report.ofile.buff1, None){
+			                                    Ok(_) => (),
+			                                    Err(err) => println!("{err}")
+			                                };
+			                                match seqrec.write( &mut report.ofile.buff2, None){
+			                                    Ok(_) => (),
+			                                    Err(err) => println!("{err}")
+			                                };                              
+		                        //     		println!("Cool I got a gene id: {gene_id}", );
+		                        //     	}
+	                            //     },
+	                            //     None => {
+	                            //     	// match seqrec1.write(&mut report.ofile.buff1, None){
 		                        //         //     Ok(_) => (),
 		                        //         //     Err(err) => println!("{err}")
 		                        //         // };
@@ -362,9 +387,9 @@ impl Analysis<'_>{
 		                        //         //     Ok(_) => (),
 		                        //         //     Err(err) => println!("{err}")
 		                        //         // };
-                                //     	report.no_data +=1;
-                                //     }
-                                // };
+	                            //      	report.no_data +=1;
+	                            //     }
+	                            // };
                                 report.no_data +=1;
 
                                 // all - samples genes and antibodies are classed as genes here.
