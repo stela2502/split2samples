@@ -89,6 +89,7 @@ impl GeneIds{
 
         for kmer in needletail::kmer::Kmers::new(seq, self.kmer_size as u8 ) {
             checker.clear();
+            //check for too simple kmers
             for nuc in kmer {
 
                 match checker.get_mut( nuc ){

@@ -600,7 +600,7 @@ This should not return a match. As actuall Cd3e is not detected in 1.0.0.
 But even in 1.0.01 there are a view cells where the expression of that gene is detected.
 
 ```
-target/release/quantify_rhapsody -r  testData/OneSingleCell.11521.R1.fastq.gz -f testData/OneSingleCell.11521.R2.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
+target/release/quantify_rhapsody -f  testData/OneSingleCell.11521.R1.fastq.gz -r testData/OneSingleCell.11521.R2.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
 
 zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
 ```
