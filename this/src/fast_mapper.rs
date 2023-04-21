@@ -4,10 +4,11 @@
 use needletail::kmer::Kmers;
 use kmers::naive_impl::Kmer;
 use std::collections::BTreeMap;
+use needletail::bitkmer::BitKmer;
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
-use crate::geneids::GeneIds;
+use crate::mapper_entries::MapperEntry;
 
 use std::path::Path;
 use std::io::Write;
@@ -15,6 +16,8 @@ use std::fs;
 
 use std::io::BufRead;
 use std::io::Read;
+
+use crate::geneids::GeneIds;
 
 
 /// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
@@ -28,8 +31,10 @@ use std::io::Read;
 /// and a lot of private ease of live id to name or vice versa BTreeMaps
 
 #[derive(Debug,PartialEq)]
-pub struct FastMapper<'a>{
-    pub mapper: Vec<&'a mut GeneIds>, // the position is the sequence!
+pub struct FastMapper{
+    pub kmer_len:usize, // how long should the second entries be (up to 32 bp + 8bp initial map) 
+    spacer:usize,
+    pub mapper: Vec<Box<MapperEntry>>, // the position is the sequence!
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names_store: Vec<String>, //sore gene names as vector
@@ -41,83 +46,15 @@ pub struct FastMapper<'a>{
 
 // here the functions
 
-/* Seams I need to implement a Clone function for my GeneIds class. What a pain!
-
-stefan.lang@med.lu.se
-Hi and good Morning. How do I create a to_owned functionality for my own Rust class?
-
-Good morning! To create a to_owned functionality for your own Rust class, you can implement the Clone trait for your class. The Clone trait defines a clone method that returns a new instance of the object with the same data as the original instance.
-
-Here's an example implementation:
-
-rust
-
-#[derive(Debug, Clone)]
-struct MyStruct {
-    // fields of your struct
-}
-
-impl MyStruct {
-    fn to_owned(&self) -> Self {
-        self.clone()
-    }
-}
-
-In this example, we define a MyStruct struct and implement the Clone trait for it. The to_owned method simply calls the clone method to create a new instance of the struct with the same data as the original instance. We can then use to_owned to create a new owned instance of MyStruct from a reference to an existing instance.
-
-Note that we also derive the Debug trait for MyStruct to allow for debugging output using println!("{:?}", my_struct).
-
-Here's an example usage:
-
-rust
-
-fn main() {
-    let my_struct = MyStruct { /* initialize fields */ };
-    let owned_struct = my_struct.to_owned();
-    // `owned_struct` is a new owned instance of `MyStruct` with the same data as `my_struct`
-}
-
-I hope this helps! Let me know if you have any more questions.
-stefan.lang@med.lu.se
-:-D And the clone function - just re-run the new function?
-
-Yes, to implement the Clone trait, you need to define a clone method that returns a new instance of the struct with the same data as the original instance. You can do this by simply copying the values of the fields from the original instance to the new instance.
-
-Here's an example implementation:
-
-rust
-
-#[derive(Debug, Clone)]
-struct MyStruct {
-    // fields of your struct
-}
-
-impl Clone for MyStruct {
-    fn clone(&self) -> Self {
-        // Create a new instance of the struct with the same data as `self`
-        MyStruct {
-            // Copy the values of the fields from `self` to the new instance
-            // For example:
-            // field1: self.field1.clone(),
-            // field2: self.field2.clone(),
-            // ...
-        }
-    }
-}
-
-In this example, we implement the Clone trait for MyStruct by defining a clone method that creates a new instance of the struct with the same data as self.
-
-To copy the values of the fields from self to the new instance, you can call the clone method on each field that implements the Clone trait. If a field does not implement the Clone trait, you may need to implement it yourself by defining a clone method for that field.
-
-Once you've implemented the Clone trait for your struct, you can call the clone method on any instance of the struct to create a new instance with the same data.
-
-I hope this answers your question! Let me know if you have any more questions.
-*/
-
-impl <'a> FastMapper<'a>{
+impl  FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
-    pub fn new( )-> Self {
-        let mapper = Vec::with_capacity(u16::MAX as usize);
+    pub fn new( kmer_len:usize )-> Self {
+        println!("I would add {} new entries here:", u16::MAX);
+        let mut mapper: Vec<Box< MapperEntry>> = Vec::with_capacity(u16::MAX as usize);
+        for i in 0..u16::MAX{
+            let mut b = Box::new( MapperEntry::new( ) );
+            mapper.push( b );
+        }
         let names = BTreeMap::<std::string::String, usize>::new();
         let names4sparse = BTreeMap::<std::string::String, usize>::new();
         let names_store = Vec::with_capacity(1000);
@@ -125,7 +62,10 @@ impl <'a> FastMapper<'a>{
         let last_count = 0;
         let last_kmers = Vec::with_capacity(60);
         let with_data = 0;
+        let spacer = 3;
         Self {
+            kmer_len,
+            spacer,
             mapper,
             names,
             names4sparse,
@@ -137,194 +77,159 @@ impl <'a> FastMapper<'a>{
         }
     }
 
+
     pub fn add(&mut self, seq: &[u8], name: std::string::String ){
         
         let mut total = 0;
         let mut add = 0;
 
-        for i in 0..3{
-            // add three kmers at position 0+4 4+4 and 8+4
-            let kmer = needletail::kmer::Kmers::new(&seq[(1*i)..(8+8*i)], 8 as u8 ).next().unwrap();
-            for value in Kmer::from(kmer).k.to_le_bytes(){
-                let index = value as usize;
-                let mut gene_ids = self.mapper.get_mut(index)
-                    .unwrap_or_else(|| {
-                        self.mapper.insert(index, &mut Box::new(&mut GeneIds::new(32) ) );
-                        self.mapper.get_mut( index).unwrap()
-                        });
-                gene_ids.add(&seq[(8 + 8 * i)..(36 + 8 * i)], name.to_string() );
-            }
-            total +=1;
-        }
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.max_id );
             self.names_store.push( name.clone() );
             self.max_id += 1;
         }
 
-        println!( "{} kmers for gene {}", total, name );
+        let gene_id = self.get_id( name.to_string() );
+
+
+        for i in 0..10{
+            // add three kmers at position 0+4 4+4 and 8+4
+            if seq.len() < self.kmer_len + 3 + 8 * i{
+                break;
+            }
+            let mut longer: u64 = 0;
+            for kmer_l in needletail::kmer::Kmers::new(&seq[(8 + self.spacer * i)..( self.kmer_len +8 + self.spacer * i)], self.kmer_len as u8){
+                //println!("And I try to get a longer from kmer_l {kmer_l:?}:");
+                longer = Kmer::from(kmer_l).into_u64();
+                break;
+            }
+
+
+            let kmer = needletail::kmer::Kmers::new(&seq[(0 + self.spacer *i)..(8+self.spacer*i)], 8 as u8 ).next().unwrap();
+
+            let mut index : usize = 0;
+            //println!("Is this a [u8] ({}, {})?: {:?}", (0 + 8 * i), ( 8 + 8 * i ), &seq[(8 + 8 * i)..(8 + 8 * i)]);
+            for kmer in needletail::kmer::Kmers::new(&seq[(0+ self.spacer * i)..(8 +self.spacer * i)], 8 as u8){
+                //println!("And I try to get a index from kmer {kmer:?}:");
+                index = Kmer::from(kmer).into_u64() as usize;
+                break;
+            }
+
+            //println!("This is what I would add here: {index} and {longer}");
+
+
+            match self.mapper.get_mut(index){
+                Some( genebox ) => {
+                    genebox.add( longer , gene_id );
+                    //println!("Cool I got a gene box! {genebox:?}");
+                },
+                None => {
+                    let mut b = Box::new( MapperEntry::new( ) );
+                    b.add( longer , gene_id  );
+                    //println!("Cool I got a new gene box!? {b:?}");
+                    self.mapper.insert(index,  b ); 
+                }
+            }
+            total +=1;
+            self.with_data +=1;
+        }
+        
+        if total == 0 {
+            panic!("gene {} does not get an entry in the fast_mapper object! - too short!!", &name.as_str() );
+        }
+        //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );
 
     }
-
-
 
     pub fn print( &self ){
         println!("I have {} kmers and {} genes", self.with_data, self.names.len() );
     }
 
-    // pub fn get_id( &mut self, name: String ) -> usize{
-    //     let id = match self.names.get( &name ) {
-    //         Some( id ) => id,
-    //         None => panic!("Gene {name} not defined in the GeneID object"),
-    //     };
-    //     *id
-    // }
+    pub fn get_id( &mut self, name: String ) -> usize{
+        let id = match self.names.get( &name ) {
+            Some( id ) => id,
+            None => panic!("Gene {name} not defined in the GeneID object"),
+        };
+        *id
+    }
 
-    // pub fn get_name( &self, id:usize) -> String{
-    //     let name = match self.names_store.get( &id ){
-    //         Some( na ) => na,
-    //         None => panic!("GeneID {id} not defined in the GeneID object"),
-    //     };
-    //     name.to_string()
-    // }
+    pub fn get_name( &self, id:usize) -> String{
+        let name = match self.names_store.get( id ){
+            Some( na ) => na,
+            None => panic!("GeneID {id} not defined in the GeneID object"),
+        };
+        name.to_string()
+    }
 
-    // pub fn get(&mut self, seq: &[u8] ) -> Option< usize >{
+    pub fn get(&mut self, seq: &[u8] ) -> Option< usize >{
         
-    //     // let min_value = 2;
-    //     // let min_z = 1;
-    //     // let mut max_value = 0;
-    //     // let mut ret:u32 = 0;
-    //     if self.unchecked{
-    //         return self.get_unchecked( seq );
-    //     }
-    //     let kmers = needletail::kmer::Kmers::new(seq, self.kmer_size as u8 );
-    //     let mut kmer_vec = Vec::<u64>::with_capacity(60);
+        let mut id = 0;
 
-    //     fill_kmer_vec(kmers, &mut kmer_vec);
+        for kmer in needletail::kmer::Kmers::new(&seq, 8 as u8){
+            //println!("And I try to get a index from kmer {kmer:?} at pos {id}:");
+            let mut ok = true; 
+            if seq.len() < 40 + 3 * id{
+                break
+            }
+            for n in &seq[(id)..(self.kmer_len +8 + id)]{
+                if  n == &b'N' {
+                    ok = false;
+                }
+            }
+            if ! ok{
+                continue;
+            }
+            
+            let index = Kmer::from(kmer).into_u64() as usize;
+            let mapper = match self.mapper.get_mut(index){
+                Some( map) => map,
+                None => return None
+            };
+            //println!("got the index {index} and the mapper {mapper:?} searching for");
+            //let mapper:MapperEntry = &*box_;
+            if mapper.has_data() {
+                let mut longer: u64 = 0;
+                for kmer_l in needletail::kmer::Kmers::new(&seq[(8 + id)..(self.kmer_len +8 + id)], self.kmer_len as u8){
+                    //println!("And I try to get a longer from kmer_l {kmer_l:?}:");
+                    longer = Kmer::from(kmer_l).into_u64();
+                    //println!("got the index {index} and the mapper {mapper:?} searching for longer {longer}");
+                    match mapper.get(&longer){
+                        Some( gene_id ) => {
+                            //println!("Got one: {gene_id}");
+                            return Some(gene_id);
+                        },
+                        None => (),
+                    }
+                }
+            }
+            id +=1;
+        }
+        None
+    }
 
-    //     //let report = self.get_id("2810417H13Rik".to_string());
+    pub fn to_header( &self ) -> std::string::String {
+        let mut ret= Vec::<std::string::String>::with_capacity( self.names.len() +2 );
+        //println!( "I get try to push into a {} sized vector", self.names.len());
+        for obj in self.names.keys() {
+            //println!( "Pushing {} -> {}", obj, *id-1);
+            ret.push(  obj.to_string() ) ;
+        }
+        ret.push("Most likely name".to_string());
+        ret.push("Faction total".to_string());
+        "CellID\t".to_owned()+&ret.join("\t")
+    }
 
-    //     let mut ret:Option<usize> = None;
-
-    //     if kmer_vec.is_empty() {
-    //         //eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
-    //         return ret
-    //     }  
-    //     let mut sums = vec![0 ;self.names.len()];
-    //     let mut max = 0;
-    //     self.last_kmers.clear();
-
-    //     for km in kmer_vec{
-    //         //println!( "searching for kmer {}", km);
-    //         if let Some(c1) = self.kmers.get(&km) {
-    //             sums[*c1] += 1;
-    //             if max < sums[*c1]{
-    //                 max =  sums[*c1];
-    //             }
-    //             self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
-    //         }
-
-    //     }
-    //     self.last_count = max;
-    //     if max >2 {
-    //         for (i, sum) in sums.iter().enumerate() {
-    //             if *sum == max{
-    //                 //println!("Now the ret hould have the value {} resp {:?}", i, Some(i));
-    //                 if ret.is_some() {
-    //                     //eprintln!("I have two genes matching with max value of {}: {:?} and {}", max, ret, i);
-    //                     ret =None;
-    //                     return ret
-    //                 }
-    //                 ret = Some(i);
-    //             }
-    //         }
-    //     }
-    //     //println!("return geneid {:?}", ret);
-    //     ret
-    // }
-
-    // pub fn get_unchecked(&mut self, seq: &[u8] ) -> Option< usize >{
-        
-    //     // let min_value = 2;
-    //     // let min_z = 1;
-    //     // let mut max_value = 0;
-    //     // let mut ret:u32 = 0;
-    //     let kmers = needletail::kmer::Kmers::new(seq, self.kmer_size as u8 );
-    //     let mut kmer_vec = Vec::<u64>::with_capacity(60);
-
-    //     fill_kmer_vec(kmers, &mut kmer_vec);
-
-    //     let mut ret:Option<usize> = None;
-
-    //     if kmer_vec.is_empty() {
-    //         //eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
-    //         return ret
-    //     }  
-    //     let mut sums = vec![0 ;self.names.len()];
-    //     let mut max = 0;
-    //     self.last_kmers.clear();
-
-    //     for km in kmer_vec{
-    //         //println!( "searching for kmer {}", km);
-    //         if let Some(c1) = self.kmers.get(&km) {
-    //             sums[*c1] += 1;
-    //             if max < sums[*c1]{
-    //                 max =  sums[*c1];
-    //             }
-    //             self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
-    //         }
-    //     }
-    //     self.last_count = max;
-    //     if max >3 {
-    //         for (i, sum) in sums.iter().enumerate(){
-    //             if *sum == max{
-    //                 if ret.is_some() {
-    //                     //eprintln!("I have two genes matching with max value of {}: {:?} and {}", max, ret, i);
-    //                     ret =None;
-    //                     return ret
-    //                 }
-    //                 //println!("max = {} -> now the ret hould have the value {:?}", max, Some(i));
-    //                 ret = Some(i);
-    //                 //break;
-    //             }
-    //         }
-    //     }
-    //     // else {
-    //     //     eprintln!("The max was {} => no (good) gene found", max);
-    //     // }
-    //     //println!("return geneid {:?}", ret);
-    //     ret
-    // }
-    // // pub fn to_ids( &self,  ret:&mut Vec<Info> )  {
-    // //     ret.clear();
-    // //     for (_i, obj) in &self.kmers {
-    // //         ret.push(*obj );
-    // //     }
-    // // }
-
-    // pub fn to_header( &self ) -> std::string::String {
-    //     let mut ret= Vec::<std::string::String>::with_capacity( self.names.len() +2 );
-    //     //println!( "I get try to push into a {} sized vector", self.names.len());
-    //     for obj in self.names.keys() {
-    //         //println!( "Pushing {} -> {}", obj, *id-1);
-    //         ret.push(  obj.to_string() ) ;
-    //     }
-    //     ret.push("Most likely name".to_string());
-    //     ret.push("Faction total".to_string());
-    //     "CellID\t".to_owned()+&ret.join("\t")
-    // }
-
-    // pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
-    //     let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
-    //     //println!( "I get try to push into a {} sized vector", self.names.len());
-    //     for name in names {
-    //         //println!( "Pushing {} -> {}", obj, *id-1);
-    //         ret.push( name.to_string() ) ;
-    //     }
-    //     ret.push("AsignedSampleName".to_string());
-    //     ret.push("FractionTotal".to_string());
-    //     "CellID\t".to_owned()+&ret.join("\t")
-    // }
+    pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
+        let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
+        //println!( "I get try to push into a {} sized vector", self.names.len());
+        for name in names {
+            //println!( "Pushing {} -> {}", obj, *id-1);
+            ret.push( name.to_string() ) ;
+        }
+        ret.push("AsignedSampleName".to_string());
+        ret.push("FractionTotal".to_string());
+        "CellID\t".to_owned()+&ret.join("\t")
+    }
 
     // pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
     //     let rs = Path::new( &path ).exists();
@@ -556,33 +461,33 @@ fn fill_kmer_vec(seq: needletail::kmer::Kmers, kmer_vec: &mut Vec<u64>) {
 #[cfg(test)]
 mod tests {
 
-    use crate::geneids::GeneIds;
-    use crate::geneids::FastMapper;
+    use crate::fast_mapper::FastMapper;
     use std::path::Path;
 
      #[test]
     fn check_geneids() {
-        let mut mapper = FastMapper::new();
+        let mut mapper = FastMapper::new( 16 );
 
         let mut geneid = 0;
         
-        mapper.add( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", "Gene1".to_string() );
+        mapper.add( b"ATCCCATCCTTCATTGTTCGCCTGGA", "Gene1".to_string() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
         mapper.add( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", "Gene2".to_string() );
+        geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 6 );
+        assert_eq!( mapper.with_data, 4 );
+
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0));
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
+
+        mapper.add( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", "Gene3".to_string() );
+
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(2));
+
         mapper.print();
 
     }
 
-    #[test]
-    fn test_u64_to_str(){
-
-        let num:u64 = 15561;
-        let mut data:String = "".to_string();
-        GeneIds::u64_to_str( 7, &num, &mut data );
-        assert_eq!( data, "CGATATT".to_string() )
-    } 
 }

@@ -4,6 +4,8 @@ use kmers::naive_impl::Kmer;
 use crate::cellids::CellIds;
 use crate::singlecelldata::SingleCellData;
 use crate::geneids::GeneIds;
+use crate::fast_mapper::FastMapper;
+
 use crate::ofiles::Ofiles;
 use std::io::BufReader;
 use flate2::write::GzDecoder;
@@ -119,8 +121,7 @@ fn mean_u8( data:&[u8] ) -> f32 {
 /// the analysis calss is a wrapper around my 'old' quantify_rhapsody main funtion.
 /// I started it to easily process multiple fastq files in a row.
 pub struct Analysis<'a>{
-	genes: GeneIds,
-	genes2: GeneIds,
+	genes: FastMapper,
 	cells: CellIds<'a>,
 	gex: SingleCellData,
 	sample_names:Vec<String>,
@@ -138,14 +139,8 @@ impl Analysis<'_>{
 	    //cells.init_rhapsody( &opts.specie );
 
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
-	    let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
-	    let mut genes2:GeneIds;
-	    if gene_kmers <= 15{
-	        genes2 = GeneIds::new( 5 ); 
-	    }
-	    else {
-	        genes2 = GeneIds::new(gene_kmers -10); 
-	    }
+	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
+	    let mut genes :FastMapper = FastMapper::new( gene_kmers ); // split them into 9 bp kmers
 	     
 	    //  now we need to get a CellIDs object, too
 	    let cells = CellIds::new( &version, 7);
@@ -212,7 +207,7 @@ impl Analysis<'_>{
 	                	if let Some(id) = st.to_string().split('|').next(){
 		                    genes.add( &seqrec.seq(), id.to_string() );
 	                    	gene_names.push( id.to_string() );
-	                    	genes2.add_unchecked( &seqrec.seq(), id.to_string() );
+	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -232,7 +227,7 @@ impl Analysis<'_>{
 	                	if let Some(id) = st.to_string().split('|').next(){
 		                    genes.add( &seqrec.seq(), id.to_string() );
 	                    	ab_names.push( id.to_string() );
-	                    	genes2.add_unchecked( &seqrec.seq(), id.to_string() );
+	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 	                	};
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -243,7 +238,7 @@ impl Analysis<'_>{
 	    }
 		Self{
 			genes,
-			genes2,
+	//		genes2,
 			cells,
 			gex,
 			sample_names,
@@ -353,7 +348,7 @@ impl Analysis<'_>{
 	                                    Ok(_) => (),
 	                                    Err(err) => println!("{err}")
 	                                };                              
-                            		println!("Cool I got a gene id: {gene_id}", );
+                            		//println!("Cool I got a gene id: {gene_id}", );
                             	}
                             },
                             None => {

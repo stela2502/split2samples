@@ -24,7 +24,6 @@ git clone https://github.com/stela2502/split2samples
 cd split2samples
 cargo build --release
 cp target/release/split2samples /usr/bin
-cp target/release/demux10x /usr/bin
 cp target/release/quantify_rhapsody /usr/bin
 cp target/release/bd_cell_id_2_seq /usr/bin
 cp target/release/bd_get_single_cell /usr/bin
