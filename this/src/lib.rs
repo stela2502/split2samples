@@ -34,3 +34,4 @@ pub mod ofiles;
 pub mod ifiles;
 pub mod analysis;
 pub mod last5;
+pub mod fast_mapper;
