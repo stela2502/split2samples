@@ -17,15 +17,7 @@ use std::io::BufRead;
 use std::io::Read;
 
 
-/// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
-/// but that can be different, too. 
-/// Hence we store here 
-/// kmers       : the search object
-/// seq_len     : the length of the sequences (10x oversequences them)
-/// kmer_size   : the length of the kmers
-/// names       : a hashset for the gene names
-/// bad_entries : a hash to save bad entries (repetetive ones)
-/// and a lot of private ease of live id to name or vice versa BTreeMaps
+/// GeneIds in the new version  
 
 #[derive(Debug,PartialEq)]
 pub struct GeneIds{    

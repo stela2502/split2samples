@@ -41,6 +41,79 @@ pub struct FastMapper<'a>{
 
 // here the functions
 
+/* Seams I need to implement a Clone function for my GeneIds class. What a pain!
+
+stefan.lang@med.lu.se
+Hi and good Morning. How do I create a to_owned functionality for my own Rust class?
+
+Good morning! To create a to_owned functionality for your own Rust class, you can implement the Clone trait for your class. The Clone trait defines a clone method that returns a new instance of the object with the same data as the original instance.
+
+Here's an example implementation:
+
+rust
+
+#[derive(Debug, Clone)]
+struct MyStruct {
+    // fields of your struct
+}
+
+impl MyStruct {
+    fn to_owned(&self) -> Self {
+        self.clone()
+    }
+}
+
+In this example, we define a MyStruct struct and implement the Clone trait for it. The to_owned method simply calls the clone method to create a new instance of the struct with the same data as the original instance. We can then use to_owned to create a new owned instance of MyStruct from a reference to an existing instance.
+
+Note that we also derive the Debug trait for MyStruct to allow for debugging output using println!("{:?}", my_struct).
+
+Here's an example usage:
+
+rust
+
+fn main() {
+    let my_struct = MyStruct { /* initialize fields */ };
+    let owned_struct = my_struct.to_owned();
+    // `owned_struct` is a new owned instance of `MyStruct` with the same data as `my_struct`
+}
+
+I hope this helps! Let me know if you have any more questions.
+stefan.lang@med.lu.se
+:-D And the clone function - just re-run the new function?
+
+Yes, to implement the Clone trait, you need to define a clone method that returns a new instance of the struct with the same data as the original instance. You can do this by simply copying the values of the fields from the original instance to the new instance.
+
+Here's an example implementation:
+
+rust
+
+#[derive(Debug, Clone)]
+struct MyStruct {
+    // fields of your struct
+}
+
+impl Clone for MyStruct {
+    fn clone(&self) -> Self {
+        // Create a new instance of the struct with the same data as `self`
+        MyStruct {
+            // Copy the values of the fields from `self` to the new instance
+            // For example:
+            // field1: self.field1.clone(),
+            // field2: self.field2.clone(),
+            // ...
+        }
+    }
+}
+
+In this example, we implement the Clone trait for MyStruct by defining a clone method that creates a new instance of the struct with the same data as self.
+
+To copy the values of the fields from self to the new instance, you can call the clone method on each field that implements the Clone trait. If a field does not implement the Clone trait, you may need to implement it yourself by defining a clone method for that field.
+
+Once you've implemented the Clone trait for your struct, you can call the clone method on any instance of the struct to create a new instance with the same data.
+
+I hope this answers your question! Let me know if you have any more questions.
+*/
+
 impl <'a> FastMapper<'a>{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
     pub fn new( )-> Self {
