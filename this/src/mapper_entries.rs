@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 #[derive(Debug,PartialEq)]
 pub struct MapperEntry{
-	map:BTreeMap<u64, usize>, // the data storage
+	pub map:BTreeMap<u64, usize>, // the data storage
 	only:usize
 }
 

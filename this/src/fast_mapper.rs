@@ -12,7 +12,7 @@ use crate::mapper_entries::MapperEntry;
 
 use std::path::Path;
 use std::io::Write;
-use std::fs;
+use std::fs::{self, DirBuilder};
 
 use std::io::BufRead;
 use std::io::Read;
@@ -120,6 +120,9 @@ impl  FastMapper{
 
             match self.mapper.get_mut(index){
                 Some( genebox ) => {
+                    if genebox.map.len() == 0{
+                        self.with_data +=1;
+                    }
                     genebox.add( longer , gene_id );
                     //println!("Cool I got a gene box! {genebox:?}");
                 },
@@ -131,7 +134,6 @@ impl  FastMapper{
                 }
             }
             total +=1;
-            self.with_data +=1;
         }
         
         if total == 0 {
@@ -231,117 +233,156 @@ impl  FastMapper{
         "CellID\t".to_owned()+&ret.join("\t")
     }
 
-    // pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
-    //     let rs = Path::new( &path ).exists();
+    pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
+        let rs = Path::new( &path ).exists();
 
-    //     if ! rs {
-    //         match fs::create_dir ( path.clone() ){
-    //             Ok(_file) => (),
-    //             Err(err) => {
-    //                  eprintln!("Error?: {err:#?}");
-    //              }
-    //         };
-    //     }
+        if ! rs {
+            let mut dir_builder = DirBuilder::new();
+            dir_builder.recursive(true);
 
-    //     // remove the old files if they exist:
-    //     let fpath = Path::new(&path ) ;
-    //     if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
-    //     if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
+            match dir_builder.create ( path.clone() ){
+                Ok(_file) => (),
+                Err(err) => {
+                     eprintln!("Error?: {err:#?}");
+                 }
+            };
+        }
 
-    //     let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
+        // remove the old files if they exist:
+        let fpath = Path::new(&path ) ;
+        if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
+        if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-    //     let seq_len:u64 = self.kmer_size as u64;
+        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
 
+        
+        let mut count:usize;
+        let mut idx:usize;
 
-    //     match ofile.buff1.write( &seq_len.to_le_bytes() ){
-    //         Ok(_) => (),
-    //         Err(_err) => return Err::<(), &str>("seq_len could not be written"),
-    //     };
+        let seq_len:u64 = self.kmer_len as u64;
+        match ofile.buff1.write( &seq_len.to_le_bytes() ){
+            Ok(_) => (),
+            Err(_err) => return Err::<(), &str>("seq_len could not be written"),
+        };
 
-    //     for ( kmer, gene_id) in &self.kmers {
-    //         match ofile.buff1.write( &kmer.to_le_bytes() ){
-    //             Ok(_) => println!("{} -> {:?} -> {:?}",kmer, &kmer.to_le_bytes(),  &u64::from_le_bytes(kmer.to_le_bytes())  ) ,
-    //             Err(_err) => return Err::<(), &str>("kmer could not be written"),
-    //         };
-
-    //         match self.names_store.get( &gene_id ){
-    //             Some(name) => {
-    //                 write!(ofile.buff2,"{name}\n" ).unwrap();
-    //             },
-    //             None => panic!("Gene id {gene_id} not found in this object!"),
-    //         };
-    //     }
+        let with_data:u64 = self.with_data as u64;
+        match ofile.buff1.write( &with_data.to_le_bytes() ){
+            Ok(_) => (),
+            Err(_err) => return Err::<(), &str>("with_data could not be written"),
+        };
 
 
-    //     ofile.close();
-    //     Ok(())
-    // }
+        for i in 0..u16::MAX{
+            // write the 8bp kmer as int
+            idx = i as usize;
+            if self.mapper[idx].has_data(){
+                match ofile.buff1.write( &i.to_le_bytes() ){
+                    Ok(_) => println!("i: {} -> {:?}",i, &i.to_le_bytes()  ) ,
+                    Err(_err) => return Err::<(), &str>("i could not be written"),
+                };
+                //write the amount of downstream entries
+                count = self.mapper[idx].map.len();
+                match ofile.buff1.write( &count.to_le_bytes() ){
+                    Ok(_) => println!("count: {} -> {:?}",count, &count.to_le_bytes()  ) ,
+                    Err(_err) => return Err::<(), &str>("count could not be written"),
+                };
+                for (key, value) in self.mapper[idx].map.iter(){
+                    match ofile.buff1.write( &key.to_le_bytes() ){
+                        Ok(_) => println!("key: {} -> {:?}",key, &key.to_le_bytes()  ) ,
+                        Err(_err) => return Err::<(), &str>("key could not be written"),
+                    };
+                    match ofile.buff1.write( &value.to_le_bytes() ){
+                        Ok(_) => println!("value: {} -> {:?}",value, &value.to_le_bytes()  ) ,
+                        Err(_err) => return Err::<(), &str>("value could not be written"),
+                    };
+                }
+            }
+        }
 
-    // pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
+        let string_to_write = self.names_store.join("\n");
+        match ofile.buff2.write( string_to_write.as_bytes() ){
+            Ok(_) => println!("I wrote this: {string_to_write}",),
+            Err(_err) => return Err::<(), &str>("gene names could not be written"),
+        };
 
-    //     let f1 = Path::new( &path ).join("index.1.Index");
-    //     let f2 = Path::new( &path ).join("index.1.gene.txt");
-    //     if ! f1.exists() {
-    //         panic!("Index file {} does not exist", f1.to_str().unwrap() );
-    //     }
-    //     if ! f2.exists() {
-    //         panic!("kmer names file {} does not exist", f2.to_str().unwrap() );
-    //     }
+        ofile.close();
+        Ok(())
+    }
 
-    //     let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  &path  );
-    //     let mut id = 0;
+    pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
 
-    //     let mut buff = [0_u8 ;8 ];
+        let f1 = Path::new( &path ).join("index.1.Index");
+        let f2 = Path::new( &path ).join("index.1.gene.txt");
+        if ! f1.exists() {
+            panic!("Index file {} does not exist", f1.to_str().unwrap() );
+        }
+        if ! f2.exists() {
+            panic!("kmer names file {} does not exist", f2.to_str().unwrap() );
+        }
 
-    //     ifile.buff1.read_exact(&mut buff).unwrap();
-    //     //println! ("I got the buff {buff:?}");
-    //     self.kmer_size = u64::from_le_bytes( buff ) as usize;
+        let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  &path  );
+        let mut id = 0;
 
-    //     for name in ifile.buff2.lines() {
-    //         //println!("I read this name: {name:?}");
-    //         //let mut buff = [0_u8 ;8 ];
-    //         ifile.buff1.read_exact(&mut buff).unwrap();
+        let mut buff_u64 = [0_u8 ;8 ];
+        let mut buff_u16 = [0_u8 ;2 ];
 
-    //         let km = &u64::from_le_bytes( buff );
+        let mut kmer:u64;
+        let mut gene_id:usize;
+
+        // first 16 bytes are the kmer_len and the with_data usize values.
+        ifile.buff1.read_exact(&mut buff_u64).unwrap();
+        //println! ("I got the buff {buff:?}");
+        self.kmer_len = u64::from_le_bytes( buff_u64 ) as usize;
+
+        ifile.buff1.read_exact(&mut buff_u64).unwrap();
+        self.with_data = u64::from_le_bytes( buff_u64 ) as usize;
+
+        for i_ in 0..self.with_data {
+            // read in the single mapper elements 
+            // first 2 - kmer position
+            ifile.buff1.read_exact(&mut buff_u16).unwrap();
+            let idx = u16::from_le_bytes ( buff_u16) as usize;
+            if self.mapper[idx].has_data(){
+                panic!("Loading an mapper_entry that has alreadyx been filled!");
+            }
+            // next 8 amount of [u64, gene id] following
+            ifile.buff1.read_exact(&mut buff_u64).unwrap();
+            let i = u64::from_le_bytes( buff_u64 ) as usize;
+            for i_ in 0..i{
+                // next 8 u64 kmer
+                ifile.buff1.read_exact(&mut buff_u64).unwrap();
+                kmer = u64::from_le_bytes( buff_u64 );
+                // next 8 u64 gene id
+                ifile.buff1.read_exact(&mut buff_u64).unwrap();
+                gene_id = usize::from_le_bytes( buff_u64 );
+                // save in object
+                self.mapper[idx].map.insert( kmer, gene_id );
+            }
+        }
+
+
+        for name in ifile.buff2.lines() {
+            //println!("I read this name: {name:?}");
+            //let mut buff = [0_u8 ;8 ];
+            match name {
+                Ok(n) => {
+                    if ! self.names.contains_key( &n ){
+                        self.names.insert( n.clone(), self.max_id );
+                        self.names_store.push( n.clone() );
+                        self.max_id += 1;
+                    }
+                },
+                Err(e) => panic!("I could not read from the genes table {e:?}"),
+            };
+        }
             
-    //         //println!("I try to insert km {km} and gene name '{name}' ({len:?}) ");
-    //         id += 1;
-    //         let mut data:String = "".to_string() ; // needs to be a constant...
-    //         match name{
-    //             Ok(na) => {
-    //                 if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(*km) {
-    //                     //let info = Info::new(km, name.clone() );
-    //                     if ! self.names.contains_key( &na ){
-    //                         self.names.insert( na.clone(), self.max_id );
-    //                         self.names_store.insert( self.max_id, na.clone() );
-    //                         self.max_id += 1;
-    //                     }
-    //                     let gene_id = self.names.get( &na ).unwrap();
-    //                     //self.kmer_store.insert( *km , "not recovered".to_string() );
-    //                     //println!("These are the bytes I need to work on: {:?}",&km.to_le_bytes());
-    //                     Self::u64_to_str(self.kmer_size, km, &mut data );
-    //                     println!( "({})Can I get that {km} to string? {:?}", self.seq_len, data );
-                        
-    //                     self.kmer_store.insert( *km , data.to_string() );
-    //                     e.insert( *gene_id );
-    //                 } 
-    //                 else {
-    //                     self.bad_entries.insert( *km );
-    //                     self.kmers.remove( km );
-    //                 }
-    //             },
-    //             Err(err) => panic!("This is not working: {err:?}"),
-    //         };
+        if self.with_data == 0 {
+            panic!("No data read!");
+        }
 
-    //         //println!(" {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
-    //     }
-    //     if id == 0 {
-    //         panic!("No data read!");
-    //     }
-
-    //     //self.print();
-    //     Ok(())
-    // }
+        //self.print();
+        Ok(())
+    }
 
     /*
     if that works here is the CatGPG discussion  that taught me that:
@@ -463,8 +504,9 @@ mod tests {
 
     use crate::fast_mapper::FastMapper;
     use std::path::Path;
+    use crate::fast_mapper::Kmer;
 
-     #[test]
+    #[test]
     fn check_geneids() {
         let mut mapper = FastMapper::new( 16 );
 
@@ -477,7 +519,7 @@ mod tests {
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 4 );
+        assert_eq!( mapper.with_data, 9 );
 
         assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0));
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
@@ -486,7 +528,51 @@ mod tests {
 
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(2));
 
+        let mut gnames = Vec::<String>::with_capacity(3);
+        gnames.push( "Gene1".to_string() );
+        gnames.push( "Gene2".to_string() );
+        gnames.push( "Gene3".to_string() );
+        assert_eq!( mapper.names_store, gnames );
         mapper.print();
+
+    }
+
+    #[test]
+    fn check_write_index() {
+        let mut mapper = FastMapper::new( 16 );
+
+        let mut geneid = 0;
+        
+        mapper.add( b"ATCCCATCCTTCATTGTTCGCCTGGA", "Gene1".to_string() );
+        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
+
+        mapper.add( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", "Gene2".to_string() );
+        geneid +=1;
+        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
+
+        assert_eq!( mapper.with_data, 9 );
+
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0));
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
+
+        let opath = "testData/output_index_test";
+        mapper.write_index( opath.to_string() );
+        mapper.print();
+
+        let mut mapper2 = FastMapper::new( 16 );
+        mapper2.load_index( opath.to_string() );
+
+        assert_eq!(  mapper.with_data, mapper2.with_data );
+
+        assert_eq!(  mapper.kmer_len, mapper2.kmer_len );
+
+        assert_eq!(  mapper.kmer_len, mapper2.kmer_len );
+
+        let key = b"ATCCCATC";
+        let kmer = needletail::kmer::Kmers::new(key, 8 as u8).next();
+        let idx = Kmer::from(kmer.unwrap()).into_u64() as usize;
+
+        assert_eq!(  mapper.names_store, mapper2.names_store );
 
     }
 
