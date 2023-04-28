@@ -3,12 +3,12 @@ use kmers::naive_impl::Kmer;
 
 use crate::cellids::CellIds;
 use crate::singlecelldata::SingleCellData;
-use crate::geneids::GeneIds;
+//use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
 
 use crate::ofiles::Ofiles;
-use std::io::BufReader;
-use flate2::write::GzDecoder;
+//use std::io::BufReader;
+//use flate2::write::GzDecoder;
 
 //use this::last5::Last5;
 
@@ -163,33 +163,33 @@ impl Analysis<'_>{
 
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
-	        genes.add( b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", "Sample1".to_string() );
-	        genes.add( b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG", "Sample2".to_string() );
-	        genes.add( b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", "Sample3".to_string() );
-	        genes.add( b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", "Sample4".to_string() );
-	        genes.add( b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", "Sample5".to_string() );
-	        genes.add( b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC", "Sample6".to_string() );
-	        genes.add( b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", "Sample7".to_string() );
-	        genes.add( b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT", "Sample8".to_string() );
-	        genes.add( b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", "Sample9".to_string() );
-	        genes.add( b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC", "Sample10".to_string() );
-	        genes.add( b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", "Sample11".to_string() );
-	        genes.add( b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG", "Sample12".to_string() );
+	        genes.add( &b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG".to_vec(), "Sample1".to_string() );
+	        genes.add( &b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG".to_vec(), "Sample2".to_string() );
+	        genes.add( &b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT".to_vec(), "Sample3".to_string() );
+	        genes.add( &b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT".to_vec(), "Sample4".to_string() );
+	        genes.add( &b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG".to_vec(), "Sample5".to_string() );
+	        genes.add( &b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC".to_vec(), "Sample6".to_string() );
+	        genes.add( &b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT".to_vec(), "Sample7".to_string() );
+	        genes.add( &b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT".to_vec(), "Sample8".to_string() );
+	        genes.add( &b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG".to_vec(), "Sample9".to_string() );
+	        genes.add( &b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC".to_vec(), "Sample10".to_string() );
+	        genes.add( &b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC".to_vec(), "Sample11".to_string() );
+	        genes.add( &b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG".to_vec(), "Sample12".to_string() );
 	    }
 	    else if specie.eq("mouse") {
 	        // and the mouse ones
-	        genes.add( b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", "Sample1".to_string() );
-	        genes.add( b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", "Sample2".to_string() );
-	        genes.add( b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", "Sample3".to_string() );
-	        genes.add( b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT", "Sample4".to_string() );
-	        genes.add( b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", "Sample5".to_string() );
-	        genes.add( b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC", "Sample6".to_string() );
-	        genes.add( b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", "Sample7".to_string() );
-	        genes.add( b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG", "Sample8".to_string() );
-	        genes.add( b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", "Sample9".to_string() );
-	        genes.add( b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC", "Sample10".to_string() );
-	        genes.add( b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", "Sample11".to_string() );
-	        genes.add( b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC", "Sample12".to_string() );
+	        genes.add( &b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG".to_vec(), "Sample1".to_string() );
+	        genes.add( &b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC".to_vec(), "Sample2".to_string() );
+	        genes.add( &b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC".to_vec(), "Sample3".to_string() );
+	        genes.add( &b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT".to_vec(), "Sample4".to_string() );
+	        genes.add( &b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT".to_vec(), "Sample5".to_string() );
+	        genes.add( &b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC".to_vec(), "Sample6".to_string() );
+	        genes.add( &b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC".to_vec(), "Sample7".to_string() );
+	        genes.add( &b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG".to_vec(), "Sample8".to_string() );
+	        genes.add( &b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC".to_vec(), "Sample9".to_string() );
+	        genes.add( &b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC".to_vec(), "Sample10".to_string() );
+	        genes.add( &b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT".to_vec(), "Sample11".to_string() );
+	        genes.add( &b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC".to_vec(), "Sample12".to_string() );
 
 	    } else {
 	        println!("Sorry, but I have no primers for species {}", specie);
@@ -205,7 +205,7 @@ impl Analysis<'_>{
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq(), id.to_string() );
+		                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
 	                    	gene_names.push( id.to_string() );
 	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 	                	}
@@ -225,7 +225,7 @@ impl Analysis<'_>{
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq(), id.to_string() );
+		                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
 	                    	ab_names.push( id.to_string() );
 	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 	                	};

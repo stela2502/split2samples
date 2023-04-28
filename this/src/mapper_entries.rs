@@ -12,7 +12,7 @@ pub struct MapperEntry{
 
 impl MapperEntry{
 	pub fn new() -> Self{
-		let mut map = BTreeMap::new();
+		let  map = BTreeMap::new();
 		let only =0;
 		Self{
 			map,

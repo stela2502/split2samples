@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 
-use crate::geneids::GeneIds;
+//use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
 
 use crate::analysis::MappingInfo;

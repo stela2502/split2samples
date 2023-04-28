@@ -36,3 +36,4 @@ pub mod analysis;
 pub mod last5;
 pub mod fast_mapper;
 pub mod mapper_entries;
+pub mod gene;

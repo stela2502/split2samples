@@ -1,10 +1,10 @@
 /// Geneids is a class that holds a set of kmers and allows to match a longer sequence to the set of kmers.
 /// The id matching most kmers is returned.
 
-use needletail::kmer::Kmers;
+//use needletail::kmer::Kmers;
 use kmers::naive_impl::Kmer;
 use std::collections::BTreeMap;
-use needletail::bitkmer::BitKmer;
+//use needletail::bitkmer::BitKmer;
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
@@ -17,7 +17,7 @@ use std::fs::{self, DirBuilder};
 use std::io::BufRead;
 use std::io::Read;
 
-use crate::geneids::GeneIds;
+//use crate::geneids::GeneIds;
 
 
 /// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
@@ -51,8 +51,8 @@ impl  FastMapper{
     pub fn new( kmer_len:usize )-> Self {
         println!("I would add {} new entries here:", u16::MAX);
         let mut mapper: Vec<Box< MapperEntry>> = Vec::with_capacity(u16::MAX as usize);
-        for i in 0..u16::MAX{
-            let mut b = Box::new( MapperEntry::new( ) );
+        for _i in 0..u16::MAX{
+            let b = Box::new( MapperEntry::new( ) );
             mapper.push( b );
         }
         let names = BTreeMap::<std::string::String, usize>::new();
@@ -78,10 +78,10 @@ impl  FastMapper{
     }
 
 
-    pub fn add(&mut self, seq: &[u8], name: std::string::String ){
+
+    pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String ){
         
         let mut total = 0;
-        let mut add = 0;
 
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.max_id );
@@ -105,7 +105,7 @@ impl  FastMapper{
             }
 
 
-            let kmer = needletail::kmer::Kmers::new(&seq[(0 + self.spacer *i)..(8+self.spacer*i)], 8 as u8 ).next().unwrap();
+            //let kmer = needletail::kmer::Kmers::new(&seq[(0 + self.spacer *i)..(8+self.spacer*i)], 8 as u8 ).next().unwrap();
 
             let mut index : usize = 0;
             //println!("Is this a [u8] ({}, {})?: {:?}", (0 + 8 * i), ( 8 + 8 * i ), &seq[(8 + 8 * i)..(8 + 8 * i)]);
@@ -190,7 +190,7 @@ impl  FastMapper{
             //println!("got the index {index} and the mapper {mapper:?} searching for");
             //let mapper:MapperEntry = &*box_;
             if mapper.has_data() {
-                let mut longer: u64 = 0;
+                let mut longer: u64;
                 for kmer_l in needletail::kmer::Kmers::new(&seq[(8 + id)..(self.kmer_len +8 + id)], self.kmer_len as u8){
                     //println!("And I try to get a longer from kmer_l {kmer_l:?}:");
                     longer = Kmer::from(kmer_l).into_u64();
@@ -321,7 +321,6 @@ impl  FastMapper{
         }
 
         let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  &path  );
-        let mut id = 0;
 
         let mut buff_u64 = [0_u8 ;8 ];
         let mut buff_u16 = [0_u8 ;2 ];
@@ -337,7 +336,7 @@ impl  FastMapper{
         ifile.buff1.read_exact(&mut buff_u64).unwrap();
         self.with_data = u64::from_le_bytes( buff_u64 ) as usize;
 
-        for i_ in 0..self.with_data {
+        for _i in 0..self.with_data {
             // read in the single mapper elements 
             // first 2 - kmer position
             ifile.buff1.read_exact(&mut buff_u16).unwrap();
@@ -348,7 +347,7 @@ impl  FastMapper{
             // next 8 amount of [u64, gene id] following
             ifile.buff1.read_exact(&mut buff_u64).unwrap();
             let i = u64::from_le_bytes( buff_u64 ) as usize;
-            for i_ in 0..i{
+            for _i in 0..i{
                 // next 8 u64 kmer
                 ifile.buff1.read_exact(&mut buff_u64).unwrap();
                 kmer = u64::from_le_bytes( buff_u64 );
@@ -384,119 +383,8 @@ impl  FastMapper{
         Ok(())
     }
 
-    /*
-    if that works here is the CatGPG discussion  that taught me that:
-    rust how to access bits of a u8 0,1 and 2,3 and so forth?
-
-    To access bits of a u8, use the bitwise operators & (AND) and | (OR). For example, to access the 0th and 1st bits of a u8, you can use the expression:
-
-    u8 & 0x03
-
-    What would be the result of this operation?
-
-    The result of this operation would be the 0th and 1st bits of the u8.
-
-    Can that be applioed multiple times to get the next 2 ans so on?
-
-    Yes, you can use this operation multiple times to get the next 2 bits and so on. For example, to access the 2nd and 3rd bits of a u8, you could use the expression:
-
-    u8 & 0x0C
-
-    Can I get that for the rest, too?
-
-    Yes, you can use this operation to get the rest of the bits as well. For example, to access the 4th and 5th bits of a u8, you could use the expression:
-
-    u8 & 0x30
-
-    and one more?
-
-    Yes, to access the 6th and 7th bits of a u8, you could use the expression:
-
-    u8 & 0xC0
-
-    That is it then - there are no more bits in an u8 - or?
-
-    Yes, that is it - there are no more bits in an u8.
-
-    EPIC! Thank you!
-
-    You're welcome!
-    */
-    fn u64_to_str (kmer_size:usize, km:&u64,  data:&mut String ){
-
-        let mut i = 0;
-        for u8_rep in km.to_le_bytes(){
-            if i < kmer_size{
-                match u8_rep & 0x03{
-                    0b00000000 => *data +="A",
-                    0b00000001 => *data +="C",
-                    0b00000010 => *data +="G",
-                    0b00000011 => *data +="T",
-                    _ => *data +="N",
-                };
-                i += 1;
-            }
-            if i < kmer_size{
-                match u8_rep & 0x0C{
-                    0b00000000 => *data +="A",
-                    0b00000100 => *data +="C",
-                    0b00001000 => *data +="G",
-                    0b00001100 => *data +="T",
-                    _ => *data +="N",
-                };
-                i += 1;
-            }
-            if i < kmer_size{
-                match u8_rep & 0x30{
-                    0b00000000 => *data +="A",
-                    0b00010000 => *data +="C",
-                    0b00100000 => *data +="G",
-                    0b00110000 => *data +="T",
-                    _ => *data +="N",
-                };
-                i += 1;
-            }
-            if i < kmer_size{
-                match u8_rep & 0xC0{
-                    0b00000000 => *data +="A",
-                    0b01000000 => *data +="C",
-                    0b10000000 => *data +="G",
-                    0b11000000 => *data +="T",
-                    _ => *data +="N",
-                };
-                i += 1;
-            }
-            if i == kmer_size{
-                break;
-            }
-
-        //println!( "({})Can I get that {u8_rep} to u2 ({i})? {:?}, {:?}, {:?}, {:?}, {:?}", self.seq_len, u8_rep & 0x03,  u8_rep & 0x0C, u8_rep & 0x30 , u8_rep & 0xC0, data );
-        }
-    }
-
 }
 
-
-
-
-fn fill_kmer_vec(seq: needletail::kmer::Kmers, kmer_vec: &mut Vec<u64>) {
-   kmer_vec.clear();
-   let mut bad = 0;
-   for km in seq {
-        // I would like to add a try catch here - possibly the '?' works?
-        // if this can not be converted it does not even make sense to keep this info
-        for nuc in km{
-            if *nuc ==b'N'{
-                bad = 1;
-            }
-        }
-        if bad == 0{
-            // let s = str::from_utf8(km);
-            // println!( "this is the lib: {:?}",  s );
-            kmer_vec.push(Kmer::from(km).into_u64());
-        }
-   }
-}
 
 
 #[cfg(test)]
