@@ -92,7 +92,7 @@ impl  FastMapper{
         let gene_id = self.get_id( name.to_string() );
 
 
-        for i in 0..10{
+        'this: for i in 0..10{
             // add three kmers at position 0+4 4+4 and 8+4
             if seq.len() < self.kmer_len + 3 + 8 * i{
                 break;
@@ -100,6 +100,11 @@ impl  FastMapper{
             let mut longer: u64 = 0;
             for kmer_l in needletail::kmer::Kmers::new(&seq[(8 + self.spacer * i)..( self.kmer_len +8 + self.spacer * i)], self.kmer_len as u8){
                 //println!("And I try to get a longer from kmer_l {kmer_l:?}:");
+                for nuc in kmer {
+                    if *nuc ==b'N'{
+                        continue 'this;
+                    }
+                }
                 longer = Kmer::from(kmer_l).into_u64();
                 break;
             }
