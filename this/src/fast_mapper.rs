@@ -147,7 +147,7 @@ impl  FastMapper{
         }
         
         if total == 0 {
-            panic!("gene {} does not get an entry in the fast_mapper object! - too short!!", &name.as_str() );
+            eprintln!("gene {} does not get an entry in the fast_mapper object! - too short!!", &name.as_str() );
         }
         //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );
 
