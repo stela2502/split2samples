@@ -137,12 +137,12 @@ fn main() {
     match gtf.is_match( &opts.gtf ){
         true => {
             println!("gtf mode");
-            re_gene_name =  Regex::new(r#".* gene_name "([\w\d-\._]*)""#).unwrap();
+            re_gene_name =  Regex::new(r#".* gene_name "([\w\d\-\._]*)""#).unwrap();
             re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
         },
         false => {
             println!("gff mode.");
-            re_gene_name =  Regex::new(r#".* ?gene_name=([\w\d-\._]*); ?"#).unwrap();
+            re_gene_name =  Regex::new(r#".* ?gene_name=([\w\d\-\._]*); ?"#).unwrap();
             re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
         },
     }
