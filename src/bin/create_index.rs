@@ -151,6 +151,9 @@ fn main() {
     for line in reader.lines() {
         let rec = line.ok().expect("Error reading record.");
         let parts: Vec<String> = rec.split('\t').map(|s| s.to_string()).collect();
+        if parts.len() < 8{
+            continue;
+        }
         if parts[2] == "transcript"{
             // capture the parts I need
             if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
