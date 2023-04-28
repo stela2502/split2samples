@@ -11,7 +11,32 @@ const COMPLEMENT: [Option<u8>; 256] = {
     lookup[b'c' as usize] = Some(b'G');
     lookup[b'g' as usize] = Some(b'C');
     lookup[b't' as usize] = Some(b'A');
+    lookup[b'R' as usize] = Some(b'Y');
+    lookup[b'Y' as usize] = Some(b'R');
+    lookup[b'S' as usize] = Some(b'W');
+    lookup[b'W' as usize] = Some(b'S');
+    lookup[b'K' as usize] = Some(b'M');
+    lookup[b'M' as usize] = Some(b'K');
+    lookup[b'B' as usize] = Some(b'V');
+    lookup[b'V' as usize] = Some(b'B');
+    lookup[b'D' as usize] = Some(b'H');
+    lookup[b'H' as usize] = Some(b'D');
+    lookup[b'N' as usize] = Some(b'N');
 
+    lookup
+};
+
+const CHECK: [Option<u8>; 256] = {
+    let mut lookup = [None; 256];
+
+    lookup[b'A' as usize] = Some(b'A');
+    lookup[b'C' as usize] = Some(b'C');
+    lookup[b'G' as usize] = Some(b'G');
+    lookup[b'T' as usize] = Some(b'T');
+    lookup[b'a' as usize] = Some(b'A');
+    lookup[b'c' as usize] = Some(b'C');
+    lookup[b'g' as usize] = Some(b'G');
+    lookup[b't' as usize] = Some(b'T');
     lookup
 };
 
@@ -70,26 +95,43 @@ impl Gene{
 		if self.sense_strand{
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
-			index.add( &self.to_mrna( seq.to_owned()), self.name.to_string() );
+			match  &self.to_mrna( seq.to_owned()){
+				Some( mrna ) => {
+					index.add( &mrna , self.name.to_string() );
+				},
+				None=> {
+					eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
+					return
+				}
+			};
+
 			if self.exons[0][1] - self.start > 38{
 				// we could reach the intron!
 				addon = "_int".to_string();
 				index.add( &seq.to_owned(), self.name.to_string() + &addon );
 			}
 		}else {
-			let compl = Self::reverse_complement( seq );
-			let compl_mrna = Self::rev_compl ( self.to_mrna( seq.to_owned()));
+			match  self.to_mrna( seq.to_owned()){
+				Some( mrna ) => {
+					let compl_mrna = Self::rev_compl ( mrna );
+					index.add( &compl_mrna , self.name.to_string() );
+				},
+				None=> {
+					eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
+					return
+				}
+			};
 
-			index.add( &compl_mrna, self.name.to_string() );
 			if self.end - self.exons[self.exons.len()-1][0] > 38{
 				// we could reach the intron!
 				addon = "_int".to_string();
+				let compl = Self::reverse_complement ( seq );
 				index.add( &compl, self.name.to_string() + &addon );
 			}
 		}
 	}
 
-	fn to_mrna(&self, seq:Vec<u8> ) -> Vec<u8>{
+	fn to_mrna(&self, seq:Vec<u8> ) -> Option<Vec<u8>>{
 		let mut size = 0;
 		for reg in &self.exons{
 			size += reg[1] - reg[0];
@@ -99,8 +141,14 @@ impl Gene{
 			println!( "exon start {} and end {}", reg[0]-1, reg[1]);
 			mrna.extend_from_slice(&seq[reg[0]-1..reg[1]]); 
 		}
+		for &b in mrna.iter() {
+    		let entr = match CHECK[b as usize] {
+    			Some(val) => val,
+    			None => return None,
+			};
+		}
 		println!(">{}\n{}\n", self.id, std::str::from_utf8( &mrna ).unwrap() );
-		mrna
+		Some(mrna)
 	}	
 
 	pub fn passed( &self, pos:usize ) -> bool{
@@ -131,6 +179,6 @@ impl Gene{
 	        complement.push(entr);
 	    }
 
-	    complement
+	   complement
 	}
 }
