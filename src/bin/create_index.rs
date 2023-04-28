@@ -92,7 +92,7 @@ fn main() {
 
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
-        seq_records.insert( format!("{:#?}",seqrec.id() ), seqrec.seq().to_vec());
+        seq_records.insert( std::str::from_utf8( seqrec.id() ).unwrap().to_string() , seqrec.seq().to_vec());
     }
     // now we need to read the gtf info and get all genes out of that
     // we specificly need the last 64bp of the end of the gene as that is what we are going to map

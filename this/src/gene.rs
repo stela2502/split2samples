@@ -70,25 +70,56 @@ impl Gene{
 		if self.sense_strand{
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
+			index.add( &self.to_mrna( seq.to_owned()), self.name.to_string() );
 			if self.exons[0][1] - self.start > 38{
 				// we could reach the intron!
 				addon = "_int".to_string();
+				index.add( &seq.to_owned(), self.name.to_string() + &addon );
 			}
-			index.add( &seq.to_owned(), self.name.to_string() + &addon );
 		}else {
 			let compl = Self::reverse_complement( seq );
+			let compl_mrna = Self::rev_compl ( self.to_mrna( seq.to_owned()));
+
+			index.add( &compl_mrna, self.name.to_string() );
 			if self.end - self.exons[self.exons.len()-1][0] > 38{
 				// we could reach the intron!
 				addon = "_int".to_string();
+				index.add( &compl, self.name.to_string() + &addon );
 			}
-			index.add( &compl, self.name.to_string() + &addon );
 		}
 	}
+
+	fn to_mrna(&self, seq:Vec<u8> ) -> Vec<u8>{
+		let mut size = 0;
+		for reg in &self.exons{
+			size += reg[1] - reg[0];
+		}
+		let mut mrna = Vec::<u8>::with_capacity(size);
+		for reg in &self.exons{
+			println!( "exon start {} and end {}", reg[0]-1, reg[1]);
+			mrna.extend_from_slice(&seq[reg[0]-1..reg[1]]); 
+		}
+		println!(">{}\n{}\n", self.id, std::str::from_utf8( &mrna ).unwrap() );
+		mrna
+	}	
 
 	pub fn passed( &self, pos:usize ) -> bool{
         self.end < pos
     }
 
+    fn rev_compl( seq:Vec<u8> ) -> Vec<u8>{
+    	let mut complement = Vec::with_capacity(seq.len());
+
+	    for &b in seq.iter().rev() {
+	    	let entr = match COMPLEMENT[b as usize] {
+	    		Some(val) => val,
+	    		None => panic!("Could not translate nucl {b}"),
+			};
+	        complement.push(entr);
+	    }
+
+	    complement
+    }
 	fn reverse_complement(seq: &[u8]) -> Vec<u8> {
 	    let mut complement = Vec::with_capacity(seq.len());
 
