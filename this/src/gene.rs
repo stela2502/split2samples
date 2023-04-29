@@ -98,7 +98,7 @@ impl Gene{
 			match  &self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
 					if mrna.len() > 100{
-						index.add( &mrna[ mrna.len()-100.. ] , self.name.to_string() );
+						index.add( &mrna[ mrna.len()-100.. ].to_owned() , self.name.to_string() );
 					}
 					else {
 						index.add( &mrna , self.name.to_string() );
@@ -117,7 +117,7 @@ impl Gene{
 				match  &self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
 						if nascent.len() > 100{
-							index.add( &nascent[nascent.len()-100..] , self.name.to_string() + &addon );
+							index.add( &nascent[nascent.len()-100..].to_owned() , self.name.to_string() + &addon );
 						}else{
 							index.add( &nascent , self.name.to_string() + &addon );
 						}
@@ -132,8 +132,8 @@ impl Gene{
 			match  self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
 					let compl_mrna = Self::rev_compl ( mrna );
-					if mrna.len() > 100{
-						index.add( &compl_mrna[ mrna.len()-100.. ] , self.name.to_string() );
+					if compl_mrna.len() > 100{
+						index.add( &compl_mrna[ compl_mrna.len()-100.. ].to_owned() , self.name.to_string() );
 					}
 					else {
 						index.add( &compl_mrna , self.name.to_string() );
@@ -151,8 +151,8 @@ impl Gene{
 				match  self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
 						let compl = Self::rev_compl ( nascent );
-						if nascent.len() > 100{
-							index.add( &compl[nascent.len()-100..] , self.name.to_string() + &addon );
+						if compl.len() > 100{
+							index.add( &compl[compl.len()-100..].to_owned() , self.name.to_string() + &addon );
 						}else{
 							index.add( &compl , self.name.to_string() + &addon );
 						}
