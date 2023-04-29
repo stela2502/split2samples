@@ -94,7 +94,7 @@ impl  FastMapper{
 
         'this: for i in 0..10{
             // add three kmers at position 0+4 4+4 and 8+4
-            if seq.len() < self.kmer_len + 3 + 8 * i{
+            if seq.len() < self.kmer_len +8 + self.spacer * i{
                 break;
             }
             let mut longer: u64 = 0;
