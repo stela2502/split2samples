@@ -92,7 +92,7 @@ impl Gene{
 	/// to fill in the FastMapper index.
 	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper ){
 
-		if self.sense_strand{
+		if ! self.sense_strand{
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
 			match  &self.to_mrna( seq.to_owned()){
