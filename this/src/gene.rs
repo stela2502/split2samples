@@ -184,7 +184,7 @@ impl Gene{
     			None => return None,
 			};
 		}
-		println!(">{}\n{}\n", self.id.to_string() + " " + &self.name, std::str::from_utf8( &mrna ).unwrap() );
+		println!(">{}\n{}", self.id.to_string() + " " + &self.name, std::str::from_utf8( &mrna ).unwrap() );
 		Some(mrna)
 	}
 
