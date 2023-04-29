@@ -91,7 +91,7 @@ impl Gene{
 	/// Select the correct regions from the gene and underlying sequences
 	/// to fill in the FastMapper index.
 	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper ){
-		let mut addon="".to_string();
+
 		if self.sense_strand{
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
@@ -107,8 +107,16 @@ impl Gene{
 
 			if self.exons[0][1] - self.start > 38{
 				// we could reach the intron!
-				addon = "_int".to_string();
-				index.add( &seq.to_owned(), self.name.to_string() + &addon );
+				let addon = "_int".to_string();
+				match  &self.to_nascent( seq.to_owned()){
+					Some( nascent ) => {
+						index.add( &nascent , self.name.to_string() + &addon );
+					},
+					None=> {
+						eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
+						return
+					}
+				};
 			}
 		}else {
 			match  self.to_mrna( seq.to_owned()){
@@ -124,13 +132,23 @@ impl Gene{
 
 			if self.end - self.exons[self.exons.len()-1][0] > 38{
 				// we could reach the intron!
-				addon = "_int".to_string();
-				let compl = Self::reverse_complement ( seq );
-				index.add( &compl, self.name.to_string() + &addon );
+				let addon = "_int".to_string();
+				match  self.to_nascent( seq.to_owned()){
+					Some( nascent ) => {
+						let compl = Self::rev_compl ( nascent );
+						index.add( &compl , self.name.to_string()+ &addon );
+					},
+					None=> {
+						eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
+						return
+					}
+				};
 			}
 		}
 	}
 
+	/// get the mRNA sequence of the transcript in sense orientation.
+	/// Fails if any other base than AGCT is in the sequence
 	fn to_mrna(&self, seq:Vec<u8> ) -> Option<Vec<u8>>{
 		let mut size = 0;
 		for reg in &self.exons{
@@ -142,19 +160,36 @@ impl Gene{
 			mrna.extend_from_slice(&seq[reg[0]-1..reg[1]]); 
 		}
 		for &b in mrna.iter() {
-    		let entr = match CHECK[b as usize] {
+    		let _entr = match CHECK[b as usize] {
     			Some(val) => val,
     			None => return None,
 			};
 		}
 		println!(">{}\n{}\n", self.id, std::str::from_utf8( &mrna ).unwrap() );
 		Some(mrna)
-	}	
+	}
 
+	/// get the nascent RNA for this transcript (including introns).
+	/// Fails if any other base than AGCT is in the sequence
+	fn to_nascent(&self, seq:Vec<u8> ) -> Option<Vec<u8>> {
+		let size = self.end - self.start;
+		let mut nascent = Vec::<u8>::with_capacity(size);
+		nascent.extend_from_slice(&seq[self.start-1..self.end]);
+		for &b in nascent.iter() {
+    		let _entr = match CHECK[b as usize] {
+    			Some(val) => val,
+    			None => return None,
+			};
+		}
+		Some(nascent)
+	}
+
+	/// is the position (pos) after our end?
 	pub fn passed( &self, pos:usize ) -> bool{
         self.end < pos
     }
 
+    /// the reverse complement of a Vec<u8>
     fn rev_compl( seq:Vec<u8> ) -> Vec<u8>{
     	let mut complement = Vec::with_capacity(seq.len());
 
@@ -168,17 +203,19 @@ impl Gene{
 
 	    complement
     }
-	fn reverse_complement(seq: &[u8]) -> Vec<u8> {
-	    let mut complement = Vec::with_capacity(seq.len());
 
-	    for &b in seq.iter().rev() {
-	    	let entr = match COMPLEMENT[b as usize] {
-	    		Some(val) => val,
-	    		None => panic!("Could not translate nucl {b}"),
-			};
-	        complement.push(entr);
-	    }
+    // /// the reverse complement of a &[u8]
+	// fn reverse_complement(seq: &[u8]) -> Vec<u8> {
+	//     let mut complement = Vec::with_capacity(seq.len());
 
-	   complement
-	}
+	//     for &b in seq.iter().rev() {
+	//     	let entr = match COMPLEMENT[b as usize] {
+	//     		Some(val) => val,
+	//     		None => panic!("Could not translate nucl {b}"),
+	// 		};
+	//         complement.push(entr);
+	//     }
+
+	//    complement
+	// }
 }
