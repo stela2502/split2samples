@@ -92,12 +92,18 @@ impl Gene{
 	/// to fill in the FastMapper index.
 	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper ){
 
-		if ! self.sense_strand{
+		if self.sense_strand{
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
 			match  &self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
-					index.add( &mrna , self.name.to_string() );
+					if mrna.len() > 100{
+						index.add( &mrna[ mrna.len()-100.. ] , self.name.to_string() );
+					}
+					else {
+						index.add( &mrna , self.name.to_string() );
+					}
+					
 				},
 				None=> {
 					eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
@@ -110,7 +116,11 @@ impl Gene{
 				let addon = "_int".to_string();
 				match  &self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
-						index.add( &nascent , self.name.to_string() + &addon );
+						if nascent.len() > 100{
+							index.add( &nascent[nascent.len()-100..] , self.name.to_string() + &addon );
+						}else{
+							index.add( &nascent , self.name.to_string() + &addon );
+						}
 					},
 					None=> {
 						eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
@@ -122,7 +132,12 @@ impl Gene{
 			match  self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
 					let compl_mrna = Self::rev_compl ( mrna );
-					index.add( &compl_mrna , self.name.to_string() );
+					if mrna.len() > 100{
+						index.add( &compl_mrna[ mrna.len()-100.. ] , self.name.to_string() );
+					}
+					else {
+						index.add( &compl_mrna , self.name.to_string() );
+					}
 				},
 				None=> {
 					eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
@@ -136,7 +151,11 @@ impl Gene{
 				match  self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
 						let compl = Self::rev_compl ( nascent );
-						index.add( &compl , self.name.to_string()+ &addon );
+						if nascent.len() > 100{
+							index.add( &compl[nascent.len()-100..] , self.name.to_string() + &addon );
+						}else{
+							index.add( &compl , self.name.to_string() + &addon );
+						}
 					},
 					None=> {
 						eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
