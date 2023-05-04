@@ -319,7 +319,7 @@ impl  FastMapper{
 
         let string_to_write = self.names_store.join("\n");
         match ofile.buff2.write( string_to_write.as_bytes() ){
-            Ok(_) => eprintln!("Genes indexed: {string_to_write}",),
+            Ok(_) => (),//eprintln!("Genes indexed: {string_to_write}",),
             Err(_err) => return Err::<(), &str>("gene names could not be written"),
         };
 

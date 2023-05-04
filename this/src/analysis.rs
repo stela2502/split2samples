@@ -133,7 +133,8 @@ pub struct Analysis<'a>{
 impl Analysis<'_>{
 
 
-	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, antibody:Option<String>, specie:String, index:Option<String>  ) -> Self{
+	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 
+		antibody:Option<String>, specie:String, index:Option<String>  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -141,6 +142,7 @@ impl Analysis<'_>{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers ); // split them into 9 bp kmers
+	    let mut gene_count = 600;
 	    if let Some(i) = index {
 	    	println!("Loading index from path {i}");
 	    	match genes.load_index( i ){
@@ -148,9 +150,14 @@ impl Analysis<'_>{
 	    		Err(e) => panic!("Failed to load the index {e:?}")
 	    	}
 	    	genes.print();
+	    	gene_count = genes.names.len();
 	    }
 	    
-	    let mut gene_names:Vec<String> = Vec::with_capacity(600);
+	    let mut gene_names:Vec<String> = Vec::with_capacity(gene_count);
+
+	    for gene in genes.names.keys() {
+	    	gene_names.push(gene.to_string());
+	    }
 	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
 
 	    if let Some(ex) = expression {

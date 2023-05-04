@@ -92,13 +92,13 @@ impl Gene{
 	/// to fill in the FastMapper index.
 	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper ){
 
-		if self.sense_strand{
+		if ! self.sense_strand{ // I need the reverse sequence in the index!
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
 			match  &self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
 					if mrna.len() > 100{
-						index.add( &mrna[ mrna.len()-100.. ].to_owned() , self.name.to_string() );
+						index.add( &mrna[ 0..100 ].to_owned() , self.name.to_string() );
 					}
 					else {
 						index.add( &mrna , self.name.to_string() );
@@ -110,14 +110,14 @@ impl Gene{
 				}
 			};
 
-			if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100 {
-			//if self.exons[0][1] - self.start > 38{
+			//if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100 {
+			if self.exons[ 0 ][1] - self.exons[ 0 ][0] < 100 {
 				// we could reach the intron!
 				let addon = "_int".to_string();
 				match  &self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
 						if nascent.len() > 100{
-							index.add( &nascent[nascent.len()-100..].to_owned() , self.name.to_string() + &addon );
+							index.add( &nascent[ 0..100].to_owned() , self.name.to_string() + &addon );
 						}else{
 							index.add( &nascent , self.name.to_string() + &addon );
 						}
@@ -133,7 +133,7 @@ impl Gene{
 				Some( mrna ) => {
 					let compl_mrna = Self::rev_compl ( mrna );
 					if compl_mrna.len() > 100{
-						index.add( &compl_mrna[ compl_mrna.len()-100.. ].to_owned() , self.name.to_string() );
+						index.add( &compl_mrna[ 0..100 ].to_owned() , self.name.to_string() );
 					}
 					else {
 						index.add( &compl_mrna , self.name.to_string() );
@@ -145,7 +145,7 @@ impl Gene{
 				}
 			};
 
-			if self.exons[0][1] - self.exons[0][0] < 100{
+			if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100{
 				// we could reach the intron!
 				let addon = "_int".to_string();
 				match  self.to_nascent( seq.to_owned()){
@@ -153,7 +153,7 @@ impl Gene{
 						let compl = Self::rev_compl ( nascent );
 
 						if compl.len() > 100{
-							index.add( &compl[compl.len()-100..].to_owned() , self.name.to_string() + &addon );
+							index.add( &compl[ 0..100 ].to_owned() , self.name.to_string() + &addon );
 						}else{
 							index.add( &compl , self.name.to_string() + &addon );
 						}
