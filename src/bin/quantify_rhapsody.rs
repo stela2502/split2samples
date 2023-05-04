@@ -30,6 +30,9 @@ struct Opts {
     /// the input R2 samples file
     #[clap(short, long)]
     file: String,
+    /// a pre-defined index folder produced by the cerateIndex scipt
+    #[clap(short, long)]
+    index: Option<String>,
     /// the specie of the library [mouse, human]
     #[clap(short, long)]
     specie: String,
@@ -38,11 +41,11 @@ struct Opts {
     outpath: String,
     /// the fasta database containing the genes
     #[clap(short, long)]
-    expression: String,
+    expression: Option<String>,
     /// the fasta database containing the antibody tags
     #[clap(short, long)]
-    antibody: String,
-    /// the minimum reads per cell (sample + genes + antibody combined)
+    antibody: Option<String>,
+    /// the minimum (UMI) reads per cell (sample + genes + antibody combined)
     #[clap(short, long)]
     min_umi: usize,
     /// the version of beads you used v1, v2.96 or v2.384
@@ -121,11 +124,17 @@ fn main() {
         pos = &[0,9, 12,22, 26,35 , 36,42 ];
         min_sizes = &[ 51, 51 ];
     }
+    
+    let save= opts.index.is_none();
+
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie);
+        opts.antibody, opts.specie, opts.index );
 
+    if save{
+        worker.write_index( &opts.outpath );
+    }
     //worker.parse(&mut self,  f1:String, f2:String,  report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2]  )
     let mut split1 = opts.reads.split(',');
     let mut split2 = opts.file.split(',');

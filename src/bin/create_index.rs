@@ -10,8 +10,9 @@ use needletail::parse_fastx_file;
 //use this::sampleids::SampleIds;
 //use this::analysis::
 
-use std::path::PathBuf;
+//use std::path::PathBuf;
 use std::fs;
+//use std::path::Path;
 
 use std::time::SystemTime;
 
@@ -21,7 +22,8 @@ use std::io::BufRead;
 
 use flate2::read::GzDecoder;
 use std::collections::HashMap;
-// use std::collections::HashSet;
+use std::collections::HashSet;
+
 // use std::convert::TryInto;
 
 /// Just run a test case for speed reproducability and simplicity
@@ -50,9 +52,6 @@ struct Opts {
     #[clap(default_value_t=1,short, long)]
     umi_count: u8,
 */
-
-
-
 
 
 // the main function nowadays just calls the other data handling functions
@@ -94,16 +93,8 @@ fn main() {
         let seqrec = e_record.expect("invalid record");
         seq_records.insert( std::str::from_utf8( seqrec.id() ).unwrap().to_string() , seqrec.seq().to_vec());
     }
-    // now we need to read the gtf info and get all genes out of that
-    // we specificly need the last 64bp of the end of the gene as that is what we are going to map
-    // if there is a splice entry in that area we need to create a spliced and an unspliced entry
-    let fp1 = PathBuf::from(opts.gtf.to_string());
-    let f1 = match File::open(fp1){
-        Ok(file) => file,
-        Err(err) => panic!("The file does not exists: {err}",  )
-    };
-    let file1 = GzDecoder::new( f1 );
-    let reader = BufReader::new( file1 );
+
+
 
 
     // and init the Index:
@@ -136,18 +127,35 @@ fn main() {
 
     match gtf.is_match( &opts.gtf ){
         true => {
-            println!("gtf mode");
+            eprintln!("gtf mode");
             re_gene_name =  Regex::new(r#".* gene_name "([\(\)\w\d\-\._]*)""#).unwrap();
             re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
         },
         false => {
-            println!("gff mode.");
+            eprintln!("gff mode.");
             re_gene_name =  Regex::new(r#".* ?gene_name=([\(\)\w\d\-\._]*); ?"#).unwrap();
             re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
         },
     }
     let mut gene_id:String;
     let mut gene_name:String;
+
+    // now we need to read the gtf info and get all genes out of that
+    // we specificly need the last 64bp of the end of the gene as that is what we are going to map
+    // if there is a splice entry in that area we need to create a spliced and an unspliced entry
+
+    if ! opts.gtf.ends_with(".gz") {
+        panic!("Please gzip your gtf file - thank you! {}", opts.gtf.to_string());
+    }
+
+    let f1 = match File::open( &opts.gtf ){
+        Ok(file) => file,
+        Err(err) => panic!("The file {} does not exists: {err}", &opts.gtf ),
+    };
+    let file1 = GzDecoder::new(f1);
+    let reader = BufReader::new( file1 );
+    let mut missing_chr:HashSet<String>  = HashSet::new();
+
     for line in reader.lines() {
         let rec = line.ok().expect("Error reading record.");
         let parts: Vec<String> = rec.split('\t').map(|s| s.to_string()).collect();
@@ -193,7 +201,11 @@ fn main() {
             };
             let mut to_remove = Vec::new();
 
-            for (k, gene) in &genes {
+            'genes: for (k, gene) in &genes {
+                if let Some(_entry) = missing_chr.get( &gene.chrom.to_string() ){
+                    eprintln!("gene {} - no sequence for chr {}", &gene.name.to_string(), &gene.chrom.to_string() );
+                    continue 'genes;
+                }
                 if gene.passed(start) {
                     // Do something with the gene, e.g. remove it
                     match seq_records.get( &gene.chrom.to_string() ){
@@ -201,7 +213,10 @@ fn main() {
                             gene.add_to_index( seq, &mut index );
                             //println!("The genes detected: {:?}", index.names_store );
                         },
-                        None => panic!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() )
+                        None => {
+                            missing_chr.insert( gene.chrom.to_string() );
+                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+                        }
                     }
                     
                     to_remove.push(k.clone());
@@ -228,7 +243,7 @@ fn main() {
         }
 
     }
-    println!("The genes detected: {:?}", index.names_store );
+    eprintln!("The genes detected: {:?}", index.names_store );
 
     index.write_index( opts.outpath.to_string() ).unwrap();
 

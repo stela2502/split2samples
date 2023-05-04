@@ -52,6 +52,8 @@ Rscript Rtest/TestExample.R
 
 # Usage
 
+## quantfyRhapsody
+
 The `quantifyRhapsody` program takes several arguments.  The usage can be printed 
 from the command line using `quantifyRhapsody -h`.
 
@@ -95,6 +97,50 @@ The benefit between running both files separately is that the umis are controlle
 target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz,testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz,testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
 ```
 
+
+## createIndex
+
+BD Rhapsody now also supports whole genome transcriptomics. For thsi setting it becomes vital to have a mapping index that is capable of storing the genome information.
+In order to do this a 2bit based 8mer numeric initial mapper has been combined with 32bp full length match to build up a 40bp full length match.
+
+The creatIndex produces these indices for quantifyRhapsody. It only needs a geneome fasta file and a genome gtf or gff annotation file:
+
+```
+target/release/create_index -h
+Rustody 1.0.0
+Stefan L. <stefan.lang@med.lu.se>
+Just run a test case for speed reproducability and simplicity
+
+USAGE:
+    create_index [OPTIONS]
+
+OPTIONS:
+    -a, --antibody <ANTIBODY>        [default: testData/MyAbSeqPanel.fasta]
+    -f, --file <FILE>                the fasta genome data [default: testData/testGenes.fa.gz]
+    -g, --gtf <GTF>                  the gff gene information table [default:
+                                     testData/testGenes.gtf.gz]
+        --gene-kmers <GENE_KMERS>    thje mapping kmer length [default: 32]
+    -h, --help                       Print help information
+    -o, --outpath <OUTPATH>          the outpath [default: testData/mapperTest]
+    -V, --version                    Print version information
+med-sal@jesse:~/git_Projects/Rustody$ 
+
+```
+
+**Runtime**
+
+```
+real    50m50,368s
+user    8m31,537s
+sys     42m18,564s
+```
+
+**File size**
+```
+Will come once the tool creates one :-D
+```
+
+
 # Speed comparisons to local BD software installation
 
 The BD rhapsody software is available for Mac and Linux, not for Windows. Whereas this rust program here also compiles and runs on Windows.
@@ -127,11 +173,36 @@ OK I assume we get the point ~ 17min.
 ## time for a Rustody analysis 500k reads S2
 
 ```
- time ../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96
+ time ../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
 
-user    0m3,983s
-user    0m4,040s
-user    0m4,020s
+init models
+the log file: Mapping_log.txt
+   0.50 mio reads (99.35% usable; 76.08% PCR dupl. [usable] [37.52% for last batch])                                               
+
+Writing outfiles ...
+sparse Matrix: 34 cell(s), 450 gene(s) and 4348 entries written (88 cells too view umis) to path Ok("Rustody_S2/BD_Rhapsody_expression"); 
+sparse Matrix: 34 cell(s), 4 gene(s) and 20 entries written (88 cells too view umis) to path Ok("Rustody_S2/BD_Rhapsody_antibodies"); 
+dense matrix: 34 cell written - 88 cells too view umis
+
+Summary:
+total      reads  : 500000 reads
+no cell ID reads  : 0 reads
+no gene ID reads  : 3568 reads
+N's or too short  : 3228 reads
+cellular reads    : 493204 reads (98.64% of total)
+expression reads  : 493237 reads (98.65% of total)
+antibody reads    : 74 reads (0.01% of total)
+sample tag reads  : 34 reads (0.01% of total)
+pcr duplicates    : 375215 reads (76.08% of usable)
+
+Cell->Sample table written to "Rustody_S2/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 1 sec 208milli sec
+
+
+real    0m1,213s
+user    0m1,197s
+sys     0m0,016s
 ```
 
 So ~ 4 sec. I do not think it makes sense to calculate the difference here.
@@ -200,7 +271,7 @@ user    2283m4,866s
 ```
 Maximum memory requirement over this time: ~ 22.03 Gb.
 
-More than 38 hours the BD system stopped with this error:
+More than 38 hours the BD system stopped with an error,
 <details>
     <summary>
 

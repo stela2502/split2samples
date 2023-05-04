@@ -133,7 +133,7 @@ pub struct Analysis<'a>{
 impl Analysis<'_>{
 
 
-	pub fn new(gene_kmers:usize, version:String, expression:String, antibody:String, specie:String  ) -> Self{
+	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, antibody:Option<String>, specie:String, index:Option<String>  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -141,7 +141,65 @@ impl Analysis<'_>{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers ); // split them into 9 bp kmers
-	     
+	    if let Some(i) = index {
+	    	println!("Loading index from path {i}");
+	    	match genes.load_index( i ){
+	    		Ok(_r) => (),
+	    		Err(e) => panic!("Failed to load the index {e:?}")
+	    	}
+	    	genes.print();
+	    }
+	    
+	    let mut gene_names:Vec<String> = Vec::with_capacity(600);
+	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
+
+	    if let Some(ex) = expression {
+	    	if Path::new(&ex).exists(){
+
+		    	let mut expr_file = parse_fastx_file(ex).expect("valid path/file");
+
+		    	while let Some(e_record) = expr_file.next() {
+			        let seqrec = e_record.expect("invalid record");
+		        	match std::str::from_utf8(seqrec.id()){
+			            Ok(st) => {
+		                	if let Some(id) = st.to_string().split('|').next(){
+			                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
+		                    	gene_names.push( id.to_string() );
+		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
+		                	}
+		            	},
+		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
+		        	}
+		        }
+		    }else {
+		    	eprintln!("Expression file could not be read - ignoring")
+		    }
+	    }
+	    
+	    if let Some(ab) = antibody {
+
+		    if Path::new(&ab).exists(){
+
+		   		let mut ab_file = parse_fastx_file(ab).expect("valid path/file");
+		    	while let Some(ab_record) = ab_file.next() {
+			        let seqrec = ab_record.expect("invalid record");
+		        	match std::str::from_utf8(seqrec.id()){
+			            Ok(st) => {
+		                	if let Some(id) = st.to_string().split('|').next(){
+			                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
+		                    	ab_names.push( id.to_string() );
+		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
+		                	};
+		            	},
+		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
+		        	}
+		        }
+		    }else {
+		    	eprintln!("Antibody file could not be read - ignoring")
+		    }
+
+		}
+
 	    //  now we need to get a CellIDs object, too
 	    let cells = CellIds::new( &version, 7);
 
@@ -151,11 +209,8 @@ impl Analysis<'_>{
 	    // here I need the cell kmer site.
 	    let gex = SingleCellData::new( );
 
-	    
-
 	    let mut sample_names:Vec<String> = Vec::with_capacity(12);
-	    let mut gene_names:Vec<String> = Vec::with_capacity(600);
-	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
+
 
 	    for i in 1..13{
 	        sample_names.push( format!("Sample{i}") )
@@ -196,46 +251,7 @@ impl Analysis<'_>{
 	        std::process::exit(1)
 	    }
 	    
-	    if Path::new(&expression).exists(){
-
-	    	let mut expr_file = parse_fastx_file(expression).expect("valid path/file");
-
-	    	while let Some(e_record) = expr_file.next() {
-		        let seqrec = e_record.expect("invalid record");
-	        	match std::str::from_utf8(seqrec.id()){
-		            Ok(st) => {
-	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
-	                    	gene_names.push( id.to_string() );
-	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
-	                	}
-	            	},
-	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
-	        	}
-	        }
-	    }else {
-	    	eprintln!("Expression file could not be read - ignoring")
-	    }
-
-	    if Path::new(&antibody).exists(){
-
-	   		let mut ab_file = parse_fastx_file(antibody).expect("valid path/file");
-	    	while let Some(ab_record) = ab_file.next() {
-		        let seqrec = ab_record.expect("invalid record");
-	        	match std::str::from_utf8(seqrec.id()){
-		            Ok(st) => {
-	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
-	                    	ab_names.push( id.to_string() );
-	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
-	                	};
-	            	},
-	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
-	        	}
-	        }
-	    }else {
-	    	eprintln!("Antibody file could not be read - ignoring")
-	    }
+	    
 		Self{
 			genes,
 	//		genes2,
@@ -245,6 +261,10 @@ impl Analysis<'_>{
 			gene_names,
 			ab_names,
 		}
+	}
+
+	pub fn write_index(&mut self, path:&String ){
+		self.genes.write_index( path.to_string() ).unwrap();
 	}
 
 

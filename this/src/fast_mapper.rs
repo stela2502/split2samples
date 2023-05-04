@@ -42,6 +42,7 @@ pub struct FastMapper{
     pub last_count: usize,
     pub last_kmers: Vec<String>,
     pub with_data: usize,
+    pub version: usize, //the version of this
 }
 
 // here the functions
@@ -49,7 +50,7 @@ pub struct FastMapper{
 impl  FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
     pub fn new( kmer_len:usize )-> Self {
-        println!("I would add {} new entries here:", u16::MAX);
+        //println!("I would add {} new entries here:", u16::MAX);
         let mut mapper: Vec<Box< MapperEntry>> = Vec::with_capacity(u16::MAX as usize);
         for _i in 0..u16::MAX{
             let b = Box::new( MapperEntry::new( ) );
@@ -74,6 +75,7 @@ impl  FastMapper{
             last_count,
             last_kmers,
             with_data,
+            version: 1,
         }
     }
 
@@ -269,6 +271,12 @@ impl  FastMapper{
         let mut count:usize;
         let mut idx:usize;
 
+        let version:u64 = self.version as u64;
+        match ofile.buff1.write( &version.to_le_bytes() ){
+            Ok(_) => (),
+            Err(_err) => return Err::<(), &str>("version could not be written"),
+        };
+
         let seq_len:u64 = self.kmer_len as u64;
         match ofile.buff1.write( &seq_len.to_le_bytes() ){
             Ok(_) => (),
@@ -287,22 +295,22 @@ impl  FastMapper{
             idx = i as usize;
             if self.mapper[idx].has_data(){
                 match ofile.buff1.write( &i.to_le_bytes() ){
-                    Ok(_) => println!("i: {} -> {:?}",i, &i.to_le_bytes()  ) ,
+                    Ok(_) => (), //println!("i: {} -> {:?}",i, &i.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("i could not be written"),
                 };
                 //write the amount of downstream entries
                 count = self.mapper[idx].map.len();
                 match ofile.buff1.write( &count.to_le_bytes() ){
-                    Ok(_) => println!("count: {} -> {:?}",count, &count.to_le_bytes()  ) ,
+                    Ok(_) => (), //println!("count: {} -> {:?}",count, &count.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("count could not be written"),
                 };
                 for (key, value) in self.mapper[idx].map.iter(){
                     match ofile.buff1.write( &key.to_le_bytes() ){
-                        Ok(_) => println!("key: {} -> {:?}",key, &key.to_le_bytes()  ) ,
+                        Ok(_) => (), //println!("key: {} -> {:?}",key, &key.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
                     };
                     match ofile.buff1.write( &value.to_le_bytes() ){
-                        Ok(_) => println!("value: {} -> {:?}",value, &value.to_le_bytes()  ) ,
+                        Ok(_) => (),//println!("value: {} -> {:?}",value, &value.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
                 }
@@ -311,7 +319,7 @@ impl  FastMapper{
 
         let string_to_write = self.names_store.join("\n");
         match ofile.buff2.write( string_to_write.as_bytes() ){
-            Ok(_) => println!("I wrote this: {string_to_write}",),
+            Ok(_) => eprintln!("Genes indexed: {string_to_write}",),
             Err(_err) => return Err::<(), &str>("gene names could not be written"),
         };
 
@@ -338,11 +346,20 @@ impl  FastMapper{
         let mut kmer:u64;
         let mut gene_id:usize;
 
-        // first 16 bytes are the kmer_len and the with_data usize values.
+
+        // the real first 8 bytes are the version
+        ifile.buff1.read_exact(&mut buff_u64).unwrap();
+        //println! ("I got the buff {buff:?}");
+        if ! self.version == u64::from_le_bytes( buff_u64 ) as usize{
+            panic!("Sorry - this version of the index {} does not match the requirements {}.", u64::from_le_bytes( buff_u64 ), self.version);
+        }
+
+        self.kmer_len = u64::from_le_bytes( buff_u64 ) as usize;
+        // next 8bytes are the kmer_len
         ifile.buff1.read_exact(&mut buff_u64).unwrap();
         //println! ("I got the buff {buff:?}");
         self.kmer_len = u64::from_le_bytes( buff_u64 ) as usize;
-
+        // and finally (preable) the with_data usize value
         ifile.buff1.read_exact(&mut buff_u64).unwrap();
         self.with_data = u64::from_le_bytes( buff_u64 ) as usize;
 
@@ -401,7 +418,7 @@ impl  FastMapper{
 mod tests {
 
     use crate::fast_mapper::FastMapper;
-    use std::path::Path;
+    //use std::path::Path;
     use crate::fast_mapper::Kmer;
 
     #[test]
@@ -410,19 +427,19 @@ mod tests {
 
         let mut geneid = 0;
         
-        mapper.add( b"ATCCCATCCTTCATTGTTCGCCTGGA", "Gene1".to_string() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        mapper.add( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", "Gene2".to_string() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 9 );
+        assert_eq!( mapper.with_data, 11 );
 
         assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0));
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
 
-        mapper.add( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", "Gene3".to_string() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string() );
 
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(2));
 
@@ -441,24 +458,24 @@ mod tests {
 
         let mut geneid = 0;
         
-        mapper.add( b"ATCCCATCCTTCATTGTTCGCCTGGA", "Gene1".to_string() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        mapper.add( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", "Gene2".to_string() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 9 );
+        assert_eq!( mapper.with_data, 11 );
 
         assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0));
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
 
         let opath = "testData/output_index_test";
-        mapper.write_index( opath.to_string() );
+        mapper.write_index( opath.to_string() ).unwrap();
         mapper.print();
 
         let mut mapper2 = FastMapper::new( 16 );
-        mapper2.load_index( opath.to_string() );
+        mapper2.load_index( opath.to_string() ).unwrap();
 
         assert_eq!(  mapper.with_data, mapper2.with_data );
 
@@ -468,7 +485,7 @@ mod tests {
 
         let key = b"ATCCCATC";
         let kmer = needletail::kmer::Kmers::new(key, 8 as u8).next();
-        let idx = Kmer::from(kmer.unwrap()).into_u64() as usize;
+        let _idx = Kmer::from(kmer.unwrap()).into_u64() as usize;
 
         assert_eq!(  mapper.names_store, mapper2.names_store );
 

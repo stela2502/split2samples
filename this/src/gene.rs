@@ -47,7 +47,7 @@ pub struct Gene{
 	end:usize, // the end position for this entry
 	exons:Vec<[usize;2]>, // a vector of start and end positions
 	sense_strand:bool, // sense_strand in the genome true 1->n; false n <- 1
-	name:String, // the gene symbol
+	pub name:String, // the gene symbol
 	pub id:String, // e.g. ENSMBL ID
 }
 
@@ -103,7 +103,6 @@ impl Gene{
 					else {
 						index.add( &mrna , self.name.to_string() );
 					}
-					
 				},
 				None=> {
 					eprintln!("Error in gene {} - none standard nucleotides!",self.name.to_string());
@@ -111,7 +110,8 @@ impl Gene{
 				}
 			};
 
-			if self.exons[0][1] - self.start > 38{
+			if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100 {
+			//if self.exons[0][1] - self.start > 38{
 				// we could reach the intron!
 				let addon = "_int".to_string();
 				match  &self.to_nascent( seq.to_owned()){
@@ -145,12 +145,13 @@ impl Gene{
 				}
 			};
 
-			if self.end - self.exons[self.exons.len()-1][0] > 38{
+			if self.exons[0][1] - self.exons[0][0] < 100{
 				// we could reach the intron!
 				let addon = "_int".to_string();
 				match  self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
 						let compl = Self::rev_compl ( nascent );
+
 						if compl.len() > 100{
 							index.add( &compl[compl.len()-100..].to_owned() , self.name.to_string() + &addon );
 						}else{
@@ -184,7 +185,7 @@ impl Gene{
     			None => return None,
 			};
 		}
-		println!(">{}\n{}", self.id.to_string() + " " + &self.name, std::str::from_utf8( &mrna ).unwrap() );
+		//println!(">{}\n{}", self.id.to_string() + " " + &self.name + " " + &self.chrom , std::str::from_utf8( &mrna ).unwrap() );
 		Some(mrna)
 	}
 
