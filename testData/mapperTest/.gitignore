@@ -1,0 +1,7 @@
+# Ignore everything
+*
+
+# But these files:
+!.gitignore
+!Juan_genes.fa.gz
+!Juan_genes.fixed.gtf.gz
