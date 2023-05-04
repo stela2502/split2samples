@@ -29,6 +29,7 @@ pub struct CellData{
     //pub kmer_size: usize,
     pub name: std::string::String,
     pub genes: BTreeMap<usize, HashSet<u64>>, // I want to know how many times I got the same UMI
+    pub genes_with_data: HashSet<String>, // when exporting genes it is helpfule to know which of the possible genomic genes actually have an expression reported...
     pub total_reads: BTreeMap<usize, usize>, // instead of the per umi counting
     pub passing: bool // check if this cell is worth exporting. Late game
 }
@@ -37,10 +38,12 @@ impl CellData{
     pub fn new(  name: std::string::String ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
         let total_reads = BTreeMap::new();
+        let genes_with_data = HashSet::new();
         let passing = false;
         Self{
             name,
             genes,
+            genes_with_data,
             total_reads,
             passing
         }
@@ -62,7 +65,6 @@ impl CellData{
 
     pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
         //println!("adding gene id {}", geneid );
-        
         return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
                 match self.total_reads.get_mut( &geneid ){
@@ -126,7 +128,7 @@ impl CellData{
     }
 
     
-    pub fn to_str(& self, gene_info:&FastMapper, names: &Vec<String> ) -> String {
+    pub fn to_str(&self, gene_info:&FastMapper, names: &Vec<String> ) -> String {
 
         let mut data = Vec::<std::string::String>::with_capacity( gene_info.names.len()+3 ); 
         data.push(self.name.clone());
@@ -166,6 +168,7 @@ pub struct SingleCellData{
     cells: BTreeMap<u64, CellData>,
     checked: bool,
     passing: usize,
+    pub genes_with_data: HashSet<usize>,
 }
 
 impl Default for SingleCellData {
@@ -183,12 +186,14 @@ impl SingleCellData{
         let cells = BTreeMap::new();
         let checked:bool = false;
         let passing = 0;
+        let genes_with_data = HashSet::new();
 
         Self {
             //kmer_size,
             cells,
             checked,
-            passing
+            passing,
+            genes_with_data,
         }
     }
 
@@ -216,11 +221,12 @@ impl SingleCellData{
 
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
-    pub fn try_insert(&mut self, cell_id: u64, name: std::string::String, gene_id:&usize,umi:u64, report: &mut MappingInfo ) ->bool{
+    pub fn try_insert(&mut self, cell_id: u64, name: std::string::String, 
+        gene_id:&usize,umi:u64, report: &mut MappingInfo ) ->bool{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
-
+        self.genes_with_data.insert( *gene_id );
         self.cells.entry(cell_id).or_insert_with( || { CellData::new( name ) });
         let mut ret = true;
         match self.cells.get_mut(&cell_id){

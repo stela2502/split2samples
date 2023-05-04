@@ -1,5 +1,6 @@
 use needletail::parse_fastx_file;
 use kmers::naive_impl::Kmer;
+use std::collections::HashSet;
 
 use crate::cellids::CellIds;
 use crate::singlecelldata::SingleCellData;
@@ -143,6 +144,7 @@ impl Analysis<'_>{
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers ); // split them into 9 bp kmers
 	    let mut gene_count = 600;
+	    
 	    if let Some(i) = index {
 	    	println!("Loading index from path {i}");
 	    	match genes.load_index( i ){
@@ -150,9 +152,15 @@ impl Analysis<'_>{
 	    		Err(e) => panic!("Failed to load the index {e:?}")
 	    	}
 	    	genes.print();
-	    	gene_count = genes.names.len();
+	    	gene_count = genes.names.len();	    	
+	    	
 	    }
-	    
+
+	    let mut gene_names = Vec::new();
+	    for gname in &genes.names_store {
+	    	gene_names.push( gname.to_string());
+	    }
+
 	    let mut gene_names:Vec<String> = Vec::with_capacity(gene_count);
 
 	    for gene in genes.names.keys() {
@@ -170,8 +178,10 @@ impl Analysis<'_>{
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
-			                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
-		                    	gene_names.push( id.to_string() );
+		                		if ! genes.names.contains_key(  id ){
+			                    	genes.add( &seqrec.seq().to_vec(), id.to_string() );
+		                    		gene_names.push( id.to_string() );
+		                    	}
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 		                	}
 		            	},
@@ -464,6 +474,7 @@ impl Analysis<'_>{
     );
 
     // this always first as this will decide which cells are OK ones!
+
     match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}")
