@@ -243,7 +243,7 @@ fn main() {
         }
 
     }
-    eprintln!("The genes detected: {:?}", index.names_store );
+    eprintln!("total first keys, total second keys, total single gene per second key, total multimapper per second key: {:?}", index.info() );
 
     index.write_index( opts.outpath.to_string() ).unwrap();
 

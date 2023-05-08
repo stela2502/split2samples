@@ -123,10 +123,12 @@ OPTIONS:
     -h, --help                       Print help information
     -o, --outpath <OUTPATH>          the outpath [default: testData/mapperTest]
     -V, --version                    Print version information
-med-sal@jesse:~/git_Projects/Rustody$ 
-
 ```
 
+```
+target/release/create_index 
+
+```
 **Runtime**
 
 ```

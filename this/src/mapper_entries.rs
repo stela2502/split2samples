@@ -19,7 +19,9 @@ impl NameEntry{
 	}
 
 	pub fn add( &mut self, id:usize) {
-		self.map.push(id);
+		if ! self.map.contains( &id ) {
+			self.map.push(id);
+		}
 	}
 	pub fn get( &self ) -> Vec<usize>{
 		self.map.clone()
