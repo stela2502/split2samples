@@ -34,7 +34,7 @@ use std::io::Read;
 pub struct FastMapper{
     pub kmer_len:usize, // how long should the second entries be (up to 32 bp + 8bp initial map) 
     spacer:usize,
-    pub mapper: Vec<Box<MapperEntry>>, // the position is the sequence!
+    pub mapper: Vec<MapperEntry>, // the position is the sequence!
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names_store: Vec<String>, //sore gene names as vector
@@ -51,9 +51,9 @@ impl  FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
     pub fn new( kmer_len:usize )-> Self {
         //println!("I would add {} new entries here:", u16::MAX);
-        let mut mapper: Vec<Box< MapperEntry>> = Vec::with_capacity(u16::MAX as usize);
+        let mut mapper: Vec<MapperEntry> = Vec::with_capacity(u16::MAX as usize);
         for _i in 0..u16::MAX{
-            let b = Box::new( MapperEntry::new( ) );
+            let b = MapperEntry::new( );
             mapper.push( b );
         }
         let names = BTreeMap::<std::string::String, usize>::new();
@@ -139,10 +139,11 @@ impl  FastMapper{
                     //println!("Cool I got a gene box! {genebox:?}");
                 },
                 None => {
-                    let mut b = Box::new( MapperEntry::new( ) );
-                    b.add( longer , gene_id  );
-                    //println!("Cool I got a new gene box!? {b:?}");
-                    self.mapper.insert(index,  b ); 
+                    panic!("I must not need to create the MapperEntry like ever!");
+                    //let mut b = Box::new( MapperEntry::new( ) );
+                    //b.add( longer , gene_id  );
+                    ////println!("Cool I got a new gene box!? {b:?}");
+                    //self.mapper.insert(index,  b ); 
                 }
             }
             total +=1;
@@ -154,8 +155,24 @@ impl  FastMapper{
         //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );
 
     }
+    /// [entries with values, total second level entries, total single gene first/second pairs, total >1 first/second level pairs]
+    pub fn info( &self ) -> [usize;4]{
+        let mut ret: [usize;4] = [0,0,0,0];
+        let mut second: [usize;3];
+        for entry in &self.mapper {
+            if entry.has_data() {
+                ret[0] +=1;
+                second = entry.info();
+                for id in 0..3{
+                    ret[id+1] += second[id];
+                }
+            }
+        }
+        ret
+    }
 
     pub fn print( &self ){
+
         println!("I have {} kmers and {} genes", self.with_data, self.names.len() );
     }
 
@@ -210,7 +227,9 @@ impl  FastMapper{
                     match mapper.get(&longer){
                         Some( gene_id ) => {
                             //println!("Got one: {gene_id}");
-                            return Some(gene_id);
+                            if gene_id.len() == 1{
+                                return Some(gene_id[0]);
+                            }  
                         },
                         None => (),
                     }
@@ -309,10 +328,18 @@ impl  FastMapper{
                         Ok(_) => (), //println!("key: {} -> {:?}",key, &key.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
                     };
-                    match ofile.buff1.write( &value.to_le_bytes() ){
+                    // now we need the NameEntry.ken() to to_le_bytes()
+                    match ofile.buff1.write( &value.map.len().to_le_bytes() ){
                         Ok(_) => (),//println!("value: {} -> {:?}",value, &value.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
+                    for id in &value.map{
+                        match ofile.buff1.write( &id.to_le_bytes() ){
+                            Ok(_) => (),//println!("value: {} -> {:?}",value, &value.to_le_bytes()  ) ,
+                            Err(_err) => return Err::<(), &str>("value could not be written"),
+                        };
+                    }
+                    
                 }
             }
         }
@@ -345,6 +372,7 @@ impl  FastMapper{
 
         let mut kmer:u64;
         let mut gene_id:usize;
+        let mut len:usize;
 
 
         // the real first 8 bytes are the version
@@ -380,9 +408,12 @@ impl  FastMapper{
                 kmer = u64::from_le_bytes( buff_u64 );
                 // next 8 u64 gene id
                 ifile.buff1.read_exact(&mut buff_u64).unwrap();
-                gene_id = usize::from_le_bytes( buff_u64 );
-                // save in object
-                self.mapper[idx].map.insert( kmer, gene_id );
+                len = usize::from_le_bytes( buff_u64 );
+                for _id in 0..len{
+                    ifile.buff1.read_exact(&mut buff_u64).unwrap();
+                    gene_id = usize::from_le_bytes( buff_u64 );
+                    self.mapper[idx].add( kmer, gene_id );
+                }
             }
         }
 
@@ -436,12 +467,12 @@ mod tests {
 
         assert_eq!( mapper.with_data, 11 );
 
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0));
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(vec![0]));
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(vec![1]));
 
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string() );
 
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(2));
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(vec![2]));
 
         let mut gnames = Vec::<String>::with_capacity(3);
         gnames.push( "Gene1".to_string() );

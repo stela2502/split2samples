@@ -115,6 +115,7 @@ fn main() {
 
     let pos:&[usize;8];
     let min_sizes:&[usize;2];
+    
 
     if &opts.version == "v1"{
         pos = &[0,9, 21,30, 43,52, 52,60 ];
