@@ -314,18 +314,21 @@ impl  FastMapper{
             idx = i as usize;
             if self.mapper[idx].has_data(){
                 match ofile.buff1.write( &i.to_le_bytes() ){
-                    Ok(_) => (), //println!("i: {} -> {:?}",i, &i.to_le_bytes()  ) ,
+                    //Ok(_) => (), 
+                    Ok(_) => println!("i: {} -> {:?}",i, &i.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("i could not be written"),
                 };
                 //write the amount of downstream entries
                 count = self.mapper[idx].map.len();
                 match ofile.buff1.write( &count.to_le_bytes() ){
-                    Ok(_) => (), //println!("count: {} -> {:?}",count, &count.to_le_bytes()  ) ,
+                    //Ok(_) => (), 
+                    Ok(_) => println!("count: {} -> {:?}",count, &count.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("count could not be written"),
                 };
                 for (key, value) in self.mapper[idx].map.iter(){
                     match ofile.buff1.write( &key.to_le_bytes() ){
-                        Ok(_) => (), //println!("key: {} -> {:?}",key, &key.to_le_bytes()  ) ,
+                        //Ok(_) => (), 
+                        Ok(_) => println!("key: {} -> {:?}",key, &key.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
                     };
                     // now we need the NameEntry.ken() to to_le_bytes()

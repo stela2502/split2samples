@@ -176,7 +176,7 @@ impl Gene{
 		}
 		let mut mrna = Vec::<u8>::with_capacity(size);
 		for reg in &self.exons{
-			//println!( "exon start {} and end {}", reg[0]-1, reg[1]);
+			println!( "gene {} exon start {} and end {}", self.name,reg[0]-1, reg[1]);
 			mrna.extend_from_slice(&seq[reg[0]-1..reg[1]]); 
 		}
 		for &b in mrna.iter() {
