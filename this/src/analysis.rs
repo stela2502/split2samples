@@ -1,6 +1,6 @@
 use needletail::parse_fastx_file;
 use kmers::naive_impl::Kmer;
-use std::collections::HashSet;
+//use std::collections::HashSet;
 
 use crate::cellids::CellIds;
 use crate::singlecelldata::SingleCellData;

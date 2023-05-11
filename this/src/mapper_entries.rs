@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+//use std::collections::BTreeMap;
 
 
 /// A mapper entry is a simplistic storage for the fast mapper class.
@@ -7,27 +7,24 @@ use std::collections::BTreeMap;
 
 #[derive(Debug,PartialEq)]
 pub struct NameEntry{
-	pub map:Vec<usize>, // the data storage
+	pub data:Vec<usize>, // the data storage
 }
 
 impl NameEntry{
 	pub fn new() -> Self{
-		let map = Vec::new();
+		let data = Vec::new();
 		Self{ 
-			map 
+			data
 		}
 	}
 
 	pub fn add( &mut self, id:usize) {
-		if ! self.map.contains( &id ) {
-			self.map.push(id);
+		if ! self.data.contains( &id ) {
+			self.data.push(id);
 		}
 	}
 	pub fn get( &self ) -> Vec<usize>{
-		self.map.clone()
-	}
-	pub fn get_mut( &mut self ) -> &mut Vec<usize>{
-		&mut self.map
+		self.data.clone()
 	}
 
 }
@@ -35,13 +32,13 @@ impl NameEntry{
 
 #[derive(Debug,PartialEq)]
 pub struct MapperEntry{
-	pub map:BTreeMap<u64, NameEntry>, // the data storage
+	pub map:Vec::<(u64, NameEntry)>, // the data storage
 	only:usize
 }
 
 impl MapperEntry{
 	pub fn new() -> Self{
-		let  map = BTreeMap::new();
+		let map = Vec::<(u64, NameEntry)>::new();
 		let only =0;
 		Self{
 			map,
@@ -50,21 +47,95 @@ impl MapperEntry{
 	}
 
 	pub fn add( &mut self, seq:u64, id:usize) {
-		match self.map.get_mut( &seq ){
-			Some( name_entry ) =>  {
-				name_entry.add( id );
+		match self.find(&seq) {
+			Some( id ) =>  {
+				self.map[id].1.add( id );
 			},
 			None => {
 				let mut name_entry = NameEntry::new();
 				name_entry.add( id );
-				self.map.insert( seq, name_entry );
+				self.map.push( (seq, name_entry) );
 			}
 		};
 		self.only = id;
 	}
 
+	/// finds the most likely matching entry in our set of sequences.
+	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
+	/// But not continuousely as that would need me to convert them back to string.
+	/// If this becomes necessary it can be added later.
+	pub fn find (&self, seq:&u64 ) -> Option<usize> {
+		for i in 1..self.map.len() {
+			if seq == &self.map[i].0 {
+				return Some(i);
+			}
+		}
+		// now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
+		let seq_u8 = seq.clone().to_le_bytes();
+		let mut seq_other:[u8;8];
+		let mut count = Vec::<usize>::with_capacity(self.map.len() );
+		let mut max = 0;
+		let mut id = 0;
+		let mut entry_id = 0;
+		for entry in &self.map {
+			seq_other = entry.0.clone().to_le_bytes();
+			let mut c = 0;
+			for i in 0..8{
+				if seq_u8[i] == seq_other[i] {
+					c +=1;
+				}
+				
+			}
+			if max < c {
+				max = c;
+				entry_id = id;
+			}
+			id +=1;
+			count.push(c);
+		}
+		if max >1 {
+			return Some(entry_id);
+		}
+		return None
+	}
+
+	// pub fn find_mut (&mut self, seq:&u64 ) -> Option(mut NameEntry) {
+	// 	for entry in self.map {
+	// 		if seq == entry[0] {
+	// 			return Some(mut entry[1]);
+	// 		}
+	// 	}
+	// 	/// now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
+	// 	let seq_u8 = seq.clone().to_le_bytes()?;
+	// 	let mut seq_other:[u8;4];
+	// 	let mut count = Vec::<usize>::with_capacity(self.map.len() );
+	// 	let mut max = 0;
+	// 	let id = 0;
+	// 	for entry in self.map {
+	// 		seq_other = entry[0].clone().to_le_bytes()?;
+	// 		let mut c = 0;
+	// 		for i in 0..4{
+	// 			if seq_u8[i] == seq_other[i] {
+	// 				c +=1;
+	// 			}
+	// 		}
+	// 		if max < c {
+	// 			max = c;
+	// 			id = i;
+	// 		}
+	// 		count.push(c);
+	// 	}
+	// 	if max >1 {
+	// 		return Some(mut self.map[i][1]);
+	// 	}
+	// 	return None
+	// }
+
 	pub fn get( &self,seq:&u64 ) -> Option<Vec<usize>> {
-		Some(self.map.get( seq )?.get())
+		match self.find(seq){
+			Some(id) => return Some(self.map[id].1.data.clone()),
+			None => return None,
+		};
 	}
 
 	pub fn has_data(&self) -> bool{
@@ -75,9 +146,9 @@ impl MapperEntry{
 	/// third how many entries with more than one gene
 	pub fn info (&self) -> [usize;3] {
 		let mut ret: [usize;3] = [0,0,0];
-		for entry in self.map.values(){ //.cloned().collect() {
+		for i in 0..self.map.len(){
 			ret[0] +=1;
-			ret[1+ (entry.map.len() > 1) as usize] += 1;
+			ret[1+ (self.map[i].1.data.len() > 1) as usize] += 1;
 			// match entry.map.len() > 1{
 			// 	true => {
 			// 		ret[2] += 1;
