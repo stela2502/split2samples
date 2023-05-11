@@ -80,7 +80,7 @@ impl GeneIds{
 
         let mut checker = BTreeMap::<u8, usize>::new();
         let mut total = 0;
-        
+
         for kmer in needletail::kmer::Kmers::new(seq, self.kmer_size as u8 ) {
             checker.clear();
             //check for too simple kmers
@@ -109,7 +109,7 @@ impl GeneIds{
 
             //println!("Adding a gene id os length {} with seq {:?}", self.kmer_size, std::str::from_utf8(kmer) );
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
-            let km = self.tool.into_u64( kmer);
+            let km = self.tool.into_u64( kmer.to_vec() );
 
             if self.bad_entries.contains( &km ){
                 continue
@@ -182,7 +182,7 @@ impl GeneIds{
             //println!("Adding a gene id os length {} with seq {:?}", self.kmer_size, std::str::from_utf8(kmer) );
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
             //let km = Kmer::from(kmer).into_u64();
-            let km = self.tool.into_u64(kmer);
+            let km = self.tool.into_u64(kmer.to_vec());
             if self.bad_entries.contains( &km ){
                 continue
             }
@@ -579,7 +579,7 @@ impl GeneIds{
             if bad == 0{
                 // let s = str::from_utf8(km);
                 // println!( "this is the lib: {:?}",  s );
-                kmer_vec.push(  self.tool.into_u64(km) );
+                kmer_vec.push(  self.tool.into_u64(km.to_vec()) );
             }
        }
     }

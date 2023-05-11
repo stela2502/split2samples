@@ -5,6 +5,7 @@
 use kmers::naive_impl::Kmer;
 use std::collections::BTreeMap;
 //use needletail::bitkmer::BitKmer;
+use crate::int_to_str::IntToStr;
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
@@ -43,6 +44,8 @@ pub struct FastMapper{
     pub last_kmers: Vec<String>,
     pub with_data: usize,
     pub version: usize, //the version of this
+    tool: IntToStr,
+
 }
 
 // here the functions
@@ -64,6 +67,7 @@ impl  FastMapper{
         let last_kmers = Vec::with_capacity(60);
         let with_data = 0;
         let spacer = 3;
+        let tool = IntToStr::new();
         Self {
             kmer_len,
             spacer,
@@ -75,7 +79,8 @@ impl  FastMapper{
             last_count,
             last_kmers,
             with_data,
-            version: 1,
+            version: 2,
+            tool,
         }
     }
 
@@ -93,59 +98,73 @@ impl  FastMapper{
 
         let gene_id = self.get_id( name.to_string() );
 
-
-        'this: for i in 0..10{
-            // add three kmers at position 0+4 4+4 and 8+4
-            if seq.len() < self.kmer_len +8 + self.spacer * i{
+        let mut long:u64;
+        let mut short:u16;
+        let mut checker = BTreeMap::<u8, usize>::new();
+        let u8_seq_vec = self.tool.encode2bit_u8( seq.to_vec() );
+        let mut added = 0;
+        let mut i = 0;
+        while added < 3{
+            // add three subsequent kmers 8bp kmers (if possible)
+            // and one self.kmer_len additional sequence afterwards
+            i += 1;
+            if seq.len() < self.kmer_len  + 8*(i+1) {
                 break;
             }
-            let mut longer: u64 = 0;
-            for kmer_l in needletail::kmer::Kmers::new(&seq[(8 + self.spacer * i)..( self.kmer_len +8 + self.spacer * i)], self.kmer_len as u8){
-                //println!("And I try to get a longer from kmer_l {kmer_l:?}:");
-                for nuc in kmer_l {
-                    if *nuc ==b'N'{
-                        continue 'this;
+
+            short = self.tool.into_u16( seq[i*8..(i+1)*8].to_vec() );
+
+            checker.clear();
+            for nuc in &seq[i*8..(i+1)*8] {
+                match checker.get_mut( nuc ){
+                    Some( count ) => *count += 1,
+                    None => {
+                        if checker.insert( *nuc, 1).is_some(){};
                     }
+                };
+                if *nuc ==b'N'{
+                    continue;
                 }
-                longer = Kmer::from(kmer_l).into_u64();
-                break;
+            }
+            if checker.len() < 3{
+                //println!( "kmer for gene {} is too simple/not enough diff nucs): {:?} sequence: {short}", name,  seq[i*8..(i+1)*8].to_vec() );
+                continue;
             }
 
+           
+            
+            for ( key, value ) in checker.iter(){
+                //println!( "kmer for gene {} is too simple/too many nucs same: sequence: {short} {:?} {:2}", name,  key.to_string(),*value as f32 / self.kmer_len as f32 );
 
-            //let kmer = needletail::kmer::Kmers::new(&seq[(0 + self.spacer *i)..(8+self.spacer*i)], 8 as u8 ).next().unwrap();
-
-            let mut index : usize = 0;
-            //println!("Is this a [u8] ({}, {})?: {:?}", (0 + 8 * i), ( 8 + 8 * i ), &seq[(8 + 8 * i)..(8 + 8 * i)]);
-            for kmer in needletail::kmer::Kmers::new(&seq[(0+ self.spacer * i)..(8 +self.spacer * i)], 8 as u8){
-                //println!("And I try to get a index from kmer {kmer:?}:");
-                for nuc in kmer {
-                    if *nuc ==b'N'{
-                        continue 'this;
-                    }
-                }
-                index = Kmer::from(kmer).into_u64() as usize;
-                break;
+                if *value as f32 / self.kmer_len as f32 > 0.4 {
+                    //println!( "kmer for gene {} is too simple/too many nucs same: sequence: {short} {:?} {:2}", name,  key, *value as f32 / self.kmer_len as f32 );
+                    continue;
+                } 
             }
+            
+            long = self.tool.into_u64( seq[(i+1)*8..(i+1)*8+self.kmer_len].to_vec() );
+
 
             //println!("This is what I would add here: {index} and {longer}");
 
 
-            match self.mapper.get_mut(index){
-                Some( genebox ) => {
-                    if genebox.map.len() == 0{
-                        self.with_data +=1;
-                    }
-                    genebox.add( longer , gene_id );
-                    //println!("Cool I got a gene box! {genebox:?}");
-                },
-                None => {
-                    //panic!("I must not need to create the MapperEntry like ever!");
-                    let mut b =  MapperEntry::new( ) ;
-                    b.add( longer , gene_id  );
-                    println!("Cool I got a new gene box!? {b:?}");
-                    self.mapper.insert(index,  b ); 
-                }
-            }
+            self.mapper[short as usize].add( long, gene_id );
+            added +=1;
+            //     Some( genebox ) => {
+            //         if genebox.map.len() == 0{
+            //             self.with_data +=1;
+            //         }
+            //         genebox.add( longer , gene_id );
+            //         //println!("Cool I got a gene box! {genebox:?}");
+            //     },
+            //     None => {
+            //         //panic!("I must not need to create the MapperEntry like ever!");
+            //         let mut b =  MapperEntry::new( ) ;
+            //         b.add( longer , gene_id  );
+            //         println!("Cool I got a new gene box!? {b:?}");
+            //         self.mapper.insert(index,  b ); 
+            //     }
+            // }
             total +=1;
         }
         
@@ -328,7 +347,7 @@ impl  FastMapper{
                 for tuple  in self.mapper[idx].map.iter(){
                     match ofile.buff1.write( &tuple.0.to_le_bytes() ){
                         //Ok(_) => (), 
-                        Ok(_) => println!("the u64 kmer: {:b} -> {:?}",tuple.0, &tuple.0.to_le_bytes()  ) ,
+                        Ok(_) => println!("the u64 kmer: {} or {:b} -> {:?}",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
                     };
                     // now we need the NameEntry.len() to to_le_bytes()

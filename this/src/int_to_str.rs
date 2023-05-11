@@ -20,17 +20,36 @@ impl IntToStr {
 		}
 	}
 
-	pub fn into_u64(&self,  data:&[u8] ) -> u64{
+	/// needed for the secundary mappings
+    /// takes the UTF8 encoded sequence and encodes the first 32 into a u64 
+	pub fn into_u64(&self,  data:Vec::<u8> ) -> u64{
 
 		let vec = self.encode2bit_u8_sized( data.to_vec(), 32 );
-		if vec.len() < 4 {
+		let a: u64 = *vec.get(0).unwrap_or(&0_u8) as u64;
+   		let b: u64 = *vec.get(1).unwrap_or(&0_u8) as u64;
+    	let c: u64 = *vec.get(2).unwrap_or(&0_u8) as u64;
+    	let d: u64 = *vec.get(3).unwrap_or(&0_u8) as u64;
+    	let e: u64 = *vec.get(4).unwrap_or(&0_u8) as u64;
+   		let f: u64 = *vec.get(5).unwrap_or(&0_u8) as u64;
+    	let g: u64 = *vec.get(6).unwrap_or(&0_u8) as u64;
+    	let h: u64 = *vec.get(7).unwrap_or(&0_u8) as u64;
+    	let concatenated: u64 = (a << 56) | (b << 48) | (c << 40) | (d << 32) | (e << 24) | (f << 16) | (g << 8) | h as u64;
+    	//let concatenated: u64 = (a << 24) | (b << 16) | (c << 8) | d;
+    	concatenated
+
+	}
+
+	// this is needed for the initial mappers
+	// takes the utf8 encoded seqences and converts them into one u16
+	pub fn into_u16(&self,  data:Vec::<u8> ) -> u16{
+
+		let vec = self.encode2bit_u8_sized( data.to_vec(), 16 );
+		if vec.len() < 2 {
 			panic!("Not enough data to create one (leading) u64 from this data");
 		}
-		let a: u64 = u64::from(vec[0]);
-   		let b: u64 = u64::from(vec[1]);
-    	let c: u64 = u64::from(vec[2]);
-    	let d: u64 = u64::from(vec[3]);
-    	let concatenated: u64 = (a << 24) | (b << 16) | (c << 8) | d;
+		let a: u16 = u16::from(vec[0]);
+   		let b: u16 = u16::from(vec[1]);
+    	let concatenated: u16 =  (a << 8) | b;
     	concatenated
 
 	}
