@@ -24,17 +24,56 @@ impl IntToStr {
 	pub fn encode2bit_u8( array:Vec::<u8> ) -> Vec::<u8> {
 		// 4 of the array u8 fit into one result u8
 		let mut ret = Vec::<u8>::with_capacity( array.len()/4+1);
-
-		for i in 0..array.len(){
-			if i % 4 == 0{ // need to push a new entry	
+		let mut id = 0;
+		for i in IntToStr::encode_positions(array.len()){
+			if id % 4 == 0{ // need to push a new entry	
 				let mut val:u8=0;
 				ret.push(val);
 			}
-			ret[i/4] <<=2;
-			ret[i/4] |= IntToStr::encode_binary(array[i]);
+			ret[id/4] <<=2;
+			if array.len()> i {
+				ret[id/4] |= IntToStr::encode_binary(array[i]);
+			}
+			else {
+				ret[id/4] |= IntToStr::encode_binary(b'A');
+			}
+			id +=1;
 		}
 		ret
 	}
+	pub fn encode_positions(len: usize) -> Vec::<usize> {
+
+	    let mut chunk_index:usize;  // Determine the chunk index (0, 1, 2, ...)
+	    let mut remainder = len % 4;    // Determine the remainder within the chunk (0, 1, 2, 3)
+	    
+	    let mut target = len;
+	    if remainder != 0{
+	    	target +=  4 - remainder;
+	    }
+		println! ("encode_positions for len {len} has the target at {target}");
+	    // Calculate the encoded value based on the chunk index and remainder
+	    let mut ret = Vec::<usize>::with_capacity(target);
+	    for index in 0..target{
+	    	chunk_index = index / 4;
+	    	remainder = index % 4;
+	    	ret.push( (3 - remainder) + chunk_index * 4 );
+	    	println! ("encode_positions at {index} got {}", (3 - remainder) + chunk_index * 4 );
+	    }
+
+	    ret
+	}
+
+	pub fn encode_positions(index: usize) -> usize {
+
+	    let chunk_index = index / 4;  // Determine the chunk index (0, 1, 2, ...)
+	    let remainder = index % 4;    // Determine the remainder within the chunk (0, 1, 2, 3)
+
+	    // Calculate the encoded value based on the chunk index and remainder
+	    let encoded_value = (3 - remainder) + chunk_index * 4;
+
+	    encoded_value
+	}
+
 
 	pub fn encode_binary(c: u8) -> Base {
     	// might have to play some tricks for lookup in a const
@@ -99,16 +138,35 @@ mod tests {
 
     use crate::int_to_str::IntToStr;
 
+
+     #[test]
+    fn check_encode_positions() {
+
+    	//let orig = vec![0,1,2,3,4,5,6,7,8,9,10];
+    	let mut expected = vec![3,2,1,0,7,6,5,4,11,10,9,8];
+
+    	let mut order = IntToStr::encode_positions( 9 );
+
+    	assert_eq!( order, expected ); 
+    	expected = vec![3,2,1,0,7,6,5,4];
+    	order = IntToStr::encode_positions( 8 );
+
+    	assert_eq!( order, expected ); 
+                            
+    }
+
      #[test]
     fn check_conversion_4bp() {
 
     	let seq = b"AGGC";
+    	//		   C G G A
+    	//         01101000
     	let binary = IntToStr::encode2bit_u8( seq.to_vec() );
 
     	assert_eq!( binary.len(),  1 ); 
-
+    	//panic!("{:b}", binary[0] );
     	//                          G G C 
-    	assert_eq!( binary, vec![ 0b101001 ]);
+    	assert_eq!( binary, vec![ 0b1101000 ]);
 
     	let mut decoded:String = "".to_string();
 
@@ -117,19 +175,23 @@ mod tests {
                             
     }
 
+
+
      #[test]
     fn check_conversion_15bp() {
-
+        //          0000111122223333   
     	let seq = b"AGGCTTGATAGCGAG";
     	let binary = IntToStr::encode2bit_u8( seq.to_vec() );
 
     	assert_eq!( binary.len(),  4 );
 
-    	panic!("{:b} {:b} {:b} {:b}", binary[0], binary[1], binary[2], binary[3] );
+    	//panic!("{:b} {:b} {:b} {:b}", binary[0], binary[1], binary[2], binary[3] );
 		//												  A G C A
 		//												0b00100100  
     	//                          G G C     T T G A     T A G C     G A G
-    	assert_eq!( binary, vec![ !0b101001, !0b11111000, !0b11001001, !0b100010 ]);
+
+    	//panic!("the binaries I get: {:b} {:b} {:b} {:b} ", binary[0], binary[1], binary[2], binary[3]);
+    	assert_eq!( binary, vec![ 0b1101000, 0b101111, 0b1100011, 0b100010 ]);
 
     	let mut decoded:String = "".to_string();
 
@@ -174,7 +236,7 @@ mod tests {
     }
 
 
-         #[test]
+    #[test]
     fn check_conversion_4_from_15bp() {
 
     	let seq = b"AGGCCTGTATGA";
@@ -183,7 +245,7 @@ mod tests {
     	assert_eq!( binary.len(),  3 ); 
 
     	//                          G G C 
-    	assert_eq!( binary[0], 0b101001  );
+    	assert_eq!( binary[0], 0b1101000  );
 
     	let mut decoded:String = "".to_string();
 
