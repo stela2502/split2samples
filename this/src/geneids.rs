@@ -559,7 +559,6 @@ impl GeneIds{
             if i == kmer_size{
                 break;
             }
-
         //println!( "({})Can I get that {u8_rep} to u2 ({i})? {:?}, {:?}, {:?}, {:?}, {:?}", self.seq_len, u8_rep & 0x03,  u8_rep & 0x0C, u8_rep & 0x30 , u8_rep & 0xC0, data );
         }
     }
