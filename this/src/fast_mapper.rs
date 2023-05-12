@@ -44,7 +44,7 @@ pub struct FastMapper{
     pub last_kmers: Vec<String>,
     pub with_data: usize,
     pub version: usize, //the version of this
-    tool: IntToStr,
+    pub tool: IntToStr,
 
 }
 
@@ -230,28 +230,31 @@ impl  FastMapper{
                 continue;
             }
             
-            let index = Kmer::from(kmer).into_u64() as usize;
+            let index = self.tool.into_u16( kmer.to_vec() ) as usize;
             let mapper = match self.mapper.get_mut(index){
-                Some( map) => map,
+                Some( map) => {
+                    if map.has_data(){
+                        println!("I have a match for the sequence {index} with these genes:");
+                        map.print();
+                    }
+                    
+                    map
+                },
                 None => return None
             };
             //println!("got the index {index} and the mapper {mapper:?} searching for");
             //let mapper:MapperEntry = &*box_;
             if mapper.has_data() {
-                let mut longer: u64;
-                for kmer_l in needletail::kmer::Kmers::new(&seq[(8 + id)..(self.kmer_len +8 + id)], self.kmer_len as u8){
-                    //println!("And I try to get a longer from kmer_l {kmer_l:?}:");
-                    longer = Kmer::from(kmer_l).into_u64();
-                    //println!("got the index {index} and the mapper {mapper:?} searching for longer {longer}");
-                    match mapper.get(&longer){
-                        Some( gene_id ) => {
-                            //println!("Got one: {gene_id}");
-                            if gene_id.len() == 1{
-                                return Some(gene_id[0]);
-                            }  
-                        },
-                        None => (),
-                    }
+                let longer = self.tool.into_u64( seq[(8 + id)..(self.kmer_len +8 + id)].to_vec() );
+                println!("got the index {index} and the long kmer {longer} to match");
+                match mapper.get(&longer){
+                    Some( gene_id ) => {
+                        println!("Got one: {gene_id:?}");
+                        if gene_id.len() == 1{
+                            return Some(gene_id[0]);
+                        }  
+                    },
+                    None => (),
                 }
             }
             id +=1;

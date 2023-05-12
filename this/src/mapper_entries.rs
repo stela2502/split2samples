@@ -27,6 +27,10 @@ impl NameEntry{
 		self.data.clone()
 	}
 
+	pub fn to_string( &self ) -> String {
+		format!("NameEntry linking to {} gene_ids: {:?}", self.data.len(), self.data )
+	}
+
 }
 
 
@@ -65,8 +69,9 @@ impl MapperEntry{
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
 	pub fn find (&self, seq:&u64 ) -> Option<usize> {
-		for i in 1..self.map.len() {
+		for i in 0..self.map.len() {
 			if seq == &self.map[i].0 {
+				println!("Match to the internal seq {}", self.map[i].0 );
 				return Some(i);
 			}
 		}
@@ -80,8 +85,10 @@ impl MapperEntry{
 		for entry in &self.map {
 			seq_other = entry.0.clone().to_le_bytes();
 			let mut c = 0;
+			println!("I try to match the other {} to mine: {} or {:?}",seq, entry.0, seq_u8);
 			for i in 0..8{
 				if seq_u8[i] == seq_other[i] {
+					println!("\t\t\tmatch {}", seq_u8[i]);
 					c +=1;
 				}
 				
@@ -99,37 +106,14 @@ impl MapperEntry{
 		return None
 	}
 
-	// pub fn find_mut (&mut self, seq:&u64 ) -> Option(mut NameEntry) {
-	// 	for entry in self.map {
-	// 		if seq == entry[0] {
-	// 			return Some(mut entry[1]);
-	// 		}
-	// 	}
-	// 	/// now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
-	// 	let seq_u8 = seq.clone().to_le_bytes()?;
-	// 	let mut seq_other:[u8;4];
-	// 	let mut count = Vec::<usize>::with_capacity(self.map.len() );
-	// 	let mut max = 0;
-	// 	let id = 0;
-	// 	for entry in self.map {
-	// 		seq_other = entry[0].clone().to_le_bytes()?;
-	// 		let mut c = 0;
-	// 		for i in 0..4{
-	// 			if seq_u8[i] == seq_other[i] {
-	// 				c +=1;
-	// 			}
-	// 		}
-	// 		if max < c {
-	// 			max = c;
-	// 			id = i;
-	// 		}
-	// 		count.push(c);
-	// 	}
-	// 	if max >1 {
-	// 		return Some(mut self.map[i][1]);
-	// 	}
-	// 	return None
-	// }
+	pub fn print(&self) {
+		if  self.has_data() {
+			//println!("I have {} u64 matching sequences:", self.map.len() );
+			for entry in &self.map{
+				println!( "\tThe sequence {} links to the {}", entry.0, entry.1.to_string() );
+			}
+		}
+	}
 
 	pub fn get( &self,seq:&u64 ) -> Option<Vec<usize>> {
 		match self.find(seq){
@@ -161,9 +145,6 @@ impl MapperEntry{
 		ret
 	}
 
-	pub fn print( &self ){
-
-	}
 }
 
 #[cfg(test)]

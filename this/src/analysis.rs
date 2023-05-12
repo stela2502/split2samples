@@ -376,6 +376,7 @@ impl Analysis<'_>{
                                 	umi,
                                 	report
                                 );
+                                //println!("analysis.parse() has a match to {gene_id} for sequence {:?}", self.genes.tool.encode2bit_u8( seqrec.seq().to_vec() ));
                                 if *gene_id == report_gid {
                                 	match seqrec1.write(&mut report.ofile.buff1, None){
 	                                    Ok(_) => (),
