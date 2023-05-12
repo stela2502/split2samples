@@ -10,6 +10,10 @@ The output from here can easily be read into any single cell analysis package fo
 
 You can inspect the state of the program using this [deatiled comparison between the seven bridges BD Rhapsody pipeline and the Rhapsody output here]( ./testData/BD_results/CombinedAnalysis_scanpy.ipynb).
 
+## News
+
+The news [can be read here](./News.md).
+
 # Installation
 
 You need the Rust compiler: https://www.rust-lang.org/tools/install

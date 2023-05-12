@@ -1,3 +1,13 @@
+# 1.2.0
+
+The mapper has changed completely.
+Switched from a BTreeMap to a 2bit u16 initial vector with the 2bit u16 entries as index and later on 2bit u64 to match the following sequences.
+Missing sequences are 'replaced' by 'A' == 0.
+
+The index can now also be calculated over the whole genome using the new create_index tool.
+In addition there is a small helper that converts a up to u128 integer to Nucleotide sequence (int_2_seq).
+
+
 # 0.2.0
 
 Support for three bd primer types added:
