@@ -234,7 +234,7 @@ impl  FastMapper{
             i +=1;
         }
         
-        println!("I have now {total} mappers for the gene {name}");
+        //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
             panic!("gene {} does not get an entry in the fast_mapper object! - too short!!", &name.as_str() );
         }
@@ -329,6 +329,9 @@ impl  FastMapper{
                             match genes.get_mut(&gid) {
                                 Some(mut gene_count) => {
                                     *gene_count +=1;
+                                    if *gene_count == 4 {
+                                        break 'main;
+                                    }
                                 },
                                 None => {
                                     genes.insert( gid, 1);
@@ -440,33 +443,33 @@ impl  FastMapper{
             idx = i as usize;
             if self.mapper[idx].has_data(){
                 match ofile.buff1.write( &i.to_le_bytes() ){
-                    //Ok(_) => (), 
-                    Ok(_) => println!("8bp mapper: {:b} binary -> {:?} bytes",i, &i.to_le_bytes()  ) ,
+                    Ok(_) => (), 
+                    //Ok(_) => println!("8bp mapper: {:b} binary -> {:?} bytes",i, &i.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("i could not be written"),
                 };
                 //write the amount of downstream entries
                 count = self.mapper[idx].map.len();
                 match ofile.buff1.write( &count.to_le_bytes() ){
-                    //Ok(_) => (), 
-                    Ok(_) => println!("amount of 32 bp second kmers to the first 8bp: {} -> {:?} bytes",count, &count.to_le_bytes()  ) ,
+                    Ok(_) => (), 
+                    //Ok(_) => println!("amount of 32 bp second kmers to the first 8bp: {} -> {:?} bytes",count, &count.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("count could not be written"),
                 };
                 for tuple  in self.mapper[idx].map.iter(){
                     match ofile.buff1.write( &tuple.0.to_le_bytes() ){
-                        //Ok(_) => (), 
-                        Ok(_) => println!("the u64 kmer: {} or {:b} binary -> {:?} bytes",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,
+                        Ok(_) => (), 
+                        //Ok(_) => println!("the u64 kmer: {} or {:b} binary -> {:?} bytes",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
                     };
                     // now we need the NameEntry.len() to to_le_bytes()
                     match ofile.buff1.write( &tuple.1.data.len().to_le_bytes() ){
-                        //Ok(_) => (),
-                        Ok( len ) => println!("length of gene list attached to that 32bp kmer: {:?}",len   ) ,
+                        Ok(_) => (),
+                        //Ok( len ) => println!("length of gene list attached to that 32bp kmer: {:?}",len   ) ,
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
                     for id in &tuple.1.data{
                         match ofile.buff1.write( &id.to_le_bytes() ){
-                            //Ok(_) => (),
-                            Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
+                            Ok(_) => (),
+                            //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
                         };
                     }

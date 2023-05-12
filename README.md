@@ -211,7 +211,43 @@ user    0m1,197s
 sys     0m0,016s
 ```
 
-So ~ 4 sec. I do not think it makes sense to calculate the difference here.
+### version 1.2.0
+
+```
+time ../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
+Analysis will stop after having processed 18446744073709551615 fastq entries containing a cell info
+
+init models
+the log file: Mapping_log.txt
+   0.50 mio reads (99.34% usable; 77.13% PCR dupl. [usable] [37.54% for last batch])                                                                                                                               
+
+Writing outfiles ...
+sparse Matrix: 34 cell(s), 283 gene(s) and 2706 entries written (87 cells too view umis) to path Ok("Rustody_S2/BD_Rhapsody_expression"); 
+sparse Matrix: 34 cell(s), 2 gene(s) and 2 entries written (87 cells too view umis) to path Ok("Rustody_S2/BD_Rhapsody_antibodies"); 
+dense matrix: 34 cell written - 87 cells too view umis
+
+Summary:
+total      reads  : 500000 reads
+no cell ID reads  : 0 reads
+no gene ID reads  : 10066 reads
+N's or too short  : 3228 reads
+cellular reads    : 486706 reads (97.34% of total)
+expression reads  : 486680 reads (97.34% of total)
+antibody reads    : 2 reads (0.00% of total)
+sample tag reads  : 24 reads (0.00% of total)
+pcr duplicates    : 375396 reads (77.13% of usable)
+
+Cell->Sample table written to "Rustody_S2/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 2 sec 481milli sec
+
+
+real  0m2,486s
+user  0m2,482s
+sys 0m0,004s
+```
+
+So \> 4 sec. I do not think it makes sense to calculate the difference here.
 
 The two results from this small example are compared [here]( ./testData/BD_results/CombinedAnalysis_scanpy.ipynb).
 
