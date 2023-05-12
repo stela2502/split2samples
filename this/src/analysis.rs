@@ -168,6 +168,8 @@ impl Analysis<'_>{
 	    }
 	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
 
+	    let mut seq_temp:Vec::<u8>;
+
 	    if let Some(ex) = expression {
 	    	if Path::new(&ex).exists(){
 
@@ -179,7 +181,9 @@ impl Analysis<'_>{
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		if ! genes.names.contains_key(  id ){
-			                    	genes.add( &seqrec.seq().to_vec(), id.to_string() );
+		                			seq_temp = seqrec.seq().to_vec();
+		                			//seq_temp.reverse();
+			                    	genes.add( &seq_temp, id.to_string() );
 		                    		gene_names.push( id.to_string() );
 		                    	}
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
@@ -203,7 +207,9 @@ impl Analysis<'_>{
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
-			                    genes.add( &seqrec.seq().to_vec(), id.to_string() );
+		                		seq_temp = seqrec.seq().to_vec();
+		                		//seq_temp.reverse();
+			                    genes.add( &seq_temp, id.to_string() );
 		                    	ab_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 		                	};
@@ -232,42 +238,41 @@ impl Analysis<'_>{
 	    for i in 1..13{
 	        sample_names.push( format!("Sample{i}") )
 	    }
-
+	    let mut id = 1;
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
-	        genes.add( &b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG".to_vec(), "Sample1".to_string() );
-	        genes.add( &b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG".to_vec(), "Sample2".to_string() );
-	        genes.add( &b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT".to_vec(), "Sample3".to_string() );
-	        genes.add( &b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT".to_vec(), "Sample4".to_string() );
-	        genes.add( &b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG".to_vec(), "Sample5".to_string() );
-	        genes.add( &b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC".to_vec(), "Sample6".to_string() );
-	        genes.add( &b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT".to_vec(), "Sample7".to_string() );
-	        genes.add( &b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT".to_vec(), "Sample8".to_string() );
-	        genes.add( &b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG".to_vec(), "Sample9".to_string() );
-	        genes.add( &b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC".to_vec(), "Sample10".to_string() );
-	        genes.add( &b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC".to_vec(), "Sample11".to_string() );
-	        genes.add( &b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG".to_vec(), "Sample12".to_string() );
+	        let sequences = [ b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG".to_vec(), b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG".to_vec(),
+	        b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT".to_vec(), b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT".to_vec(), 
+	        b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG".to_vec(), b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC".to_vec(),
+	        b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT".to_vec(), b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT".to_vec(),
+	        b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG".to_vec(), b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC".to_vec(),
+	        b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC".to_vec(), b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG".to_vec() ];
+
+	        for mut seq in sequences{
+	        	//seq.reverse();
+	        	genes.add( &seq, format!("Sample{id}") );
+	        	id +=1;
+	        }
 	    }
 	    else if specie.eq("mouse") {
 	        // and the mouse ones
-	        genes.add( &b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG".to_vec(), "Sample1".to_string() );
-	        genes.add( &b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC".to_vec(), "Sample2".to_string() );
-	        genes.add( &b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC".to_vec(), "Sample3".to_string() );
-	        genes.add( &b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT".to_vec(), "Sample4".to_string() );
-	        genes.add( &b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT".to_vec(), "Sample5".to_string() );
-	        genes.add( &b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC".to_vec(), "Sample6".to_string() );
-	        genes.add( &b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC".to_vec(), "Sample7".to_string() );
-	        genes.add( &b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG".to_vec(), "Sample8".to_string() );
-	        genes.add( &b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC".to_vec(), "Sample9".to_string() );
-	        genes.add( &b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC".to_vec(), "Sample10".to_string() );
-	        genes.add( &b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT".to_vec(), "Sample11".to_string() );
-	        genes.add( &b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC".to_vec(), "Sample12".to_string() );
+	        let sequences = [b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG".to_vec(), b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC".to_vec(), 
+	        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC".to_vec(), b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT".to_vec(),
+	        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT".to_vec(), b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC".to_vec(),
+	        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC".to_vec(), b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG".to_vec(),
+	        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC".to_vec(), b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC".to_vec(),
+	        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT".to_vec(), b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC".to_vec()];
+
+	        for mut seq in sequences{
+	        	//seq.reverse();
+	        	genes.add( &seq, format!("Sample{id}") );
+	        	id +=1;
+	        }
 
 	    } else {
 	        println!("Sorry, but I have no primers for species {}", specie);
 	        std::process::exit(1)
 	    }
-	    
 	    
 		Self{
 			genes,
@@ -300,7 +305,7 @@ impl Analysis<'_>{
         pb.set_style(spinner_style);
         //pb.set_prefix(format!("[{}/?]", i + 1));
 
-        let report_gid = self.genes.get_id( "Cd3e".to_string() );
+        let report_gid = self.genes.get_id( "Sample1".to_string() );
 
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {

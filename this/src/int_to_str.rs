@@ -169,7 +169,7 @@ impl IntToStr {
 		for u8_4bp in km{
 			i += 4;
 			if i >= kmer_size {
-				println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);
+				//println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);
 				self.u8_to_str( kmer_size - i +4, &u8_4bp, data );
 				break;
 			}else {
@@ -322,5 +322,28 @@ mod tests {
         tool.decode_vec(3, binary, &mut decoded );
 		assert_eq!( decoded, "AGG" );                
     }
+
+    #[test]
+    fn check_longer_string() {
+
+    	let seq = b"CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC";
+    	let tool = IntToStr::new();
+    	let binary = tool.encode2bit_u8( seq.to_vec() );
+
+    	assert_eq!( binary.len(), 12 ); 
+
+    	//                       CT G G
+    	//                       G G T C
+    	assert_eq!( binary[0], 0b10101101  );
+
+    	let mut decoded:String = "".to_string();
+
+		tool.decode_vec(4, binary.clone(), &mut decoded );
+		assert_eq!( decoded, "CTGG" );      
+        decoded.clear();
+        tool.decode_vec(binary.len()*4 -3, binary, &mut decoded );
+		assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC" );                
+    }
+
 
 }

@@ -52,8 +52,8 @@ impl MapperEntry{
 
 	pub fn add( &mut self, seq:u64, id:usize) {
 		match self.find(&seq) {
-			Some( id ) =>  {
-				self.map[id].1.add( id );
+			Some( i ) =>  {
+				self.map[i].1.add( id );
 			},
 			None => {
 				let mut name_entry = NameEntry::new();
@@ -71,7 +71,7 @@ impl MapperEntry{
 	pub fn find (&self, seq:&u64 ) -> Option<usize> {
 		for i in 0..self.map.len() {
 			if seq == &self.map[i].0 {
-				println!("Match to the internal seq {}", self.map[i].0 );
+				//println!("Match to the internal seq {}", self.map[i].0 );
 				return Some(i);
 			}
 		}
@@ -85,10 +85,13 @@ impl MapperEntry{
 		for entry in &self.map {
 			seq_other = entry.0.clone().to_le_bytes();
 			let mut c = 0;
-			println!("I try to match the other {} to mine: {} or {:?}",seq, entry.0, seq_u8);
+			//println!("I try to match the other {} ({:?}) to mine: {} or {:?}",seq, seq_u8, entry.0, seq_other);
 			for i in 0..8{
 				if seq_u8[i] == seq_other[i] {
-					println!("\t\t\tmatch {}", seq_u8[i]);
+					if seq_u8[i] == 0{
+						continue;
+					}
+					//println!("\t\t\tmatch {}", seq_u8[i]);
 					c +=1;
 				}
 				
@@ -110,14 +113,16 @@ impl MapperEntry{
 		if  self.has_data() {
 			//println!("I have {} u64 matching sequences:", self.map.len() );
 			for entry in &self.map{
-				println!( "\tThe sequence {} links to the {}", entry.0, entry.1.to_string() );
+				//println!( "\tThe sequence {} links to the {}", entry.0, entry.1.to_string() );
 			}
 		}
 	}
 
 	pub fn get( &self,seq:&u64 ) -> Option<Vec<usize>> {
 		match self.find(seq){
-			Some(id) => return Some(self.map[id].1.data.clone()),
+			Some(id) => {
+				return Some(self.map[id].1.data.clone())
+			},
 			None => return None,
 		};
 	}
@@ -157,10 +162,10 @@ mod tests {
         let mut mapper = MapperEntry::new();
 
         mapper.add(12, 4 );
-        mapper.add(44, 3);
+        mapper.add(45, 3);
 
         assert_eq!( mapper.get(&12), Some(vec![4]) );
-        assert_eq!( mapper.get(&44), Some(vec![3]) );
+        assert_eq!( mapper.get(&45), Some(vec![3]) );
 
 		mapper.add(12, 14 );
 		assert_eq!( mapper.get(&12), Some(vec![4, 14]) );
