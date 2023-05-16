@@ -89,7 +89,7 @@ impl MapperEntry{
 			for i in 0..8{
 				if seq_u8[i] == seq_other[i] {
 					if seq_u8[i] == 0{
-						continue;
+						continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
 					}
 					//println!("\t\t\tmatch {}", seq_u8[i]);
 					c +=1;

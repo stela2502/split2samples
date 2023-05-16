@@ -39,7 +39,7 @@ pub struct FastMapper{
     pub mapper: Vec<MapperEntry>, // the position is the sequence!
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
-    pub names_store: Vec<String>, //sore gene names as vector
+    pub names_store: Vec<String>, //store gene names as vector
     pub max_id: usize,// hope I get the ids right this way...
     pub last_count: usize,
     pub last_kmers: Vec<String>,
@@ -164,6 +164,8 @@ impl  FastMapper{
         
         let mut total = 0;
 
+        println!("fast_mapper adds this genes: {}", name);
+
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.max_id );
             self.names_store.push( name.clone() );
@@ -182,7 +184,7 @@ impl  FastMapper{
         self.tool.decode_vec( seq.len(), u8_seq_vec, &mut tmp );
         //println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
         let mut i = 0;
-        'main: while i < 30{
+        'main: while i < 60{
             // add three subsequent kmers 8bp kmers (if possible)
             // and one self.kmer_len additional sequence afterwards
 
@@ -198,9 +200,12 @@ impl  FastMapper{
             }
 
             short = self.tool.into_u16( seq[i*8..(i+1)*8].to_vec() );
+
+            // comment out if not debugging
             let mut tmp = "".to_string();
             self.tool.decode_vec( 8, short.to_le_bytes().to_vec(), &mut tmp );
-            //println!("\t\t\tindex\t{tmp} {short}" );
+            println!("\t\t\tindex\t{tmp} {short}" );
+            //
 
             if seq.len() < (i+1)*8+self.kmer_len {
                 long = self.tool.into_u64( seq[(i+1)*8..seq.len()].to_vec() );
@@ -208,13 +213,17 @@ impl  FastMapper{
             else {
                 long = self.tool.into_u64( seq[(i+1)*8..(i+1)*8+self.kmer_len].to_vec() );
             }
+
+            // comment out if not debugging
             tmp.clear();
             self.tool.decode_vec( 32, long.to_le_bytes().to_vec(), &mut tmp );
-            //println!("\t\t\tlong\t{tmp} {long}");
+            println!("\t\t\tlong\t{tmp} {long}");
+            //
 
-            //println!("This is what I would add here: {short} and {long}");
-
-
+            if ! self.mapper[short as usize].has_data() {
+                // will add in the next step so
+                self.with_data +=1;
+            } 
             self.mapper[short as usize].add( long, gene_id );
             //     Some( genebox ) => {
             //         if genebox.map.len() == 0{
@@ -230,8 +239,8 @@ impl  FastMapper{
             //         println!("Cool I got a new gene box!? {b:?}");
             //         self.mapper.insert(index,  b ); 
             //     }
-            // }
-            i +=1;
+            // }   
+            i +=2; // 'jump' 16 bp on the sequence to cover more ground!
         }
         
         //println!("I have now {i} mappers for the gene {name}");
@@ -291,6 +300,7 @@ impl  FastMapper{
 
         let mut long:u64;
         let mut short:u16;
+        let mut stop: bool;
 
         'main: while i < 30{
             //println!("And I try to get a index from kmer {kmer:?} at pos {id}:");
@@ -320,6 +330,7 @@ impl  FastMapper{
 
             //println!("got the index {index} and the mapper {mapper:?} searching for");
             //let mapper:MapperEntry = &*box_;
+            stop = false;
             if self.mapper[short as usize].has_data() {
                 match self.mapper[short as usize].get(&long){
                     Some( gene_id ) => {
@@ -330,7 +341,7 @@ impl  FastMapper{
                                 Some(mut gene_count) => {
                                     *gene_count +=1;
                                     if *gene_count == 4 {
-                                        break 'main;
+                                        stop = true;
                                     }
                                 },
                                 None => {
@@ -343,6 +354,9 @@ impl  FastMapper{
                 }
             }
             i +=1;
+            if stop{
+                break 'main;
+            }
         }
         let mut max = 0;
         id = 0;
@@ -361,6 +375,20 @@ impl  FastMapper{
                 return Some(id);
             }else {
                 // we have more than one gene as a max count - that is inacceptable
+                // for the debug I need to know which genes I get here!
+                let mut gene_ids= Vec::<usize>::with_capacity(i);
+                for (gene_id, count) in &genes{
+                    if count == &max {
+                        gene_ids.push(*gene_id);
+                    }
+                }
+                if gene_ids.len() == 2 && ( gene_ids[0] +1 == gene_ids[1] || gene_ids[0] == gene_ids[1] +1 ) {
+                    // this is the gene and it's _int transcript not having a clear difference.
+                    // needs to be fixed in a later version of the index...
+                    return Some(gene_ids[0] )
+                }
+                println!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") );
+                println!("I got a multi mapper ({i}): {:?} -> returning None", gene_ids );
                 return None
             }
             
@@ -594,6 +622,11 @@ mod tests {
         
         mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
+
+        //ATCCCATCCTTCATTGTTCGCCTGGA #0
+        //CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC #1
+        //CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC #2
+        //...........................................................................
 
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
         geneid +=1;

@@ -90,17 +90,22 @@ impl Gene{
 
 	/// Select the correct regions from the gene and underlying sequences
 	/// to fill in the FastMapper index.
-	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper ){
+	/// the [u8] we get here has to be utf8 encoded!
+	/// not 2bit binaries!
+	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper, covered_area:usize ){
 
-		if ! self.sense_strand{ // I need the reverse sequence in the index!
+		if  self.sense_strand{ // I need the reverse sequence in the index!
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
 			match  &self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
-					if mrna.len() > 100{
-						index.add( &mrna[ 0..100 ].to_owned() , self.name.to_string() );
+					println!(">{}\n{}", self.id.to_string() + " " + &self.name + " " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
+					if mrna.len() > covered_area{
+						//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna[ 0..100]).expect("Invalid UTF-8") );
+						index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string() );
 					}
 					else {
+						//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna).expect("Invalid UTF-8") );
 						index.add( &mrna , self.name.to_string() );
 					}
 				},
@@ -110,15 +115,17 @@ impl Gene{
 				}
 			};
 
-			//if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100 {
-			if self.exons[ 0 ][1] - self.exons[ 0 ][0] < 100 {
+			if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100 {
+			// if self.exons[ 0 ][1] - self.exons[ 0 ][0] < 100 {
 				// we could reach the intron!
 				let addon = "_int".to_string();
 				match  &self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
-						if nascent.len() > 100{
-							index.add( &nascent[ 0..100].to_owned() , self.name.to_string() + &addon );
+						if nascent.len() > covered_area{
+							//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent[ 0..100]).expect("Invalid UTF-8") );
+							index.add( &nascent[ nascent.len()-covered_area..].to_owned() , self.name.to_string() + &addon );
 						}else{
+							//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent).expect("Invalid UTF-8") );
 							index.add( &nascent , self.name.to_string() + &addon );
 						}
 					},
@@ -132,10 +139,13 @@ impl Gene{
 			match  self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
 					let compl_mrna = Self::rev_compl ( mrna );
-					if compl_mrna.len() > 100{
-						index.add( &compl_mrna[ 0..100 ].to_owned() , self.name.to_string() );
+					println!(">{}\n{}", self.id.to_string() + " " + &self.name + " " + &self.chrom + " reverse" , std::str::from_utf8( &compl_mrna ).unwrap() );
+					if compl_mrna.len() > covered_area{
+						//eprintln!( "adding this compl_mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&compl_mrna[ 0..100]).expect("Invalid UTF-8") );
+						index.add( &compl_mrna[ compl_mrna.len()-covered_area.. ].to_owned() , self.name.to_string() );
 					}
 					else {
+						//eprintln!( "adding this compl_mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&compl_mrna).expect("Invalid UTF-8") );
 						index.add( &compl_mrna , self.name.to_string() );
 					}
 				},
@@ -145,16 +155,20 @@ impl Gene{
 				}
 			};
 
-			if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100{
+			// if self.exons[ self.exons.len()-1 ][1] - self.exons[ self.exons.len()-1 ][0] < 100{
+			if self.exons[ 0 ][1] - self.exons[ 0 ][0] < covered_area {
+
 				// we could reach the intron!
 				let addon = "_int".to_string();
 				match  self.to_nascent( seq.to_owned()){
 					Some( nascent ) => {
 						let compl = Self::rev_compl ( nascent );
 
-						if compl.len() > 100{
-							index.add( &compl[ 0..100 ].to_owned() , self.name.to_string() + &addon );
+						if compl.len() > covered_area{
+							//eprintln!( "adding this compl to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&compl[ 0..100]).expect("Invalid UTF-8") );
+							index.add( &compl[ compl.len()-covered_area.. ].to_owned() , self.name.to_string() + &addon );
 						}else{
+							//eprintln!( "adding this compl to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&compl).expect("Invalid UTF-8") );
 							index.add( &compl , self.name.to_string() + &addon );
 						}
 					},
@@ -172,12 +186,13 @@ impl Gene{
 	fn to_mrna(&self, seq:Vec<u8> ) -> Option<Vec<u8>>{
 		let mut size = 0;
 		for reg in &self.exons{
-			size += reg[1] - reg[0];
+			size += reg[1] - reg[0] +1;
 		}
 		let mut mrna = Vec::<u8>::with_capacity(size);
 		for reg in &self.exons{
-			println!( "gene {} exon start {} and end {}", self.name,reg[0]-1, reg[1]);
-			mrna.extend_from_slice(&seq[reg[0]-1..reg[1]]); 
+			//println!( "gene {} exon start {} and end {}", self.name,reg[0]-1, reg[1]);
+			mrna.extend_from_slice(&seq[reg[0]-1..reg[1]]);
+			//mrna.push(b'\n');
 		}
 		for &b in mrna.iter() {
     		let _entr = match CHECK[b as usize] {
@@ -185,7 +200,7 @@ impl Gene{
     			None => return None,
 			};
 		}
-		println!(">{} antisense\n{}", self.id.to_string() + " " + &self.name + " " + &self.chrom , std::str::from_utf8( &mrna ).unwrap() );
+		//println!(">{}\n{}", self.id.to_string() + " " + &self.name + " " + &self.chrom , std::str::from_utf8( &mrna ).unwrap() );
 		Some(mrna)
 	}
 

@@ -32,6 +32,8 @@ cp target/release/quantify_rhapsody /usr/bin
 cp target/release/bd_cell_id_2_seq /usr/bin
 cp target/release/bd_get_single_cell /usr/bin
 cp target/release/get_n_cell_reads /usr/bin
+cp target/release/int_2_seq /usr/bin
+
 ``` 
 
 Do not forget the --release while building the tool. 
@@ -294,6 +296,8 @@ quantify_rhapsody finished in 1h 36min 8 sec 767milli sec
 
 Little less than 2h. Let's check how much time BD's version does need...
 
+
+
 ## And BD software for the S2 sample
 
 
@@ -313,329 +317,22 @@ user    2283m4,866s
 ```
 Maximum memory requirement over this time: ~ 22.03 Gb.
 
-More than 38 hours the BD system stopped with an error,
-<details>
-    <summary>
-
-```
-40 (function(){return ((JSON.parse(self[0].contents).max_count));})()
-stdout was: ''
-stderr was: 'evalmachine.<anonymous>:40
-(function(){return ((JSON.parse(self[0].contents).max_count));})()
-```
-
-</summary>
-
-```
-Running RSEC on Cxcr6
-Traceback (most recent call last):
-  File "/opt/conda/bin/mist_annotate_molecules.py", line 33, in <module>
-    sys.exit(load_entry_point('mist==1.11.1', 'console_scripts', 'mist_annotate_molecules.py')())
-  File "src/mist/apps/AnnotateMolecules.py", line 172, in mist.apps.AnnotateMolecules.main
-  File "src/mist/apps/utils.py", line 349, in mist.apps.utils.node_timer.node_timer_inner
-  File "src/mist/apps/utils.py", line 350, in mist.apps.utils.node_timer.node_timer_inner
-  File "src/mist/apps/AnnotateMolecules.py", line 76, in mist.apps.AnnotateMolecules.annotate_molecules
-  File "src/mist/apps/AnnotateMolecules.py", line 77, in mist.apps.AnnotateMolecules.annotate_molecules
-  File "src/mist/apps/AnnotateMolecules.py", line 78, in mist.apps.AnnotateMolecules.annotate_molecules
-  File "src/mist/apps/AnnotateMolecules.py", line 105, in genexpr
-  File "/opt/conda/lib/python3.9/collections/__init__.py", line 593, in __init__
-    self.update(iterable, **kwds)
-  File "/opt/conda/lib/python3.9/collections/__init__.py", line 679, in update
-    _count_elements(self, iterable)
-  File "src/mist/apps/AnnotateMolecules.py", line 105, in genexpr
-  File "/opt/conda/lib/python3.9/csv.py", line 111, in __next__
-    row = next(self.reader)
-  File "/opt/conda/lib/python3.9/gzip.py", line 313, in read1
-    return self._buffer.read1(size)
-  File "/opt/conda/lib/python3.9/_compression.py", line 68, in readinto
-    data = self.read(len(byte_view))
-  File "/opt/conda/lib/python3.9/gzip.py", line 478, in read
-    self._read_eof()
-  File "/opt/conda/lib/python3.9/gzip.py", line 524, in _read_eof
-    raise BadGzipFile("CRC check failed %s != %s" % (hex(crc32),
-gzip.BadGzipFile: CRC check failed 0xcb91dc88 != 0x6039edc1
-WARNING [job AnnotateMolecules_4] exited with status: 1
-ERROR Expecting value: line 1 column 1 (char 0)
-script was:
-01 "use strict";
-02 var inputs = {
-03     "AbSeq_UMI": null,
-04     "Run_Metadata": {
-05         "location": "file:///mnt/data2/tmp/l646vxf_/run_metadata.json",
-06         "basename": "run_metadata.json",
-07         "nameroot": "run_metadata",
-08         "nameext": ".json",
-09         "class": "File",
-10         "checksum": "sha1$98da781bea38bbfdf942b84dedd3306ecfc1528b",
-11         "size": 2177,
-12         "http://commonwl.org/cwltool#generation": 0,
-13         "path": "/var/lib/cwl/stg27313649-e54e-40d0-9077-92ec21a0c264/run_metadata.json",
-14         "dirname": "/var/lib/cwl/stg27313649-e54e-40d0-9077-92ec21a0c264"
-15     },
-16     "Use_DBEC": null,
-17     "Valids": {
-18         "location": "file:///mnt/data2/tmp/s_mh_f4k/Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",
-19         "basename": "Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",
-20         "nameroot": "Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv",
-21         "nameext": ".gz",
-22         "class": "File",
-23         "checksum": "sha1$b86533ea9a444b9c629c0ed02b240b79b7d2039f",
-24         "size": 257705212,
-25         "http://commonwl.org/cwltool#generation": 0,
-26         "path": "/var/lib/cwl/stgf51c5461-bd47-462c-8559-cb5a3bd953f1/Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",
-27         "dirname": "/var/lib/cwl/stgf51c5461-bd47-462c-8559-cb5a3bd953f1"
-28     }
-29 };
-30 var self = [];
-31 var runtime = {
-32     "cores": 1,
-33     "ram": 32000,
-34     "tmpdirSize": 1024,
-35     "outdirSize": 1024,
-36     "exitCode": 1,
-37     "tmpdir": "/tmp",
-38     "outdir": "/nIvmVh"
-39 };
-40 (function(){return ((JSON.parse(self[0].contents).max_count));})()
-stdout was: ''
-stderr was: 'evalmachine.<anonymous>:40
-(function(){return ((JSON.parse(self[0].contents).max_count));})()
-                                        ^
-
-TypeError: Cannot read property 'contents' of undefined
-    at evalmachine.<anonymous>:40:41
-    at evalmachine.<anonymous>:40:65
-    at Script.runInContext (vm.js:130:18)
-    at Script.runInNewContext (vm.js:135:17)
-    at Object.runInNewContext (vm.js:302:38)
-    at Socket.<anonymous> ([eval]:11:57)
-    at Socket.emit (events.js:314:20)
-    at addChunk (_stream_readable.js:297:12)
-    at readableAddChunk (_stream_readable.js:268:11)
-    at Socket.Readable.push (_stream_readable.js:213:10)'
-
-Traceback (most recent call last):
-  File "/usr/lib/python3/dist-packages/cwltool/sandboxjs.py", line 384, in execjs
-    return cast(CWLOutputType, json.loads(stdout))
-  File "/usr/lib/python3.10/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-  File "/usr/lib/python3.10/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/usr/lib/python3.10/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/usr/lib/python3/dist-packages/cwltool/expression.py", line 393, in do_eval
-    return interpolate(
-  File "/usr/lib/python3/dist-packages/cwltool/expression.py", line 297, in interpolate
-    e = evaluator(
-  File "/usr/lib/python3/dist-packages/cwltool/expression.py", line 232, in evaluator
-    return execjs(
-  File "/usr/lib/python3/dist-packages/cwltool/sandboxjs.py", line 386, in execjs
-    raise JavascriptException(
-cwltool.sandboxjs.JavascriptException: Expecting value: line 1 column 1 (char 0)
-script was:
-01 "use strict";
-02 var inputs = {
-03     "AbSeq_UMI": null,
-04     "Run_Metadata": {
-05         "location": "file:///mnt/data2/tmp/l646vxf_/run_metadata.json",
-06         "basename": "run_metadata.json",
-07         "nameroot": "run_metadata",
-08         "nameext": ".json",
-09         "class": "File",
-10         "checksum": "sha1$98da781bea38bbfdf942b84dedd3306ecfc1528b",
-11         "size": 2177,
-12         "http://commonwl.org/cwltool#generation": 0,
-13         "path": "/var/lib/cwl/stg27313649-e54e-40d0-9077-92ec21a0c264/run_metadata.json",
-14         "dirname": "/var/lib/cwl/stg27313649-e54e-40d0-9077-92ec21a0c264"
-15     },
-16     "Use_DBEC": null,
-17     "Valids": {
-18         "location": "file:///mnt/data2/tmp/s_mh_f4k/Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",
-19         "basename": "Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",
-20         "nameroot": "Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv",
-21         "nameext": ".gz",
-22         "class": "File",
-23         "checksum": "sha1$b86533ea9a444b9c629c0ed02b240b79b7d2039f",
-24         "size": 257705212,
-25         "http://commonwl.org/cwltool#generation": 0,
-26         "path": "/var/lib/cwl/stgf51c5461-bd47-462c-8559-cb5a3bd953f1/Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",
-27         "dirname": "/var/lib/cwl/stgf51c5461-bd47-462c-8559-cb5a3bd953f1"
-28     }
-29 };
-30 var self = [];
-31 var runtime = {
-32     "cores": 1,
-33     "ram": 32000,
-34     "tmpdirSize": 1024,
-35     "outdirSize": 1024,
-36     "exitCode": 1,
-37     "tmpdir": "/tmp",
-38     "outdir": "/nIvmVh"
-39 };
-40 (function(){return ((JSON.parse(self[0].contents).max_count));})()
-stdout was: ''
-stderr was: 'evalmachine.<anonymous>:40
-(function(){return ((JSON.parse(self[0].contents).max_count));})()
-                                        ^
-
-TypeError: Cannot read property 'contents' of undefined
-    at evalmachine.<anonymous>:40:41
-    at evalmachine.<anonymous>:40:65
-    at Script.runInContext (vm.js:130:18)
-    at Script.runInNewContext (vm.js:135:17)
-    at Object.runInNewContext (vm.js:302:38)
-    at Socket.<anonymous> ([eval]:11:57)
-    at Socket.emit (events.js:314:20)
-    at addChunk (_stream_readable.js:297:12)
-    at readableAddChunk (_stream_readable.js:268:11)
-    at Socket.Readable.push (_stream_readable.js:213:10)'
-
-ERROR [job AnnotateMolecules_4] Job error:
-('Error collecting output for parameter \'Max_Count\': 1.11.1.cwl:231:25: Expression evaluation error:\n1.11.1.cwl:231:25: Expecting value: line 1 column 1 (char 0)\n1.11.1.cwl:231:25: script was:\n1.11.1.cwl:231:25: 01 "use strict";\n1.11.1.cwl:231:25: 02 var inputs = {\n1.11.1.cwl:231:25: 03     "AbSeq_UMI": null,\n1.11.1.cwl:231:25: 04     "Run_Metadata": {\n1.11.1.cwl:231:25: 05         "location": "file:///mnt/data2/tmp/l646vxf_/run_metadata.json",\n1.11.1.cwl:231:25: 06         "basename": "run_metadata.json",\n1.11.1.cwl:231:25: 07         "nameroot": "run_metadata",\n1.11.1.cwl:231:25: 08         "nameext": ".json",\n1.11.1.cwl:231:25: 09         "class": "File",\n1.11.1.cwl:231:25: 10         "checksum": "sha1$98da781bea38bbfdf942b84dedd3306ecfc1528b",\n1.11.1.cwl:231:25: 11         "size": 2177,\n1.11.1.cwl:231:25: 12         "http://commonwl.org/cwltool#generation": 0,\n1.11.1.cwl:231:25: 13         "path": "/var/lib/cwl/stg27313649-e54e-40d0-9077-92ec21a0c264/run_metadata.json",\n1.11.1.cwl:231:25: 14         "dirname": "/var/lib/cwl/stg27313649-e54e-40d0-9077-92ec21a0c264"\n1.11.1.cwl:231:25: 15     },\n1.11.1.cwl:231:25: 16     "Use_DBEC": null,\n1.11.1.cwl:231:25: 17     "Valids": {\n1.11.1.cwl:231:25: 18         "location": "file:///mnt/data2/tmp/s_mh_f4k/Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",\n1.11.1.cwl:231:25: 19         "basename": "Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",\n1.11.1.cwl:231:25: 20         "nameroot": "Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv",\n1.11.1.cwl:231:25: 21         "nameext": ".gz",\n1.11.1.cwl:231:25: 22         "class": "File",\n1.11.1.cwl:231:25: 23         "checksum": "sha1$b86533ea9a444b9c629c0ed02b240b79b7d2039f",\n1.11.1.cwl:231:25: 24         "size": 257705212,\n1.11.1.cwl:231:25: 25         "http://commonwl.org/cwltool#generation": 0,\n1.11.1.cwl:231:25: 26         "path": "/var/lib/cwl/stgf51c5461-bd47-462c-8559-cb5a3bd953f1/Rhapsody_SV_index2_Sorted_Valid_Reads.C.csv.gz",\n1.11.1.cwl:231:25: 27         "dirname": "/var/lib/cwl/stgf51c5461-bd47-462c-8559-cb5a3bd953f1"\n1.11.1.cwl:231:25: 28     }\n1.11.1.cwl:231:25: 29 };\n1.11.1.cwl:231:25: 30 var self = [];\n1.11.1.cwl:231:25: 31 var runtime = {\n1.11.1.cwl:231:25: 32     "cores": 1,\n1.11.1.cwl:231:25: 33     "ram": 32000,\n1.11.1.cwl:231:25: 34     "tmpdirSize": 1024,\n1.11.1.cwl:231:25: 35     "outdirSize": 1024,\n1.11.1.cwl:231:25: 36     "exitCode": 1,\n1.11.1.cwl:231:25: 37     "tmpdir": "/tmp",\n1.11.1.cwl:231:25: 38     "outdir": "/nIvmVh"\n1.11.1.cwl:231:25: 39 };\n1.11.1.cwl:231:25: 40 (function(){return ((JSON.parse(self[0].contents).max_count));})()\n1.11.1.cwl:231:25: stdout was: \'\'\n1.11.1.cwl:231:25: stderr was: \'evalmachine.<anonymous>:40\n1.11.1.cwl:231:25: (function(){return ((JSON.parse(self[0].contents).max_count));})()\n1.11.1.cwl:231:25:                                         ^\n1.11.1.cwl:231:25: \n1.11.1.cwl:231:25: TypeError: Cannot read property \'contents\' of undefined\n1.11.1.cwl:231:25:     at evalmachine.<anonymous>:40:41\n1.11.1.cwl:231:25:     at evalmachine.<anonymous>:40:65\n1.11.1.cwl:231:25:     at Script.runInContext (vm.js:130:18)\n1.11.1.cwl:231:25:     at Script.runInNewContext (vm.js:135:17)\n1.11.1.cwl:231:25:     at Object.runInNewContext (vm.js:302:38)\n1.11.1.cwl:231:25:     at Socket.<anonymous> ([eval]:11:57)\n1.11.1.cwl:231:25:     at Socket.emit (events.js:314:20)\n1.11.1.cwl:231:25:     at addChunk (_stream_readable.js:297:12)\n1.11.1.cwl:231:25:     at readableAddChunk (_stream_readable.js:268:11)\n1.11.1.cwl:231:25:     at Socket.Readable.push (_stream_readable.js:213:10)\'', {})
-WARNING [job AnnotateMolecules_4] completed permanentFail
-INFO [workflow ] starting step VDJ_Preprocess_Reads_IG
-INFO [step VDJ_Preprocess_Reads_IG] start
-INFO [workflow VDJ_Preprocess_Reads_IG] start
-INFO [workflow VDJ_Preprocess_Reads_IG] starting step VDJ_Trim_Reads_2
-INFO [step VDJ_Trim_Reads_2] start
-INFO [job VDJ_Trim_Reads_2] /mnt/data2/tmp/c9n6z9hk$ singularity \
-    --quiet \
-    exec \
-    --contain \
-    --ipc \
-    --cleanenv \
-    --userns \
-    --home \
-    /mnt/data2/tmp/c9n6z9hk:/nIvmVh \
-    --bind \
-    /mnt/data2/tmp/ntx1seu5:/tmp \
-    --pwd \
-    /nIvmVh \
-    /mnt/data2/RhapsodyTest/S2/bdgenomics_rhapsody:1.11.1.sif \
-    VDJ_Trim_Reads.sh
-Number of arguments is not 1.
-    Usage: bash ./VDJ_Trim_Reads.sh <fastq file>
-        fastq file: a fastq file that will undergo trimming
-    
-INFO [job VDJ_Trim_Reads_2] completed success
-INFO [step VDJ_Trim_Reads_2] completed success
-INFO [workflow VDJ_Preprocess_Reads_IG] starting step VDJ_num_splits_2
-INFO [step VDJ_num_splits_2] start
-INFO [step VDJ_num_splits_2] completed success
-INFO [workflow VDJ_Preprocess_Reads_IG] starting step VDJ_RSEC_Reads_2
-INFO [step VDJ_RSEC_Reads_2] start
-INFO [job VDJ_RSEC_Reads_2] /mnt/data2/tmp/7ztzjmai$ singularity \
-    --quiet \
-    exec \
-    --contain \
-    --ipc \
-    --cleanenv \
-    --userns \
-    --home \
-    /mnt/data2/tmp/7ztzjmai:/nIvmVh \
-    --bind \
-    /mnt/data2/tmp/4axkzt_m:/tmp \
-    --pwd \
-    /nIvmVh \
-    /mnt/data2/RhapsodyTest/S2/bdgenomics_rhapsody:1.11.1.sif \
-    mist_vdj_rsec_reads.py \
-    --num-splits \
-    46
-Running with options:
-{'num_splits': 46, 'vdj_valid_reads': None}
-Beginning Vdj Rsec Reads at 2023-02-12 08:20:03
-No valid reads file for this chain type
-Completed Vdj Rsec Reads at 2023-02-12 08:20:03
-INFO [job VDJ_RSEC_Reads_2] completed success
-INFO [step VDJ_RSEC_Reads_2] completed success
-INFO [workflow VDJ_Preprocess_Reads_IG] completed success
-INFO [step VDJ_Preprocess_Reads_IG] completed success
-INFO [workflow ] starting step VDJ_Assemble_and_Annotate_Contigs_IG
-INFO [step VDJ_Assemble_and_Annotate_Contigs_IG] start
-INFO [workflow VDJ_Assemble_and_Annotate_Contigs_IG] start
-INFO [workflow VDJ_Assemble_and_Annotate_Contigs_IG] starting step VDJ_Assemble_and_Annotate_Contigs_IG_2
-WARNING [job step VDJ_Assemble_and_Annotate_Contigs_IG_2] Notice: scattering over empty input in 'RSEC_Reads_Fastq'.  All outputs will be empty.
-INFO [step VDJ_Assemble_and_Annotate_Contigs_IG_2] completed success
-INFO [workflow VDJ_Assemble_and_Annotate_Contigs_IG] completed success
-INFO [step VDJ_Assemble_and_Annotate_Contigs_IG] completed success
-INFO [workflow ] starting step VDJ_GatherIGCalls
-INFO [step VDJ_GatherIGCalls] start
-INFO [workflow VDJ_GatherIGCalls] start
-INFO [workflow VDJ_GatherIGCalls] starting step VDJ_GatherCalls
-INFO [step VDJ_GatherCalls] start
-INFO Using local copy of Singularity image found in /mnt/data2/RhapsodyTest/S2
-INFO [job VDJ_GatherCalls] /mnt/data2/tmp/w3305mtb$ singularity \
-    --quiet \
-    exec \
-    --contain \
-    --ipc \
-    --cleanenv \
-    --userns \
-    --home \
-    /mnt/data2/tmp/w3305mtb:/nIvmVh \
-    --bind \
-    /mnt/data2/tmp/7o52lagt:/tmp \
-    --pwd \
-    /nIvmVh \
-    /mnt/data2/RhapsodyTest/S2/bdgenomics_rhapsody:1.11.1.sif \
-    /bin/sh \
-    -c \
-    echo "No outputs from PyIR detected in VDJ_GatherCalls"
-No outputs from PyIR detected in VDJ_GatherCalls
-INFO [job VDJ_GatherCalls] completed success
-INFO [step VDJ_GatherCalls] completed success
-INFO [workflow VDJ_GatherIGCalls] completed success
-INFO [step VDJ_GatherIGCalls] completed success
-INFO [workflow ] starting step VDJ_Assemble_and_Annotate_Contigs_TCR
-INFO [step VDJ_Assemble_and_Annotate_Contigs_TCR] start
-INFO [workflow VDJ_Assemble_and_Annotate_Contigs_TCR] start
-INFO [workflow VDJ_Assemble_and_Annotate_Contigs_TCR] starting step VDJ_Assemble_and_Annotate_Contigs_TCR_2
-WARNING [job step VDJ_Assemble_and_Annotate_Contigs_TCR_2] Notice: scattering over empty input in 'RSEC_Reads_Fastq'.  All outputs will be empty.
-INFO [step VDJ_Assemble_and_Annotate_Contigs_TCR_2] completed success
-INFO [workflow VDJ_Assemble_and_Annotate_Contigs_TCR] completed success
-INFO [step VDJ_Assemble_and_Annotate_Contigs_TCR] completed success
-INFO [workflow ] starting step VDJ_GatherTCRCalls
-INFO [step VDJ_GatherTCRCalls] start
-INFO [workflow VDJ_GatherTCRCalls] start
-INFO [workflow VDJ_GatherTCRCalls] starting step VDJ_GatherCalls_2
-INFO [step VDJ_GatherCalls_2] start
-INFO [job VDJ_GatherCalls_2] /mnt/data2/tmp/g89zad01$ singularity \
-    --quiet \
-    exec \
-    --contain \
-    --ipc \
-    --cleanenv \
-    --userns \
-    --home \
-    /mnt/data2/tmp/g89zad01:/nIvmVh \
-    --bind \
-    /mnt/data2/tmp/wsvn1gyd:/tmp \
-    --pwd \
-    /nIvmVh \
-    /mnt/data2/RhapsodyTest/S2/bdgenomics_rhapsody:1.11.1.sif \
-    /bin/sh \
-    -c \
-    echo "No outputs from PyIR detected in VDJ_GatherCalls"
-No outputs from PyIR detected in VDJ_GatherCalls
-INFO [job VDJ_GatherCalls_2] completed success
-INFO [step VDJ_GatherCalls_2] completed success
-INFO [workflow VDJ_GatherTCRCalls] completed success
-INFO [step VDJ_GatherTCRCalls] completed success
-ERROR Workflow cannot make any more progress.
-WARNING Final process status is permanentFail
-
-```
-</details>
-
+More than 38 hours the BD system stopped with an error.
 
 # Additional Programs
 
 There are several other programs in this package:
+
+## create_index
+
+Instead of creating the index each time from the fasta files this program can generate the index from a fasta.gz file paired up with a gtf.gz or gff.gz file.
+This way intron/exon boundaries can be addressed.
+
+```
+./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index
+
+./target/release/quantify_rhapsody -a testData/MyAbSeqPanel.fasta -i testData/mapperTest/index -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz  -o testData/mapperTest/ -s mouse -v v1 -m 30
+```
 
  ## split2samples 
 

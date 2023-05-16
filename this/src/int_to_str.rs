@@ -33,6 +33,14 @@ impl IntToStr {
    		let f: u64 = *vec.get(5).unwrap_or(&0_u8) as u64;
     	let g: u64 = *vec.get(6).unwrap_or(&0_u8) as u64;
     	let h: u64 = *vec.get(7).unwrap_or(&0_u8) as u64;
+    	// let a: u64 = *vec.get(7).unwrap_or(&0_u8) as u64;
+   		// let b: u64 = *vec.get(6).unwrap_or(&0_u8) as u64;
+    	// let c: u64 = *vec.get(5).unwrap_or(&0_u8) as u64;
+    	// let d: u64 = *vec.get(4).unwrap_or(&0_u8) as u64;
+    	// let e: u64 = *vec.get(3).unwrap_or(&0_u8) as u64;
+   		// let f: u64 = *vec.get(2).unwrap_or(&0_u8) as u64;
+    	// let g: u64 = *vec.get(1).unwrap_or(&0_u8) as u64;
+    	// let h: u64 = *vec.get(0).unwrap_or(&0_u8) as u64;
     	let concatenated: u64 = (a << 56) | (b << 48) | (c << 40) | (d << 32) | (e << 24) | (f << 16) | (g << 8) | h as u64;
     	//let concatenated: u64 = (a << 24) | (b << 16) | (c << 8) | d;
     	concatenated
@@ -49,6 +57,8 @@ impl IntToStr {
 		}
 		let a: u16 = u16::from(vec[0]);
    		let b: u16 = u16::from(vec[1]);
+   		// let a: u16 = u16::from(vec[1]);
+   		// let b: u16 = u16::from(vec[0]);
     	let concatenated: u16 =  (a << 8) | b;
     	concatenated
 
@@ -115,7 +125,7 @@ impl IntToStr {
 				}
 			}
 		}
-		ret
+		ret.iter().rev().copied().collect()
 	}
 	// pub fn encode_positions(len: usize) -> Vec::<usize> {
 
@@ -157,16 +167,27 @@ impl IntToStr {
 	    let final_whole = kmer_size / 4;  // Determine the chunk index (0, 1, 2, ...)
 	    let remainder   = kmer_size % 4;    // Determine the remainder within the chunk (0, 1, 2, 3)
 	    
+	    println!("The total {final_whole}");
+
 	    let array = km.to_le_bytes();
-	    for i in 0..final_whole{
-	    	self.u8_to_str( 4, &array[i] , data );
-	    }
-	    self.u8_to_str( remainder, &array[final_whole] , data );
+
+	    let mut i = 0;
+		for u8_4bp in array.iter().rev(){
+			i += 4;
+			if i >= kmer_size {
+				//println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);
+				self.u8_to_str( kmer_size - i +4, &u8_4bp, data );
+				break;
+			}else {
+				//println!("decoding 4 bits of this number: {:b}", u8_4bp);
+				self.u8_to_str( 4, &u8_4bp, data );
+			}
+		}
 	}
 
 	pub fn decode_vec ( &self, kmer_size:usize, km:Vec::<u8>, data:&mut String ){
 		let mut i = 0;
-		for u8_4bp in km{
+		for u8_4bp in km.iter().rev(){
 			i += 4;
 			if i >= kmer_size {
 				//println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);
@@ -207,11 +228,17 @@ mod tests {
     #[test]
     fn test_u64_to_str(){
 
-        let num:u64 = 15561;
+		let tool = IntToStr::new();
+
+		let num:u64 = tool.into_u64( b"CGATATT".to_vec() );
+		println!("I have this number for the sting 'CGATATT' {num}");
+
+        //let num:u64 = 15561;
+
         //println!("This is the number I want to convert to a Sequence: {num:b}");
         // 11110011001001
         // T T A T A C G 
-        let tool = IntToStr::new();
+        //let tool = IntToStr::new();
         let mut data:String = "".to_string();
         tool.u64_to_str( 7, &num, &mut data );
         assert_eq!( data, "CGATATT".to_string() )
@@ -255,8 +282,8 @@ mod tests {
     	//                          G G C     T T G A     T A G C     G A G
 
     	//panic!("the binaries I get: {:b} {:b} {:b} {:b} ", binary[0], binary[1], binary[2], binary[3]);
-    	assert_eq!( binary, vec![ 0b1101000, 0b101111, 0b1100011, 0b100010 ]);
-
+    	//assert_eq!( binary, vec![ 0b1101000, 0b101111, 0b1100011, 0b100010 ]);
+    	assert_eq!( binary, vec![ 0b100010, 0b1100011, 0b101111, 0b1101000   ]);
     	let mut decoded:String = "".to_string();
 
 		tool.decode_vec(15, binary, &mut decoded );
@@ -312,7 +339,7 @@ mod tests {
     	assert_eq!( binary.len(),  3 ); 
 
     	//                          G G C 
-    	assert_eq!( binary[0], 0b1101000  );
+    	assert_eq!( binary[2], 0b1101000  );
 
     	let mut decoded:String = "".to_string();
 
@@ -334,16 +361,53 @@ mod tests {
 
     	//                       CT G G
     	//                       G G T C
-    	assert_eq!( binary[0], 0b10101101  );
+    	assert_eq!( binary[11], 0b10101101  );
 
     	let mut decoded:String = "".to_string();
 
 		tool.decode_vec(4, binary.clone(), &mut decoded );
 		assert_eq!( decoded, "CTGG" );      
         decoded.clear();
-        tool.decode_vec(binary.len()*4 -3, binary, &mut decoded );
-		assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC" );                
+        tool.decode_vec(binary.len()*4 -3, binary.clone(), &mut decoded );
+		assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC" );       
+
+		decoded.clear();
+        tool.decode_vec(binary.len()*4 -6, binary.clone(), &mut decoded );
+		assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGG" );               
     }
+
+    #[test]
+    fn check_u64_decode() {
+
+    	let seq = b"CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC";
+    	let tool = IntToStr::new();
+    	let binary = tool.into_u64( seq.to_vec() );
+
+
+    	assert_eq!( binary, 12493186416256676202 ); 
+
+    	let mut decoded:String = "".to_string();
+		tool.u64_to_str( 32, &binary, &mut decoded);
+    	assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGC".to_string() );
+
+
+    	//                       CT G G
+    	//                       G G T C
+    	// assert_eq!( binary[11], 0b10101101  );
+
+    	// let mut decoded:String = "".to_string();
+
+		// tool.decode_vec(4, binary.clone(), &mut decoded );
+		// assert_eq!( decoded, "CTGG" );      
+        // decoded.clear();
+        // tool.decode_vec(binary.len()*4 -3, binary.clone(), &mut decoded );
+		// assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC" );       
+
+		// decoded.clear();
+        // tool.decode_vec(binary.len()*4 -6, binary.clone(), &mut decoded );
+		// assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGG" );               
+    }
+
 
 
 }

@@ -1,0 +1,78 @@
+3 kmers per gene 32bp
+
+Summary:
+total      reads  : 200000 reads
+no cell ID reads  : 20520 reads
+no gene ID reads  : 57716 reads
+N's or too short  : 28160 reads
+cellular reads    : 93604 reads (46.80% of total)
+expression reads  : 93604 reads (46.80% of total)
+antibody reads    : 0 reads (0.00% of total)
+sample tag reads  : 0 reads (0.00% of total)
+pcr duplicates    : 46895 reads (50.10% of usable)
+
+
+
+10 kmers per gene 32bp
+Summary:
+total      reads  : 200000 reads
+no cell ID reads  : 20520 reads
+no gene ID reads  : 57634 reads
+N's or too short  : 28160 reads
+cellular reads    : 93686 reads (46.84% of total)
+expression reads  : 93686 reads (46.84% of total)
+antibody reads    : 0 reads (0.00% of total)
+sample tag reads  : 0 reads (0.00% of total)
+pcr duplicates    : 46936 reads (50.10% of usable)
+
+
+10 kmers per gene 16bp
+
+Summary:
+total      reads  : 200000 reads
+no cell ID reads  : 20520 reads
+no gene ID reads  : 25688 reads
+N's or too short  : 28160 reads
+cellular reads    : 125632 reads (62.82% of total)
+expression reads  : 125472 reads (62.74% of total)
+antibody reads    : 24 reads (0.01% of total)
+sample tag reads  : 136 reads (0.07% of total)
+pcr duplicates    : 62933 reads (50.09% of usable)
+
+So there is a problem in the initial sequences!
+I have one test too much somewhere!
+
+Removed the test and fixed the undelying error:
+
+10 kmers per gene 32bp
+
+Summary:
+total      reads  : 200000 reads
+no cell ID reads  : 20520 reads
+no gene ID reads  : 57608 reads
+N's or too short  : 28160 reads
+cellular reads    : 93712 reads (46.86% of total)
+expression reads  : 93686 reads (46.84% of total)
+antibody reads    : 26 reads (0.02% of total)
+sample tag reads  : 0 reads (0.00% of total)
+pcr duplicates    : 46949 reads (50.10% of usable)
+
+But that still leaves a huge gap of ~50% of the reads
+
+
+Now I simply added more kmers per gene (up to 30).
+
+Summary:
+total      reads  : 200000 reads
+no cell ID reads  : 20520 reads
+no gene ID reads  : 57566 reads
+N's or too short  : 28160 reads
+cellular reads    : 93754 reads (46.88% of total)
+expression reads  : 93736 reads (46.87% of total)
+antibody reads    : 18 reads (0.01% of total)
+sample tag reads  : 0 reads (0.00% of total)
+pcr duplicates    : 46970 reads (50.10% of usable)
+
+
+## Still no sample tag reads....
+

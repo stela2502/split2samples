@@ -68,6 +68,7 @@ fn main() {
         kmer_size = 32;
     }
 
+    const covered_area:usize = 600; // cover 600 bp of the transcript
     fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
 
     // let log_file_str = PathBuf::from(&opts.outpath).join(
@@ -124,21 +125,25 @@ fn main() {
 
     let re_gene_name: Regex;
     let re_gene_id: Regex;
+    let re_transcript_id : Regex;
 
     match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
             re_gene_name =  Regex::new(r#".* gene_name "([\(\)\w\d\-\._]*)""#).unwrap();
             re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
+            re_transcript_id = Regex::new(r#"transcript_id "([\d\w\.]*)";"#).unwrap();
         },
         false => {
             eprintln!("gff mode.");
             re_gene_name =  Regex::new(r#".* ?gene_name=([\(\)\w\d\-\._]*); ?"#).unwrap();
             re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
+            re_transcript_id = Regex::new(r#"transcript_id=([\d\w\.]*);"#).unwrap();
         },
     }
     let mut gene_id:String;
     let mut gene_name:String;
+    let mut transcript_id:String;
 
     // now we need to read the gtf info and get all genes out of that
     // we specificly need the last 64bp of the end of the gene as that is what we are going to map
@@ -163,7 +168,7 @@ fn main() {
             continue;
         }
         if parts[2] == "transcript"{
-            // capture the parts I need
+            // capture the parts I need using my regexp modules
             if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
                 gene_name = captures.get(1).unwrap().as_str().to_string();
             }else {
@@ -174,22 +179,29 @@ fn main() {
             }else {
                 panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
             }
+            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
+                transcript_id = captures.get(1).unwrap().as_str().to_string();
+            }else {
+                panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8].to_string() );
+            }
+            
             // and add a gene
-            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), gene_id.to_string() );
-            genes.insert( gene_id, gene );
+            // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
+            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
+            genes.insert( transcript_id, gene );
         }
 
         if parts[2] == "exon"{
             // capture the parts I need
-            if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
-                gene_id = captures.get(1).unwrap().as_str().to_string();
+            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
+                transcript_id = captures.get(1).unwrap().as_str().to_string();
             }else {
                 panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
             }
             // and add an exon
-            match genes.get_mut( &gene_id.to_string() ){
+            match genes.get_mut( &transcript_id.to_string() ){
                 Some(gene) => gene.add_exon( parts[3].to_string(), parts[4].to_string() ),
-                None => panic!("and exon without a transcript?! ({})", gene_id.to_string())
+                None => panic!("and exon without a transcript?! ({})", transcript_id.to_string())
             }
         }
 
@@ -210,7 +222,7 @@ fn main() {
                     // Do something with the gene, e.g. remove it
                     match seq_records.get( &gene.chrom.to_string() ){
                         Some(seq) => {
-                            gene.add_to_index( seq, &mut index );
+                            gene.add_to_index( seq, &mut index, covered_area );
                             //println!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
@@ -233,7 +245,7 @@ fn main() {
         // Do something with the gene, e.g. remove it
         match seq_records.get( &gene.chrom.to_string() ){
             Some(seq) => {
-                gene.add_to_index( seq, &mut index );
+                gene.add_to_index( seq, &mut index, covered_area );
                 //println!("The genes detected: {:?}", index.names_store );
             },
             None => {
