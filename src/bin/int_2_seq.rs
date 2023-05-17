@@ -16,11 +16,11 @@ struct Opts {
 fn main() {
     let opts: Opts = Opts::parse();
 
-    let tool = IntToStr::new( );
+    let tool = IntToStr::new( b"".to_vec(), 32 );
 
     let mut seq = "".to_string();
 
-    tool.decode_vec( opts.length, opts.int.to_le_bytes().to_vec(), &mut seq );
+    tool.u8_array_to_str( opts.length, opts.int.to_le_bytes().to_vec(), &mut seq );
 
     println!( "The sequence is:\n{}\n", seq );
 }

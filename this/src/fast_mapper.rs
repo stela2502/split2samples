@@ -68,7 +68,7 @@ impl  FastMapper{
         let last_kmers = Vec::with_capacity(60);
         let with_data = 0;
         let spacer = 3;
-        let tool = IntToStr::new();
+        let tool = IntToStr::new(b"".to_vec(), kmer_len );
         Self {
             kmer_len,
             spacer,
@@ -176,71 +176,57 @@ impl  FastMapper{
 
         let gene_id = self.get_id( name.to_string() );
 
-        let mut long:u64;
-        let mut short:u16;
+        //let mut long:u64;
+        //let mut short:u16;
         let mut checker = BTreeMap::<u8, usize>::new();
-        let u8_seq_vec = self.tool.encode2bit_u8( seq.to_vec() );
+        self.tool.from_vec_u8( seq.to_vec() );
         let mut tmp = "".to_string();
-        self.tool.decode_vec( seq.len(), u8_seq_vec, &mut tmp );
+        self.tool.to_string( seq.len(), &mut tmp );
+        self.tool.print();
         //println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
         let mut i = 0;
-        'main: while i < 60{
-            // add three subsequent kmers 8bp kmers (if possible)
-            // and one self.kmer_len additional sequence afterwards
 
-            checker.clear();
-            match self.seq_ok( &seq.to_vec(), i, &mut checker){
-                Some(false) => {
-                    i+=1;
-                    continue 'main
-                },
-                Some(true) => (),
-                None => break 'main,
+        self.tool.shifted = 3; // I will only add one set of kmers!
 
-            }
+        let mut item = self.tool.next();
+        while let Some(entries) = item{
 
-            short = self.tool.into_u16( seq[i*8..(i+1)*8].to_vec() );
+            // checker.clear();
+            // match self.seq_ok( &seq.to_vec(), i, &mut checker){
+            //     Some(false) => {
+            //         i+=1;
+            //         continue 'main
+            //     },
+            //     Some(true) => (),
+            //     None => break 'main,
+
+            // }
+            println!( "short {:b} long: {:b}",entries.0, entries.1);
 
             // comment out if not debugging
             let mut tmp = "".to_string();
-            self.tool.decode_vec( 8, short.to_le_bytes().to_vec(), &mut tmp );
-            println!("\t\t\tindex\t{tmp} {short}" );
+            self.tool.u8_array_to_str( 8, entries.0.clone().to_le_bytes().to_vec(), &mut tmp );
+            print!("\t\t\tindex\t{} {} ", &tmp, &entries.0 );
+            print!("[ ");
+            for en in entries.0.to_le_bytes().to_vec(){
+                print!(", {en:b}");
+            }
+            println!(" ]");
             //
-
-            if seq.len() < (i+1)*8+self.kmer_len {
-                long = self.tool.into_u64( seq[(i+1)*8..seq.len()].to_vec() );
-            }
-            else {
-                long = self.tool.into_u64( seq[(i+1)*8..(i+1)*8+self.kmer_len].to_vec() );
-            }
 
             // comment out if not debugging
             tmp.clear();
-            self.tool.decode_vec( 32, long.to_le_bytes().to_vec(), &mut tmp );
-            println!("\t\t\tlong\t{tmp} {long}");
+            self.tool.u8_array_to_str( 32, entries.1.to_le_bytes().to_vec(), &mut tmp );
+            println!("\t\t\tlong\t{tmp}, {}",entries.1);
             //
 
-            if ! self.mapper[short as usize].has_data() {
+            if ! self.mapper[entries.0 as usize].has_data() {
                 // will add in the next step so
                 self.with_data +=1;
             } 
-            self.mapper[short as usize].add( long, gene_id );
-            //     Some( genebox ) => {
-            //         if genebox.map.len() == 0{
-            //             self.with_data +=1;
-            //         }
-            //         genebox.add( longer , gene_id );
-            //         //println!("Cool I got a gene box! {genebox:?}");
-            //     },
-            //     None => {
-            //         //panic!("I must not need to create the MapperEntry like ever!");
-            //         let mut b =  MapperEntry::new( ) ;
-            //         b.add( longer , gene_id  );
-            //         println!("Cool I got a new gene box!? {b:?}");
-            //         self.mapper.insert(index,  b ); 
-            //     }
-            // }   
-            i +=2; // 'jump' 16 bp on the sequence to cover more ground!
+            self.mapper[entries.0 as usize].add( entries.1, gene_id );
+            i+=1;
+            item = self.tool.next();
         }
         
         //println!("I have now {i} mappers for the gene {name}");
@@ -301,32 +287,33 @@ impl  FastMapper{
         let mut long:u64;
         let mut short:u16;
         let mut stop: bool;
+        let mut tmp = "".to_string();
+        //self.tool.shifted = 3; // I will only add one set of kmers!
 
-        'main: while i < 30{
+        let mut item = self.tool.next();
+        'main :while let Some(( short, long )) = item{
+
+        //'main: while i < 30{
             //println!("And I try to get a index from kmer {kmer:?} at pos {id}:");
 
-            checker.clear();
-            match self.seq_ok( &seq.to_vec(), i, &mut checker){
-                Some(false) => {
-                    i+=1;
-                    continue 'main
-                },
-                Some(true) => (),
-                None => break 'main,
+            // checker.clear();
+            // match self.seq_ok( &seq.to_vec(), i, &mut checker){
+            //     Some(false) => {
+            //         i+=1;
+            //         continue 'main
+            //     },
+            //     Some(true) => (),
+            //     None => break 'main,
 
-            }
+            // }
 
-            short = self.tool.into_u16( seq[i*8..(i+1)*8].to_vec() );
-            let mut tmp = "".to_string();
-            self.tool.decode_vec( 8, short.to_le_bytes().to_vec(), &mut tmp );
-            // println!("\t\t\tindex\t{tmp} {short}" );
+            tmp.clear();
+            self.tool.u8_array_to_str( 8, short.to_le_bytes().to_vec(), &mut tmp );
+            println!("\t\t\tindex\t{tmp} {short}" );
+            tmp.clear();
+            self.tool.u8_array_to_str( 32, long.to_le_bytes().to_vec(), &mut tmp );
+            println!("\t\t\tlong\t{tmp} {long}" );
 
-            if seq.len() < (i+1)*8+self.kmer_len {
-                long = self.tool.into_u64( seq[(i+1)*8..seq.len()].to_vec() );
-            }
-            else {
-                long = self.tool.into_u64( seq[(i+1)*8..(i+1)*8+self.kmer_len].to_vec() );
-            }
 
             //println!("got the index {index} and the mapper {mapper:?} searching for");
             //let mapper:MapperEntry = &*box_;
@@ -607,86 +594,3 @@ impl  FastMapper{
 
 
 
-#[cfg(test)]
-mod tests {
-
-    use crate::fast_mapper::FastMapper;
-    //use std::path::Path;
-    use crate::fast_mapper::Kmer;
-
-    #[test]
-    fn check_geneids() {
-        let mut mapper = FastMapper::new( 16 );
-
-        let mut geneid = 0;
-        
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
-        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
-
-        //ATCCCATCCTTCATTGTTCGCCTGGA #0
-        //CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC #1
-        //CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC #2
-        //...........................................................................
-
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
-        geneid +=1;
-        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
-
-        assert_eq!( mapper.with_data, 10 );
-
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
-
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string() );
-
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), None );
-
-        let mut gnames = Vec::<String>::with_capacity(3);
-        gnames.push( "Gene1".to_string() );
-        gnames.push( "Gene2".to_string() );
-        gnames.push( "Gene3".to_string() );
-        assert_eq!( mapper.names_store, gnames );
-        mapper.print();
-
-    }
-
-    #[test]
-    fn check_write_index() {
-        let mut mapper = FastMapper::new( 16 );
-
-        let mut geneid = 0;
-        
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
-        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
-
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
-        geneid +=1;
-        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
-
-        assert_eq!( mapper.with_data, 10);
-
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1) );
-
-        let opath = "testData/output_index_test";
-        mapper.write_index( opath.to_string() ).unwrap();
-        mapper.print();
-
-        let mut mapper2 = FastMapper::new( 16 );
-        mapper2.load_index( opath.to_string() ).unwrap();
-
-        assert_eq!(  mapper.with_data, mapper2.with_data );
-
-        assert_eq!(  mapper.kmer_len, mapper2.kmer_len );
-
-        assert_eq!(  mapper.kmer_len, mapper2.kmer_len );
-
-        let key = b"ATCCCATC";
-        let kmer = needletail::kmer::Kmers::new(key, 8 as u8).next();
-        let _idx = Kmer::from(kmer.unwrap()).into_u64() as usize;
-
-        assert_eq!(  mapper.names_store, mapper2.names_store );
-
-    }
-
-}

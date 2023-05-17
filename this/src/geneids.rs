@@ -4,9 +4,10 @@
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 
+use kmers::naive_impl::Kmer;
+
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
-use crate::int_to_str::IntToStr;
 
 use std::path::Path;
 use std::io::Write;
@@ -16,7 +17,15 @@ use std::io::BufRead;
 use std::io::Read;
 
 
-/// GeneIds in the new version  
+/// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
+/// but that can be different, too. 
+/// Hence we store here 
+/// kmers       : the search object
+/// seq_len     : the length of the sequences (10x oversequences them)
+/// kmer_size   : the length of the kmers
+/// names       : a hashset for the gene names
+/// bad_entries : a hash to save bad entries (repetetive ones)
+/// and a lot of private ease of live id to name or vice versa BTreeMaps
 
 #[derive(Debug,PartialEq)]
 pub struct GeneIds{    
@@ -33,7 +42,6 @@ pub struct GeneIds{
     unchecked: bool, //if add_unchecked was used results should always be as get_unchecked,
     pub last_count: usize,
     pub last_kmers: Vec<String>,
-    tool: IntToStr,
 }
 
 // here the functions
@@ -53,7 +61,6 @@ impl GeneIds{
         let unchecked = false;
         let last_count = 0;
         let last_kmers = Vec::with_capacity(60);
-        let tool = IntToStr::new();
         Self {
             kmers,
             seq_len,
@@ -67,8 +74,7 @@ impl GeneIds{
             max_id,
             unchecked,
             last_count,
-            last_kmers,
-            tool
+            last_kmers
         }
     }
 
@@ -109,7 +115,7 @@ impl GeneIds{
 
             //println!("Adding a gene id os length {} with seq {:?}", self.kmer_size, std::str::from_utf8(kmer) );
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
-            let km = self.tool.into_u64( kmer.to_vec() );
+            let km = Kmer::from(kmer).into_u64();
 
             if self.bad_entries.contains( &km ){
                 continue
@@ -181,8 +187,7 @@ impl GeneIds{
 
             //println!("Adding a gene id os length {} with seq {:?}", self.kmer_size, std::str::from_utf8(kmer) );
             // if  id == 1 { let s = str::from_utf8(kmer); println!( "this is the lib: {:?}",  s )};
-            //let km = Kmer::from(kmer).into_u64();
-            let km = self.tool.into_u64(kmer.to_vec());
+            let km = Kmer::from(kmer).into_u64();
             if self.bad_entries.contains( &km ){
                 continue
             }
@@ -239,7 +244,7 @@ impl GeneIds{
         let kmers = needletail::kmer::Kmers::new(seq, self.kmer_size as u8 );
         let mut kmer_vec = Vec::<u64>::with_capacity(60);
 
-        self.fill_kmer_vec(kmers, &mut kmer_vec);
+        fill_kmer_vec(kmers, &mut kmer_vec);
 
         //let report = self.get_id("2810417H13Rik".to_string());
 
@@ -291,7 +296,7 @@ impl GeneIds{
         let kmers = needletail::kmer::Kmers::new(seq, self.kmer_size as u8 );
         let mut kmer_vec = Vec::<u64>::with_capacity(60);
 
-        self.fill_kmer_vec(kmers, &mut kmer_vec);
+        fill_kmer_vec(kmers, &mut kmer_vec);
 
         let mut ret:Option<usize> = None;
 
@@ -562,26 +567,9 @@ impl GeneIds{
             if i == kmer_size{
                 break;
             }
+
         //println!( "({})Can I get that {u8_rep} to u2 ({i})? {:?}, {:?}, {:?}, {:?}, {:?}", self.seq_len, u8_rep & 0x03,  u8_rep & 0x0C, u8_rep & 0x30 , u8_rep & 0xC0, data );
         }
-    }
-    fn fill_kmer_vec( &self, seq: needletail::kmer::Kmers, kmer_vec: &mut Vec<u64>) {
-       kmer_vec.clear();
-       let mut bad = 0;
-       for km in seq {
-            // I would like to add a try catch here - possibly the '?' works?
-            // if this can not be converted it does not even make sense to keep this info
-            for nuc in km{
-                if *nuc ==b'N'{
-                    bad = 1;
-                }
-            }
-            if bad == 0{
-                // let s = str::from_utf8(km);
-                // println!( "this is the lib: {:?}",  s );
-                kmer_vec.push(  self.tool.into_u64(km.to_vec()) );
-            }
-       }
     }
 
 }
@@ -589,7 +577,24 @@ impl GeneIds{
 
 
 
-
+fn fill_kmer_vec(seq: needletail::kmer::Kmers, kmer_vec: &mut Vec<u64>) {
+   kmer_vec.clear();
+   let mut bad = 0;
+   for km in seq {
+        // I would like to add a try catch here - possibly the '?' works?
+        // if this can not be converted it does not even make sense to keep this info
+        for nuc in km{
+            if *nuc ==b'N'{
+                bad = 1;
+            }
+        }
+        if bad == 0{
+            // let s = str::from_utf8(km);
+            // println!( "this is the lib: {:?}",  s );
+            kmer_vec.push(Kmer::from(km).into_u64());
+        }
+   }
+}
 
 
 #[cfg(test)]
@@ -629,5 +634,12 @@ mod tests {
         assert_eq!( genes.kmer_size, genes2.kmer_size )
     }
 
+    #[test]
+    fn test_u64_to_str(){
 
+        let num:u64 = 15561;
+        let mut data:String = "".to_string();
+        GeneIds::u64_to_str( 7, &num, &mut data );
+        assert_eq!( data, "CGATATT".to_string() )
+    } 
 }
