@@ -7,6 +7,8 @@ use std::collections::BTreeMap;
 //use needletail::bitkmer::BitKmer;
 use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
+use std::collections::HashSet;
+
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
@@ -18,7 +20,7 @@ use std::fs::{self, DirBuilder};
 
 use std::io::BufRead;
 use std::io::Read;
-
+use std::error::Error;
 //use crate::geneids::GeneIds;
 
 
@@ -31,6 +33,9 @@ use std::io::Read;
 /// last_count  : internal value for data export
 
 /// and a lot of private ease of live id to name or vice versa BTreeMaps
+
+
+
 
 #[derive(Debug,PartialEq)]
 pub struct FastMapper{
@@ -85,86 +90,12 @@ impl  FastMapper{
         }
     }
 
-    /// returns true if the sequence passes, fasle if there is a problem like N nucleotides
-    /// or too low sequences variability in the first 8bp
-    fn seq_ok(&self, seq:&Vec<u8>, i:usize, checker:&mut BTreeMap::<u8, usize>) -> Option<bool> {
-
-        let start = (i+1)*8;
-
-        if seq.len() < (i+1)*8 +10 {
-            return None
-        }
-        let mut to = (i+1)*8+self.kmer_len;
-        if seq.len()< to{
-            to = seq.len();
-        }
-        // check the initial 8 bp as they will create a key
-        for nuc in &seq[i*8..(i+1)*8 ] {
-            match checker.get_mut( nuc ){
-                Some( count ) => *count += 1,
-                None => {
-                    if checker.insert( *nuc, 1).is_some(){};
-                }
-            };
-            if *nuc ==b'N'{
-                return Some(false);
-            }
-        }
-        if checker.len() < 3{
-            //println!( "kmer is too simple/not enough diff nucs" );
-            return Some(false);
-        }
-        
-        for ( key, value ) in checker.iter(){
-            //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
-
-            if *value as f32 / (to-start) as f32 > 0.6 {
-                //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
-                return Some(false);
-            } 
-        }
-        
-        // and now check the rest, too
-        checker.clear();
-
-        for nuc in &seq[(i+1)*8..to ] {
-            match checker.get_mut( nuc ){
-                Some( count ) => *count += 1,
-                None => {
-                    if checker.insert( *nuc, 1).is_some(){};
-                }
-            };
-            if *nuc ==b'N'{
-                return Some(false);
-            }
-        }
-        if checker.len() < 3{
-            //println!( "kmer is too simple/not enough diff nucs" );
-            return Some(false);
-        }
-        
-        for ( key, value ) in checker.iter(){
-            //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
-
-            if *value as f32 / (to-start) as f32 > 0.6 {
-                //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
-                return Some(false);
-            } 
-        }
-
-
-
-
-        return Some(true)
-    }
-
-
 
     pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String ){
         
         let mut total = 0;
 
-        println!("fast_mapper adds this genes: {}", name);
+        //println!("fast_mapper adds this genes: {}", name);
 
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.max_id );
@@ -172,53 +103,52 @@ impl  FastMapper{
             self.max_id += 1;
         }
         
-        //println!("Adding gene {name} to the index:");
+        println!("Adding gene {name} to the index:");
 
         let gene_id = self.get_id( name.to_string() );
 
         //let mut long:u64;
         //let mut short:u16;
-        let mut checker = BTreeMap::<u8, usize>::new();
+
         self.tool.from_vec_u8( seq.to_vec() );
         let mut tmp = "".to_string();
         self.tool.to_string( seq.len(), &mut tmp );
-        self.tool.print();
-        //println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
+        //self.tool.print();
+        println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
         let mut i = 0;
 
-        self.tool.shifted = 3; // I will only add one set of kmers!
+        // self.tool.shift(); // I will only add one set of kmers!
+        // self.tool.shift();
+        // self.tool.shift();
 
         let mut item = self.tool.next();
-        while let Some(entries) = item{
+        'main :while let Some(entries) = item{
 
-            // checker.clear();
-            // match self.seq_ok( &seq.to_vec(), i, &mut checker){
-            //     Some(false) => {
-            //         i+=1;
-            //         continue 'main
-            //     },
-            //     Some(true) => (),
-            //     None => break 'main,
 
+
+            /////// comment out if not debugging //////
+            println!( "              short {} long: {}",entries.0, entries.1);
+            let mut short_oligo = "".to_string();
+            let mut long_oligo = "".to_string();
+            self.tool.u16_to_str( 8, &entries.0, &mut short_oligo);
+            self.tool.u64_to_str( self.kmer_len, &entries.1, &mut long_oligo);
+            println!( "short {} long: {}", short_oligo, long_oligo);
+
+            // let mut tmp = "".to_string();
+            // self.tool.u8_array_to_str( 8, entries.0.clone().to_le_bytes().to_vec(), &mut tmp );
+            // print!("\t\t\tindex\t{} {} ", &tmp, &entries.0 );
+            // print!("[ ");
+            // for en in entries.0.to_le_bytes().to_vec(){
+            //     print!(", {en:b}");
             // }
-            println!( "short {:b} long: {:b}",entries.0, entries.1);
+            // println!(" ]");
+            
+            // tmp.clear();
+            // self.tool.u8_array_to_str( 32, entries.1.to_le_bytes().to_vec(), &mut tmp );
+            // println!("\t\t\tlong\t{tmp}, {}",entries.1);
 
-            // comment out if not debugging
-            let mut tmp = "".to_string();
-            self.tool.u8_array_to_str( 8, entries.0.clone().to_le_bytes().to_vec(), &mut tmp );
-            print!("\t\t\tindex\t{} {} ", &tmp, &entries.0 );
-            print!("[ ");
-            for en in entries.0.to_le_bytes().to_vec(){
-                print!(", {en:b}");
-            }
-            println!(" ]");
-            //
+            /////// comment out if not debugging ////////
 
-            // comment out if not debugging
-            tmp.clear();
-            self.tool.u8_array_to_str( 32, entries.1.to_le_bytes().to_vec(), &mut tmp );
-            println!("\t\t\tlong\t{tmp}, {}",entries.1);
-            //
 
             if ! self.mapper[entries.0 as usize].has_data() {
                 // will add in the next step so
@@ -280,7 +210,6 @@ impl  FastMapper{
         let mut id = 0;
         let mut genes:HashMap::<usize, usize>= HashMap::new();
 
-        let mut checker = BTreeMap::<u8, usize>::new();
         let mut total = 0;
         let mut i =0;
 
@@ -288,38 +217,48 @@ impl  FastMapper{
         let mut short:u16;
         let mut stop: bool;
         let mut tmp = "".to_string();
-        //self.tool.shifted = 3; // I will only add one set of kmers!
+        let mut no_8bp_match = 0;
+        let mut no_32bp_match = 0;
+        let mut multimapper = 0;
+        let mut total_oligos = 0;
+
+        let mut possibleGenes = HashMap::<usize, usize>::with_capacity(10);
+
+        self.tool.from_vec_u8( seq.to_vec() );
 
         let mut item = self.tool.next();
-        'main :while let Some(( short, long )) = item{
+        'main :while let Some(entries) = item{
+             item = self.tool.next();
+             total_oligos +=1;
 
-        //'main: while i < 30{
-            //println!("And I try to get a index from kmer {kmer:?} at pos {id}:");
+            /////// comment out if not debugging ////////
 
-            // checker.clear();
-            // match self.seq_ok( &seq.to_vec(), i, &mut checker){
-            //     Some(false) => {
-            //         i+=1;
-            //         continue 'main
-            //     },
-            //     Some(true) => (),
-            //     None => break 'main,
+            //println!( "get searching short {} long: {}",entries.0, entries.1);
 
+            // let mut tmp = "".to_string();
+            // self.tool.u8_array_to_str( 8, entries.0.clone().to_le_bytes().to_vec(), &mut tmp );
+            // print!("\t\t\tindex\t{} {} ", &tmp, &entries.0 );
+            // print!("[ ");
+            // for en in entries.0.to_le_bytes().to_vec(){
+            //     print!(", {en:b}");
             // }
+            // println!(" ]");
+            
+            // tmp.clear();
+            // self.tool.u8_array_to_str( 32, entries.1.to_le_bytes().to_vec(), &mut tmp );
+            // println!("\t\t\tlong\t{tmp}, {}",entries.1);
 
-            tmp.clear();
-            self.tool.u8_array_to_str( 8, short.to_le_bytes().to_vec(), &mut tmp );
-            println!("\t\t\tindex\t{tmp} {short}" );
-            tmp.clear();
-            self.tool.u8_array_to_str( 32, long.to_le_bytes().to_vec(), &mut tmp );
-            println!("\t\t\tlong\t{tmp} {long}" );
+            /////// comment out if not debugging ////////
 
 
             //println!("got the index {index} and the mapper {mapper:?} searching for");
             //let mapper:MapperEntry = &*box_;
             stop = false;
-            if self.mapper[short as usize].has_data() {
-                match self.mapper[short as usize].get(&long){
+            if self.mapper[entries.0 as usize].has_data() {
+                for gid in self.mapper[entries.0 as usize].possible_ids(){
+                    *possibleGenes.entry(gid).or_insert(0) += 1;
+                }
+                match self.mapper[entries.0 as usize].get(&entries.1){
                     Some( gene_id ) => {
                         //println!("Got one: {gene_id:?}");
                         //return ( gene_id );
@@ -337,8 +276,13 @@ impl  FastMapper{
                             };
                         }
                     },
-                    None => (),
+                    None => {
+                        no_32bp_match +=1;
+                    },
                 }
+            }
+            else{
+                no_8bp_match+=1;
             }
             i +=1;
             if stop{
@@ -372,15 +316,52 @@ impl  FastMapper{
                 if gene_ids.len() == 2 && ( gene_ids[0] +1 == gene_ids[1] || gene_ids[0] == gene_ids[1] +1 ) {
                     // this is the gene and it's _int transcript not having a clear difference.
                     // needs to be fixed in a later version of the index...
-                    return Some(gene_ids[0] )
+                    println!("I got an unique gene_id ({}): {:?}!!!", gene_ids[0], gene_ids );
+                    return Some( gene_ids[0].min( gene_ids[1] ) )
                 }
                 println!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") );
                 println!("I got a multi mapper ({i}): {:?} -> returning None", gene_ids );
-                return None
+                multimapper += 1;
             }
             
         }
         // we have not found any gene here!
+        // only if all the 8bp have only linked to a single gene...
+        if possibleGenes.len() == 1{
+            return Some( *(possibleGenes.values().collect::<Vec<&usize>>()[0]) )
+        }
+
+
+        // check if there is only one gene //
+
+        let mut max = 0;
+        let mut gid = 0;
+        let mut n =0;
+        for ( gid_, count ) in &possibleGenes {
+            if max < *count {
+                gid = *gid_;
+                max = *count;
+                n =0;
+            }
+            if max == *count{
+                n +=1;
+            }
+        }
+        if n == 1 {
+            println!("just by the u8's -> most likely gene id: {gid} with {max} u8's linking to: {}", self.names_store[gid].to_string());
+            return Some(gid)
+        }
+
+        if possibleGenes.len() > 0 {
+            let mut pg= Vec::<String>::with_capacity( possibleGenes.len() );
+            for gid in possibleGenes{
+                pg.push( self.names_store[gid.0].to_string() );
+            }
+
+            //println!("FastMapper::get - {total_oligo} no8 {no_8bp_match} no32 {no_32bp_match} mulit {multimapper} - failed" );
+            println!("Possible genes: {:?} - failed!", pg);
+            println!("{:?}",std::str::from_utf8(&seq) );
+        }
         None
     }
 

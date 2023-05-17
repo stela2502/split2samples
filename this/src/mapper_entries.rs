@@ -1,4 +1,4 @@
-//use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 
 /// A mapper entry is a simplistic storage for the fast mapper class.
@@ -50,6 +50,16 @@ impl MapperEntry{
 		}
 	}
 
+	pub fn possible_ids(&self) -> Vec<usize>{
+		let mut ids = HashSet::<usize>::with_capacity(5);
+		for entry in &self.map {
+			for gid in &entry.1.data{
+				ids.insert( *gid);
+			}
+		}
+		ids.into_iter().collect()
+	}
+
 	pub fn add( &mut self, seq:u64, id:usize) {
 		match self.find(&seq) {
 			Some( i ) =>  {
@@ -82,9 +92,10 @@ impl MapperEntry{
 		let mut max = 0;
 		let mut id = 0;
 		let mut entry_id = 0;
+		let mut c:usize;
 		for entry in &self.map {
 			seq_other = entry.0.clone().to_le_bytes();
-			let mut c = 0;
+			c=0;
 			//println!("I try to match the other {} ({:?}) to mine: {} or {:?}",seq, seq_u8, entry.0, seq_other);
 			for i in 0..8{
 				if seq_u8[i] == seq_other[i] {
@@ -93,8 +104,7 @@ impl MapperEntry{
 					}
 					//println!("\t\t\tmatch {}", seq_u8[i]);
 					c +=1;
-				}
-				
+				}	
 			}
 			if max < c {
 				max = c;
@@ -106,6 +116,62 @@ impl MapperEntry{
 		if max >1 {
 			return Some(entry_id);
 		}
+
+		// Still no match - come on - a frame shift - I bet it's true
+		let mut other:u64;
+		id = 0;
+		for entry in &self.map {
+			other = entry.0.clone();
+			other >>=2; //shift in the one direction
+			seq_other = other.to_le_bytes();
+			c=0;
+			for i in 0..8{
+				if seq_u8[i] == seq_other[i] {
+					if seq_u8[i] == 0{
+						continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
+					}
+					//println!("\t\t\tmatch {}", seq_u8[i]);
+					c +=1;
+				}
+			}
+			if max < c {
+				max = c;
+				entry_id = id;
+			}
+			id +=1;
+			count.push(c);
+		}
+		if max >1 {
+			return Some(entry_id);
+		}
+		// Still no match - come on - a frame shift - I bet it's true
+		let mut other:u64;
+		id = 0;
+		for entry in &self.map {
+			other = entry.0.clone();
+			other <<=2; //shift in the one direction
+			seq_other = other.to_le_bytes();
+			c=0;
+			for i in 0..8{
+				if seq_u8[i] == seq_other[i] {
+					if seq_u8[i] == 0{
+						continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
+					}
+					//println!("\t\t\tmatch {}", seq_u8[i]);
+					c +=1;
+				}
+			}
+			if max < c {
+				max = c;
+				entry_id = id;
+			}
+			id +=1;
+			count.push(c);
+		}
+		if max >1 {
+			return Some(entry_id);
+		}
+
 		return None
 	}
 

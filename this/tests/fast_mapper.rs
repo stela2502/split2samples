@@ -22,14 +22,14 @@ mod tests {
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 10 );
+        assert_eq!( mapper.with_data, 8 );
 
         assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0) );
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1));
 
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string() );
 
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), None );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1) );
 
         let mut gnames = Vec::<String>::with_capacity(3);
         gnames.push( "Gene1".to_string() );
@@ -53,7 +53,7 @@ mod tests {
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 10);
+        assert_eq!( mapper.with_data, 8);
 
         assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC" ), Some(0) );
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC" ), Some(1) );

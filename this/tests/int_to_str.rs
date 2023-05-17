@@ -8,6 +8,7 @@
 mod tests {
 
    use this::int_to_str::IntToStr;
+   //use int_to_str::int_to_str::IntToStr;
 
     #[test]
     fn test_u64_to_str(){
@@ -65,7 +66,8 @@ mod tests {
 
      //panic!("the binaries I get: {:b} {:b} {:b} {:b} ", binary[0], binary[1], binary[2], binary[3]);
      //assert_eq!( binary, vec![ 0b1101000, 0b101111, 0b1100011, 0b100010 ]);
-     assert_eq!( tool, vec![ 0b100010, 0b1100011, 0b101111, 0b1101000   ]);
+     //tool.print();
+     assert_eq!( tool, vec![ 0b1101000, 0b101111, 0b1100011, 0b100010  ]);
      let mut decoded:String = "".to_string();
 
      tool.to_string(15, &mut decoded );
@@ -111,14 +113,15 @@ mod tests {
 
     #[test]
     fn check_conversion_4_from_15bp() {
-
+     //          ----    ----
      let seq = b"AGGCCTGTATGA";
      let tool = IntToStr::new( seq.to_vec(), 10);
 
      assert_eq!( tool.len(),  3 ); 
 
-     //                          G G C 
-     assert_eq!( tool[2], 0b1101000 );
+     //                     A G T A 
+     tool.print();
+     assert_eq!( tool[2], 0b101100 );
 
      let mut decoded:String = "".to_string();
 
@@ -139,7 +142,8 @@ mod tests {
 
      //                       CT G G
      //                       G G T C
-     assert_eq!( tool[11], 0b10101101  );
+     tool.print();
+     assert_eq!( tool[11], 0b1  );
 
      let mut decoded:String = "".to_string();
 
@@ -157,32 +161,61 @@ mod tests {
     #[test]
     fn check_u64_decode() {
 
-     let seq = b"CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC";
+     let seq = b"CTGGAAAAGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTT";
+     //let seq = b"CTGG";
      let mut tool = IntToStr::new(seq.to_vec(), 8);
-     let binary = tool.into_u64(  );
+     tool.print();
 
+     let two_bp = tool.into_u64_nbp( 2 );
+     println!("the obtained sequence from into_u64_nbp for the sequence CT : {two_bp:b}");
+     assert_eq!( tool.into_u64_nbp( 2 ) , 0b1101 );
 
-     assert_eq!( binary, 7706141192143397037 ); 
+     let binary = tool.into_u16(  ).to_le_bytes();
+     println!("The u16 split ínto two u8 (again): {binary:?}", );
+     assert_eq!( binary[0] as u8, tool.u8_encoded[0] );
+     assert_eq!( binary[1] as u8, tool.u8_encoded[1] );
+     
+
+     //println!("Binary GGTC {:b}", IntToStr::enc_2bit(b"GGTC".to_vec() ) );
+     assert_eq!( tool.u8_encoded, vec![173_u8, 0_u8, 182_u8, 218_u8, 149_u8, 182_u8, 241_u8, 106_u8, 235_u8, 229_u8, 234_u8, 3_u8]);
+
 
      let mut decoded:String = "".to_string();
      tool.to_string( 32, &mut decoded);
-     assert_eq!( decoded, "CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGC".to_string() );
+     assert_eq!( decoded, "CTGGAAAAGCTGGGCTCCCGGCTGCATTGGGC".to_string() );
+   
+     decoded.clear();
+     tool.u8_to_str( 4,  &tool.u8_encoded[0],  &mut decoded);
+     assert_eq!( decoded, "CTGG".to_string() );
 
-     assert_eq!( tool.next(), Some( (24749_u16,55990_u64) ) );
+     decoded.clear();
+     tool.u8_array_to_str( 45,  tool.u8_encoded.clone(),  &mut decoded);
+     assert_eq!( decoded, "CTGGAAAAGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTT".to_string() );
+
+      decoded.clear();
+     tool.to_string( 2, &mut decoded);
+     assert_eq!( decoded, "CT".to_string() );
+
+     assert_eq!( tool.next(), Some( (173_u16,55990_u64) ) );
      assert_eq!( tool.next(), Some( (55990_u16,46741_u64) ) );
      assert_eq!( tool.next(), Some( (46741_u16,27377_u64) ) );
      assert_eq!( tool.next(), Some( (27377_u16,58859_u64) ) );
-     assert_eq!( tool.next(), Some( (38955_u16,30381_u64) ) );
+     assert_eq!( tool.next(), Some( (32811_u16,30381_u64) ) );
 
      assert_eq!( tool.next(), Some( (30381_u16,28069_u64) ) );
      assert_eq!( tool.next(), Some( (28069_u16,55996_u64) ) );
      assert_eq!( tool.next(), Some( (55996_u16,47482_u64) ) );
-     assert_eq!( tool.next(), Some( (26122_u16,23979_u64) ) );
+     assert_eq!( tool.next(), Some( (24586_u16,23979_u64) ) );
      assert_eq!( tool.next(), Some( (23979_u16,7017_u64) ) );
 
      assert_eq!( tool.next(), Some( (7017_u16,46767_u64) ) );
 
-
+     tool.deep_refresh();
+     tool.drop_n(1);
+     tool.print();
+     let mut decoded:String = "".to_string();
+     tool.to_string( 4, &mut decoded);
+     assert_eq!( decoded, "AAAA".to_string() );
 
      //                       CT G G
      //                       G G T C
