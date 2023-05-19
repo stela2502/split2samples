@@ -86,7 +86,9 @@ impl MapperEntry{
 			}
 		}
 		// now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
+		// these sequences might have a polyA tail - cut that!
 		let seq_u8 = seq.clone().to_le_bytes();
+
 		let mut seq_other:[u8;8];
 		let mut count = Vec::<usize>::with_capacity(self.map.len() );
 		let mut max = 0;
@@ -110,10 +112,24 @@ impl MapperEntry{
 				max = c;
 				entry_id = id;
 			}
-			id +=1;
 			count.push(c);
+			id +=1;
 		}
+		id = usize::MAX;
 		if max >1 {
+			for i in 0..count.len() {
+				if count[i] == max{
+					if id != usize::MAX{
+						// more than one entry has top matches
+						// a classical multimapper to the end
+						// return None!
+						//println!("count found multiple matches - A multi mapper! -> returning None");
+						return None
+					}
+					id = i;
+				}
+			}
+			//println!("New count has identified a possible gene: {:?}", self.map[id].1.data );
 			return Some(entry_id);
 		}
 
@@ -142,6 +158,7 @@ impl MapperEntry{
 			count.push(c);
 		}
 		if max >1 {
+			//println!("We found one match with a >>=!");
 			return Some(entry_id);
 		}
 		// Still no match - come on - a frame shift - I bet it's true
@@ -157,7 +174,7 @@ impl MapperEntry{
 					if seq_u8[i] == 0{
 						continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
 					}
-					//println!("\t\t\tmatch {}", seq_u8[i]);
+					// println!("\t\t\tmatch {} to gene(s) {:?}", seq_u8[i], entry.1.data );
 					c +=1;
 				}
 			}
@@ -169,6 +186,7 @@ impl MapperEntry{
 			count.push(c);
 		}
 		if max >1 {
+			//println!("We found one match with a <<=!");
 			return Some(entry_id);
 		}
 
@@ -177,9 +195,9 @@ impl MapperEntry{
 
 	pub fn print(&self) {
 		if  self.has_data() {
-			//println!("I have {} u64 matching sequences:", self.map.len() );
+			println!("I have {} u64 matching sequences:", self.map.len() );
 			for entry in &self.map{
-				//println!( "\tThe sequence {} links to the {}", entry.0, entry.1.to_string() );
+				println!( "\tThe sequence {} links to the {}", entry.0, entry.1.to_string() );
 			}
 		}
 	}

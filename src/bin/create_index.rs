@@ -68,7 +68,7 @@ fn main() {
         kmer_size = 32;
     }
 
-    const covered_area:usize = 600; // cover 600 bp of the transcript
+    const COVERED_AREA:usize = 600; // cover 600 bp of the transcript
     fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
 
     // let log_file_str = PathBuf::from(&opts.outpath).join(
@@ -124,24 +124,24 @@ fn main() {
     let gtf = Regex::new(r".*gtf.?g?z?$").unwrap();
 
     let re_gene_name: Regex;
-    let re_gene_id: Regex;
+    // let re_gene_id: Regex;
     let re_transcript_id : Regex;
 
     match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
             re_gene_name =  Regex::new(r#".* gene_name "([\(\)\w\d\-\._]*)""#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
+            // re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
             re_transcript_id = Regex::new(r#"transcript_id "([\d\w\.]*)";"#).unwrap();
         },
         false => {
             eprintln!("gff mode.");
             re_gene_name =  Regex::new(r#".* ?gene_name=([\(\)\w\d\-\._]*); ?"#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
+            // re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
             re_transcript_id = Regex::new(r#"transcript_id=([\d\w\.]*);"#).unwrap();
         },
     }
-    let mut gene_id:String;
+    //let mut gene_id:String;
     let mut gene_name:String;
     let mut transcript_id:String;
 
@@ -174,11 +174,11 @@ fn main() {
             }else {
                 panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
             }
-            if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
-                gene_id = captures.get(1).unwrap().as_str().to_string();
-            }else {
-                panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
-            }
+            // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
+            //     gene_id = captures.get(1).unwrap().as_str().to_string();
+            // }else {
+            //     panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
+            // }
             if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
                 transcript_id = captures.get(1).unwrap().as_str().to_string();
             }else {
@@ -222,7 +222,7 @@ fn main() {
                     // Do something with the gene, e.g. remove it
                     match seq_records.get( &gene.chrom.to_string() ){
                         Some(seq) => {
-                            gene.add_to_index( seq, &mut index, covered_area );
+                            gene.add_to_index( seq, &mut index, COVERED_AREA );
                             //println!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
@@ -245,7 +245,7 @@ fn main() {
         // Do something with the gene, e.g. remove it
         match seq_records.get( &gene.chrom.to_string() ){
             Some(seq) => {
-                gene.add_to_index( seq, &mut index, covered_area );
+                gene.add_to_index( seq, &mut index, COVERED_AREA );
                 //println!("The genes detected: {:?}", index.names_store );
             },
             None => {

@@ -107,7 +107,7 @@ impl IntToStr {
             return Some(false);
         }
         
-        for ( key, value ) in self.checker.iter(){
+        for value in self.checker.values(){
 
             if *value as f32 / (to-start) as f32 > 0.6 {
                 //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
@@ -143,7 +143,7 @@ impl IntToStr {
             return Some(false);
         }
         
-        for ( key, value ) in self.checker.iter(){
+        for value in self.checker.values(){
             //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
 
             if *value as f32 / (to-start) as f32 > 0.6 {

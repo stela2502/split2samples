@@ -16,6 +16,7 @@ use crate::ofiles::Ofiles;
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 //use std::time::Duration;
 
+use needletail::errors::ParseError;
 
 use std::path::PathBuf;
 use std::fs::File;
@@ -248,7 +249,7 @@ impl Analysis<'_>{
 	        b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG".to_vec(), b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC".to_vec(),
 	        b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC".to_vec(), b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG".to_vec() ];
 
-	        for mut seq in sequences{
+	        for seq in sequences{
 	        	//seq.reverse();
 	        	genes.add( &seq, format!("Sample{id}") );
 	        	id +=1;
@@ -263,7 +264,7 @@ impl Analysis<'_>{
 	        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC".to_vec(), b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC".to_vec(),
 	        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT".to_vec(), b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC".to_vec()];
 
-	        for mut seq in sequences{
+	        for seq in sequences{
 	        	//seq.reverse();
 	        	genes.add( &seq, format!("Sample{id}") );
 	        	id +=1;
@@ -305,7 +306,7 @@ impl Analysis<'_>{
         pb.set_style(spinner_style);
         //pb.set_prefix(format!("[{}/?]", i + 1));
 
-        let report_gid = self.genes.get_id( "Sample1".to_string() );
+        //let report_gid = self.genes.get_id( "Sample1".to_string() );
 
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {
@@ -382,52 +383,39 @@ impl Analysis<'_>{
                                 	report
                                 );
                                 //println!("analysis.parse() has a match to {gene_id} for sequence {:?}", self.genes.tool.encode2bit_u8( seqrec.seq().to_vec() ));
-                                if *gene_id == report_gid {
-                                	match seqrec1.write(&mut report.ofile.buff1, None){
-	                                    Ok(_) => (),
-	                                    Err(err) => println!("{err}")
-	                                };
-	                                match seqrec.write( &mut report.ofile.buff2, None){
-	                                    Ok(_) => (),
-	                                    Err(err) => println!("{err}")
-	                                };                              
-                            		//println!("Cool I got a gene id: {gene_id}", );
-                            	}
+                                // if *gene_id == report_gid {
+                                // 	match seqrec1.write(&mut report.ofile.buff1, None){
+	                            //         Ok(_) => (),
+	                            //         Err(err) => println!("{err}")
+	                            //     };
+	                            //     match seqrec.write( &mut report.ofile.buff2, None){
+			                    //         Ok(_) => (),
+			                    //         Err(err) => println!("{err}")
+			                    //     };                       
+                            	// 	//println!("Cool I got a gene id: {gene_id}", );
+                            	// }
                             },
                             None => {
-                                // match &self.genes2.get_unchecked( &seqrec.seq() ){
-                                //     Some(gene_id) =>{ 
-                                //         self.gex.try_insert( 
-                                //         	*cell_id as u64, 
-                                //         	format!( "Cell{cell_id}"  ),
-                                //         	gene_id,
-                                //         	umi, 
-                                // 			report
-                                //         	);
-                                //         if *gene_id == report_gid {
-		                                	match seqrec1.write(&mut report.ofile.buff1, None){
-			                                    Ok(_) => (),
-			                                    Err(err) => println!("{err}")
-			                                };
-			                                match seqrec.write( &mut report.ofile.buff2, None){
-			                                    Ok(_) => (),
-			                                    Err(err) => println!("{err}")
-			                                };                              
-		                        //     		println!("Cool I got a gene id: {gene_id}", );
-		                        //     	}
-	                            //     },
-	                            //     None => {
-	                            //     	// match seqrec1.write(&mut report.ofile.buff1, None){
-		                        //         //     Ok(_) => (),
-		                        //         //     Err(err) => println!("{err}")
-		                        //         // };
-		                        //         // match seqrec.write( &mut report.ofile.buff2, None){
-		                        //         //     Ok(_) => (),
-		                        //         //     Err(err) => println!("{err}")
-		                        //         // };
-	                            //      	report.no_data +=1;
-	                            //     }
-	                            // };
+
+                            	match seqrec1.write(&mut report.ofile.buff1, None){
+                                    Ok(_) => (),
+                                    Err(err) => println!("{err}")
+                                };
+                                // split this up to look at this in an other tool, but with the cell IDs!
+                                // seqrec.write_fastq( id:&[u8], seq:&[u8], qual:Option<&[u8]>, writer, line_ending: crate::parser::utils::LineEnding::Unix | '\n'?)
+                                // add the cell id to the fastq id
+                                let id_fq = String::from_utf8_lossy(seqrec.id()).to_string();
+                       			let concatenated = format!("{} Cell{}", id_fq, cell_id);
+                                match write_fastq(
+                                	concatenated.as_bytes(),
+                                	seqrec.raw_seq(),
+                                	seqrec.qual(),
+									&mut report.ofile.buff2 ){
+                                    Ok(_) => (),
+                                    Err(err) => println!("{err}")
+                                };     
+                                //println!("Added cell id {} to the unmapped read: {}", cell_id, concatenated);    
+
                                 report.no_data +=1;
 
                                 // all - samples genes and antibodies are classed as genes here.
@@ -523,4 +511,33 @@ impl Analysis<'_>{
     let file_path2 = format!("{}/SampleCounts.tsv", outpath );
     println!( "\nCell->Sample table written to {file_path2:?}\n" );
 	}
+}
+
+
+/// taken from https://github.com/onecodex/needletail/blob/eea49d01e5895a28ea85ba23a5e1a20a2fd7b378/src/parser/record.rs
+/// as the library defines this part as private :-(
+pub fn write_fastq(
+    id: &[u8],
+    seq: &[u8],
+    qual: Option<&[u8]>,
+    writer: &mut dyn Write,
+) -> Result<(), ParseError> {
+    let ending = b"\n".to_owned();
+    writer.write_all(b"@")?;
+    writer.write_all(id)?;
+    writer.write_all(&ending)?;
+    writer.write_all(seq)?;
+    writer.write_all(&ending)?;
+    writer.write_all(b"+")?;
+    writer.write_all(&ending)?;
+    // this is kind of a hack, but we want to allow writing out sequences
+    // that don't have qualitys so this will mask to "good" if the quality
+    // slice is empty
+    if let Some(qual) = qual {
+        writer.write_all(qual)?;
+    } else {
+        writer.write_all(&vec![b'I'; seq.len()])?;
+    }
+    writer.write_all(&ending)?;
+    Ok(())
 }
