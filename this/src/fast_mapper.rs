@@ -22,7 +22,7 @@ use std::io::BufRead;
 use std::io::Read;
 //use std::error::Error;
 //use crate::geneids::GeneIds;
-
+use crate::mapping_info::MappingInfo;
 
 /// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
 /// but that can be different, too. 
@@ -122,37 +122,43 @@ impl  FastMapper{
         let mut item = self.tool.next();
         while let Some(entries) = item{
 
-
-
             /////// comment out if not debugging //////
-            // println!( "              short {} long: {}",entries.0, entries.1);
-            let mut short_oligo = "".to_string();
-            let mut long_oligo = "".to_string();
-            self.tool.u16_to_str( 8, &entries.0, &mut short_oligo);
-            self.tool.u64_to_str( self.kmer_len, &entries.1, &mut long_oligo);
-            // println!( "short {} long: {}", short_oligo, long_oligo);
+            // if gene_id > 431{
+            //     println!( "{}       short {} long: {}",self.names_store[gene_id], entries.0, entries.1);
+            //     let mut short_oligo = "".to_string();
+            //     let mut long_oligo = "".to_string();
+            //     self.tool.u16_to_str( 8, &entries.0, &mut short_oligo);
+            //     self.tool.u64_to_str( self.kmer_len, &entries.1, &mut long_oligo);
+            //     println!( "short {} long: {}", short_oligo, long_oligo);
 
-            // let mut tmp = "".to_string();
-            // self.tool.u8_array_to_str( 8, entries.0.clone().to_le_bytes().to_vec(), &mut tmp );
-            // print!("\t\t\tindex\t{} {} ", &tmp, &entries.0 );
-            // print!("[ ");
-            // for en in entries.0.to_le_bytes().to_vec(){
-            //     print!(", {en:b}");
-            // }
-            // println!(" ]");
-            
-            // tmp.clear();
-            // self.tool.u8_array_to_str( 32, entries.1.to_le_bytes().to_vec(), &mut tmp );
-            // println!("\t\t\tlong\t{tmp}, {}",entries.1);
+            //     let mut tmp = "".to_string();
+            //     self.tool.u8_array_to_str( 8, entries.0.clone().to_le_bytes().to_vec(), &mut tmp );
+            //     print!("\t\t\tindex\t{} {} ", &tmp, &entries.0 );
+            //     print!("[ ");
+            //     for en in entries.0.to_le_bytes().to_vec(){
+            //         print!(", {en:b}");
+            //     }
+            //     println!(" ]");
+                
+            //     tmp.clear();
+            //     self.tool.u8_array_to_str( 32, entries.1.to_le_bytes().to_vec(), &mut tmp );
+            //     println!("\t\t\tlong\t{tmp}, {}",entries.1);
 
+               
+            // } 
             /////// comment out if not debugging ////////
-
+            if entries.2 < 5{
+                break;
+            }
 
             if ! self.mapper[entries.0 as usize].has_data() {
                 // will add in the next step so
                 self.with_data +=1;
-            } 
-            self.mapper[entries.0 as usize].add( entries.1, gene_id );
+            }
+            // if entries.2  < self.kmer_len{
+            //     println!("adding a smaller that expected sequence for gene {name}/{gene_id} ({})", entries.2);
+            // }
+            self.mapper[entries.0 as usize].add( entries.1, gene_id, entries.2 );
             i+=1;
             item = self.tool.next();
         }
@@ -203,7 +209,64 @@ impl  FastMapper{
         name.to_string()
     }
 
-    pub fn get(&mut self, seq: &[u8] ) -> Option<usize>{
+    fn get_best_gene( &self, genes:&HashMap::<usize, usize> , ret: &mut Vec::<usize> ){
+        ret.clear();
+        if genes.len() > 0{
+            let mut max = 0;
+            let mut id= usize::MAX;
+            let mut i = usize::MAX;
+
+            for (gene_id, count) in genes{
+                if count > &max{
+                    max = *count;
+                    id = *gene_id;
+                    i = 0;
+                }else if count == &max {
+                    i+=1;
+                }
+            }
+            if max < 2{
+                // there needs to be some reproducibility here!
+                return 
+            }
+            if i == 0{
+                // we have exactly one gene with the max count
+                //println!("I found one gene: {}", self.names_store[id] );
+                ret.push(id);
+                return;
+            }else {
+                // we have more than one gene as a max count - that is inacceptable
+                // for the debug I need to know which genes I get here!
+                let mut gene_ids= Vec::<usize>::with_capacity(i);
+                for (gene_id, count) in genes{
+                    if count == &max {
+                        gene_ids.push(*gene_id);
+                    }
+                }
+                if gene_ids.len() == 2{
+
+                    if self.names_store[gene_ids[0]] == self.names_store[gene_ids[1]].to_string()+"_int"{
+                        ret.push( gene_ids[0] )
+                    }
+                    if self.names_store[gene_ids[1]] == self.names_store[gene_ids[0]].to_string()+"_int" {
+                        ret.push( gene_ids[1] )
+                    }
+                }
+                
+                let mut genes = Vec::<String>::with_capacity( gene_ids.len() );
+                for gid in gene_ids{
+                    ret.push(gid);
+                    genes.push( self.names_store[gid].to_string())
+                }
+                //println!("I got a multi mapper ({i}): {:?} -> returning None", genes );
+                //multimapper += 1;
+            }
+            
+        }
+    }
+
+
+    pub fn get(&mut self, seq: &[u8], report:&mut MappingInfo ) -> Option<usize>{
         
         let mut id:usize;
         let mut genes:HashMap::<usize, usize>= HashMap::new();
@@ -225,6 +288,9 @@ impl  FastMapper{
         self.tool.from_vec_u8( seq.to_vec() );
 
         let mut item = self.tool.next();
+
+        let mut matching_geneids = Vec::<usize>::with_capacity(10);
+
         'main :while let Some(entries) = item{
              item = self.tool.next();
              //total_oligos +=1;
@@ -251,8 +317,15 @@ impl  FastMapper{
 
             //println!("got the index {index} and the mapper {mapper:?} searching for");
             //let mapper:MapperEntry = &*box_;
+
+
             stop = false;
+
+
             if self.mapper[entries.0 as usize].has_data() {
+                if matching_geneids.len() == 1 {
+                    break;
+                }
                 for gid in self.mapper[entries.0 as usize].possible_ids(){
                     *possible_genes.entry(gid).or_insert(0) += 1;
                 }
@@ -279,58 +352,16 @@ impl  FastMapper{
                     },
                 }
             }
-            else{
-                //no_8bp_match+=1;
-            }
-            i +=1;
-            if stop{
-                break 'main;
-            }
+            self.get_best_gene( &genes, &mut matching_geneids );
         }
-        let mut max = 0;
-        id = 0;
-        if genes.len() > 0{
-            for (gene_id, count) in &genes{
-                if count > &max{
-                    max = *count;
-                    id = *gene_id;
-                    i = 0;
-                }else if count == &max {
-                    i+=1;
-                }
-            }
-            if i == 0{
-                // we have exactly one gene with the max count
-                //println!("I found one gene: {}", self.names_store[id] );
-                return Some(id);
-            }else {
-                // we have more than one gene as a max count - that is inacceptable
-                // for the debug I need to know which genes I get here!
-                let mut gene_ids= Vec::<usize>::with_capacity(i);
-                for (gene_id, count) in &genes{
-                    if count == &max {
-                        gene_ids.push(*gene_id);
-                    }
-                }
-                if gene_ids.len() == 2{
 
-                    if self.names_store[gene_ids[0]] == self.names_store[gene_ids[1]].to_string()+"_int"{
-                        return Some( gene_ids[0] )
-                    }
-                    if self.names_store[gene_ids[1]] == self.names_store[gene_ids[0]].to_string()+"_int" {
-                        return Some( gene_ids[1] )
-                    }
-                }
-                // println!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") );
-                // println!("I got a multi mapper ({i}): {:?} -> returning None", gene_ids );
-                //multimapper += 1;
-            }
-            
+        if matching_geneids.len() == 0 {
+            return None
         }
         // we have not found any gene here!
         // only if all the 8bp have only linked to a single gene...
-        if possible_genes.len() == 1{
-            return Some( *(possible_genes.values().collect::<Vec<&usize>>()[0]) )
+        if matching_geneids.len() == 1{
+            return Some( matching_geneids[0] )
         }
 
 
@@ -353,23 +384,9 @@ impl  FastMapper{
             // println!("just by the u8's -> most likely gene id: {gid} with {max} u8's linking to: {}", self.names_store[gid].to_string());
             return Some(gid)
         }
-
-        if possible_genes.len() > 0 {
-            let mut pg= Vec::<String>::with_capacity( possible_genes.len() );
-            for gid in possible_genes{
-                pg.push( self.names_store[gid.0].to_string() );
-            }
-            /////////// for debug - print multi mapper sequences ////////////////
-            // println!("FastMapper::get - {total_oligo} no8 {no_8bp_match} no32 {no_32bp_match} mulit {multimapper} - failed" );
-            // println!("Possible genes: {:?} - failed!", pg);
-            // println!("{:?}",std::str::from_utf8(&seq) );
-        }
-        //////// for debug - print the not matching if not high in polyA! ///////////////
-        // self.tool.regenerate();
-        // if self.tool.u8_encoded[self.tool.u8_encoded.len()-3 ]+ self.tool.u8_encoded[self.tool.u8_encoded.len()-2 ] != 0 {
-        //     // I do not want to see the high polA ones here!
-        //     println!("No gene at alkl for thsi sequence:\n{:?}", std::str::from_utf8(&seq));
-        // }
+        let gnames: Vec<String> = matching_geneids.iter().map(|&index| self.names_store[index].to_string()).collect();
+        report.write_to_log( format!("Multimapping sequence to {} genes: {:?}", matching_geneids.len(), gnames ));
+        report.write_to_log( format!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") ));
         None
     }
 
@@ -470,8 +487,13 @@ impl  FastMapper{
                         //Ok( len ) => println!("length of gene list attached to that 32bp kmer: {:?}",len   ) ,
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
-                    for id in &tuple.1.data{
-                        match ofile.buff1.write( &id.to_le_bytes() ){
+                    for id in 0..tuple.1.data.len(){
+                        match ofile.buff1.write( &tuple.1.data[id].to_le_bytes() ){
+                            Ok(_) => (),
+                            //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
+                            Err(_err) => return Err::<(), &str>("value could not be written"),
+                        };
+                        match ofile.buff1.write( &tuple.1.significant_bp[id].to_le_bytes() ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
@@ -510,6 +532,7 @@ impl  FastMapper{
 
         let mut kmer:u64;
         let mut gene_id:usize;
+        let mut sig_bits:usize;
         let mut len:usize;
 
 
@@ -550,7 +573,9 @@ impl  FastMapper{
                 for _id in 0..len{
                     ifile.buff1.read_exact(&mut buff_u64).unwrap();
                     gene_id = usize::from_le_bytes( buff_u64 );
-                    self.mapper[idx].add( kmer, gene_id );
+                    ifile.buff1.read_exact(&mut buff_u64).unwrap();
+                    sig_bits= usize::from_le_bytes( buff_u64 );
+                    self.mapper[idx].add( kmer, gene_id, sig_bits );
                 }
             }
         }

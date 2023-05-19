@@ -1,7 +1,7 @@
 use clap::Parser;
 
 //use this::sampleids::SampleIds;
-use this::analysis::MappingInfo;
+use this::mapping_info::MappingInfo;
 use this::analysis::Analysis;
 //use this::last5::Last5;
 

@@ -38,3 +38,4 @@ pub mod fast_mapper;
 pub mod mapper_entries;
 pub mod gene;
 pub mod int_to_str;
+pub mod mapping_info;

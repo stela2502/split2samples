@@ -8,7 +8,7 @@ use std::collections::HashSet;
 //use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
 
-use crate::analysis::MappingInfo;
+use crate::mapping_info::MappingInfo;
 
 use std::io::BufWriter;
 use std::fs::File;

@@ -132,7 +132,7 @@ OPTIONS:
 ```
 
 ```
-target/release/create_index 
+./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index
 
 ```
 **Runtime**

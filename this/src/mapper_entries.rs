@@ -8,19 +8,48 @@ use std::collections::HashSet;
 #[derive(Debug,PartialEq)]
 pub struct NameEntry{
 	pub data:Vec<usize>, // the data storage
+	pub significant_bp:Vec<usize>, // how much data should be matched against here(e.g. sample IDs are quite short)
+	pos:usize,// the position to return with next
 }
 
 impl NameEntry{
 	pub fn new() -> Self{
 		let data = Vec::new();
+		let significant_bp = Vec::new();
+		let pos = 0;
 		Self{ 
-			data
+			data,
+			significant_bp,
+			pos
 		}
 	}
 
-	pub fn add( &mut self, id:usize) {
+	pub fn next(&mut self) -> Option<u64> {
+
+		if self.pos == self.data.len(){
+			return None
+		}
+		if self.significant_bp[self.pos] == 32 {
+			self.pos += 1;
+			return Some(u64::MAX)
+		}
+		//println!( "NameEntry::next() - I have {} significant bits for the iteration {}",self.significant_bp[self.pos]*2, self.pos);
+		let mask: u64 = (1 << self.significant_bp[self.pos] *2) -1;
+        self.pos += 1;
+        Some(mask)
+    }
+
+    pub fn reset(&mut self) {
+    	self.pos=0;
+    } 
+
+	pub fn add( &mut self, id:usize, sign:usize) {
+		if sign == 0 {
+			panic!("This does not make sense - I can not use a u64 with {sign} significant bits!");
+		}
 		if ! self.data.contains( &id ) {
 			self.data.push(id);
+			self.significant_bp.push(sign);
 		}
 	}
 	pub fn get( &self ) -> Vec<usize>{
@@ -30,6 +59,16 @@ impl NameEntry{
 	pub fn to_string( &self ) -> String {
 		format!("NameEntry linking to {} gene_ids: {:?}", self.data.len(), self.data )
 	}
+
+	pub fn contains(&self, gene_id:usize) -> bool{
+		for i in 0..self.data.len(){
+			if self.data[i] >= gene_id{
+				return true
+			}
+		}
+		return false
+	}
+
 
 }
 
@@ -60,14 +99,14 @@ impl MapperEntry{
 		ids.into_iter().collect()
 	}
 
-	pub fn add( &mut self, seq:u64, id:usize) {
+	pub fn add( &mut self, seq:u64, id:usize, sign:usize) {
 		match self.find(&seq) {
 			Some( i ) =>  {
-				self.map[i].1.add( id );
+				self.map[i].1.add( id, sign );
 			},
 			None => {
 				let mut name_entry = NameEntry::new();
-				name_entry.add( id );
+				name_entry.add( id , sign);
 				self.map.push( (seq, name_entry) );
 			}
 		};
@@ -78,12 +117,61 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&self, seq:&u64 ) -> Option<usize> {
+	pub fn find (&mut self, seq:&u64 ) -> Option<usize> {
 		for i in 0..self.map.len() {
-			if seq == &self.map[i].0 {
-				//println!("Match to the internal seq {}", self.map[i].0 );
-				return Some(i);
+			self.map[i].1.reset();
+			let mut bitmask = self.map[i].1.next();
+			if self.map[i].1.contains(467){
+				while let Some(mask) = bitmask{
+					if mask != u64::MAX {
+						//println!("I am processing using this bitmask: {:b}", mask);
+						let mut loc = seq.clone();
+						loc &= mask;
+						//println!( "I have the seq \n{seq:b} and am using this to map:\n{loc:b}");
+						if loc == *&self.map[i].0 {
+							//println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
+							return Some(i)
+						}
+					}
+					else {
+						//println!("Checking {} vs {}", seq,  &self.map[i].0 );
+						if seq == &self.map[i].0 {
+							//println!("And I have a match to {i}");
+							return Some(i)
+						}
+					}
+					//println!("Some problem?");
+					bitmask = self.map[i].1.next();
+				}
 			}
+			else {
+				while let Some(mask) = bitmask{
+					if mask != u64::MAX {
+						//println!("I am processing using this bitmask: {:b}", mask);
+						let mut loc = seq.clone();
+						loc &= mask;
+						//println!( "I have the seq \n{seq:b} and am using this to map:\n{loc:b}");
+						if loc == *&self.map[i].0 {
+							//println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
+							return Some(i)
+						}
+					}
+					else {
+						//println!("Checking {} vs {}", seq,  &self.map[i].0 );
+						if seq == &self.map[i].0 {
+							//println!("And I have a match to {i}");
+							return Some(i)
+						}
+					}
+					//println!("Some problem?");
+					bitmask = self.map[i].1.next();
+				}
+			}
+			
+			// if seq == &self.map[i].0 {
+			// 	//println!("Match to the internal seq {}", self.map[i].0 );
+			// 	return Some(i);
+			// }
 		}
 		// now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
 		// these sequences might have a polyA tail - cut that!
@@ -202,7 +290,7 @@ impl MapperEntry{
 		}
 	}
 
-	pub fn get( &self,seq:&u64 ) -> Option<Vec<usize>> {
+	pub fn get( &mut self,seq:&u64 ) -> Option<Vec<usize>> {
 		match self.find(seq){
 			Some(id) => {
 				return Some(self.map[id].1.data.clone())

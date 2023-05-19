@@ -83,7 +83,7 @@ impl IntToStr {
 
         self.checker.clear();
 
-        if self.u8_encoded.len() *4 < to{
+        if self.storage.len() < to{
             return None
         }
         
@@ -124,6 +124,7 @@ impl IntToStr {
         }
 
         if to - start < 10{
+        	//panic!("left over sequence is too short...{}", to - start);
         	return None
         }
 
@@ -151,10 +152,11 @@ impl IntToStr {
                 return Some(false);
             } 
         }
+        //println!("Sequence is fine");
         return Some(true)
     }
 
-    pub fn next(&mut self) -> Option<(u16, u64)> {
+    pub fn next(&mut self) -> Option<(u16, u64, usize)> {
 
     	match self.seq_ok(){
     		Some(true) => (),
@@ -163,13 +165,29 @@ impl IntToStr {
     			self.drop_n(2);
     			return self.next()
     		},
-    		None => return None
+    		None => {
+    			if self.shifted < 3{
+    				self.shift();
+    				return self.next();
+    			}
+    			return None
+    		},
     	};
 
         let short = self.into_u16().clone();
         self.drop_n(2);
         let long = self.into_u64_nbp( self.kmer_size ).clone();
-        Some(( short, long ))
+        let mut sign = 0;
+        //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}",
+        // self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
+        if self.storage.len() - self.lost *4 >= self.kmer_size{
+        	sign = self.kmer_size;
+        }else {
+        	sign = self.storage.len() - self.lost *4 ;
+        	//println!("next reporting a SHORTER VALUE! {sign}" );
+        }
+        
+        Some(( short, long, sign ))
     }
 
 	pub fn len(&self) -> usize{
