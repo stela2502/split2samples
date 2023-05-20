@@ -1,3 +1,12 @@
+# 1.2.1
+
+Sample table now also contains a n column with total reads over all samples.
+This should be used as a weight to qualify the FractionTotal.
+
+Mapping with smaller kmers_site values (like 16 or even 10) seams to have an overall
+positive influence of mapping efficiency. This feels a little fishy.
+I will look into that.
+
 # 1.2.0
 
 The mapper has changed completely.

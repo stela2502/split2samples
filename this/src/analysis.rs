@@ -285,6 +285,7 @@ impl Analysis<'_>{
                         continue 'main;
                     }
                 }
+
                 //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
                 let umi = Kmer::from( &seqrec1.seq()[pos[6]..pos[7]]).into_u64();
 
@@ -339,7 +340,9 @@ impl Analysis<'_>{
                                     Err(err) => println!("{err}")
                                 };     
                                 //println!("Added cell id {} to the unmapped read: {}", cell_id, concatenated);    
-
+                                //println!("Not matching seq  {}", std::str::from_utf8(&seqrec.seq()).expect("Invalid UTF-8") );
+                                //println!("Not matching qual {}", std::str::from_utf8(&seqrec.qual().unwrap()).expect("Invalid UTF-8") );
+                                //println!("The quality scores for the seqiuence:\n{:?}", &seqrec1.qual());
                                 report.no_data +=1;
 
                                 // all - samples genes and antibodies are classed as genes here.

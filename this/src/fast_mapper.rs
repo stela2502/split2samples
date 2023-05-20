@@ -225,7 +225,7 @@ impl  FastMapper{
                     i+=1;
                 }
             }
-            if max < 2{
+            if max > 1{
                 // there needs to be some reproducibility here!
                 return 
             }
@@ -291,6 +291,25 @@ impl  FastMapper{
 
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
 
+        let mut significant_bp = seq.len();
+        let mut start = 0;
+        let mut last_a = 0;
+        for i in 0..seq.len() {
+            if seq[i] == b'A' | b'A' {
+                last_a +=1;
+                if last_a >5{
+                    //println!("This contains a polyA stretch - last significant_bo is {}", i - last_a );
+                    //println!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") );
+                    significant_bp = i - last_a;
+                    break;
+                }
+            }
+            else {
+               last_a = 0; 
+            }
+        }
+
+
         'main :while let Some(entries) = item{
              item = self.tool.next();
              //total_oligos +=1;
@@ -324,12 +343,14 @@ impl  FastMapper{
 
             if self.mapper[entries.0 as usize].has_data() {
                 if matching_geneids.len() == 1 {
+                    // we have one best gene identified!
+                    // this needs at least 2 entries from the same gene to be OK
                     break;
                 }
                 for gid in self.mapper[entries.0 as usize].possible_ids(){
                     *possible_genes.entry(gid).or_insert(0) += 1;
                 }
-                match self.mapper[entries.0 as usize].get(&entries.1){
+                match self.mapper[entries.0 as usize].get(&entries.1, significant_bp-self.tool.lost *4 ){
                     Some( gene_id ) => {
                         //println!("Got one: {gene_id:?}");
                         //return ( gene_id );
@@ -411,6 +432,7 @@ impl  FastMapper{
         }
         ret.push("AsignedSampleName".to_string());
         ret.push("FractionTotal".to_string());
+        ret.push("n".to_string());
         "CellID\t".to_owned()+&ret.join("\t")
     }
 

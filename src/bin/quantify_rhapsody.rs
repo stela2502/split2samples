@@ -22,7 +22,7 @@ use this::ofiles::Ofiles;
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
-#[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "1.2.1", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]

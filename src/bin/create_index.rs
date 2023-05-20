@@ -122,6 +122,7 @@ fn main() {
     let mut genes = HashMap::<String, Gene>::new();
 
     let gtf = Regex::new(r".*gtf.?g?z?$").unwrap();
+    let chr = Regex::new(r"^chr").unwrap();
 
     let re_gene_name: Regex;
     // let re_gene_id: Regex;
@@ -226,9 +227,32 @@ fn main() {
                             //println!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
-                            missing_chr.insert( gene.chrom.to_string() );
-                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+                            if chr.is_match ( &gene.chrom.to_string() ){
+                                match seq_records.get( &gene.chrom.to_string()[3..] ){
+                                    Some(seq) => {
+                                        gene.add_to_index( seq, &mut index, COVERED_AREA );
+                                        //println!("The genes detected: {:?}", index.names_store );
+                                    },
+                                    None => {
+                                        missing_chr.insert( gene.chrom.to_string() );
+                                        eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+                                    }
+                                }
+                            }else {
+                                match seq_records.get( &format!("chr{}", &gene.chrom.to_string()) ){
+                                    Some(seq) => {
+                                        gene.add_to_index( seq, &mut index, COVERED_AREA );
+                                        //println!("The genes detected: {:?}", index.names_store );
+                                    },
+                                    None => {
+                                        missing_chr.insert( gene.chrom.to_string() );
+                                        eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+                                    }
+                                }
+
+                            }
                         }
+                            
                     }
                     
                     to_remove.push(k.clone());

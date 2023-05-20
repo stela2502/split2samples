@@ -152,7 +152,7 @@ impl CellData{
 
         data.push( max_name ); // max expressing gene (or sample id in an HTO analysis)
         data.push( (max as f32 / total as f32 ).to_string()); // fraction of reads for the max gene
-
+        data.push( ( total ).to_string());
         data.join( "\t" )
     }
 }

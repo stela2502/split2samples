@@ -24,17 +24,23 @@ impl NameEntry{
 		}
 	}
 
-	pub fn next(&mut self) -> Option<u64> {
+	pub fn next(&mut self, significant_bp:&usize) -> Option<u64> {
 
+		// we have returned all values
 		if self.pos == self.data.len(){
 			return None
 		}
-		if self.significant_bp[self.pos] == 32 {
+
+		if self.significant_bp[self.pos] == 32 &&  significant_bp >= &32{
 			self.pos += 1;
 			return Some(u64::MAX)
 		}
+		// else if significant_bp < &32{
+		// 	println!("I am returning a map for {} {} -> {}",self.significant_bp[self.pos], significant_bp ,self.significant_bp[self.pos].min(*significant_bp));
+		// }
 		//println!( "NameEntry::next() - I have {} significant bits for the iteration {}",self.significant_bp[self.pos]*2, self.pos);
-		let mask: u64 = (1 << self.significant_bp[self.pos] *2) -1;
+		let mask: u64 = (1 << self.significant_bp[self.pos].min(*significant_bp) *2) -1;
+		// println!("the returned map {mask:b}");
         self.pos += 1;
         Some(mask)
     }
@@ -100,7 +106,7 @@ impl MapperEntry{
 	}
 
 	pub fn add( &mut self, seq:u64, id:usize, sign:usize) {
-		match self.find(&seq) {
+		match self.find(&seq, 32) {
 			Some( i ) =>  {
 				self.map[i].1.add( id, sign );
 			},
@@ -117,11 +123,36 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&mut self, seq:&u64 ) -> Option<usize> {
+	pub fn find (&mut self, seq:&u64, significant_bp:usize) -> Option<usize> {
 		for i in 0..self.map.len() {
-			self.map[i].1.reset();
-			let mut bitmask = self.map[i].1.next();
-			if self.map[i].1.contains(467){
+			self.map[i].1.reset(); // a NameEntry
+			let mut bitmask = self.map[i].1.next(&significant_bp);
+			// if self.map[i].1.contains(467){
+			// 	while let Some(mask) = bitmask{
+			// 		if mask != u64::MAX {
+			// 			println!("I am processing using this bitmask: {:b}", mask);
+			// 			let mut loc_seq = seq.clone();
+			// 			loc_seq &= mask;
+			// 			let mut loc_entry = self.map[i].0.clone();
+			// 			loc_entry &= mask;
+			// 			println!( "I had the seq {seq} and am now using {loc_seq} to match to my entry orig{} changed {}", *&self.map[i].0 , loc_entry);
+			// 			if loc_seq == loc_entry {
+			// 				println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
+			// 				return Some(i)
+			// 			}
+			// 		}
+			// 		else {
+			// 			println!("Checking {} vs {}", seq,  &self.map[i].0 );
+			// 			if seq == &self.map[i].0 {
+			// 				println!("And I have a match to {i}");
+			// 				return Some(i)
+			// 			}
+			// 		}
+			// 		println!("But this did not turn out to be a match");
+			// 		bitmask = self.map[i].1.next(&significant_bp);
+			// 	}
+			// }
+			// else {
 				while let Some(mask) = bitmask{
 					if mask != u64::MAX {
 						//println!("I am processing using this bitmask: {:b}", mask);
@@ -141,32 +172,9 @@ impl MapperEntry{
 						}
 					}
 					//println!("Some problem?");
-					bitmask = self.map[i].1.next();
+					bitmask = self.map[i].1.next(&significant_bp);
 				}
-			}
-			else {
-				while let Some(mask) = bitmask{
-					if mask != u64::MAX {
-						//println!("I am processing using this bitmask: {:b}", mask);
-						let mut loc = seq.clone();
-						loc &= mask;
-						//println!( "I have the seq \n{seq:b} and am using this to map:\n{loc:b}");
-						if loc == *&self.map[i].0 {
-							//println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
-							return Some(i)
-						}
-					}
-					else {
-						//println!("Checking {} vs {}", seq,  &self.map[i].0 );
-						if seq == &self.map[i].0 {
-							//println!("And I have a match to {i}");
-							return Some(i)
-						}
-					}
-					//println!("Some problem?");
-					bitmask = self.map[i].1.next();
-				}
-			}
+			//}
 			
 			// if seq == &self.map[i].0 {
 			// 	//println!("Match to the internal seq {}", self.map[i].0 );
@@ -290,8 +298,8 @@ impl MapperEntry{
 		}
 	}
 
-	pub fn get( &mut self,seq:&u64 ) -> Option<Vec<usize>> {
-		match self.find(seq){
+	pub fn get( &mut self,seq:&u64, significant_bp:usize ) -> Option<Vec<usize>> {
+		match self.find(seq, significant_bp){
 			Some(id) => {
 				return Some(self.map[id].1.data.clone())
 			},

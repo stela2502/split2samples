@@ -249,6 +249,40 @@ user  0m2,482s
 sys 0m0,004s
 ```
 
+### version 1.2.1
+
+```
+../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
+Analysis will stop after having processed 18446744073709551615 fastq entries containing a cell info
+
+init models
+the log file: Mapping_log.txt
+   0.50 mio reads (99.35% usable; 77.16% PCR dupl. [usable] [38.04% for last batch])
+
+Writing outfiles ...
+sparse Matrix: 34 cell(s), 286 gene(s) and 2739 entries written (87 cells too view umis) to path Ok("Rustody_S2\\BD_Rhapsody_expression");
+
+sparse Matrix: 34 cell(s), 3 gene(s) and 29 entries written (87 cells too view umis) to path Ok("Rustody_S2\\BD_Rhapsody_antibodies");
+dense matrix: 34 cell written - 87 cells too view umis
+
+Summary:
+total      reads  : 500000 reads
+no cell ID reads  : 0 reads
+no gene ID reads  : 3723 reads
+N's or too short  : 3228 reads
+cellular reads    : 493049 reads (98.61% of total)
+expression reads  : 492391 reads (98.48% of total)
+antibody reads    : 80 reads (0.02% of total)
+sample tag reads  : 578 reads (0.12% of total)
+pcr duplicates    : 380424 reads (77.16% of usable)
+
+Cell->Sample table written to "Rustody_S2/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 2 sec 71milli sec
+```
+
+But if I use 32 bp for the kmers instead of 16 - I loose almost halve of the antibody reads: 54 instead of 80. That is a bug and I need to track that down. At the same time I gain 9 expression reads and in total 6 reported genes. Need to really look into that!
+
 So \> 4 sec. I do not think it makes sense to calculate the difference here.
 
 The two results from this small example are compared [here]( ./testData/BD_results/CombinedAnalysis_scanpy.ipynb).

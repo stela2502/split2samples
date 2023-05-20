@@ -14,7 +14,7 @@ pub struct IntToStr {
 	long_term_storage: Vec::<u8>, //this will never be shifted nor poped
 	storage: Vec::<u8>,  // the initial utf8 encoded data
 	pub u8_encoded: Vec::<u8>, // the 2bit encoded array (4 times compressed)
-	lost:usize, // how many times have I lost 4bp?
+	pub lost:usize, // how many times have I lost 4bp?
 	pub shifted:usize, // how many times have we shifted our initial sequence?
 	kmer_size:usize,
 	checker:BTreeMap::<u8, usize>
