@@ -33,4 +33,4 @@ Second run to actually split the fastq files based on the cell ids.
 # 0.1.0
 
 The first implementation mainly performed by Rob to get me up to speed.
-Now the bioinformatic becomes the focus.
+Now the bioinformatics becomes the focus.
