@@ -279,10 +279,11 @@ fn main() {
         }
 
     }
-    eprintln!("total first keys, total second keys, total single gene per second key, total multimapper per second key: {:?}", index.info() );
+    eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
 
-    index.write_index( opts.outpath.to_string() ).unwrap();
+    index.write_index_txt( opts.outpath.to_string() ).unwrap();
 
+    eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
 
     match now.elapsed() {
         Ok(elapsed) => {

@@ -178,6 +178,15 @@ user    16m48,953s
 
 OK I assume we get the point ~ 17min.
 
+## Rustody commands any version (up to now)
+
+```
+../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o BD_results/Rustody_S1 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqP
+anel.fasta -m 200 -v v2.96 --gene-kmers 16
+
+../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o BD_results/Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
+```
+
 ## time for a Rustody analysis 500k reads S2
 
 ```

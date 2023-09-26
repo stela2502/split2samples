@@ -74,7 +74,7 @@ impl IntToStr {
     //     }
     // }
 
-        /// returns true if the sequence passes, fasle if there is a problem like N nucleotides
+    /// returns true if the sequence passes, false if there is a problem like N nucleotides
     /// or too low sequences variability in the first 8bp
     fn seq_ok(&mut self ) -> Option<bool> {
 
@@ -162,7 +162,7 @@ impl IntToStr {
     		Some(true) => (),
     		Some(false) => {
     			//println!("useless oligos!");
-    			self.drop_n(2);
+    			self.drop_n(2); // shift 8 bp
     			return self.next()
     		},
     		None => {
@@ -175,18 +175,17 @@ impl IntToStr {
     	};
 
         let short = self.into_u16().clone();
-        self.drop_n(2);
+        self.drop_n(2); // shift 8 bp
         let long = self.into_u64_nbp( self.kmer_size ).clone();
         let mut sign = 0;
-        //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}",
-        // self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
+        //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
         if self.storage.len() - self.lost *4 >= self.kmer_size{
         	sign = self.kmer_size;
         }else {
         	sign = self.storage.len() - self.lost *4 ;
         	//println!("next reporting a SHORTER VALUE! {sign}" );
         }
-        
+        //println!( "short {short}, long {long}, sign {sign}" );
         Some(( short, long, sign ))
     }
 

@@ -337,8 +337,27 @@ mod tests {
 
     use crate::mapper_entries::MapperEntry;
 
-     #[test]
+    #[test]
     fn check_geneids() {
+        let mut mapper = MapperEntry::new();
+
+        mapper.add(12, 4 );
+        mapper.add(45, 3);
+
+        assert_eq!( mapper.get(&12), Some(vec![4]) );
+        assert_eq!( mapper.get(&45), Some(vec![3]) );
+
+		mapper.add(12, 14 );
+		assert_eq!( mapper.get(&12), Some(vec![4, 14]) );
+
+
+        assert_eq!( mapper.get(&14), None );
+
+        assert_eq!( mapper.info(), [2,1,1] );
+    }
+
+    #[test]
+    fn check_mapping() {
         let mut mapper = MapperEntry::new();
 
         mapper.add(12, 4 );
