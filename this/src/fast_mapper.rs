@@ -426,18 +426,21 @@ impl  FastMapper{
         let mut idx:usize;
 
         let version:u64 = self.version as u64;
+        eprintln!("Writing index version {}", version);
         match ofile.buff1.write( &version.to_le_bytes() ){
             Ok(_) => (),
             Err(_err) => return Err::<(), &str>("version could not be written"),
         };
 
         let seq_len:u64 = self.kmer_len as u64;
+        eprintln!("with kmer_len {}", seq_len);
         match ofile.buff1.write( &seq_len.to_le_bytes() ){
             Ok(_) => (),
             Err(_err) => return Err::<(), &str>("seq_len could not be written"),
         };
 
         let with_data:u64 = self.with_data as u64;
+        eprintln!("And a total of {} data entries", with_data);
         match ofile.buff1.write( &with_data.to_le_bytes() ){
             Ok(_) => (),
             Err(_err) => return Err::<(), &str>("with_data could not be written"),
@@ -527,20 +530,26 @@ impl  FastMapper{
         if ! self.version == u64::from_le_bytes( buff_u64 ) as usize{
             panic!("Sorry - this version of the index {} does not match the requirements {}.", u64::from_le_bytes( buff_u64 ), self.version);
         }
+        eprintln!("index version {}", self.version);
 
-        self.kmer_len = u64::from_le_bytes( buff_u64 ) as usize;
-        // next 8bytes are the kmer_len
         ifile.buff1.read_exact(&mut buff_u64).unwrap();
-        //println! ("I got the buff {buff:?}");
         self.kmer_len = u64::from_le_bytes( buff_u64 ) as usize;
-        // and finally (preable) the with_data usize value
+        eprintln!("Index kmer_len: {}", self.kmer_len); // next 8bytes are the kmer_len
+        
         ifile.buff1.read_exact(&mut buff_u64).unwrap();
         self.with_data = u64::from_le_bytes( buff_u64 ) as usize;
-
-        for _i in 0..self.with_data {
+        eprintln!("reading {} entries",self.with_data );
+        
+        for i in 0..self.with_data {
             // read in the single mapper elements 
             // first 2 - kmer position
-            ifile.buff1.read_exact(&mut buff_u16).unwrap();
+            match ifile.buff1.read_exact(&mut buff_u16){
+                Ok(_) => (),
+                Err(e) => {
+                    eprintln!("On entry {i} we hit this error: {e:?}");
+                    break
+                }
+            };
             let idx = u16::from_le_bytes ( buff_u16) as usize;
             if self.mapper[idx].has_data(){
                 panic!("Loading an mapper_entry that has alreadyx been filled!");
@@ -567,7 +576,7 @@ impl  FastMapper{
 
         eprintln!("Trying ro read the gene names\n");
         for name in ifile.buff2.lines() {
-            println!("I read this name: {name:?}");
+            //println!("I read this name: {name:?}");
             //let mut buff = [0_u8 ;8 ];
             match name {
                 Ok(n) => {

@@ -107,20 +107,27 @@ impl MapperEntry{
 
 	/// add a match pair 8bp + <sign> bp.
 	pub fn add( &mut self, seq:u64, id:usize, sign:usize) {
-		match self.find(&seq, 32) {
-			Some( i ) =>  {
-				println!("Oops - we have more genes having the same 8+32 bp sequence - adding BUT think about what to do here!");
-				self.map[i].1.add( id, sign );
-			},
-			None => {
-				println!("All good - a singleton - adding");
-				let mut name_entry = NameEntry::new();
-				name_entry.add( id , sign);
-				self.map.push( (seq, name_entry) );
+
+		let mut added = false;
+		for i in 0..self.map.len() {
+			if self.map[i].0 == seq {
+				self.map[i].1.add( id, sign);
+				added = true;
+				self.only = 0;
 			}
-		};
-		self.only = id;
+		}
+		if ! added{
+			let mut name_entry = NameEntry::new();
+			name_entry.add( id , sign);
+			self.map.push( ( seq, name_entry ) );
+			if self.map.len() == 1{
+				self.only = id;
+			}else {
+				self.only = 0;
+			}
+		}
 	}
+
 
 	/// finds the most likely matching entry in our set of sequences.
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
@@ -128,18 +135,19 @@ impl MapperEntry{
 	/// If this becomes necessary it can be added later.
 	pub fn find (&mut self, seq:&u64, significant_bp:usize) -> Option<usize> {
 		for i in 0..self.map.len() {
-			if self.map[i].0 == seq {
+			if &self.map[i].0 == seq {
 				if self.map[i].1.data.len() == 1{
-					return (Ok( self.map[i].1.data[0] ))
+
+					return Some( self.map[i].1.data[0] )
 				}else {
-					return(None)
+					return None
 				}
 			}
 		}
 		// now we have an initial match, but no secondary.
 		// I think we should (in the first stage here) just stop here.
-		return (None)
-		
+		return None
+
 		// 	self.map[i].1.reset(); // a NameEntry
 		// 	let mut bitmask = self.map[i].1.next(&significant_bp);
 		// 	// if self.map[i].1.contains(467){
@@ -314,12 +322,12 @@ impl MapperEntry{
 	}
 
 	pub fn get( &mut self,seq:&u64, significant_bp:usize ) -> Option<Vec<usize>> {
-		match self.find(seq, significant_bp){
-			Some(id) => {
-				return Some(self.map[id].1.data.clone())
-			},
-			None => return None,
-		};
+		for i in 0..self.map.len(){
+			if &self.map[i].0 == seq {
+			 	return Some(self.map[i].1.data.clone())
+			}
+		}
+		None
 	}
 
 	pub fn has_data(&self) -> bool{
