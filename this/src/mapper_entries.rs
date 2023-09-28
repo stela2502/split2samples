@@ -35,9 +35,9 @@ impl NameEntry{
 			self.pos += 1;
 			return Some(u64::MAX)
 		}
-		// else if significant_bp < &32{
-		// 	println!("I am returning a map for {} {} -> {}",self.significant_bp[self.pos], significant_bp ,self.significant_bp[self.pos].min(*significant_bp));
-		// }
+		//else if significant_bp < &32{
+		//	println!("I am returning a map for {} {} -> {}",self.significant_bp[self.pos], significant_bp ,self.significant_bp[self.pos].min(*significant_bp));
+		//}
 		//println!( "NameEntry::next() - I have {} significant bits for the iteration {}",self.significant_bp[self.pos]*2, self.pos);
 		let mask: u64 = (1 << self.significant_bp[self.pos].min(*significant_bp) *2) -1;
 		// println!("the returned map {mask:b}");
@@ -105,12 +105,15 @@ impl MapperEntry{
 		ids.into_iter().collect()
 	}
 
+	/// add a match pair 8bp + <sign> bp.
 	pub fn add( &mut self, seq:u64, id:usize, sign:usize) {
 		match self.find(&seq, 32) {
 			Some( i ) =>  {
+				println!("Oops - we have more genes having the same 8+32 bp sequence - adding BUT think about what to do here!");
 				self.map[i].1.add( id, sign );
 			},
 			None => {
+				println!("All good - a singleton - adding");
 				let mut name_entry = NameEntry::new();
 				name_entry.add( id , sign);
 				self.map.push( (seq, name_entry) );
@@ -125,168 +128,180 @@ impl MapperEntry{
 	/// If this becomes necessary it can be added later.
 	pub fn find (&mut self, seq:&u64, significant_bp:usize) -> Option<usize> {
 		for i in 0..self.map.len() {
-			self.map[i].1.reset(); // a NameEntry
-			let mut bitmask = self.map[i].1.next(&significant_bp);
-			// if self.map[i].1.contains(467){
-			// 	while let Some(mask) = bitmask{
-			// 		if mask != u64::MAX {
-			// 			println!("I am processing using this bitmask: {:b}", mask);
-			// 			let mut loc_seq = seq.clone();
-			// 			loc_seq &= mask;
-			// 			let mut loc_entry = self.map[i].0.clone();
-			// 			loc_entry &= mask;
-			// 			println!( "I had the seq {seq} and am now using {loc_seq} to match to my entry orig{} changed {}", *&self.map[i].0 , loc_entry);
-			// 			if loc_seq == loc_entry {
-			// 				println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
-			// 				return Some(i)
-			// 			}
-			// 		}
-			// 		else {
-			// 			println!("Checking {} vs {}", seq,  &self.map[i].0 );
-			// 			if seq == &self.map[i].0 {
-			// 				println!("And I have a match to {i}");
-			// 				return Some(i)
-			// 			}
-			// 		}
-			// 		println!("But this did not turn out to be a match");
-			// 		bitmask = self.map[i].1.next(&significant_bp);
-			// 	}
-			// }
-			// else {
-				while let Some(mask) = bitmask{
-					if mask != u64::MAX {
-						//println!("I am processing using this bitmask: {:b}", mask);
-						let mut loc = seq.clone();
-						loc &= mask;
-						//println!( "I have the seq \n{seq:b} and am using this to map:\n{loc:b}");
-						if loc == *&self.map[i].0 {
-							//println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
-							return Some(i)
-						}
-					}
-					else {
-						//println!("Checking {} vs {}", seq,  &self.map[i].0 );
-						if seq == &self.map[i].0 {
-							//println!("And I have a match to {i}");
-							return Some(i)
-						}
-					}
-					//println!("Some problem?");
-					bitmask = self.map[i].1.next(&significant_bp);
+			if self.map[i].0 == seq {
+				if self.map[i].1.data.len() == 1{
+					return (Ok( self.map[i].1.data[0] ))
+				}else {
+					return(None)
 				}
-			//}
+			}
+		}
+		// now we have an initial match, but no secondary.
+		// I think we should (in the first stage here) just stop here.
+		return (None)
+		
+		// 	self.map[i].1.reset(); // a NameEntry
+		// 	let mut bitmask = self.map[i].1.next(&significant_bp);
+		// 	// if self.map[i].1.contains(467){
+		// 	// 	while let Some(mask) = bitmask{
+		// 	// 		if mask != u64::MAX {
+		// 	// 			println!("I am processing using this bitmask: {:b}", mask);
+		// 	// 			let mut loc_seq = seq.clone();
+		// 	// 			loc_seq &= mask;
+		// 	// 			let mut loc_entry = self.map[i].0.clone();
+		// 	// 			loc_entry &= mask;
+		// 	// 			println!( "I had the seq {seq} and am now using {loc_seq} to match to my entry orig{} changed {}", *&self.map[i].0 , loc_entry);
+		// 	// 			if loc_seq == loc_entry {
+		// 	// 				println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
+		// 	// 				return Some(i)
+		// 	// 			}
+		// 	// 		}
+		// 	// 		else {
+		// 	// 			println!("Checking {} vs {}", seq,  &self.map[i].0 );
+		// 	// 			if seq == &self.map[i].0 {
+		// 	// 				println!("And I have a match to {i}");
+		// 	// 				return Some(i)
+		// 	// 			}
+		// 	// 		}
+		// 	// 		println!("But this did not turn out to be a match");
+		// 	// 		bitmask = self.map[i].1.next(&significant_bp);
+		// 	// 	}
+		// 	// }
+		// 	// else {
+		// 		while let Some(mask) = bitmask{
+		// 			if mask != u64::MAX {
+		// 				//println!("I am processing using this bitmask: {:b}", mask);
+		// 				let mut loc = seq.clone();
+		// 				loc &= mask;
+		// 				//println!( "I have the seq \n{seq:b} and am using this to map:\n{loc:b}");
+		// 				if loc == *&self.map[i].0 {
+		// 					//println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
+		// 					return Some(i)
+		// 				}
+		// 			}
+		// 			else {
+		// 				//println!("Checking {} vs {}", seq,  &self.map[i].0 );
+		// 				if seq == &self.map[i].0 {
+		// 					//println!("And I have a match to {i}");
+		// 					return Some(i)
+		// 				}
+		// 			}
+		// 			//println!("Some problem?");
+		// 			bitmask = self.map[i].1.next(&significant_bp);
+		// 		}
+		// 	//}
 			
-			// if seq == &self.map[i].0 {
-			// 	//println!("Match to the internal seq {}", self.map[i].0 );
-			// 	return Some(i);
-			// }
-		}
-		// now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
-		// these sequences might have a polyA tail - cut that!
-		let seq_u8 = seq.clone().to_le_bytes();
+		// 	// if seq == &self.map[i].0 {
+		// 	// 	//println!("Match to the internal seq {}", self.map[i].0 );
+		// 	// 	return Some(i);
+		// 	// }
+		// }
+		// // now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
+		// // these sequences might have a polyA tail - cut that!
+		// let seq_u8 = seq.clone().to_le_bytes();
 
-		let mut seq_other:[u8;8];
-		let mut count = Vec::<usize>::with_capacity(self.map.len() );
-		let mut max = 0;
-		let mut id = 0;
-		let mut entry_id = 0;
-		let mut c:usize;
-		for entry in &self.map {
-			seq_other = entry.0.clone().to_le_bytes();
-			c=0;
-			//println!("I try to match the other {} ({:?}) to mine: {} or {:?}",seq, seq_u8, entry.0, seq_other);
-			for i in 0..8{
-				if seq_u8[i] == seq_other[i] {
-					if seq_u8[i] == 0{
-						continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
-					}
-					//println!("\t\t\tmatch {}", seq_u8[i]);
-					c +=1;
-				}	
-			}
-			if max < c {
-				max = c;
-				entry_id = id;
-			}
-			count.push(c);
-			id +=1;
-		}
-		id = usize::MAX;
-		if max >1 {
-			for i in 0..count.len() {
-				if count[i] == max{
-					if id != usize::MAX{
-						// more than one entry has top matches
-						// a classical multimapper to the end
-						// return None!
-						//println!("count found multiple matches - A multi mapper! -> returning None");
-						return None
-					}
-					id = i;
-				}
-			}
-			//println!("New count has identified a possible gene: {:?}", self.map[id].1.data );
-			return Some(entry_id);
-		}
+		// let mut seq_other:[u8;8];
+		// let mut count = Vec::<usize>::with_capacity(self.map.len() );
+		// let mut max = 0;
+		// let mut id = 0;
+		// let mut entry_id = 0;
+		// let mut c:usize;
+		// for entry in &self.map {
+		// 	seq_other = entry.0.clone().to_le_bytes();
+		// 	c=0;
+		// 	//println!("I try to match the other {} ({:?}) to mine: {} or {:?}",seq, seq_u8, entry.0, seq_other);
+		// 	for i in 0..8{
+		// 		if seq_u8[i] == seq_other[i] {
+		// 			if seq_u8[i] == 0{
+		// 				continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
+		// 			}
+		// 			//println!("\t\t\tmatch {}", seq_u8[i]);
+		// 			c +=1;
+		// 		}	
+		// 	}
+		// 	if max < c {
+		// 		max = c;
+		// 		entry_id = id;
+		// 	}
+		// 	count.push(c);
+		// 	id +=1;
+		// }
+		// id = usize::MAX;
+		// if max >1 {
+		// 	for i in 0..count.len() {
+		// 		if count[i] == max{
+		// 			if id != usize::MAX{
+		// 				// more than one entry has top matches
+		// 				// a classical multimapper to the end
+		// 				// return None!
+		// 				//println!("count found multiple matches - A multi mapper! -> returning None");
+		// 				return None
+		// 			}
+		// 			id = i;
+		// 		}
+		// 	}
+		// 	//println!("New count has identified a possible gene: {:?}", self.map[id].1.data );
+		// 	return Some(entry_id);
+		// }
 
-		// Still no match - come on - a frame shift - I bet it's true
-		let mut other:u64;
-		id = 0;
-		for entry in &self.map {
-			other = entry.0.clone();
-			other >>=2; //shift in the one direction
-			seq_other = other.to_le_bytes();
-			c=0;
-			for i in 0..8{
-				if seq_u8[i] == seq_other[i] {
-					if seq_u8[i] == 0{
-						continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
-					}
-					//println!("\t\t\tmatch {}", seq_u8[i]);
-					c +=1;
-				}
-			}
-			if max < c {
-				max = c;
-				entry_id = id;
-			}
-			id +=1;
-			count.push(c);
-		}
-		if max >1 {
-			//println!("We found one match with a >>=!");
-			return Some(entry_id);
-		}
-		// Still no match - come on - a frame shift - I bet it's true
-		let mut other:u64;
-		id = 0;
-		for entry in &self.map {
-			other = entry.0.clone();
-			other <<=2; //shift in the one direction
-			seq_other = other.to_le_bytes();
-			c=0;
-			for i in 0..8{
-				if seq_u8[i] == seq_other[i] {
-					if seq_u8[i] == 0{
-						continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
-					}
-					// println!("\t\t\tmatch {} to gene(s) {:?}", seq_u8[i], entry.1.data );
-					c +=1;
-				}
-			}
-			if max < c {
-				max = c;
-				entry_id = id;
-			}
-			id +=1;
-			count.push(c);
-		}
-		if max >1 {
-			//println!("We found one match with a <<=!");
-			return Some(entry_id);
-		}
+		// // Still no match - come on - a frame shift - I bet it's true
+		// let mut other:u64;
+		// id = 0;
+		// for entry in &self.map {
+		// 	other = entry.0.clone();
+		// 	other >>=2; //shift in the one direction
+		// 	seq_other = other.to_le_bytes();
+		// 	c=0;
+		// 	for i in 0..8{
+		// 		if seq_u8[i] == seq_other[i] {
+		// 			if seq_u8[i] == 0{
+		// 				continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
+		// 			}
+		// 			//println!("\t\t\tmatch {}", seq_u8[i]);
+		// 			c +=1;
+		// 		}
+		// 	}
+		// 	if max < c {
+		// 		max = c;
+		// 		entry_id = id;
+		// 	}
+		// 	id +=1;
+		// 	count.push(c);
+		// }
+		// if max >1 {
+		// 	//println!("We found one match with a >>=!");
+		// 	return Some(entry_id);
+		// }
+		// // Still no match - come on - a frame shift - I bet it's true
+		// let mut other:u64;
+		// id = 0;
+		// for entry in &self.map {
+		// 	other = entry.0.clone();
+		// 	other <<=2; //shift in the one direction
+		// 	seq_other = other.to_le_bytes();
+		// 	c=0;
+		// 	for i in 0..8{
+		// 		if seq_u8[i] == seq_other[i] {
+		// 			if seq_u8[i] == 0{
+		// 				continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
+		// 			}
+		// 			// println!("\t\t\tmatch {} to gene(s) {:?}", seq_u8[i], entry.1.data );
+		// 			c +=1;
+		// 		}
+		// 	}
+		// 	if max < c {
+		// 		max = c;
+		// 		entry_id = id;
+		// 	}
+		// 	id +=1;
+		// 	count.push(c);
+		// }
+		// if max >1 {
+		// 	//println!("We found one match with a <<=!");
+		// 	return Some(entry_id);
+		// }
 
-		return None
+		// return None
 	}
 
 	pub fn print(&self) {

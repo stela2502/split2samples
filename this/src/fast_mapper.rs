@@ -301,37 +301,8 @@ impl  FastMapper{
             }
         }
 
-
-        'main :while let Some(entries) = item{
-             item = self.tool.next();
-             //total_oligos +=1;
-
-            /////// comment out if not debugging ////////
-
-            //println!( "get searching short {} long: {}",entries.0, entries.1);
-
-            // let mut tmp = "".to_string();
-            // self.tool.u8_array_to_str( 8, entries.0.clone().to_le_bytes().to_vec(), &mut tmp );
-            // print!("\t\t\tindex\t{} {} ", &tmp, &entries.0 );
-            // print!("[ ");
-            // for en in entries.0.to_le_bytes().to_vec(){
-            //     print!(", {en:b}");
-            // }
-            // println!(" ]");
-            
-            // tmp.clear();
-            // self.tool.u8_array_to_str( 32, entries.1.to_le_bytes().to_vec(), &mut tmp );
-            // println!("\t\t\tlong\t{tmp}, {}",entries.1);
-
-            /////// comment out if not debugging ////////
-
-
-            //println!("got the index {index} and the mapper {mapper:?} searching for");
-            //let mapper:MapperEntry = &*box_;
-
-
-            stop = false;
-
+        // entries is a Option<(u16, u64, usize)
+        'main :while let Some(entries) = self.tool.next(){
 
             if self.mapper[entries.0 as usize].has_data() {
                 if matching_geneids.len() == 1 {
@@ -594,12 +565,13 @@ impl  FastMapper{
             }
         }
 
-
+        eprintln!("Trying ro read the gene names\n");
         for name in ifile.buff2.lines() {
-            //println!("I read this name: {name:?}");
+            println!("I read this name: {name:?}");
             //let mut buff = [0_u8 ;8 ];
             match name {
                 Ok(n) => {
+                    //eprintln!("the name of the gene: {n}\n");
                     if ! self.names.contains_key( &n ){
                         self.names.insert( n.clone(), self.max_id );
                         self.names_store.push( n.clone() );
