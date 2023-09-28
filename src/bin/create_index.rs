@@ -94,9 +94,10 @@ fn main() {
 
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
-        id = seqrec.id().split(|&x| x == delimiter[0]).collect()[0];
-        println!("{:?}", id);
-        seq_records.insert( std::str::from_utf8( seqrec.id() ).unwrap().to_string() , seqrec.seq().to_vec());
+        id = seqrec.id().split(|&x| x == delimiter[0]).collect::<Vec<&[u8]>>()[0];
+        //id = seqrec.id().split(|&x| x == delimiter[0]).collect()[0];
+        println!("'{}'", std::str::from_utf8(id).unwrap() );
+        seq_records.insert( std::str::from_utf8( id ).unwrap().to_string() , seqrec.seq().to_vec());
     }
 
 
@@ -227,7 +228,7 @@ fn main() {
 
             'genes: for (k, gene) in &genes {
                 if let Some(_entry) = missing_chr.get( &gene.chrom.to_string() ){
-                    eprintln!("gene {} - no sequence for chr {}", &gene.name.to_string(), &gene.chrom.to_string() );
+                    eprintln!("gene '{}' - no sequence for chr '{}'", &gene.name.to_string(), &gene.chrom.to_string() );
                     continue 'genes;
                 }
                 if gene.passed(start) {
