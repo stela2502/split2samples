@@ -89,9 +89,13 @@ fn main() {
     let mut seq_records = HashMap::< String, Vec<u8>>::new();
 
     let mut expr_file = parse_fastx_file(&opts.file).expect("valid path/file");
+    let mut id: &[u8];
+    let delimiter: &[u8] = b"  ";  // The byte sequence you want to split by
 
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
+        id = seqrec.id().split(|&x| x == delimiter[0]).collect()[0];
+        println!("{:?}", id);
         seq_records.insert( std::str::from_utf8( seqrec.id() ).unwrap().to_string() , seqrec.seq().to_vec());
     }
 
@@ -125,24 +129,25 @@ fn main() {
     let chr = Regex::new(r"^chr").unwrap();
 
     let re_gene_name: Regex;
-    // let re_gene_id: Regex;
+    let re_gene_id: Regex;
     let re_transcript_id : Regex;
+
 
     match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
             re_gene_name =  Regex::new(r#".* gene_name "([\(\)\w\d\-\._]*)""#).unwrap();
-            // re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
+            re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
             re_transcript_id = Regex::new(r#"transcript_id "([\d\w\.]*)";"#).unwrap();
         },
         false => {
             eprintln!("gff mode.");
             re_gene_name =  Regex::new(r#".* ?gene_name=([\(\)\w\d\-\._]*); ?"#).unwrap();
-            // re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
+            re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
             re_transcript_id = Regex::new(r#"transcript_id=([\d\w\.]*);"#).unwrap();
         },
     }
-    //let mut gene_id:String;
+    let mut gene_id:String;
     let mut gene_name:String;
     let mut transcript_id:String;
 
@@ -173,7 +178,13 @@ fn main() {
             if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
                 gene_name = captures.get(1).unwrap().as_str().to_string();
             }else {
-                panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
+                if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
+                    continue; // this likely clutters up the data anyhow.
+                    gene_name = captures.get(1).unwrap().as_str().to_string();
+                }
+                else {
+                    panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
+                }
             }
             // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
             //     gene_id = captures.get(1).unwrap().as_str().to_string();
@@ -202,7 +213,7 @@ fn main() {
             // and add an exon
             match genes.get_mut( &transcript_id.to_string() ){
                 Some(gene) => gene.add_exon( parts[3].to_string(), parts[4].to_string() ),
-                None => panic!("and exon without a transcript?! ({})", transcript_id.to_string())
+                None => eprintln!( "ignoring transcript! ({})", transcript_id.to_string())
             }
         }
 
@@ -281,9 +292,11 @@ fn main() {
     }
     eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
 
-    index.write_index_txt( opts.outpath.to_string() ).unwrap();
+    index.write_index( opts.outpath.to_string() ).unwrap();
 
-    eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
+    //index.write_index_txt( opts.outpath.to_string() ).unwrap();
+    //eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
+    
 
     match now.elapsed() {
         Ok(elapsed) => {

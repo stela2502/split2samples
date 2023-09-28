@@ -93,7 +93,7 @@ impl  FastMapper{
 
     pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String ){
         
-        println!("fast_mapper adds this genes: {} of length {}", name, seq.len() );
+        //println!("fast_mapper adds this genes: {} of length {}", name, seq.len() );
 
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.max_id );
@@ -113,7 +113,7 @@ impl  FastMapper{
         let mut tmp = "".to_string();
         self.tool.to_string( seq.len(), &mut tmp );
         //self.tool.print();
-        println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
+        //println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
 
         // self.tool.shift(); // I will only add one set of kmers!
         // self.tool.shift();
@@ -154,10 +154,11 @@ impl  FastMapper{
         
         //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
-            panic!("gene {} does not get an entry in the fast_mapper object! - too short!!", &name.as_str() );
-        }else {
-            println!("I added {i} mappper entries for gene {name}");
+            eprintln!("gene {} does not get an entry in the fast_mapper object! - too short!!", &name.as_str() );
         }
+        /*else {
+            println!("I added {i} mappper entries for gene {name}");
+        }*/
 
         self.with_data += i;
         //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );

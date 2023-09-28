@@ -186,7 +186,7 @@ impl IntToStr {
         	//println!("next reporting a SHORTER VALUE! {sign}" );
         }
         //println!( "short {short}, long {long}, sign {sign}" );
-        Some(( short, long, sign ))
+        Some(( short -1, long, sign ))
     }
 
 	pub fn len(&self) -> usize{

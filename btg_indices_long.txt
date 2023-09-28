@@ -1,0 +1,16 @@
+              short 54177 long: 47582943
+short CAGGTACT long: TTCTGTAAGCCTGAAA
+              short 3807 long: 1660617430
+short TTCTGTAA long: GCCTGAAATGTTGAGC
+              short 726 long: 2694800123
+short GCCTGAAA long: TGTTGAGCTTCGAAGG
+              short 25339 long: 2135466143
+short TGTTGAGC long: TTCGAAGGAGACTTTC
+              short 41119 long: 2850632
+short TTCGAAGG long: AGACTTTCTGGAAAAA
+              short 32584 long: 101842987
+short AGACTTTC long: TGGAAAAAGACAGCAA
+              short 1554 long: 3749699619
+short GACAGCAA long: TAGAAAGTTTTCTTCT
+              short 57379 long: 3621904255
+
