@@ -574,7 +574,7 @@ impl  FastMapper{
             }
         }
 
-        eprintln!("Trying ro read the gene names\n");
+        eprintln!("Reading the gene names\n");
         for name in ifile.buff2.lines() {
             //println!("I read this name: {name:?}");
             //let mut buff = [0_u8 ;8 ];

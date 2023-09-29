@@ -133,15 +133,10 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&mut self, seq:&u64, significant_bp:usize) -> Option<usize> {
+	pub fn find (&mut self, seq:&u64, significant_bp:usize) -> Option<[usize]> {
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
-				if self.map[i].1.data.len() == 1{
-
-					return Some( self.map[i].1.data[0] )
-				}else {
-					return None
-				}
+				return Some( self.map[i].1.data.clone() )
 			}
 		}
 		// now we have an initial match, but no secondary.
