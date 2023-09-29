@@ -9,6 +9,7 @@ use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 
+use regex::Regex;
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
@@ -313,7 +314,7 @@ impl  FastMapper{
                 for gid in self.mapper[entries.0 as usize].possible_ids(){
                     *possible_genes.entry(gid).or_insert(0) += 1;
                 }
-                match self.mapper[entries.0 as usize].get(&entries.1, significant_bp-self.tool.lost *4 ){
+                match self.mapper[entries.0 as usize].get(&entries.1, significant_bp-self.tool.lost *4 , &self.tool){
                     Some( gene_id ) => {
                         //println!("Got one: {gene_id:?}");
                         //return ( gene_id );
@@ -332,7 +333,28 @@ impl  FastMapper{
                         }
                     },
                     None => {
-                        //no_32bp_match +=1;
+                        match self.mapper[entries.0 as usize].find(&entries.1, significant_bp-self.tool.lost *4 , &self.tool){
+                            Some( gene_id ) => {
+                                //println!("Got one: {gene_id:?}");
+                                //return ( gene_id );
+                                for gid in gene_id{
+                                    match genes.get_mut(&gid) {
+                                        Some(gene_count) => {
+                                            *gene_count +=1;
+                                            if *gene_count == 4 {
+                                                stop = true;
+                                            }
+                                        },
+                                        None => {
+                                            genes.insert( gid, 1);
+                                        },
+                                    };
+                                }
+                            },
+                            None => {        
+                                //no_32bp_match +=1;
+                            },
+                        }
                     },
                 }
             }
@@ -354,20 +376,19 @@ impl  FastMapper{
         let mut max = 0;
         let mut gid = 0;
         let mut n =0;
-        for ( gid_, count ) in &possible_genes {
-            if max < *count {
-                gid = *gid_;
-                max = *count;
-                n =0;
-            }
-            if max == *count{
-                n +=1;
-            }
+        let mut no_int = Vec::<usize>::with_capacity(5);
+        let re = Regex::new(r".*_int").unwrap();
+        
+        for id in &matching_geneids{
+            if ! re.is_match(&self.names_store[*id]) { 
+                no_int.push(*id);
+            };
         }
-        if n == 1 {
-            // println!("just by the u8's -> most likely gene id: {gid} with {max} u8's linking to: {}", self.names_store[gid].to_string());
-            return Some(gid)
+        if no_int.len() ==1 {
+            //eprintln!("I selected the only RNA seqence {}",self.names_store[ no_int[0] ]);
+            return Some(no_int[0])
         }
+
         let gnames: Vec<String> = matching_geneids.iter().map(|&index| self.names_store[index].to_string()).collect();
         report.write_to_log( format!("Multimapping sequence to {} genes: {:?}", matching_geneids.len(), gnames ));
         report.write_to_log( format!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") ));

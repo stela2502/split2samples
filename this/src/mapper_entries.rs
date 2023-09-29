@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use crate::int_to_str::IntToStr;
 
 
 /// A mapper entry is a simplistic storage for the fast mapper class.
@@ -82,16 +83,19 @@ impl NameEntry{
 #[derive(Debug,PartialEq)]
 pub struct MapperEntry{
 	pub map:Vec::<(u64, NameEntry)>, // the data storage
-	only:usize
+	only:usize,
+	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
 }
 
 impl MapperEntry{
 	pub fn new() -> Self{
 		let map = Vec::<(u64, NameEntry)>::new();
 		let only =0;
+		let hamming_cut = 4;
 		Self{
 			map,
-			only
+			only,
+			hamming_cut,
 		}
 	}
 
@@ -128,183 +132,76 @@ impl MapperEntry{
 		}
 	}
 
+	/// calculate the bit flips between two u64 sequences
+	pub fn hamming_distance(x: u64, y: u64) -> u32 {
+    	(x ^ y).count_ones()
+	}
 
-	/// finds the most likely matching entry in our set of sequences.
-	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
-	/// But not continuousely as that would need me to convert them back to string.
-	/// If this becomes necessary it can be added later.
-	pub fn find (&mut self, seq:&u64, significant_bp:usize) -> Option<[usize]> {
+	/// get is the exact match whereas find is a somewhat fuzzy match.
+	/// So if get does not find anything at all - try find instead.
+	pub fn get( &mut self,seq:&u64, significant_bp:usize, tool:&IntToStr ) -> Option<Vec<usize>> {
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
+				// if self.map[i].1.data.len() > 1{
+				// 	eprintln!("Ooops - we have a get in more than one gene: {:?}", self.map[i].1.data);
+				// }
 				return Some( self.map[i].1.data.clone() )
 			}
 		}
 		// now we have an initial match, but no secondary.
-		// I think we should (in the first stage here) just stop here.
-		return None
-
-		// 	self.map[i].1.reset(); // a NameEntry
-		// 	let mut bitmask = self.map[i].1.next(&significant_bp);
-		// 	// if self.map[i].1.contains(467){
-		// 	// 	while let Some(mask) = bitmask{
-		// 	// 		if mask != u64::MAX {
-		// 	// 			println!("I am processing using this bitmask: {:b}", mask);
-		// 	// 			let mut loc_seq = seq.clone();
-		// 	// 			loc_seq &= mask;
-		// 	// 			let mut loc_entry = self.map[i].0.clone();
-		// 	// 			loc_entry &= mask;
-		// 	// 			println!( "I had the seq {seq} and am now using {loc_seq} to match to my entry orig{} changed {}", *&self.map[i].0 , loc_entry);
-		// 	// 			if loc_seq == loc_entry {
-		// 	// 				println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
-		// 	// 				return Some(i)
-		// 	// 			}
-		// 	// 		}
-		// 	// 		else {
-		// 	// 			println!("Checking {} vs {}", seq,  &self.map[i].0 );
-		// 	// 			if seq == &self.map[i].0 {
-		// 	// 				println!("And I have a match to {i}");
-		// 	// 				return Some(i)
-		// 	// 			}
-		// 	// 		}
-		// 	// 		println!("But this did not turn out to be a match");
-		// 	// 		bitmask = self.map[i].1.next(&significant_bp);
-		// 	// 	}
-		// 	// }
-		// 	// else {
-		// 		while let Some(mask) = bitmask{
-		// 			if mask != u64::MAX {
-		// 				//println!("I am processing using this bitmask: {:b}", mask);
-		// 				let mut loc = seq.clone();
-		// 				loc &= mask;
-		// 				//println!( "I have the seq \n{seq:b} and am using this to map:\n{loc:b}");
-		// 				if loc == *&self.map[i].0 {
-		// 					//println!("reducinge significant bits lead to a match to  {:?}", &self.map[i].1.data );
-		// 					return Some(i)
-		// 				}
-		// 			}
-		// 			else {
-		// 				//println!("Checking {} vs {}", seq,  &self.map[i].0 );
-		// 				if seq == &self.map[i].0 {
-		// 					//println!("And I have a match to {i}");
-		// 					return Some(i)
-		// 				}
-		// 			}
-		// 			//println!("Some problem?");
-		// 			bitmask = self.map[i].1.next(&significant_bp);
-		// 		}
-		// 	//}
+		None
+	}
+	/// finds the most likely matching entry in our set of sequences.
+	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
+	/// But not continuousely as that would need me to convert them back to string.
+	/// If this becomes necessary it can be added later.
+	pub fn find (&mut self, seq:&u64, significant_bp:usize, tool:&IntToStr ) -> Option<Vec<usize>> {
+		for i in 0..self.map.len() {
+			if &self.map[i].0 == seq {
+				if self.map[i].1.data.len() > 1{
+					eprintln!("Ooops - we have a find in more than one gene: {:?}", self.map[i].1.data);
+				}
+				return Some( self.map[i].1.data.clone() )
+			}
+		}
+		// now we have an initial match, but no secondary.
+		for i in 0..self.map.len() {
+			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
+			if MapperEntry::hamming_distance( self.map[i].0, *seq ) < self.hamming_cut{
+				// let mut a:String = String::from("");
+				// let mut b:String = String::from("");
+				// tool.u64_to_str(32, seq, &mut a );
+				// tool.u64_to_str(32, &self.map[i].0, &mut b);
+				// eprintln!("I have a match between sequence \nA{:?}\nB{:?}\nhamming_dist: {}\nsignificant_bp: {significant_bp}\ngenes: {:?}",a, b,MapperEntry::hamming_distance( self.map[i].0, *seq ), self.map[i].1.data );
 			
-		// 	// if seq == &self.map[i].0 {
-		// 	// 	//println!("Match to the internal seq {}", self.map[i].0 );
-		// 	// 	return Some(i);
-		// 	// }
-		// }
-		// // now check if we could use the to_le_bytes() on both u64's and find the one with the best sub-match
-		// // these sequences might have a polyA tail - cut that!
-		// let seq_u8 = seq.clone().to_le_bytes();
-
-		// let mut seq_other:[u8;8];
-		// let mut count = Vec::<usize>::with_capacity(self.map.len() );
-		// let mut max = 0;
-		// let mut id = 0;
-		// let mut entry_id = 0;
-		// let mut c:usize;
-		// for entry in &self.map {
-		// 	seq_other = entry.0.clone().to_le_bytes();
-		// 	c=0;
-		// 	//println!("I try to match the other {} ({:?}) to mine: {} or {:?}",seq, seq_u8, entry.0, seq_other);
-		// 	for i in 0..8{
-		// 		if seq_u8[i] == seq_other[i] {
-		// 			if seq_u8[i] == 0{
-		// 				continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
-		// 			}
-		// 			//println!("\t\t\tmatch {}", seq_u8[i]);
-		// 			c +=1;
-		// 		}	
-		// 	}
-		// 	if max < c {
-		// 		max = c;
-		// 		entry_id = id;
-		// 	}
-		// 	count.push(c);
-		// 	id +=1;
-		// }
-		// id = usize::MAX;
-		// if max >1 {
-		// 	for i in 0..count.len() {
-		// 		if count[i] == max{
-		// 			if id != usize::MAX{
-		// 				// more than one entry has top matches
-		// 				// a classical multimapper to the end
-		// 				// return None!
-		// 				//println!("count found multiple matches - A multi mapper! -> returning None");
-		// 				return None
-		// 			}
-		// 			id = i;
-		// 		}
-		// 	}
-		// 	//println!("New count has identified a possible gene: {:?}", self.map[id].1.data );
-		// 	return Some(entry_id);
-		// }
-
-		// // Still no match - come on - a frame shift - I bet it's true
-		// let mut other:u64;
-		// id = 0;
-		// for entry in &self.map {
-		// 	other = entry.0.clone();
-		// 	other >>=2; //shift in the one direction
-		// 	seq_other = other.to_le_bytes();
-		// 	c=0;
-		// 	for i in 0..8{
-		// 		if seq_u8[i] == seq_other[i] {
-		// 			if seq_u8[i] == 0{
-		// 				continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
-		// 			}
-		// 			//println!("\t\t\tmatch {}", seq_u8[i]);
-		// 			c +=1;
-		// 		}
-		// 	}
-		// 	if max < c {
-		// 		max = c;
-		// 		entry_id = id;
-		// 	}
-		// 	id +=1;
-		// 	count.push(c);
-		// }
-		// if max >1 {
-		// 	//println!("We found one match with a >>=!");
-		// 	return Some(entry_id);
-		// }
-		// // Still no match - come on - a frame shift - I bet it's true
-		// let mut other:u64;
-		// id = 0;
-		// for entry in &self.map {
-		// 	other = entry.0.clone();
-		// 	other <<=2; //shift in the one direction
-		// 	seq_other = other.to_le_bytes();
-		// 	c=0;
-		// 	for i in 0..8{
-		// 		if seq_u8[i] == seq_other[i] {
-		// 			if seq_u8[i] == 0{
-		// 				continue; // not match AAAA as they could easily be 'not existent' in one of the oligos
-		// 			}
-		// 			// println!("\t\t\tmatch {} to gene(s) {:?}", seq_u8[i], entry.1.data );
-		// 			c +=1;
-		// 		}
-		// 	}
-		// 	if max < c {
-		// 		max = c;
-		// 		entry_id = id;
-		// 	}
-		// 	id +=1;
-		// 	count.push(c);
-		// }
-		// if max >1 {
-		// 	//println!("We found one match with a <<=!");
-		// 	return Some(entry_id);
-		// }
-
-		// return None
+				return Some( self.map[i].1.data.clone() )
+			}
+			// else {
+			// 	let mut a:String = String::from("");
+			// 	let mut b:String = String::from("");
+			// 	tool.u64_to_str(32, seq, &mut a );
+			// 	tool.u64_to_str(32, &self.map[i].0, &mut b);
+			// 	eprintln!("I have no match between sequence \nA{:?}\nB{:?}\nhamming_dist: {}",a, b,MapperEntry::hamming_distance( self.map[i].0, *seq ) );
+			// }
+		}
+		// if this still has not worked - is the RNA fragments possibly shorter than our genomic sequence here?
+		for i in 0..self.map.len() {
+			let our = self.map[i].0.to_be_bytes();
+			let other = seq.to_be_bytes();
+			let mut sum = 0;
+			for id in 0..8{
+				if our[id] == other[id] {
+					sum += 1;
+				}
+			}
+			if sum > 2 { // at least 24 bp exact match + position
+				return Some( self.map[i].1.data.clone() )
+			}
+		}
+		// so now we could have a frameshift due to a long stretch of a single nucleotide
+		// if necessary implement that later on.
+		// For now I think we should just stop here.
+		return None
 	}
 
 	pub fn print(&self) {
@@ -316,14 +213,7 @@ impl MapperEntry{
 		}
 	}
 
-	pub fn get( &mut self,seq:&u64, significant_bp:usize ) -> Option<Vec<usize>> {
-		for i in 0..self.map.len(){
-			if &self.map[i].0 == seq {
-			 	return Some(self.map[i].1.data.clone())
-			}
-		}
-		None
-	}
+	
 
 	pub fn has_data(&self) -> bool{
 		! self.map.is_empty()
@@ -375,21 +265,14 @@ mod tests {
     }
 
     #[test]
-    fn check_mapping() {
+    fn hamming_distance() {
         let mut mapper = MapperEntry::new();
 
-        mapper.add(12, 4 );
-        mapper.add(45, 3);
+        let a:u64 = 0b11010101;
+        let b:u64 = 0b10110001;
 
-        assert_eq!( mapper.get(&12), Some(vec![4]) );
-        assert_eq!( mapper.get(&45), Some(vec![3]) );
-
-		mapper.add(12, 14 );
-		assert_eq!( mapper.get(&12), Some(vec![4, 14]) );
-
-
-        assert_eq!( mapper.get(&14), None );
-
-        assert_eq!( mapper.info(), [2,1,1] );
+        assert_eq!( MapperEntry::hamming_distance(), 3 as u32 );
     }
+
+
 }

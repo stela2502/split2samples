@@ -396,6 +396,7 @@ impl Analysis<'_>{
 
     // this always first as this will decide which cells are OK ones!
 
+    println!("filtering cells");
     match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}")
@@ -405,12 +406,13 @@ impl Analysis<'_>{
         "BD_Rhapsody_antibodies"
     );
 
+    println!("Writing Antibody counts");
     match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes, &self.ab_names, 1 ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}")
     };
 
-
+	println!("Writing GeneEXpression counts");
     match self.gex.write_sub ( file_path, &mut self.genes, &self.sample_names, 0 ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}" )

@@ -53,7 +53,6 @@ struct Opts {
     umi_count: u8,
 */
 
-
 // the main function nowadays just calls the other data handling functions
 fn main() {
     // parse the options

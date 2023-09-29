@@ -304,10 +304,8 @@ impl SingleCellData{
 
     /// this will create a path and populate that with 10x kind of files.
     pub fn write_sparse (&mut self, file_path: PathBuf, genes: &mut FastMapper, min_count:usize) -> Result< (), &str>{
-        let mut names: Vec<String> = Vec::with_capacity(genes.names.len());
-        for name in genes.names.keys() {
-            names.push( name.to_string() );
-        }
+        let names: Vec<String> = genes.names.keys().map(|k| k.to_string()).collect();
+
         return self.write_sparse_sub( file_path, genes, &names, min_count);
     }
 
@@ -340,7 +338,7 @@ impl SingleCellData{
             }
         };
         let file1 = GzEncoder::new(file, Compression::default());
-        let mut writer = BufWriter::new(file1);
+        let mut writer = BufWriter::with_capacity(4096,file1);
 
 
         //rs = Path::new( &file_path.clone().join("barcodes.tsv.gz") );
@@ -356,7 +354,7 @@ impl SingleCellData{
             }
         };
         let file2 = GzEncoder::new(file_b, Compression::default());
-        let mut writer_b = BufWriter::new(file2);
+        let mut writer_b = BufWriter::with_capacity(4096,file2);
         match writeln!( writer, "%%MatrixMarket matrix coordinate integer general\n{}", 
              self.mtx_counts( genes, names, min_count ) ){
             Ok(_) => (),
@@ -375,7 +373,7 @@ impl SingleCellData{
             }
         };
         let file3 = GzEncoder::new(file_f, Compression::default());
-        let mut writer_f = BufWriter::new(file3);
+        let mut writer_f = BufWriter::with_capacity(4096,file3);
 
         for name in genes.names4sparse.keys() {
             match writeln!( writer_f, "{name}\t{name}\tGene Expression"  ){
