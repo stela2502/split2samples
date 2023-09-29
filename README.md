@@ -24,8 +24,8 @@ But it also compiles on Windows. I just never use that for actual work.
 
 
 ```
-git clone https://github.com/stela2502/split2samples
-cd split2samples
+git clone https://github.com/stela2502/Rustody
+cd Rustody
 cargo build --release
 cp target/release/split2samples /usr/bin
 cp target/release/quantify_rhapsody /usr/bin
@@ -181,16 +181,15 @@ OK I assume we get the point ~ 17min.
 ## Rustody commands any version (up to now)
 
 ```
-../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o BD_results/Rustody_S1 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqP
-anel.fasta -m 200 -v v2.96 --gene-kmers 16
+target/release/quantify_rhapsody -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
 
-../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o BD_results/Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
+target/release/quantify_rhapsody -r testData/cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o testData/BD_results/Rustody_S2 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
 ```
 
 ## time for a Rustody analysis 500k reads S2
 
 ```
- time ../target/release/quantify_rhapsody -r cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e 2276_20220531_chang_to_rpl36a_amplicons.fasta -a MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
+ time target/release/quantify_rhapsody -r testData/cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
 
 init models
 the log file: Mapping_log.txt
