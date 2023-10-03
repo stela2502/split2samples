@@ -56,6 +56,15 @@ impl MappingInfo{
 		}
 	}
 
+
+	pub fn merge(&mut self, other:&MappingInfo ){
+		self.no_sample += other.no_sample;
+		self.no_data += other.no_data;
+		//unknown is defined without multiprocessor support
+		self.ok_reads += other.ok_reads;
+		self.pcr_duplicates += other.pcr_duplicates;
+	}
+
 	pub fn write_to_log ( &mut self, text:String ){
 		match writeln!( self.log_writer, "{text}" ){
             Ok(_) => (),

@@ -27,7 +27,7 @@ use std::path::Path;
 /// we should get a relatively correct picture as these folow normal distribution.
 pub struct CellData{
     //pub kmer_size: usize,
-    pub name: std::string::String,
+    pub name: u64,
     pub genes: BTreeMap<usize, HashSet<u64>>, // I want to know how many times I got the same UMI
     pub genes_with_data: HashSet<String>, // when exporting genes it is helpfule to know which of the possible genomic genes actually have an expression reported...
     pub total_reads: BTreeMap<usize, usize>, // instead of the per umi counting
@@ -35,7 +35,7 @@ pub struct CellData{
 }
 
 impl CellData{
-    pub fn new(  name: std::string::String ) -> Self{
+    pub fn new(  name: u64 ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
         let total_reads = BTreeMap::new();
         let genes_with_data = HashSet::new();
@@ -49,15 +49,41 @@ impl CellData{
         }
     }
 
+    pub fn deep_clone(&self) -> CellData {
+        let cloned_genes: BTreeMap<usize, HashSet<u64>> = self
+            .genes
+            .iter()
+            .map(|(k, v)| (*k, v.clone())) // Clone each HashSet within the BTreeMap
+            .collect();
+
+        let cloned_genes_with_data: HashSet<String> = self.genes_with_data.clone();
+
+        let cloned_total_reads: BTreeMap<usize, usize> = self.total_reads.clone();
+
+        CellData {
+            name: self.name,
+            genes: cloned_genes,
+            genes_with_data: cloned_genes_with_data,
+            total_reads: cloned_total_reads,
+            passing: self.passing,
+        }
+    }
+
     /// adds the other values into this object
-    pub fn merge(&mut self, other:CellData ){
-        
-        for (gene_id, umis) in other.genes {
+    pub fn merge(&mut self, other:&CellData ){
+        let mut too_much:usize;
+        for (gene_id, umis) in &other.genes {
+            too_much = 0;
             for umi in umis {
-                self.add( gene_id, umi );
+                self.add( *gene_id, *umi );
+                too_much += 1;
             }
             match self.total_reads.get_mut( &gene_id ){
-                Some( val ) => *val += other.total_reads.get( &gene_id ).unwrap_or(&0) ,
+                Some( val ) => {
+                    let add = other.total_reads.get( &gene_id ).unwrap_or(&too_much) - too_much;
+
+                    *val += add
+                },
                 None => panic!("merge could not copy the total gene values for gene {gene_id}",  ),
             };
         }
@@ -131,7 +157,7 @@ impl CellData{
     pub fn to_str(&self, gene_info:&FastMapper, names: &Vec<String> ) -> String {
 
         let mut data = Vec::<std::string::String>::with_capacity( gene_info.names.len()+3 ); 
-        data.push(self.name.clone());
+        data.push(self.name.to_string());
 
         // here our internal data already should be stored with the same ids as the gene names.
         let mut total = 0;
@@ -165,7 +191,7 @@ impl CellData{
 pub struct SingleCellData{    
     //kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
-    cells: BTreeMap<u64, CellData>,
+    cells: BTreeMap< u64, CellData>,
     checked: bool,
     passing: usize,
     pub genes_with_data: HashSet<usize>,
@@ -197,21 +223,31 @@ impl SingleCellData{
         }
     }
 
+    /// merge two SingleCellData objects - keep track of the umis!
+    pub fn merge( &mut self, other:&SingleCellData ){
+        // reset all internal measurements
+        self.checked= false;
+        self.passing = 0;
+        self.genes_with_data = HashSet::new();
+        for other_cell in other.cells.values() {
+            match self.cells.get_mut( &other_cell.name ){
+                Some(cell) => { cell.merge( other_cell ) },
+                None => {
+                    self.cells.insert( other_cell.name, other_cell.deep_clone() );
+                }
+            }
+        }
+    }
+
     /// the old get funtion. Does not work in the new Analysis package. So only to make the tests work again.
-    pub fn get(&mut self, cell_id: u64, name: std::string::String ) -> Result< &mut CellData, &str>{
+    pub fn get(&mut self, name: &u64 ) -> Result< &mut CellData, &str>{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
 
-        self.cells.entry(cell_id).or_insert_with( || { CellData::new( name ) });
+        self.cells.entry(*name).or_insert_with( || { CellData::new( *name ) });
 
-        // if ! self.cells.contains_key( &cell_id ){
-        //     //let data = CellData::new(self.kmer_size, name );
-        //     let data = CellData::new( name );
-        //     self.cells.insert( cell_id, data );
-        // }
-
-        let ret = match self.cells.get_mut(&cell_id){
+        let ret = match self.cells.get_mut( name ){
             Some(c1) => c1, 
             None => return Err::< &mut CellData, &str>("BTreeMap Upstream error")
         };
@@ -221,15 +257,15 @@ impl SingleCellData{
 
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
-    pub fn try_insert(&mut self, cell_id: u64, name: std::string::String, 
+    pub fn try_insert(&mut self, name: &u64, 
         gene_id:&usize,umi:u64, report: &mut MappingInfo ) ->bool{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
         self.genes_with_data.insert( *gene_id );
-        self.cells.entry(cell_id).or_insert_with( || { CellData::new( name ) });
+        self.cells.entry(*name).or_insert_with( || { CellData::new( *name ) });
         let mut ret = true;
-        match self.cells.get_mut(&cell_id){
+        match self.cells.get_mut(&name){
             Some(cell_info) =>  {
                 //println!("I got gene {} for cell {}", gene_id , cell_info.name);
                 report.ok_reads += 1;

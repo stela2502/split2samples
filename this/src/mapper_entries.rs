@@ -139,7 +139,7 @@ impl MapperEntry{
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
-	pub fn get( &mut self,seq:&u64, tool:&IntToStr ) -> Option<Vec<usize>> {
+	pub fn get( &self,seq:&u64, tool:&IntToStr ) -> Option<Vec<usize>> {
 
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
@@ -156,7 +156,7 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&mut self, seq:&u64, significant_bp:usize, tool:&IntToStr ) -> Option<Vec<usize>> {
+	pub fn find (&self, seq:&u64, significant_bp:usize, tool:&IntToStr ) -> Option<Vec<usize>> {
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
 				if self.map[i].1.data.len() > 1{

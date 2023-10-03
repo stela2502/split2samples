@@ -194,7 +194,7 @@ impl  FastMapper{
         println!("I have {} kmers and {} genes", self.with_data, self.names.len() );
     }
 
-    pub fn get_id( &mut self, name: String ) -> usize{
+    pub fn get_id( &self, name: String ) -> usize{
         let id = match self.names.get( &name ) {
             Some( id ) => id,
             None => panic!("Gene {name} not defined in the GeneID object"),
@@ -270,7 +270,7 @@ impl  FastMapper{
     }
 
 
-    pub fn get(&mut self, seq: &[u8], report:&mut MappingInfo ) -> Option<usize>{
+    pub fn get(&self, seq: &[u8], report:&mut MappingInfo ) -> Option<usize>{
         
         //let mut id:usize;
         let mut genes:HashMap::<usize, usize>= HashMap::new();
@@ -289,7 +289,8 @@ impl  FastMapper{
 
         let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
-        self.tool.from_vec_u8( seq.to_vec() );
+        let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
+        tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
 
@@ -315,7 +316,7 @@ impl  FastMapper{
 
         // entries is a Option<(u16, u64, usize)
         stop = false;
-        'main :while let Some(entries) = self.tool.next(){
+        'main :while let Some(entries) = tool.next(){
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
@@ -328,9 +329,9 @@ impl  FastMapper{
                     *possible_genes.entry(gid).or_insert(0) += 1;
                 }
 
-                let seq_u64 = self.tool.mask_u64( &entries.1 );
+                let seq_u64 = tool.mask_u64( &entries.1 );
 
-                match self.mapper[entries.0 as usize].get( &seq_u64,  &self.tool){
+                match &self.mapper[entries.0 as usize].get( &seq_u64,  &tool){
                     Some( gene_id ) => {
                         //println!("Got one: {gene_id:?}");
                         //return ( gene_id );
@@ -343,13 +344,13 @@ impl  FastMapper{
                                     }
                                 },
                                 None => {
-                                    genes.insert( gid, 1);
+                                    genes.insert( *gid, 1);
                                 },
                             };
                         }
                     },
                     None => {
-                        match self.mapper[entries.0 as usize].find(&entries.1, significant_bp-self.tool.lost *4 , &self.tool){
+                        match self.mapper[entries.0 as usize].find(&entries.1, significant_bp-self.tool.lost *4 , &tool){
                             Some( gene_id ) => {
                                 //println!("Got one: {gene_id:?}");
                                 //return ( gene_id );

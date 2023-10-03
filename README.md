@@ -12,6 +12,10 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
+quantify_rhapsody has finally gotten a muti processor upgrade: quantify_rhapsody_multi.
+I have not tested it out completetly now, but am confident it works correctly. (Final last words - I know). Just the PCR duplicates are not collected correctly as they can now only be measured in each chunk of the data. But the UMIs is all this tool does measure.
+So even if the PCR duplicates are not counted correctly they will nevertheless be excluded from the final data.
+
 The news [can be read here](./News.md).
 
 # Installation
@@ -29,6 +33,7 @@ cd Rustody
 cargo build --release
 cp target/release/split2samples /usr/bin
 cp target/release/quantify_rhapsody /usr/bin
+cp target/release/quantify_rhapsody_multi /usr/bin
 cp target/release/bd_cell_id_2_seq /usr/bin
 cp target/release/bd_get_single_cell /usr/bin
 cp target/release/get_n_cell_reads /usr/bin

@@ -16,7 +16,7 @@ pub struct IntToStr {
 	pub u8_encoded: Vec::<u8>, // the 2bit encoded array (4 times compressed)
 	pub lost:usize, // how many times have I lost 4bp?
 	pub shifted:usize, // how many times have we shifted our initial sequence?
-	kmer_size:usize,
+	pub kmer_size:usize,
 	checker:BTreeMap::<u8, usize>,
 	mask:u64, //a mask to fill matching sequences to match the index's kmer_len
 }

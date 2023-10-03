@@ -419,7 +419,7 @@ impl CellIds<'_>{
         }
     }
 
-    pub fn to_cellid (&mut self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
+    pub fn to_cellid (&self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
         let mut cell_id:u32 = 0;
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
