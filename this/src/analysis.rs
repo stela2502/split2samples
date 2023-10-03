@@ -335,11 +335,13 @@ impl Analysis<'_>{
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
     	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str  ){
 
-    	let good_reads: &Vec<(Vec<u8>, Vec<u8>)> = &self.read_data(f1, f2, report, pos, min_sizes );
-    	
     	let num_threads = num_cpus::get(); 
 
     	println!("I am using {} cpus", num_threads);
+    	
+    	let good_reads: &Vec<(Vec<u8>, Vec<u8>)> = &self.read_data(f1, f2, report, pos, min_sizes );
+    	
+    	
 
     	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 	        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
