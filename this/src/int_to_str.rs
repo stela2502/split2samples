@@ -17,7 +17,8 @@ pub struct IntToStr {
 	pub lost:usize, // how many times have I lost 4bp?
 	pub shifted:usize, // how many times have we shifted our initial sequence?
 	kmer_size:usize,
-	checker:BTreeMap::<u8, usize>
+	checker:BTreeMap::<u8, usize>,
+	mask:u64, //a mask to fill matching sequences to match the index's kmer_len
 }
 
 // Implement the Index trait for MyClass
@@ -54,6 +55,9 @@ impl IntToStr {
 		let lost = 0;
 		let shifted = 0;
 		let checker = BTreeMap::<u8, usize>::new();
+		let mask = !0u64 >> ( (32 - kmer_size )  * 2) as u32;
+		//let mask: u64 = (1 << (2 * kmer_size)) - 1;
+
 		let mut ret = Self{
             long_term_storage,
 			storage,
@@ -61,7 +65,8 @@ impl IntToStr {
 			lost,
 			shifted,
 			kmer_size,
-			checker
+			checker,
+			mask,
 		};
 
 		ret.regenerate();
@@ -84,10 +89,11 @@ impl IntToStr {
         self.checker.clear();
 
         if self.storage.len() < to{
+        	//println!("not enough data!");
             return None
         }
         
-        if self.storage.len()< to{
+        if self.storage.len()< to {
             to = self.storage.len();
         }
         // check the initial 8 bp as they will create a key
@@ -99,6 +105,7 @@ impl IntToStr {
                 }
             };
             if *nuc ==b'N'{
+            	//println!("N nucleotoides!");
                 return Some(false);
             }
         }
@@ -109,8 +116,8 @@ impl IntToStr {
         
         for value in self.checker.values(){
 
-            if *value as f32 / (to-start) as f32 > 0.6 {
-                //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
+            if *value as f32 / (to-start) as f32 > 0.7 {
+                //println!( "sequence from {start} to {to} is too simple/too many nucs same {value} {start} {to}" );
                 return Some(false);
             } 
         }
@@ -123,8 +130,8 @@ impl IntToStr {
 			to = self.storage.len();
         }
 
-        if to - start < 10{
-        	//panic!("left over sequence is too short...{}", to - start);
+        if to - start < (self.kmer_size /4) +1 {
+        	//println!("left over sequence is too short...{}", to - start);
         	return None
         }
 
@@ -158,35 +165,42 @@ impl IntToStr {
 
     pub fn next(&mut self) -> Option<(u16, u64, usize)> {
 
+    	//println!("Start with next");
+
     	match self.seq_ok(){
-    		Some(true) => (),
+    		Some(true) => {//eprintln!("Seq OK") 
+    		},
     		Some(false) => {
-    			//println!("useless oligos!");
-    			self.drop_n(2); // shift 8 bp
+    			//eprintln!("useless oligos!");
+    			self.drop_n(1); // shift 4 bp
     			return self.next()
     		},
     		None => {
-    			if self.shifted < 3{
+    			if self.shifted < 5{
+    				//println!("I am shifting on bp");
     				self.shift();
+    				//self.print();
     				return self.next();
     			}
     			return None
     		},
     	};
 
+    	//println!("Start with next - test finished");
         let short = self.into_u16().clone();
-        self.drop_n(2); // shift 8 bp
+        self.drop_n(2); // shift 8 bp to get the bp after the initial 8bp matcher
         let long = self.into_u64_nbp( self.kmer_size ).clone();
         let mut sign = 0;
         //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
-        if self.storage.len() - self.lost *4 >= self.kmer_size{
-        	sign = self.kmer_size;
+        if self.storage.len() - self.lost *4 >= self.kmer_size / 4{
+        	sign = self.kmer_size/4;
         }else {
         	sign = self.storage.len() - self.lost *4 ;
         	//println!("next reporting a SHORTER VALUE! {sign}" );
         }
+  
         //println!( "short {short}, long {long}, sign {sign}" );
-        Some(( short -1, long, sign ))
+        Some(( short , long, sign *4 ))
     }
 
 	pub fn len(&self) -> usize{
@@ -250,17 +264,24 @@ impl IntToStr {
         let residual = kmer_size % 4;
 
         if residual != 0 {
-        	let mut loc = self.u8_encoded[target].clone() as u8;
-        	//println!("\nGet the loc from self.u8_encoded[{}].clone()", target );
-        	//println!("I got this u64 for my u8: {loc:b}, {:b}", self.u8_encoded[target]);
-        	match residual{
-        		0 => (),
-        		3 => loc &= 0b00000011,
-        		2 => loc &= 0b00001111,
-        		1 => loc &= 0b00111111,
-        		_ => panic!("what are you trying to atchieve here? {residual}"),
-        	};
-        	ret = (ret << 8) | loc as u64;
+        	if self.u8_encoded.len() <= target {
+        		ret = (ret << 8) | 0b0 as u64;
+        	}
+        	else {
+        		//println!( "have {} and want {}", self.u8_encoded.len() , target);
+        		let mut loc = self.u8_encoded[target].clone() as u8;
+	        	//println!("\nGet the loc from self.u8_encoded[{}].clone()", target );
+	        	//println!("I got this u64 for my u8: {loc:b}, {:b}", self.u8_encoded[target]);
+	        	match residual{
+	        		0 => (),
+	        		3 => loc &= 0b00000011,
+	        		2 => loc &= 0b00001111,
+	        		1 => loc &= 0b00111111,
+	        		_ => panic!("what are you trying to atchieve here? {residual}"),
+	        	};
+	        	ret = (ret << 8) | loc as u64;
+        	}
+        	
         }
 
         for i in (0..target).rev() {
@@ -433,6 +454,12 @@ impl IntToStr {
 				self.u8_to_str( 4, &u8_4bp,  data );
 			}
 		}
+	}
+
+	pub fn mask_u64( &self, seq:&u64 ) ->u64{
+		//let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_size )));
+		//println!("I have the mask {:b}", self.mask);
+        return seq & self.mask
 	}
 
 	pub fn print(&self) {

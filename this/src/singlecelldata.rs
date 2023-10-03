@@ -388,7 +388,7 @@ impl SingleCellData{
         let mut entries = 0;
         let mut passing_cells: Vec<&CellData> = Vec::with_capacity( self.passing );
 
-        for   cell_obj in self.cells.values() {
+        for cell_obj in self.cells.values() {
             if ! cell_obj.passing {
                 //println!("failed cell {}", cell_obj.name );
                 failed +=1;

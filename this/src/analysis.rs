@@ -77,7 +77,8 @@ impl Analysis<'_>{
 	    		Err(e) => panic!("Failed to load the index {e:?}")
 	    	}
 	    	genes.print();
-	    	gene_count = genes.names.len();	    	
+	    	gene_count = genes.names.len();
+
 	    	
 	    }
 
@@ -272,11 +273,11 @@ impl Analysis<'_>{
                 // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
                 if seqrec1.seq().len() < min_sizes[0] {
                     report.unknown +=1;
-                    continue;
+                    continue 'main;
                 }
                 if seqrec.seq().len() < min_sizes[1] {
                     report.unknown +=1;
-                    continue;
+                    continue 'main;
                 }
                 //let seq = seqrec.seq().into_owned();
                 for nuc in &seqrec1.seq()[pos[6]..pos[7]] {  
@@ -427,14 +428,14 @@ impl Analysis<'_>{
 
     println!( "\nSummary:");
     println!(     "total      reads  : {} reads", results.total );
-    println!(     "no cell ID reads  : {} reads", results.no_sample );
-    println!(     "no gene ID reads  : {} reads", results.no_data );
-    println!(     "N's or too short  : {} reads", results.unknown );
+    println!(     "no cell ID reads  : {} reads ({:.2}% of total)", results.no_sample, (results.no_sample as f32 / results.total as f32) * 100.0);
+    println!(     "no gene ID reads  : {} reads ({:.2}% of total)", results.no_data, (results.no_data as f32 / results.total as f32) * 100.0);
+    println!(     "N's or too short  : {} reads ({:.2}% of total)", results.unknown, (results.unknown as f32 / results.total as f32) * 100.0);
     println!(     "cellular reads    : {} reads ({:.2}% of total)", results.ok_reads, (results.ok_reads as f32 / results.total as f32) * 100.0 );
-    println!(     "expression reads  : {} reads ({:.2}% of total)", reads_genes, (reads_genes as f32 / results.total as f32) * 100.0 );
-    println!(     "antibody reads    : {} reads ({:.2}% of total)", reads_ab, (reads_ab as f32 / total as f32) * 100.0 );
-    println!(     "sample tag reads  : {} reads ({:.2}% of total)", reads_samples, (reads_samples as f32 / results.total as f32) * 100.0 );
-    println!(     "pcr duplicates    : {} reads ({:.2}% of usable)", results.pcr_duplicates, ( results.pcr_duplicates as f32 / results.ok_reads as f32 ) * 100.0 );
+    println!(     "expression reads  : {} reads ({:.2}% of cellular)", reads_genes, (reads_genes as f32 / results.ok_reads as f32) * 100.0 );
+    println!(     "antibody reads    : {} reads ({:.2}% of cellular)", reads_ab, (reads_ab as f32 / results.ok_reads as f32) * 100.0 );
+    println!(     "sample tag reads  : {} reads ({:.2}% of cellular)", reads_samples, (reads_samples as f32 / results.ok_reads as f32) * 100.0 );
+    println!(     "pcr duplicates    : {} reads ({:.2}% of cellular)", results.pcr_duplicates, ( results.pcr_duplicates as f32 / results.ok_reads as f32 ) * 100.0 );
     
 
     let file_path2 = format!("{}/SampleCounts.tsv", outpath );

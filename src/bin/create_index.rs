@@ -42,9 +42,12 @@ struct Opts {
     outpath: String,
     #[clap(default_value= "testData/MyAbSeqPanel.fasta", short, long)]
     antibody: String,
-    /// thje mapping kmer length
+    /// the mapping kmer length
     #[clap(default_value_t=32, long)]
     gene_kmers: usize,
+    /// create text outfile instead of binary
+    #[clap(default_value_t=false, long)]
+    text: bool,
 }
 
 /*
@@ -63,11 +66,11 @@ fn main() {
 
     let mut kmer_size = opts.gene_kmers;
     if opts.gene_kmers > 32{
-        println!("Sorry the max size of the kmers is 32 bp");
+        eprintln!("Sorry the max size of the kmers is 32 bp");
         kmer_size = 32;
     }
 
-    const COVERED_AREA:usize = 600; // cover 600 bp of the transcript
+    const COVERED_AREA:usize = 400; // cover 600 bp of the transcript
     fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
 
     // let log_file_str = PathBuf::from(&opts.outpath).join(
@@ -95,7 +98,7 @@ fn main() {
         let seqrec = e_record.expect("invalid record");
         id = seqrec.id().split(|&x| x == delimiter[0]).collect::<Vec<&[u8]>>()[0];
         //id = seqrec.id().split(|&x| x == delimiter[0]).collect()[0];
-        println!("'{}'", std::str::from_utf8(id).unwrap() );
+        eprintln!("'{}'", std::str::from_utf8(id).unwrap() );
         seq_records.insert( std::str::from_utf8( id ).unwrap().to_string() , seqrec.seq().to_vec());
     }
 
@@ -293,6 +296,10 @@ fn main() {
     eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
 
     index.write_index( opts.outpath.to_string() ).unwrap();
+
+    if opts.text{
+        index.write_index_txt( opts.outpath.to_string() ).unwrap();
+    }
 
     //index.write_index_txt( opts.outpath.to_string() ).unwrap();
     //eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );

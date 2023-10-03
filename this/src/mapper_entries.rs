@@ -139,7 +139,8 @@ impl MapperEntry{
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
-	pub fn get( &mut self,seq:&u64, significant_bp:usize, tool:&IntToStr ) -> Option<Vec<usize>> {
+	pub fn get( &mut self,seq:&u64, tool:&IntToStr ) -> Option<Vec<usize>> {
+
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
 				// if self.map[i].1.data.len() > 1{
@@ -244,22 +245,24 @@ impl MapperEntry{
 mod tests {
 
     use crate::mapper_entries::MapperEntry;
+    use crate::int_to_str::IntToStr;
 
     #[test]
     fn check_geneids() {
         let mut mapper = MapperEntry::new();
 
-        mapper.add(12, 4 );
-        mapper.add(45, 3);
+        let tool = IntToStr::new(b"AGCTGTGAGACTCTTCACACTATCATCATTATTCGGAGG".to_vec(), 16);
+        mapper.add(12, 4, 16 );
+        mapper.add(45, 3, 16 );
 
-        assert_eq!( mapper.get(&12), Some(vec![4]) );
-        assert_eq!( mapper.get(&45), Some(vec![3]) );
+        assert_eq!( mapper.get(&12, &tool), Some(vec![4]) );
+        assert_eq!( mapper.get(&45, &tool), Some(vec![3]) );
 
-		mapper.add(12, 14 );
-		assert_eq!( mapper.get(&12), Some(vec![4, 14]) );
+		mapper.add(12, 14, 16 );
+		assert_eq!( mapper.get(&12, &tool), Some(vec![4, 14]) );
 
 
-        assert_eq!( mapper.get(&14), None );
+        assert_eq!( mapper.get(&14, &tool), None );
 
         assert_eq!( mapper.info(), [2,1,1] );
     }
@@ -271,7 +274,7 @@ mod tests {
         let a:u64 = 0b11010101;
         let b:u64 = 0b10110001;
 
-        assert_eq!( MapperEntry::hamming_distance(), 3 as u32 );
+        assert_eq!( MapperEntry::hamming_distance(a, b), 3 as u32 );
     }
 
 

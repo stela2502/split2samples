@@ -52,7 +52,7 @@ pub struct FastMapper{
     pub with_data: usize,
     pub version: usize, //the version of this
     pub tool: IntToStr,
-
+    mask:u64, //a mask to fill matching sequences to match the index's kmer_len
 }
 
 // here the functions
@@ -75,6 +75,8 @@ impl  FastMapper{
         let with_data = 0;
         let spacer = 3;
         let tool = IntToStr::new(b"".to_vec(), kmer_len );
+        //let mask:u64 = 0b11 << (2* 32- kmer_len);
+        let mask: u64 = (1 << (2 * kmer_len)) - 1;
         Self {
             kmer_len,
             spacer,
@@ -86,9 +88,15 @@ impl  FastMapper{
             last_count,
             last_kmers,
             with_data,
-            version: 2,
+            version: 3,
             tool,
+            mask,
         }
+    }
+
+    pub fn fill_sequence_with_a( self, seq:&u64 ) -> u64{
+        let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_len )));
+        return filled_sed
     }
 
 
@@ -161,7 +169,7 @@ impl  FastMapper{
             println!("I added {i} mappper entries for gene {name}");
         }*/
 
-        self.with_data += i;
+        //self.with_data += i;
         //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );
 
     }
@@ -202,7 +210,7 @@ impl  FastMapper{
         name.to_string()
     }
 
-    fn get_best_gene( &self, genes:&HashMap::<usize, usize> , ret: &mut Vec::<usize> ){
+    fn get_best_gene( &self, genes:&HashMap::<usize, usize> , ret: &mut Vec::<usize> ) -> bool{
         ret.clear();
         if genes.len() > 0{
             let mut max = 0;
@@ -220,13 +228,13 @@ impl  FastMapper{
             }
             if max > 1{
                 // there needs to be some reproducibility here!
-                return 
+                return true
             }
             if i == 0{
                 // we have exactly one gene with the max count
                 //println!("I found one gene: {}", self.names_store[id] );
                 ret.push(id);
-                return;
+                return true
             }else {
                 // we have more than one gene as a max count - that is inacceptable
                 // for the debug I need to know which genes I get here!
@@ -251,21 +259,24 @@ impl  FastMapper{
                     ret.push(gid);
                     genes.push( self.names_store[gid].to_string())
                 }
+                return false;
                 //println!("I got a multi mapper ({i}): {:?} -> returning None", genes );
                 //multimapper += 1;
             }
             
         }
+        return false
+
     }
 
 
     pub fn get(&mut self, seq: &[u8], report:&mut MappingInfo ) -> Option<usize>{
         
-        let mut id:usize;
+        //let mut id:usize;
         let mut genes:HashMap::<usize, usize>= HashMap::new();
 
         //let mut total = 0;
-        let mut i =0;
+        //let mut i =0;
 
         //let mut long:u64;
         //let mut short:u16;
@@ -280,12 +291,12 @@ impl  FastMapper{
 
         self.tool.from_vec_u8( seq.to_vec() );
 
-        let mut item = self.tool.next();
+        //let mut item = self.tool.next();
 
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
 
         let mut significant_bp = seq.len();
-        let mut start = 0;
+        //let mut start = 0;
         let mut last_a = 0;
         for i in 0..seq.len() {
             if seq[i] == b'A' | b'A' {
@@ -303,18 +314,23 @@ impl  FastMapper{
         }
 
         // entries is a Option<(u16, u64, usize)
+        stop = false;
         'main :while let Some(entries) = self.tool.next(){
 
             if self.mapper[entries.0 as usize].has_data() {
+                // the 8bp bit is a match
                 if matching_geneids.len() == 1 {
                     // we have one best gene identified!
-                    // this needs at least 2 entries from the same gene to be OK
-                    break;
+                    return Some( matching_geneids[0] )
+                    //break;
                 }
                 for gid in self.mapper[entries.0 as usize].possible_ids(){
                     *possible_genes.entry(gid).or_insert(0) += 1;
                 }
-                match self.mapper[entries.0 as usize].get(&entries.1, significant_bp-self.tool.lost *4 , &self.tool){
+
+                let seq_u64 = self.tool.mask_u64( &entries.1 );
+
+                match self.mapper[entries.0 as usize].get( &seq_u64,  &self.tool){
                     Some( gene_id ) => {
                         //println!("Got one: {gene_id:?}");
                         //return ( gene_id );
@@ -358,7 +374,12 @@ impl  FastMapper{
                     },
                 }
             }
-            self.get_best_gene( &genes, &mut matching_geneids );
+            if self.get_best_gene( &genes, &mut matching_geneids ){
+                break 'main;
+            }
+            if stop{
+                break 'main;
+            }
         }
 
         if matching_geneids.len() == 0 {
@@ -373,9 +394,9 @@ impl  FastMapper{
 
         // check if there is only one gene //
 
-        let mut max = 0;
-        let mut gid = 0;
-        let mut n =0;
+        //let mut max = 0;
+        //let mut gid = 0;
+        //let mut n =0;
         let mut no_int = Vec::<usize>::with_capacity(5);
         let re = Regex::new(r".*_int").unwrap();
         
@@ -665,6 +686,7 @@ impl  FastMapper{
         };
 
         let mut nucl= String::from ("");
+        let mut tuple_idx: usize;
 
         for i in 0..u16::MAX{
             // write the 8bp kmer as int
@@ -684,10 +706,11 @@ impl  FastMapper{
                     //Ok(_) => println!("amount of 32 bp second kmers to the first 8bp: {} -> {:?} bytes",count, &count.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("count could not be written"),
                 };
+                tuple_idx= 0;
                 for tuple  in self.mapper[idx].map.iter(){
                     nucl.clear();
                     self.tool.u64_to_str( 32, &tuple.0, &mut nucl ); 
-                    match write!(ofile.buff1, "0: {} ", nucl){
+                    match write!(ofile.buff1, "\n\t\t{tuple_idx}: {} resp. {} ",&tuple.0, nucl){
                         Ok(_) => (), 
                         //Ok(_) => println!("the u64 kmer: {} or {:b} binary -> {:?} bytes",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
@@ -711,6 +734,7 @@ impl  FastMapper{
                             Err(_err) => return Err::<(), &str>("value could not be written"),
                         };*/
                     }
+                    tuple_idx += 1;
                     
                 }
             }
@@ -727,6 +751,7 @@ impl  FastMapper{
     }
 
 }
+
 
 
 

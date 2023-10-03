@@ -192,23 +192,29 @@ mod tests {
      tool.u8_array_to_str( 45,  tool.u8_encoded.clone(),  &mut decoded);
      assert_eq!( decoded, "CTGGAAAAGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTT".to_string() );
 
-      decoded.clear();
+     decoded.clear();
      tool.to_string( 2, &mut decoded);
      assert_eq!( decoded, "CT".to_string() );
 
-     assert_eq!( tool.next(), Some( (173_u16,55990_u64) ) );
-     assert_eq!( tool.next(), Some( (55990_u16,46741_u64) ) );
-     assert_eq!( tool.next(), Some( (46741_u16,27377_u64) ) );
-     assert_eq!( tool.next(), Some( (27377_u16,58859_u64) ) );
-     assert_eq!( tool.next(), Some( (32811_u16,30381_u64) ) );
+     tool.regenerate();
+     // println!("If this is not followed by a three columns table we have a pporoblem!");
+     // while let Some(t) = tool.next(){
+     //     println!("{} {} {}", t.0, t.1, t.2);
+     // }
+     // tool.regenerate();
+     assert_eq!( tool.next(), Some( (173_u16,55990_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (55990_u16,46741_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (46741_u16,27377_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (27377_u16,58859_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (32811_u16,30381_u64, 8) ) );
 
-     assert_eq!( tool.next(), Some( (30381_u16,28069_u64) ) );
-     assert_eq!( tool.next(), Some( (28069_u16,55996_u64) ) );
-     assert_eq!( tool.next(), Some( (55996_u16,47482_u64) ) );
-     assert_eq!( tool.next(), Some( (24586_u16,23979_u64) ) );
-     assert_eq!( tool.next(), Some( (23979_u16,7017_u64) ) );
+     assert_eq!( tool.next(), Some( (30381_u16,28069_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (28069_u16,55996_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (55996_u16,47482_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (24586_u16,23979_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (23979_u16,7017_u64, 8) ) );
 
-     assert_eq!( tool.next(), Some( (7017_u16,46767_u64) ) );
+     assert_eq!( tool.next(), Some( (7017_u16,46767_u64, 8) ) );
 
      tool.deep_refresh();
      tool.drop_n(1);
@@ -257,7 +263,17 @@ mod tests {
     //  assert_eq!( data, "TCTCATGAAGTATGACAGCTACAGCCGCTTCTAAAAAAAA".to_string() );
 
     // }
+    #[test]
+    fn check_mask_u64() {
+       let seq1_u64 = 14104719131550637795_u64;
+       let mut tool = IntToStr::new(b"TAGTGTCCTGTGACTTCACCTCAAGTTGTAAT".to_vec(), 8);
+       assert_eq!( seq1_u64, tool.into_u64(), "correct u64" );
 
-
+       let masked = tool.mask_u64( &seq1_u64 );
+       let mut seq = String::from("");
+       tool.u64_to_str( 32, &masked, &mut seq);
+       //println!("This should be the masked seqence: \n{seq}\nTAGTGTCCTGTGACTTCACCTCAAGTTGTAAT");
+       assert_eq!( masked, tool.into_u16() as u64, "correct masked 8bp u16" );
+   }
 
 }

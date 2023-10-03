@@ -371,9 +371,40 @@ Instead of creating the index each time from the fasta files this program can ge
 This way intron/exon boundaries can be addressed.
 
 ```
-./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index
 
+./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index --gene-kmers 16 > testData/mapperTest/index/mRNA.fa
+
+```
+
+```
+gtf mode
+ total first keys 30546
+ total second keys 57140
+ total single gene per second key 56241
+ total multimapper per second key 899
+Writing index version 2
+with kmer_len 16
+And a total of 100863 data entries
+finished in 0 h 0 min 0 sec 322 milli sec
+```
+
+```
 ./target/release/quantify_rhapsody -a testData/MyAbSeqPanel.fasta -i testData/mapperTest/index -r testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz  -o testData/mapperTest/ -s mouse -v v1 -m 30
+```
+
+```
+Summary:
+total      reads  : 500000 reads
+no cell ID reads  : 0 reads
+no gene ID reads  : 1203 reads
+N's or too short  : 3028 reads
+cellular reads    : 495769 reads (99.15% of total)
+expression reads  : 495723 reads (99.14% of total)
+antibody reads    : 37 reads (0.01% of total)
+sample tag reads  : 9 reads (0.00% of total)
+pcr duplicates    : 320518 reads (64.65% of usable)
+
+quantify_rhapsody finished in 0h 0min 2 sec 28milli sec
 ```
 
  ## split2samples 

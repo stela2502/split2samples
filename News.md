@@ -1,3 +1,9 @@
+# 1.2.3
+
+It is now possible to create a genome wide index file.
+Matching to an genome wide index is horribly slow. I need to identify the problem.
+
+
 # 1.2.1
 
 Sample table now also contains a n column with total reads over all samples.
