@@ -293,48 +293,38 @@ impl Analysis<'_>{
         gex
     }
 
-    fn map_paralel( &self, data1:&Vec<u8>, data2:&Vec<u8>, report:&mut MappingInfo, pos: &[usize;8] ) -> Result< (usize, usize, u64), &'static str >{
+    // fn map_paralel( &self, data1:&Vec<u8>, data2:&Vec<u8>, report:&mut MappingInfo, pos: &[usize;8] ) -> Result< (usize, usize, u64), &'static str >{
     	
 
 
-        // first match the cell id - if that does not work the read is unusable
-        //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-        let tool = IntToStr::new( data1[pos[6]..pos[7]].to_vec(), 32 );
-        let umi:u64 = tool.into_u64();
-        //let umi = Kmer::from( data1.seq()[pos[6]..pos[7]]).into_u64();	
-    	return match &self.cells.to_cellid( &data1, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-            Ok(cell_id) => {
-                match &self.genes.get( &data2, report ){
-                	Some(gene_id) =>{ Ok( (*cell_id as usize, *gene_id, umi ) ) },
-                	None => { Err("no gene match")}
-                }
-            },
-            Err(_err) => {
-            	// match data1.write(&mut report.ofile.buff1, None){
-                //     Ok(_) => (),
-                //     Err(err) => println!("{err}")
-                // };
-                // match data2.write(&mut report.ofile.buff1, None){
-                //     Ok(_) => (),
-                //     Err(err) => println!("{err}")
-                // };
+    //     // first match the cell id - if that does not work the read is unusable
+    //     //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+    //     let tool = IntToStr::new( data1[pos[6]..pos[7]].to_vec(), 32 );
+    //     let umi:u64 = tool.into_u64();
+    //     //let umi = Kmer::from( data1.seq()[pos[6]..pos[7]]).into_u64();	
+    // 	return match &self.cells.to_cellid( &data1, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
+    //         Ok(cell_id) => {
+    //             match &self.genes.get( &data2, report ){
+    //             	Some(gene_id) =>{ Ok( (*cell_id as usize, *gene_id, umi ) ) },
+    //             	None => { Err("no gene match")}
+    //             }
+    //         },
+    //         Err(_err) => {
+    //         	// match data1.write(&mut report.ofile.buff1, None){
+    //             //     Ok(_) => (),
+    //             //     Err(err) => println!("{err}")
+    //             // };
+    //             // match data2.write(&mut report.ofile.buff1, None){
+    //             //     Ok(_) => (),
+    //             //     Err(err) => println!("{err}")
+    //             // };
                 
-            	Err("no cell match")
-            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-   		}
-    }
+    //         	Err("no cell match")
+    //         }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+   	// 	}
+    // }
 
 
-    //     println!( "\nSummary:");
-    // println!(     "total      reads  : {} reads", results.total );
-    // println!(     "no cell ID reads  : {} reads ({:.2}% of total)", results.no_sample, (results.no_sample as f32 / results.total as f32) * 100.0);
-    // println!(     "no gene ID reads  : {} reads ({:.2}% of total)", results.no_data, (results.no_data as f32 / results.total as f32) * 100.0);
-    // println!(     "N's or too short  : {} reads ({:.2}% of total)", results.unknown, (results.unknown as f32 / results.total as f32) * 100.0);
-    // println!(     "cellular reads    : {} reads ({:.2}% of total)", results.ok_reads, (results.ok_reads as f32 / results.total as f32) * 100.0 );
-    // println!(     "expression reads  : {} reads ({:.2}% of cellular)", reads_genes, (reads_genes as f32 / results.ok_reads as f32) * 100.0 );
-    // println!(     "antibody reads    : {} reads ({:.2}% of cellular)", reads_ab, (reads_ab as f32 / results.ok_reads as f32) * 100.0 );
-    // println!(     "sample tag reads  : {} reads ({:.2}% of cellular)", reads_samples, (reads_samples as f32 / results.ok_reads as f32) * 100.0 );
-    // println!(     "pcr duplicates    : {} reads ({:.2}% of cellular)", results.pcr_duplicates, ( results.pcr_duplicates as f32 / results.ok_reads as f32 ) * 100.0 );
 
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
     	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str  ){
@@ -673,8 +663,6 @@ impl Analysis<'_>{
     };
 
     
-
-    let total = results.no_sample+ results.unknown + results.ok_reads;
     let reads_genes = self.gex.n_reads( &mut self.genes , &self.gene_names );
     let reads_ab = self.gex.n_reads( &mut self.genes , &self.ab_names );
     let reads_samples = self.gex.n_reads( &mut self.genes , &self.sample_names );

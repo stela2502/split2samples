@@ -331,7 +331,7 @@ impl  FastMapper{
 
                 let seq_u64 = tool.mask_u64( &entries.1 );
 
-                match &self.mapper[entries.0 as usize].get( &seq_u64,  &tool){
+                match &self.mapper[entries.0 as usize].get( &seq_u64 ){
                     Some( gene_id ) => {
                         //println!("Got one: {gene_id:?}");
                         //return ( gene_id );
@@ -350,7 +350,7 @@ impl  FastMapper{
                         }
                     },
                     None => {
-                        match self.mapper[entries.0 as usize].find(&entries.1, significant_bp-self.tool.lost *4 , &tool){
+                        match self.mapper[entries.0 as usize].find(&seq_u64 ){
                             Some( gene_id ) => {
                                 //println!("Got one: {gene_id:?}");
                                 //return ( gene_id );

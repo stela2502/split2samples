@@ -150,7 +150,7 @@ fn main() {
             re_transcript_id = Regex::new(r#"transcript_id=([\d\w\.]*);"#).unwrap();
         },
     }
-    let mut gene_id:String;
+    //let mut gene_id:String;
     let mut gene_name:String;
     let mut transcript_id:String;
 
@@ -181,9 +181,8 @@ fn main() {
             if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
                 gene_name = captures.get(1).unwrap().as_str().to_string();
             }else {
-                if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
+                if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
                     continue; // this likely clutters up the data anyhow.
-                    gene_name = captures.get(1).unwrap().as_str().to_string();
                 }
                 else {
                     panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
@@ -279,7 +278,7 @@ fn main() {
         }
     }
 
-    for (_k, gene) in &genes {
+    for (_, gene) in &genes {
         // Do something with the gene, e.g. remove it
         match seq_records.get( &gene.chrom.to_string() ){
             Some(seq) => {
