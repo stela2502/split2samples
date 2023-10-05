@@ -358,7 +358,7 @@ impl Analysis<'_>{
 
         let reads_perl_chunk = 1_000_000;
         eprintln!("Starting with data collection");
-        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_cunk * num_threads );
+        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_chunk * num_threads );
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
@@ -427,7 +427,7 @@ impl Analysis<'_>{
 		}
 		
 
-	    if reads_perl_cunk > 0{
+	    if reads_perl_chunk > 0{
 	    	// there is data in the good_reads
 	    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 		        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
