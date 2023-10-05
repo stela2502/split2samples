@@ -37,7 +37,7 @@ fn main() {
         Err(e) => panic!("I could not create the outpath: {e}")
     };
 
-    let mut cells = CellIds::new(&opts.version, 9);
+    let cells = CellIds::new(&opts.version, 9);
 
     let mut readereads = parse_fastx_file(&opts.reads).expect("valid path/file");
     let mut readefile = parse_fastx_file(&opts.file).expect("valid path/file");
