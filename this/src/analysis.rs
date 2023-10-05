@@ -345,7 +345,7 @@ impl Analysis<'_>{
         pb.set_style(spinner_style);
 
         let reads_perl_cunk = 10_000;
-
+        println!("Starting with data collection");
         let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_cunk * num_threads );
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
@@ -372,9 +372,12 @@ impl Analysis<'_>{
         		if Self::quality_control( &read1, &read2, report.min_quality, pos, min_sizes){
         			good_read_count +=1;
         			good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
+        		}else {
+        			report.unknown +=1;
         		}
     		}
     		else {
+    			println!("Prosessing one batch");
     			good_read_count = 0;
 		    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 			        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
@@ -407,10 +410,13 @@ impl Analysis<'_>{
 			    	self.gex.merge(&gex.0);
 			       	report.merge( &gex.1 );
 			    }
-
+			    println!("Collecting more reads");
 			    good_reads.clear();
 			}
+			report.log(&pb);
 		}
+		
+
 	    if reads_perl_cunk > 0{
 	    	// there is data in the good_reads
 	    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
@@ -446,6 +452,11 @@ impl Analysis<'_>{
 	        	report.merge( &gex.1 );
 	        }
 	    }
+
+	    let log_str = report.log_str();
+
+        pb.finish_with_message( log_str );
+
     }
 
 
