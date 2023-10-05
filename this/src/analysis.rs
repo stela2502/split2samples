@@ -356,16 +356,14 @@ impl Analysis<'_>{
         let pb = m.add(ProgressBar::new(5000));
         pb.set_style(spinner_style);
 
-        let reads_perl_cunk = 1_000_000;
+        let reads_perl_chunk = 1_000_000;
         eprintln!("Starting with data collection");
         let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_cunk * num_threads );
+        let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
 
-        	
-        	let mut good_read_count = 0;
-
-        	if good_read_count < reads_perl_cunk*num_threads {
+        	if good_read_count < reads_perl_chunk*num_threads {
         		report.total += 1;
 	            let read2 = match record2{
 	                Ok( res ) => res,
