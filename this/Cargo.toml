@@ -13,3 +13,4 @@ indicatif = {version = "*", features = ["rayon"]}
 regex = "1.0.0"
 num_cpus = "1.13"
 itertools = "0.10"
+rayon = "1.5"
