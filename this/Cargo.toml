@@ -11,5 +11,5 @@ needletail = "0.4"
 flate2 = "1.0.24"
 indicatif = {version = "*", features = ["rayon"]}
 regex = "1.0.0"
-rayon = "1.5"
 num_cpus = "1.13"
+itertools = "0.10"

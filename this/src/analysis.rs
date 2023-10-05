@@ -24,10 +24,14 @@ use std::path::Path;
 use std::io::Write;
 
 use std::thread;
-use rayon::prelude::*;
 use num_cpus;
+use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::{Arc, Mutex};
 
 use crate::ofiles::Ofiles;
+use std::fs;
+use needletail::parser::SequenceRecord;
+use itertools::izip;
 
 fn mean_u8( data:&[u8] ) -> f32 {
     let this = b"!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
@@ -218,164 +222,224 @@ impl Analysis<'_>{
 		self.genes.write_index( path.to_string() ).unwrap();
 	}
 
-	fn read_data( &self,  f1:&str, f2:&str, report:&mut MappingInfo, pos: &[usize;8], min_sizes: &[usize;2]  ) -> Vec<(Vec<u8>,Vec<u8>)> {
-
-		let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
-            .unwrap()
-            .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
-        let mut result: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
-
-        // need better error handling here too    
-        // for now, we're assuming FASTQ and not FASTA.
-        let mut readereads = parse_fastx_file(&f1).expect("valid path/file");
-        let mut readefile = parse_fastx_file(&f2).expect("valid path/file");
-        let m = MultiProgress::new();
-        let pb = m.add(ProgressBar::new(5000));
-        pb.set_style(spinner_style);
-
-        'main: while let (Some(record1), Some(record2)) = (readereads.next(), readefile.next()) {
-
-        	report.total += 1;
-            
-            let seqrec = match record2{
-                Ok( res ) => res,
-                Err(err) => {
-                    eprintln!("could not read from R2:\n{err}");
-                    continue 'main;
-                }
-            };
-            let seqrec1 = match record1{
-                Ok(res) => res,
-                Err(err) => {
-                    eprintln!("could not read from R1:\n{err}");
-                    continue 'main;
-                }
-            };
-
-
-            // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
-            //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
-
-            if mean_u8( seqrec.qual().unwrap() ) < report.min_quality {
-                report.unknown +=1;
-                //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec.seq()), mean_u8( seqrec.qual().unwrap()  ) );
-                continue 'main;
-            }
-            if mean_u8( seqrec1.qual().unwrap() ) < report.min_quality {
-                report.unknown +=1;
-                //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec1.seq()), mean_u8( seqrec1.qual().unwrap() ) );
-                continue 'main;
-            }
-
-            // totally unusable sequence
-            // as described in the BD rhapsody Bioinformatic Handbook
-            // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
-            if seqrec1.seq().len() < min_sizes[0] {
-                report.unknown +=1;
-                continue 'main;
-            }
-            if seqrec.seq().len() < min_sizes[1] {
-                report.unknown +=1;
-                continue 'main;
-            }
-            //let seq = seqrec.seq().into_owned();
-            for nuc in &seqrec1.seq()[pos[6]..pos[7]] {  
-                if *nuc ==b'N'{
-                    report.unknown +=1;
-                    continue 'main;
-                }
-            }
-            result.push ( ( seqrec1.seq().to_vec(), seqrec.seq().to_vec() ) ) ;
-            report.total += 1;
-            if report.total == report.max_reads{
-                break 'main;
-            }
-            report.log(&pb);
-        }
+	
+	fn quality_control(   read1:&SequenceRecord, read2:&SequenceRecord, min_quality:f32, pos: &[usize;8], min_sizes: &[usize;2]  ) -> bool {
         
-        result
+        // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
+        //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
+
+        if mean_u8( read1.qual().unwrap() ) < min_quality {
+            //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec.seq()), mean_u8( seqrec.qual().unwrap()  ) );
+            return false
+        }
+        if mean_u8( read1.qual().unwrap() ) < min_quality {
+            //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec1.seq()), mean_u8( seqrec1.qual().unwrap() ) );
+            return false
+        }
+
+        // totally unusable sequence
+        // as described in the BD rhapsody Bioinformatic Handbook
+        // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
+        if read1.seq().len() < min_sizes[0] {
+            return false
+        }
+        if read2.seq().len() < min_sizes[1] {
+            return false
+        }
+        //let seq = seqrec.seq().into_owned();
+        for nuc in &read2.seq()[pos[6]..pos[7]] {  
+            if *nuc ==b'N'{
+                return false
+            }
+        }
+        true
     }
 
-    fn analyze_paralel( &self, data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
+    fn map_paralel( &self, data1:&SequenceRecord, data2:&SequenceRecord, report:&mut MappingInfo, pos: &[usize;8] ) -> Result< (usize, usize, u64), &'static str >{
     	
 
 
         // first match the cell id - if that does not work the read is unusable
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-        let mut gex = SingleCellData::new( );
-
-        for i in 0..data.len() {
-        	let umi = Kmer::from( &data[i].0[pos[6]..pos[7]]).into_u64();	
-        	match &self.cells.to_cellid( &data[i].0, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-	            Ok(cell_id) => {
-	                match &self.genes.get( &data[i].1, report ){
-	                    Some(gene_id) =>{
-	                        gex.try_insert( 
-	                        	&(*cell_id as u64),
-	                        	gene_id,
-	                        	umi,
-	                        	report
-	                        );
-	                    },
-	                    None => {
-	                    	report.no_data +=1;
-	                    }
-	                };
-
-	            },
-	            Err(_err) => {
-	                report.no_sample +=1;
-	                continue
-	            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-       		};
-    	}
-        gex
+        let umi = Kmer::from( &data1.seq()[pos[6]..pos[7]]).into_u64();	
+    	return match &self.cells.to_cellid( &data1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
+            Ok(cell_id) => {
+                match &self.genes.get( &data2.seq(), report ){
+                	Some(gene_id) =>{ Ok( (*cell_id as usize, *gene_id, umi ) ) },
+                	None => { Err("no gene match")}
+                }
+            },
+            Err(_err) => {
+            	Err("no cell match")
+            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
+   		}
     }
 
-    pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
-    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str  ){
+    pub fn parse_parallel(&self,  f1:&str, f2:&str,  
+    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str  ) -> SingleCellData{
 
     	let num_threads = num_cpus::get(); 
 
+    	let mut gex = SingleCellData::new();
+
     	println!("I am using {} cpus", num_threads);
-    	
-    	let good_reads: &Vec<(Vec<u8>, Vec<u8>)> = &self.read_data(f1, f2, report, pos, min_sizes );
-    	
-    	
+		
+		let mut sender_channels_tx: Vec<Sender<(SequenceRecord<'_>, SequenceRecord<'_>)>> = Vec::with_capacity(num_threads);
+		let mut sender_channels_rx: Vec<Arc<Mutex<Receiver<(SequenceRecord<'_>, SequenceRecord<'_>)>>>> = Vec::with_capacity(num_threads);
+		
+		let mut thread_gexs: Vec<Arc<Mutex<SingleCellData>>> = Vec::with_capacity(num_threads);
+		let mut thread_results: Vec<Arc<Mutex<MappingInfo>>> = Vec::with_capacity(num_threads);
 
-    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
-	        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
-    	    .map(|data_split| {
-    	    	// Get the unique identifier for the current thread
-            	let thread_id = thread::current().id();
-            
-            	// Convert the thread ID to a string for use in filenames or identifiers
-            	let thread_id_str = format!("{:?}",thread_id );
-            	let ofile = Ofiles::new( 1, &("Umapped_with_cellID".to_owned()+&thread_id_str), "R2.fastq.gz", "R1.fastq.gz",  outpath );
-            	let log_file_str = PathBuf::from(outpath).join(
-        			format!("Mapping_log_{}.txt",thread_id_str )
-        		);
-	    
-	    		let log_file = match File::create( log_file_str ){
-	        			Ok(file) => file,
-	        			Err(err) => {
-	           			panic!("thread {thread_id_str} Error: {err:#?}" );
+
+
+		for id in 0..num_threads {
+	        let (sender_tx, sender_rx) = channel();
+	        sender_channels_tx.push(sender_tx);
+	        sender_channels_rx.push(Arc::new(Mutex::new(sender_rx)));
+
+	        let gex: SingleCellData = SingleCellData::new();
+
+            fs::create_dir_all( outpath ).expect("AlreadyExists");
+		    let log_file_str = PathBuf::from( outpath ).join(
+		        format!( "Mapping_log_{}.txt", id ).as_str()
+		    );
+		    
+		    let log_file = match File::create( log_file_str ){
+		        Ok(file) => file,
+		        Err(err) => {
+		            panic!("Error: {err:#?}" );
+		        }
+		    };
+
+		    let ofile = Ofiles::new( 1, format!("Umapped_with_cellID_thread_{}", id ).as_str(), "R2.fastq.gz", "R1.fastq.gz",  outpath );	    
+		    // needs log_writer:BufWriter<File>, min_quality:f32, max_reads:usize, ofile:Ofiles
+			let results = MappingInfo::new( log_file, report.min_quality, report.max_reads, ofile );
+			thread_gexs.push(Arc::new(Mutex::new(gex)));
+			thread_results.push( Arc::new(Mutex::new(results )));
+    	}
+
+		// Start worker threads
+		let mut handles = Vec::new();
+
+	    //for (inward_ark, gex_ark, results_ark ) in izip!( &sender_channels_rx, &thread_gexs, &thread_results) {
+	    for id in 0..num_threads{
+
+	        let handle = thread::spawn( || {
+	            // Create a separate, thread-specific object here
+	            
+	            // Process lines from the channel and insert them into thread-specific data
+	            let inward_clone = Arc::clone(&sender_channels_rx[id]);
+	            let inward = inward_clone.lock().unwrap();
+
+	            let gex_clone = Arc::clone(&thread_gexs[id]);
+	            let mut gex = gex_clone.lock().unwrap();
+
+	            let report_clone = Arc::clone(&thread_results[id]);
+	            let mut report = report_clone.lock().unwrap();
+
+	            while let Ok(data) = inward.recv() {
+	            	report.total +=1;
+	        		if Self::quality_control( &data.0, &data.1, report.min_quality, pos, min_sizes ){
+	        			match self.map_paralel( &data.0, &data.1, &mut report, pos ){
+			        		Ok( result ) => {
+			        			// add that to the data object
+			        			gex.try_insert( 
+			                        &(result.0 as u64),
+			                        &result.1,
+			                        result.2,
+			                        &mut report
+			                    );
+			        		},
+			        		Err(e) => {
+			        			match data.0.write(&mut report.ofile.buff1, None){
+			                        Ok(_) => (),
+			                        Err(err) => println!("{err}")
+			                    };
+			                    match data.1.write(&mut report.ofile.buff2, None){
+			                        Ok(_) => (),
+			                        Err(err) => println!("{err}")
+			                    };
+			        			match e{
+									"no gene match" => report.no_data +=1,
+									"no cell match" => report.no_sample +=1,
+									&_ => panic!("We should never be able to get here! {e:?}"),
+			        			};
+			        			// print the read to the not mapping ones
+			        		}
+			        	}
 	        		}
-	    		};
-	    		let mut rep = MappingInfo::new( log_file, report.min_quality, report.max_reads, ofile );
-	            // Clone or create a new thread-specific report for each task
-	    	    let res = self.analyze_paralel(data_split, &mut rep, pos );
-	    	    (res, rep)
+	        		else {
+	        			report.unknown += 1;
+	        		}
+	            }
+	            
+	        });
+	        handles.push(handle);
+	    }
 
-    	    }) // Analyze each chunk in parallel
-        	.collect(); // Collect the results into a Vec
+    	let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
+            .unwrap()
+            .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
 
-        for gex in total_results{
-        	self.gex.merge(&gex.0);
-        	report.merge( &gex.1 );
+        // need better error handling here too    
+        // for now, we're assuming FASTQ and not FASTA.
+        let mut reader1 = parse_fastx_file(&f1).expect("valid path/file");
+        let mut reader2 = parse_fastx_file(&f2).expect("valid path/file");
+        let m = MultiProgress::new();
+        let pb = m.add(ProgressBar::new(5000));
+        pb.set_style(spinner_style);
+
+
+        // now chatgpt sent me down a new rabbit hole:
+        // channels to send and recieve data...
+
+        let mut id = 0;
+        'main: while let Some(record2) = reader2.next() {
+            if let Some(record1) = reader1.next() {
+            	report.log(&pb);
+            	let read2 = match record2{
+                    Ok( res ) => res,
+                    Err(err) => {
+                        eprintln!("could not read from R2:\n{err}");
+                        continue 'main;
+                    }
+                };
+                let read1 = match record1{
+                    Ok(res) => res,
+                    Err(err) => {
+                        eprintln!("could not read from R1:\n{err}");
+                        continue 'main;
+                    }
+                };
+                sender_channels_tx[id].send( (read1, read2 ) ).expect("Failed to send data");
+                id += 1;
+                if id == num_threads{
+                	id = 0;
+                }
+            }
         }
 
-    }
+        // Close the channel to signal worker threads to exit
+        drop(sender_channels_tx);
+
+    	for handle in handles {
+        	handle.join().unwrap();
+    	}
+	    // Collect the processed data from worker threads
+	    for res in thread_results{
+	    	&report.merge( &res.lock().unwrap() );
+	    }
+	    for gext in thread_gexs{
+	    	gex.merge(&gext.lock().unwrap() );
+	    }
+
+
+	    let log_str = report.log_str();
+
+        pb.finish_with_message( log_str );
+
+        return gex
+	}
 
 
 	pub fn parse(&mut self,  f1:String, f2:String,  report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2]  ){
