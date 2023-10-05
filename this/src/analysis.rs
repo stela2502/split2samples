@@ -324,6 +324,18 @@ impl Analysis<'_>{
    		}
     }
 
+
+    //     println!( "\nSummary:");
+    // println!(     "total      reads  : {} reads", results.total );
+    // println!(     "no cell ID reads  : {} reads ({:.2}% of total)", results.no_sample, (results.no_sample as f32 / results.total as f32) * 100.0);
+    // println!(     "no gene ID reads  : {} reads ({:.2}% of total)", results.no_data, (results.no_data as f32 / results.total as f32) * 100.0);
+    // println!(     "N's or too short  : {} reads ({:.2}% of total)", results.unknown, (results.unknown as f32 / results.total as f32) * 100.0);
+    // println!(     "cellular reads    : {} reads ({:.2}% of total)", results.ok_reads, (results.ok_reads as f32 / results.total as f32) * 100.0 );
+    // println!(     "expression reads  : {} reads ({:.2}% of cellular)", reads_genes, (reads_genes as f32 / results.ok_reads as f32) * 100.0 );
+    // println!(     "antibody reads    : {} reads ({:.2}% of cellular)", reads_ab, (reads_ab as f32 / results.ok_reads as f32) * 100.0 );
+    // println!(     "sample tag reads  : {} reads ({:.2}% of cellular)", reads_samples, (reads_samples as f32 / results.ok_reads as f32) * 100.0 );
+    // println!(     "pcr duplicates    : {} reads ({:.2}% of cellular)", results.pcr_duplicates, ( results.pcr_duplicates as f32 / results.ok_reads as f32 ) * 100.0 );
+
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
     	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str  ){
 
@@ -344,8 +356,8 @@ impl Analysis<'_>{
         let pb = m.add(ProgressBar::new(5000));
         pb.set_style(spinner_style);
 
-        let reads_perl_cunk = 10_000;
-        println!("Starting with data collection");
+        let reads_perl_cunk = 1_000_000;
+        eprintln!("Starting with data collection");
         let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_cunk * num_threads );
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
@@ -377,7 +389,7 @@ impl Analysis<'_>{
         		}
     		}
     		else {
-    			println!("Prosessing one batch");
+    			eprintln!("Prosessing one batch");
     			good_read_count = 0;
 		    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 			        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
@@ -410,7 +422,7 @@ impl Analysis<'_>{
 			    	self.gex.merge(&gex.0);
 			       	report.merge( &gex.1 );
 			    }
-			    println!("Collecting more reads");
+			    eprintln!("Collecting more reads");
 			    good_reads.clear();
 			}
 			report.log(&pb);
