@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use crate::int_to_str::IntToStr;
 
 
 /// A mapper entry is a simplistic storage for the fast mapper class.

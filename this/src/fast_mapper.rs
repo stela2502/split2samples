@@ -296,23 +296,23 @@ impl  FastMapper{
 
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
 
-        let mut significant_bp = seq.len();
+        //let mut significant_bp = seq.len();
         //let mut start = 0;
-        let mut last_a = 0;
-        for i in 0..seq.len() {
-            if seq[i] == b'A' | b'A' {
-                last_a +=1;
-                if last_a >5{
-                    //println!("This contains a polyA stretch - last significant_bo is {}", i - last_a );
-                    //println!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") );
-                    significant_bp = i - last_a;
-                    break;
-                }
-            }
-            else {
-               last_a = 0; 
-            }
-        }
+        // let mut last_a = 0;
+        // for i in 0..seq.len() {
+        //     if seq[i] == b'A' | b'A' {
+        //         last_a +=1;
+        //         if last_a >5{
+        //             //println!("This contains a polyA stretch - last significant_bo is {}", i - last_a );
+        //             //println!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") );
+        //             //significant_bp = i - last_a;
+        //             break;
+        //         }
+        //     }
+        //     else {
+        //        last_a = 0; 
+        //     }
+        // }
 
         // entries is a Option<(u16, u64, usize)
         stop = false;

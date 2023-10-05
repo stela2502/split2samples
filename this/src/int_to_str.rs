@@ -190,7 +190,7 @@ impl IntToStr {
         let short = self.into_u16().clone();
         self.drop_n(2); // shift 8 bp to get the bp after the initial 8bp matcher
         let long = self.into_u64_nbp( self.kmer_size ).clone();
-        let mut sign = 0;
+        let sign:usize;
         //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
         if self.storage.len() - self.lost *4 >= self.kmer_size / 4{
         	sign = self.kmer_size/4;
