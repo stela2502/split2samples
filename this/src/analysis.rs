@@ -377,7 +377,7 @@ impl Analysis<'_>{
         		}
     		}
     		else {
-    			eprintln!("Prosessing one batch");
+    			eprintln!("Mapping one batch");
     			good_read_count = 0;
 		    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 			        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
@@ -405,7 +405,7 @@ impl Analysis<'_>{
 
 		    	    }) // Analyze each chunk in parallel
 		        .collect(); // Collect the results into a Vec
-
+		        eprintln!("sum up temp results");
 			    for gex in total_results{
 			    	self.gex.merge(&gex.0);
 			       	report.merge( &gex.1 );
