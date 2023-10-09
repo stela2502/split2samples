@@ -131,7 +131,14 @@ fn main() {
     }
 
     let num_threads = match opts.num_threads{
-        Some(n) => n,
+        Some(n) => {
+            if n < 1{
+                1
+            } 
+            else {
+                n
+            }
+        },
         None => num_cpus::get(),
     };
     

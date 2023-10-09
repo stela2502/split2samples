@@ -489,7 +489,7 @@ impl SingleCellData{
         genes.max_id = 0; // reset to collect the passing genes
 
         let cell_keys:Vec<u64> = self.cells.keys().cloned().collect();
-        let chunk_size = cell_keys.len() / self.num_threads;
+        let chunk_size = cell_keys.len() / self.num_threads +1;
 
         let gene_data:Vec<BTreeMap<std::string::String, usize>> = cell_keys
         .par_chunks(chunk_size)

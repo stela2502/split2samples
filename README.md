@@ -51,13 +51,13 @@ using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 To run the test data (a tiny bit of a real dataset):
 
 ```
-target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30 -v v1
+target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
 ```
 
 Or test the multi processor version:
 
 ```
-target/release/quantify_rhapsody_multi -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 30 -v v1
+target/release/quantify_rhapsody_multi -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
 ```
 
 Or to even validate this data you can run a R test script (which requires the R::Seurat package) like that:
@@ -473,7 +473,8 @@ writing all reads from the cell 3857748
 
 # Limitations / differences
 
-Neither whole genome Rhapsody data nor TCR / BRC analyses are supported.
+TCR / BRC analyses are not supported at the moment.
+The multiprocessor tool breaks if very view cells are detected. Try using less prcessors is this problem occures. A minimum of num_theads +1 cell is required for the export process to work. 
 
 
 # specific test cases
