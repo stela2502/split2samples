@@ -21,3 +21,4 @@ glob = "0.3.0"
 regex = "1"
 this = { path = "this" }
 indicatif = {version = "*", features = ["rayon"]}
+num_cpus = "1.14"

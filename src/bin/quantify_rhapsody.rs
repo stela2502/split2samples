@@ -131,7 +131,7 @@ fn main() {
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie, opts.index );
+        opts.antibody, opts.specie, opts.index, 1 );
 
     if save{
         worker.write_index( &opts.outpath );
@@ -145,12 +145,10 @@ fn main() {
         }
         
     }
-    
 
     println!("\n\nWriting outfiles ...");
 
-    worker.write_data( opts.outpath, &results, opts.min_umi );
-
+    worker.write_data( opts.outpath, &results, opts.min_umi ); // added one thread!
 
 
     match now.elapsed() {

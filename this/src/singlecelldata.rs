@@ -21,6 +21,8 @@ use flate2::write::GzEncoder;
 use std::path::PathBuf;
 use std::path::Path;
 
+use rayon::prelude::*;
+use std::thread;
 
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
 /// But I do not correct the UMIs here - even with sequencing errors 
@@ -34,6 +36,18 @@ pub struct CellData{
     pub passing: bool // check if this cell is worth exporting. Late game
 }
 
+impl Default for CellData {
+    fn default() -> Self {
+        CellData {
+            name: 0,
+            genes: BTreeMap::new(),
+            genes_with_data: HashSet::new(),
+            total_reads: BTreeMap::new(),
+            passing: false,
+        }
+    }
+}
+
 impl CellData{
     pub fn new(  name: u64 ) -> Self{
         let genes =  BTreeMap::new(); // to collect the sample counts
@@ -45,7 +59,7 @@ impl CellData{
             genes,
             genes_with_data,
             total_reads,
-            passing
+            passing,
         }
     }
 
@@ -195,11 +209,12 @@ pub struct SingleCellData{
     checked: bool,
     passing: usize,
     pub genes_with_data: HashSet<usize>,
+    pub num_threads:usize,
 }
 
 impl Default for SingleCellData {
     fn default() -> Self {
-        Self::new()
+        Self::new(1)
     }
 }
 
@@ -207,19 +222,19 @@ impl Default for SingleCellData {
 impl SingleCellData{
 
     //pub fn new(kmer_size:usize )-> Self {
-    pub fn new( )-> Self {
+    pub fn new(num_threads:usize )-> Self {
 
         let cells = BTreeMap::new();
         let checked:bool = false;
         let passing = 0;
         let genes_with_data = HashSet::new();
-
         Self {
             //kmer_size,
             cells,
             checked,
             passing,
             genes_with_data,
+            num_threads,
         }
     }
 
@@ -229,6 +244,7 @@ impl SingleCellData{
         self.checked= false;
         self.passing = 0;
         self.genes_with_data = HashSet::new();
+
         for other_cell in other.cells.values() {
             match self.cells.get_mut( &other_cell.name ){
                 Some(cell) => { cell.merge( other_cell ) },
@@ -312,18 +328,14 @@ impl SingleCellData{
         };
 
         let mut passed = 0;
-        let mut failed = 0;
 
         if ! self.checked{
             println!("Both mRNA and antibody did not generate data - useless, but exporting all cells!");
-            self.mtx_counts( genes, names, min_count );
+            self.mtx_counts( genes, names, min_count, self.num_threads );
         }
 
         for  cell_obj in self.cells.values() {
-            if ! cell_obj.passing {
-                failed +=1;
-                continue;
-            }
+
             let text = cell_obj.to_str( genes, names );
             match writeln!( writer, "{text}" ){
                 Ok(_) => passed +=1,
@@ -333,7 +345,8 @@ impl SingleCellData{
                 }
             };
         }
-        println!( "dense matrix: {passed} cell written - {failed} cells too view umis");
+
+        println!( "dense matrix: {passed} cell written");
         Ok( () )
     }
 
@@ -392,7 +405,7 @@ impl SingleCellData{
         let file2 = GzEncoder::new(file_b, Compression::default());
         let mut writer_b = BufWriter::with_capacity(4096,file2);
         match writeln!( writer, "%%MatrixMarket matrix coordinate integer general\n{}", 
-             self.mtx_counts( genes, names, min_count ) ){
+             self.mtx_counts( genes, names, min_count, self.num_threads ) ){
             Ok(_) => (),
             Err(err) => {
                 eprintln!("write error: {err}");
@@ -460,41 +473,7 @@ impl SingleCellData{
                 }
             }
         }
-        // let mut gene_id;
-        // let mut cell_id = 0;
-        // for ( _id,  cell_obj ) in &self.cells {
-        //     if ! cell_obj.passing {
-        //         //println!("failed cell {}", cell_obj.name );
-        //         failed +=1;
-        //         continue;
-        //     }
-        //     passed += 1;
-        //     cell_id += 1;
-        //     match writeln!( writer_b, "{}",cell_obj.name ){
-        //         Ok(_) => (),
-        //         Err(err) => {
-        //             eprintln!("write error: {}", err);
-        //             return Err::<(), &str>("cell barcode could not be written")   
-        //         }
-        //     };
-        //     gene_id = 0;
-        //     for (name, _gene_id) in &genes.names4sparse {
-        //         gene_id += 1;
-        //         //if cell_id == 1{ println!("writing gene info -> Gene {} included in output", name ); }
-        //         let n = cell_obj.n_umi_4_gene( genes, name );
-        //         if n > 0{
-        //             match writeln!( writer, "{} {} {}", gene_id, cell_id, n ){
-        //                 Ok(_) => {entries += 1;},
-        //                 Err(err) => {
-        //                     eprintln!("write error: {}", err);
-        //                     return Err::<(), &str>("cell data could not be written")   
-        //                 }   
-        //             }
 
-        //         }
-        //     }
-        // }
-        //println!( "min UMI count in export function: {}");
         println!( "sparse Matrix: {} cell(s), {} gene(s) and {} entries written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), entries, failed, file_path.into_os_string().into_string());
         Ok( () )
     }
@@ -508,26 +487,42 @@ impl SingleCellData{
         }
         genes.names4sparse.clear();
         genes.max_id = 0; // reset to collect the passing genes
-        let mut n:usize;
-        for  cell_obj in &mut self.cells.values_mut() {
-            if ! cell_obj.passing {
-                continue;
-            }
-            ncell += 1;
-            for name in names {
-                //if ! genes.names4sparse.contains_key ( name ){
-                n = cell_obj.n_umi_4_gene( genes, name );
-                if n > 0{
-                    if ! genes.names4sparse.contains_key ( name ){
-                        genes.max_id +=1;
-                        genes.names4sparse.insert( name.to_string() , genes.max_id );
-                        //println!("Gene {} included in output", name );
-                    } 
-                    entries +=1;
+
+        let cell_keys:Vec<u64> = self.cells.keys().cloned().collect();
+        let chunk_size = cell_keys.len() / self.num_threads;
+
+        let gene_data:Vec<BTreeMap<std::string::String, usize>> = cell_keys
+        .par_chunks(chunk_size)
+        .map(|chunk| {
+            // Your parallel processing logic here...
+            let mut names4sparse:  BTreeMap::<String, usize> = BTreeMap::new();
+            let mut n:usize;
+            for key in chunk {
+                if let cell_obj = self.cells.get(key).unwrap(){
+                    for name in names {
+                        n = cell_obj.n_umi_4_gene( genes, name );
+                        if n > 0{
+                            if ! names4sparse.contains_key ( name ){
+                                names4sparse.insert( name.to_string() , names4sparse.len() + 1 );
+                            } 
+                        }
+                    }
                 }
-                //}
+            }
+            names4sparse
+        }).collect();
+
+        // Merge gene data from different chunks
+        for genelist in &gene_data{
+            for name in genelist.keys() {
+                if ! genes.names4sparse.contains_key ( name ){
+                    // Insert gene names into the FastMapper
+                    genes.max_id +=1;
+                    genes.names4sparse.insert( name.to_string() , genes.max_id );
+                }
             }
         }
+
         if genes.max_id  ==0 && ! names.is_empty() {
             eprintln!( "None of the genes have data:\n{}", names.join( ", " ) );
         }
@@ -540,11 +535,11 @@ impl SingleCellData{
             }
             return self.update_names_4_sparse(genes, &used );
         }
-        [  ncell, entries ]
+        [ self.cells.len(), entries ]
     }
 
 
-    pub fn mtx_counts(&mut self, genes: &mut FastMapper, names: &Vec<String>, min_count:usize) -> String{
+    pub fn mtx_counts(&mut self, genes: &mut FastMapper, names: &Vec<String>, min_count:usize, num_threads: usize ) -> String{
         
 
         if ! self.checked{
@@ -553,13 +548,56 @@ impl SingleCellData{
 
             //println!("Checking cell for min umi count!");
 
-            for cell_obj in self.cells.values_mut() {
-                // total umi check
-                let n = cell_obj.n_umi( genes, names );
-                if  n >= min_count{
-                    cell_obj.passing = true;
+
+            // Split keys into chunks and process them in parallel
+            let keys: Vec<u64> = self.cells.keys().cloned().collect();
+            let chunk_size = keys.len() / num_threads +1; // You need to implement num_threads() based on your requirement
+
+
+            let results: Vec<(u64, bool)>  = keys
+                .par_chunks(chunk_size) 
+                .flat_map(|chunk| {
+                    let genes = &genes;
+                    let min_count = min_count;
+  
+                    let mut ret= Vec::<(u64, bool)>::with_capacity(chunk_size);
+                    for key in chunk {
+                        if let Some(cell_obj) = &self.cells.get(key) {
+                            let n = cell_obj.n_umi( genes, names );
+                            ret.push( (key.clone(), n >= min_count) );
+                        }
+                    }
+                    return ret
+                })
+                .collect();
+
+            // let mut results = Vec::new();
+            // for handle in handles {
+            //     let result = handle.join().expect("Thread panicked");
+            //     results.extend(result);
+            // }
+
+            let mut bad_cells = 0;
+            for ( key, passing ) in results{
+                if passing{
+                    if let Some(cell_obj) = self.cells.get_mut(&key) {
+                        cell_obj.passing = passing;
+                    }
+                }else {
+                    bad_cells +=1;
                 }
             }
+
+            println!("Dropping cell with too little counts (n={bad_cells})");
+            self.cells.retain( |&_key, cell_data| cell_data.passing );
+
+            // for cell_obj in self.cells.values_mut() {
+            //     // total umi check
+            //     let n = cell_obj.n_umi( genes, names );
+            //     if  n >= min_count{
+            //         cell_obj.passing = true;
+            //     }
+            // }
             self.checked = true;
             //println!("{} cells have passed the cutoff of {} counts per cell and {} occurances per umi",ncell, min_count ); 
         }

@@ -13,6 +13,7 @@ use std::time::SystemTime;
 use std::fs::File;
 
 use this::ofiles::Ofiles;
+use num_cpus;
 
 
 // use std::collections::HashSet;
@@ -60,6 +61,9 @@ struct Opts {
     /// minimal sequencing quality 
     #[clap(default_value_t=32, long)]
     gene_kmers: usize,
+    /// how many threads to use to analyze this (default max available)
+    #[clap(short, long)]
+    num_threads: Option<usize>
 }
 
 /*
@@ -125,18 +129,36 @@ fn main() {
         pos = &[0,9, 12,22, 26,35 , 36,42 ];
         min_sizes = &[ 51, 51 ];
     }
+
+    let num_threads = match opts.num_threads{
+        Some(n) => n,
+        None => num_cpus::get(),
+    };
     
     let save= opts.index.is_none();
 
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie, opts.index );
+        opts.antibody, opts.specie, opts.index, num_threads );
 
     if save{
         worker.write_index( &opts.outpath );
     }
-    worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );
+
+    let mut split1 = opts.reads.split(',');
+    let mut split2 = opts.file.split(',');
+    let mut id = 0;
+    for f1 in split1.by_ref(){
+        if let Some(f2) = split2.next(){
+            id += 1;
+            println!("\nParsing file pair {id}\n");
+            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath );
+        }
+        
+    }
+
+    //worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );
 
     println!("\n\nWriting outfiles ...");
 

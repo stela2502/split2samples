@@ -27,7 +27,6 @@ use std::io::Write;
 
 use std::thread;
 use rayon::prelude::*;
-use num_cpus;
 use rayon::slice::ParallelSlice;
 
 use crate::ofiles::Ofiles;
@@ -59,6 +58,7 @@ pub struct Analysis<'a>{
 	sample_names:Vec<String>,
 	gene_names:Vec<String>,
 	ab_names:Vec<String>,
+	num_threads:usize,
 }
 
 
@@ -66,7 +66,7 @@ impl Analysis<'_>{
 
 
 	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 
-		antibody:Option<String>, specie:String, index:Option<String>  ) -> Self{
+		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -162,7 +162,7 @@ impl Analysis<'_>{
 	    // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
 	    // and umi's are u64 again
 	    // here I need the cell kmer site.
-	    let gex = SingleCellData::new( );
+	    let gex = SingleCellData::new( num_threads );
 
 	    let mut sample_names:Vec<String> = Vec::with_capacity(12);
 
@@ -214,6 +214,7 @@ impl Analysis<'_>{
 			sample_names,
 			gene_names,
 			ab_names,
+			num_threads,
 		}
 	}
 
@@ -260,7 +261,7 @@ impl Analysis<'_>{
 
         // first match the cell id - if that does not work the read is unusable
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-        let mut gex = SingleCellData::new( );
+        let mut gex = SingleCellData::new( self.num_threads );
 
         for i in 0..data.len() {
 
@@ -354,11 +355,9 @@ impl Analysis<'_>{
 
     /// Analze BPO Rhapsody data in a paralel way.
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
-    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str  ){
+    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str ){
 
-    	let num_threads = num_cpus::get(); 
-
-    	println!("I am using {} cpus", num_threads);
+    	println!("I am using {} cpus", self.num_threads);
 
 
     	let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
@@ -367,20 +366,30 @@ impl Analysis<'_>{
 
         // need better error handling here too    
         // for now, we're assuming FASTQ and not FASTA.
-        let mut readereads = parse_fastx_file(&f1).expect("valid path/file");
-        let mut readefile = parse_fastx_file(&f2).expect("valid path/file");
+        let mut readereads = match parse_fastx_file(&f1) {
+        	Ok(reader) => reader,
+        	Err(err) => {
+            	panic!("File 'reads' {f1} Error: {}", err);
+        	}
+   		};
+        let mut readefile = match parse_fastx_file(&f2) {
+        	Ok(reader) => reader,
+        	Err(err) => {
+            	panic!("File 'file' {f2} Error: {}", err);
+        	}
+   		};
         let m = MultiProgress::new();
         let pb = m.add(ProgressBar::new(5000));
         pb.set_style(spinner_style);
 
         let reads_perl_chunk = 1_000_000;
         eprintln!("Starting with data collection");
-        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_chunk * num_threads );
+        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_chunk * self.num_threads );
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
 
-        	if good_read_count < reads_perl_chunk*num_threads {
+        	if good_read_count < reads_perl_chunk*self.num_threads {
         		report.total += 1;
 	            let read2 = match record2{
 	                Ok( res ) => res,
@@ -407,7 +416,7 @@ impl Analysis<'_>{
     			//eprintln!("Mapping one batch");
     			good_read_count = 0;
 		    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
-			        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
+			        .par_chunks(good_reads.len() / self.num_threads + 1) // Split the data into chunks for parallel processing
 		    	    .map(|data_split| {
 		    	    	// Get the unique identifier for the current thread
 		            	let thread_id = thread::current().id();
@@ -447,7 +456,7 @@ impl Analysis<'_>{
 	    if reads_perl_chunk > 0{
 	    	// there is data in the good_reads
 	    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
-		        .par_chunks(good_reads.len() / num_threads + 1) // Split the data into chunks for parallel processing
+		        .par_chunks(good_reads.len() / self.num_threads + 1) // Split the data into chunks for parallel processing
 	    	    .map(|data_split| {
 	    	    	// Get the unique identifier for the current thread
 	            	let thread_id = thread::current().id();
@@ -654,7 +663,6 @@ impl Analysis<'_>{
 		    // calculating a little bit wrong - why? no idea...
     //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
 
-
     //let fp1 = PathBuf::from(opts.reads.clone());
     //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
     let file_path = PathBuf::from(&outpath).join(
@@ -678,7 +686,7 @@ impl Analysis<'_>{
     );
 
     println!("Writing Antibody counts");
-    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes, &self.ab_names, 1 ) {
+    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes, &self.ab_names, 0 ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}")
     };
