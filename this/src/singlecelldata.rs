@@ -22,7 +22,7 @@ use std::path::PathBuf;
 use std::path::Path;
 
 use rayon::prelude::*;
-use std::thread;
+
 
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
 /// But I do not correct the UMIs here - even with sequencing errors 
@@ -480,8 +480,8 @@ impl SingleCellData{
     /// Update the gene names for export to sparse
     pub fn update_names_4_sparse( &mut self, genes: &mut FastMapper, names:&Vec<String>) -> [usize; 2] {
         
-        let mut entries = 0;
-        let mut ncell = 0;
+        let entries = 0;
+        let _ncell = 0;
         if ! self.checked{
             panic!("Please always run mtx_counts before update_names_4_sparse");
         }
@@ -498,14 +498,13 @@ impl SingleCellData{
             let mut names4sparse:  BTreeMap::<String, usize> = BTreeMap::new();
             let mut n:usize;
             for key in chunk {
-                if let cell_obj = self.cells.get(key).unwrap(){
-                    for name in names {
-                        n = cell_obj.n_umi_4_gene( genes, name );
-                        if n > 0{
-                            if ! names4sparse.contains_key ( name ){
-                                names4sparse.insert( name.to_string() , names4sparse.len() + 1 );
-                            } 
-                        }
+            let cell_obj = self.cells.get(key).unwrap();
+                for name in names {
+                    n = cell_obj.n_umi_4_gene( genes, name );
+                    if n > 0{
+                        if ! names4sparse.contains_key ( name ){
+                            names4sparse.insert( name.to_string() , names4sparse.len() + 1 );
+                        } 
                     }
                 }
             }
