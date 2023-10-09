@@ -14,6 +14,8 @@ Cargo.lock
 
 /target
 
+#and my example data analysis
+/realAnalysis_genomic_index_v3/
 
 .RData
 .Rhistory

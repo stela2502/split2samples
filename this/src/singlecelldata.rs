@@ -157,7 +157,7 @@ impl CellData{
     pub fn to_str(&self, gene_info:&FastMapper, names: &Vec<String> ) -> String {
 
         let mut data = Vec::<std::string::String>::with_capacity( gene_info.names.len()+3 ); 
-        data.push(self.name.to_string());
+        data.push(format!( "Cell{}", self.name ) );
 
         // here our internal data already should be stored with the same ids as the gene names.
         let mut total = 0;
@@ -432,7 +432,7 @@ impl SingleCellData{
             }
             passed += 1;
 
-            match writeln!( writer_b, "{}",cell_obj.name ){
+            match writeln!( writer_b, "Cell{}",cell_obj.name ){
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");

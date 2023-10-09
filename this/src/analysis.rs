@@ -279,12 +279,39 @@ impl Analysis<'_>{
 	                        );
 	                    },
 	                    None => {
+	                    	// I want to be able to check why this did not work
+	                    	let _ =report.ofile.buff1.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
+	                    	let _ =report.ofile.buff1.write( &data[i].0 ).unwrap();
+	                    	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+
+	                    	let _ =report.ofile.buff2.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
+	                    	let _ =report.ofile.buff2.write( &data[i].1 ).unwrap();
+	                    	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+
 	                    	report.no_data +=1;
 	                    }
 	                };
 
 	            },
 	            Err(_err) => {
+	            	// this is fucked up - the ids are changed!
+	            	let _ =report.ofile.buff2.write( b">No Cell detected\n" );
+                	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
+                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff2.write( &data[i].0[pos[0]..pos[1]] ).unwrap();
+                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff2.write( &data[i].0[pos[2]..pos[3]] ).unwrap();
+                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff2.write( &data[i].0[pos[4]..pos[5]] ).unwrap();
+                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff1.write( b">No Cell detected\n" );
+                	let _ =report.ofile.buff1.write( &data[i].1 ).unwrap();
+                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+
 	                report.no_sample +=1;
 	                continue
 	            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
@@ -325,7 +352,7 @@ impl Analysis<'_>{
     // }
 
 
-
+    /// Analze BPO Rhapsody data in a paralel way.
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
     	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str  ){
 
