@@ -480,7 +480,7 @@ impl SingleCellData{
     /// Update the gene names for export to sparse
     pub fn update_names_4_sparse( &mut self, genes: &mut FastMapper, names:&Vec<String>) -> [usize; 2] {
         
-        let entries = 0;
+        let mut entries = 0;
         let _ncell = 0;
         if ! self.checked{
             panic!("Please always run mtx_counts before update_names_4_sparse");
@@ -491,16 +491,18 @@ impl SingleCellData{
         let cell_keys:Vec<u64> = self.cells.keys().cloned().collect();
         let chunk_size = cell_keys.len() / self.num_threads +1;
 
-        let gene_data:Vec<BTreeMap<std::string::String, usize>> = cell_keys
+        let gene_data:Vec<(BTreeMap<std::string::String, usize>, usize)> = cell_keys
         .par_chunks(chunk_size)
         .map(|chunk| {
             // Your parallel processing logic here...
             let mut names4sparse:  BTreeMap::<String, usize> = BTreeMap::new();
             let mut n:usize;
+            let mut entry = 0;
             for key in chunk {
             let cell_obj = self.cells.get(key).unwrap();
                 for name in names {
                     n = cell_obj.n_umi_4_gene( genes, name );
+                    entry +=1;
                     if n > 0{
                         if ! names4sparse.contains_key ( name ){
                             names4sparse.insert( name.to_string() , names4sparse.len() + 1 );
@@ -508,11 +510,12 @@ impl SingleCellData{
                     }
                 }
             }
-            names4sparse
+            (names4sparse, entry)
         }).collect();
 
         // Merge gene data from different chunks
-        for genelist in &gene_data{
+        for (genelist, n) in &gene_data{
+            entries += n;
             for name in genelist.keys() {
                 if ! genes.names4sparse.contains_key ( name ){
                     // Insert gene names into the FastMapper

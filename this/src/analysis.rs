@@ -84,7 +84,6 @@ impl Analysis<'_>{
 	    	}
 	    	genes.print();
 	    	gene_count = genes.names.len();
-
 	    	
 	    }
 
@@ -154,6 +153,9 @@ impl Analysis<'_>{
 		    }
 
 		}
+
+		println!("After indexing all fastq files we have the following index:");
+		genes.print();
 
 	    //  now we need to get a CellIDs object, too
 	    let cells = CellIds::new( &version, 7);
