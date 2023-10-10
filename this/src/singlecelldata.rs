@@ -502,8 +502,8 @@ impl SingleCellData{
             let cell_obj = self.cells.get(key).unwrap();
                 for name in names {
                     n = cell_obj.n_umi_4_gene( genes, name );
-                    entry +=1;
                     if n > 0{
+                        entry +=1;
                         if ! names4sparse.contains_key ( name ){
                             names4sparse.insert( name.to_string() , names4sparse.len() + 1 );
                         } 
