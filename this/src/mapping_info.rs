@@ -14,6 +14,8 @@ pub struct MappingInfo{
     pub no_data:usize,
     /// reads with cell id and gene id
     pub ok_reads:usize,
+    /// reads with cell_id - gene_id is not checked
+    pub cellular_reads: usize,
     /// reads that are duplicates on the UMI level per cell and gene
     pub pcr_duplicates:usize,
     /// the amount of ok_reads after which to write a entry into the log file
@@ -34,6 +36,7 @@ impl MappingInfo{
 		let no_sample = 0;
 		let no_data = 0;
 		let ok_reads = 0;
+		let cellular_reads = 0;
 		let pcr_duplicates = 0;
 		let split = 1_000_000;
 		let log_iter = 0;
@@ -44,6 +47,7 @@ impl MappingInfo{
 			no_sample,
 			no_data,
 			ok_reads,
+			cellular_reads,
 			pcr_duplicates,
 			split,
 			log_iter,
@@ -63,6 +67,7 @@ impl MappingInfo{
 		//unknown is defined without multiprocessor support
 		self.ok_reads += other.ok_reads;
 		self.pcr_duplicates += other.pcr_duplicates;
+		self.cellular_reads += other.cellular_reads;
 	}
 
 	pub fn write_to_log ( &mut self, text:String ){
@@ -90,11 +95,32 @@ impl MappingInfo{
 		}
 	}
 	pub fn log_str( &mut self ) -> String{
-		format!("{:.2} mio reads ({:.2}% usable; {:.2}% PCR dupl. [usable] [{:.2}% for last batch])",
+		format!("{:.2} mio reads ({:.2}% with cell info, {:.2}% with gene match",
             self.total as f32 / self.split as f32,
-            self.ok_reads as f32 / (self.ok_reads +self.no_sample+ self.unknown) as f32 * 100.0 , 
-            self.pcr_duplicates as f32 / self.ok_reads as f32 * 100.0,
-            self.local_dup as f32 / self.split as f32 * 100.0
+            self.cellular_reads as f32 / (self.total) as f32 * 100.0 , 
+            self.ok_reads as f32 / (self.total) as f32 * 100.0 
          )
+	}
+
+	pub fn summary( &mut self, reads_genes:usize, reads_ab:usize, reads_samples:usize ) -> String{
+	    let result = "\nSummary:\n".to_owned()
+	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
+	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data, (self.no_data as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     "N's or too short  : {} reads ({:.2}% of total)\n", self.unknown, (self.unknown as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     "cellular reads    : {} reads ({:.2}% of total)\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
+	    	+format!(     "expression reads  : {} reads ({:.2}% of cellular)\n", reads_genes, (reads_genes as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
+	    	+format!(     "antibody reads    : {} reads ({:.2}% of cellular)\n", reads_ab, (reads_ab as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
+	    	+format!(     "sample   reads    : {} reads ({:.2}% of cellular)\n", reads_samples, (reads_samples as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
+	    	+format!(     "mapped reads      : {} reads ({:.2}% of cellular)\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str();
+	   		//+format!(     "pcr duplicates    : {} reads ({:.2}% of cellular)\n\n", results.pcr_duplicates, ( self.pcr_duplicates as f32 / self.ok_reads as f32 ) * 100.0 ).as_str();
+	   	match writeln!( self.log_writer, "{result}" ){
+                Ok(_) => (),
+                Err(err) => {
+                    eprintln!("write error: {err}" );
+                }
+            };
+        return result
+	    
 	}
 }

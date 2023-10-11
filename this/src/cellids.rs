@@ -453,6 +453,12 @@ impl CellIds<'_>{
                         *c1 * max * max
                     },
                 None => {
+                    // let's see if we 'only' have one mismatch in the entry
+                    // for i in 0..self.c1s-len(){
+                    //     if (&km ^ self.c1s[i] ).count_ones() < 3 { // max 2 bits changed 1-2 nucl diff
+                    //         return (i)
+                    //     }
+                    // }
                     0
                     // //println!("trying to fix a problem: {:?}", std::str::from_utf8(kmer));
                     // match self.csl1kmer.get( &kmer, 1, 0 ){

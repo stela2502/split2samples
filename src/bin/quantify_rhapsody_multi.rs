@@ -169,7 +169,7 @@ fn main() {
 
     println!("\n\nWriting outfiles ...");
 
-    worker.write_data( opts.outpath, &results, opts.min_umi );
+    worker.write_data( opts.outpath, &mut results, opts.min_umi );
 
 
 

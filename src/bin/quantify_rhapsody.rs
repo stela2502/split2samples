@@ -148,7 +148,7 @@ fn main() {
 
     println!("\n\nWriting outfiles ...");
 
-    worker.write_data( opts.outpath, &results, opts.min_umi ); // added one thread!
+    worker.write_data( opts.outpath, &mut results, opts.min_umi ); // added one thread!
 
 
     match now.elapsed() {

@@ -272,6 +272,7 @@ impl Analysis<'_>{
         	let umi:u64 = tool.into_u64();
         	match &self.cells.to_cellid( &data[i].0, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
 	            Ok(cell_id) => {
+	            	report.cellular_reads +=1;
 	                match &self.genes.get( &data[i].1, report ){
 	                    Some(gene_id) =>{
 	                        gex.try_insert( 
@@ -284,11 +285,11 @@ impl Analysis<'_>{
 	                    None => {
 	                    	// I want to be able to check why this did not work
 	                    	let _ =report.ofile.buff1.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
-	                    	let _ =report.ofile.buff1.write( &data[i].0 ).unwrap();
+	                    	let _ =report.ofile.buff1.write( &data[i].1 ).unwrap();
 	                    	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
 
 	                    	let _ =report.ofile.buff2.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
-	                    	let _ =report.ofile.buff2.write( &data[i].1 ).unwrap();
+	                    	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
 	                    	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
 
 	                    	report.no_data +=1;
@@ -298,22 +299,22 @@ impl Analysis<'_>{
 	            },
 	            Err(_err) => {
 	            	// this is fucked up - the ids are changed!
-	            	let _ =report.ofile.buff2.write( b">No Cell detected\n" );
-                	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
-                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
-
-                	let _ =report.ofile.buff2.write( &data[i].0[pos[0]..pos[1]] ).unwrap();
-                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
-
-                	let _ =report.ofile.buff2.write( &data[i].0[pos[2]..pos[3]] ).unwrap();
-                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
-
-                	let _ =report.ofile.buff2.write( &data[i].0[pos[4]..pos[5]] ).unwrap();
-                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
-
-                	let _ =report.ofile.buff1.write( b">No Cell detected\n" );
+	            	let _ =report.ofile.buff1.write( b">No Cell detected\n" );
                 	let _ =report.ofile.buff1.write( &data[i].1 ).unwrap();
                 	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff1.write( &data[i].1[pos[0]..pos[1]] ).unwrap();
+                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff1.write( &data[i].1[pos[2]..pos[3]] ).unwrap();
+                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff1.write( &data[i].1[pos[4]..pos[5]] ).unwrap();
+                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+
+                	let _ =report.ofile.buff2.write( b">No Cell detected\n" );
+                	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
+                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
 
 	                report.no_sample +=1;
 	                continue
@@ -576,6 +577,7 @@ impl Analysis<'_>{
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 match &self.cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
                     Ok(cell_id) => {
+                    	report.cellular_reads +=1;
                         // this is removing complexity from the data - in the test dataset 111 reads are ignored.
                         // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );
                         // if ! cell_umi.insert( cell_id_umi ){
@@ -661,7 +663,7 @@ impl Analysis<'_>{
 
 	}
 
-	pub fn write_data( &mut self, outpath:String, results:&MappingInfo, min_umi : usize ) {
+	pub fn write_data( &mut self, outpath:String, results:&mut MappingInfo, min_umi : usize ) {
 		    // calculating a little bit wrong - why? no idea...
     //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
 
@@ -704,17 +706,7 @@ impl Analysis<'_>{
     let reads_ab = self.gex.n_reads( &mut self.genes , &self.ab_names );
     let reads_samples = self.gex.n_reads( &mut self.genes , &self.sample_names );
 
-    println!( "\nSummary:");
-    println!(     "total      reads  : {} reads", results.total );
-    println!(     "no cell ID reads  : {} reads ({:.2}% of total)", results.no_sample, (results.no_sample as f32 / results.total as f32) * 100.0);
-    println!(     "no gene ID reads  : {} reads ({:.2}% of total)", results.no_data, (results.no_data as f32 / results.total as f32) * 100.0);
-    println!(     "N's or too short  : {} reads ({:.2}% of total)", results.unknown, (results.unknown as f32 / results.total as f32) * 100.0);
-    println!(     "cellular reads    : {} reads ({:.2}% of total)", results.ok_reads, (results.ok_reads as f32 / results.total as f32) * 100.0 );
-    println!(     "expression reads  : {} reads ({:.2}% of cellular)", reads_genes, (reads_genes as f32 / results.ok_reads as f32) * 100.0 );
-    println!(     "antibody reads    : {} reads ({:.2}% of cellular)", reads_ab, (reads_ab as f32 / results.ok_reads as f32) * 100.0 );
-    println!(     "sample tag reads  : {} reads ({:.2}% of cellular)", reads_samples, (reads_samples as f32 / results.ok_reads as f32) * 100.0 );
-    println!(     "pcr duplicates    : {} reads ({:.2}% of cellular)", results.pcr_duplicates, ( results.pcr_duplicates as f32 / results.ok_reads as f32 ) * 100.0 );
-    
+    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
 
     let file_path2 = format!("{}/SampleCounts.tsv", outpath );
     println!( "\nCell->Sample table written to {file_path2:?}\n" );
