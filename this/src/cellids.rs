@@ -462,7 +462,7 @@ impl CellIds{
             None => {
                 let mut good = Vec::<(usize,usize)>::with_capacity(3);
                 for i in 0..self.c1s.len(){
-                    if ( km ^ self.c1s[i]) < 3 {
+                    if ( km ^ self.c1s[i]) < 5 {
                         // could be as little as one bd change - max two
                         good.push( (i, ( km ^ self.c1s[i])  as usize ) );
                     }
@@ -491,7 +491,7 @@ impl CellIds{
             None => {
                 let mut good = Vec::<(usize,usize)>::with_capacity(3);
                 for i in 0..self.c2s.len(){
-                    if ( km ^ self.c2s[i]) < 3 {
+                    if ( km ^ self.c2s[i]) < 5 {
                         // could be as little as one bd change - max two
                         good.push( (i, ( km ^ self.c2s[i])  as usize)  );
                     }
@@ -520,7 +520,7 @@ impl CellIds{
             None => {
                 let mut good = Vec::<(usize,usize)>::with_capacity(3);
                 for i in 0..self.c3s.len(){
-                    if ( km ^ self.c3s[i]) < 3 {
+                    if ( km ^ self.c3s[i]) < 5 {
                         // could be as little as one bd change - max two
                         good.push( (i, ( km ^ self.c3s[i])  as usize)  );
                     }

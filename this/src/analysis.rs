@@ -300,20 +300,20 @@ impl Analysis{
 	            Err(_err) => {
 	            	// this is fucked up - the ids are changed!
 	            	let _ =report.ofile.buff1.write( b">No Cell detected\n" );
-                	let _ =report.ofile.buff1.write( &data[i].1 ).unwrap();
+                	let _ =report.ofile.buff1.write( &data[i].0 ).unwrap();
                 	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
 
-                	let _ =report.ofile.buff1.write( &data[i].1[pos[0]..pos[1]] ).unwrap();
+                	let _ =report.ofile.buff1.write( &data[i].0[pos[0]..pos[1]] ).unwrap();
                 	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
 
-                	let _ =report.ofile.buff1.write( &data[i].1[pos[2]..pos[3]] ).unwrap();
+                	let _ =report.ofile.buff1.write( &data[i].0[pos[2]..pos[3]] ).unwrap();
                 	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
 
-                	let _ =report.ofile.buff1.write( &data[i].1[pos[4]..pos[5]] ).unwrap();
+                	let _ =report.ofile.buff1.write( &data[i].0[pos[4]..pos[5]] ).unwrap();
                 	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
 
                 	let _ =report.ofile.buff2.write( b">No Cell detected\n" );
-                	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
+                	let _ =report.ofile.buff2.write( &data[i].1 ).unwrap();
                 	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
 
 	                report.no_sample +=1;
