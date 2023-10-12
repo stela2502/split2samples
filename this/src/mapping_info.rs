@@ -155,7 +155,9 @@ impl MappingInfo{
          )
 	}
 
-	pub fn summary( &mut self, reads_genes:usize, reads_ab:usize, reads_samples:usize ) -> String{
+	pub fn summary( &mut self, reads_genes:usize, reads_ab :usize, reads_samples:usize ) -> String{
+
+		let pcr_duplicates = self.cellular_reads - reads_genes - reads_ab - reads_samples;
 	    let mut result = "\nSummary:\n".to_owned()
 	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
 	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
@@ -165,8 +167,8 @@ impl MappingInfo{
 	    	+format!(     "expression reads  : {} reads ({:.2}% of cellular)\n", reads_genes, (reads_genes as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "antibody reads    : {} reads ({:.2}% of cellular)\n", reads_ab, (reads_ab as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "sample   reads    : {} reads ({:.2}% of cellular)\n", reads_samples, (reads_samples as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
-	    	+format!(     "mapped reads      : {} reads ({:.2}% of cellular)\n\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
-	   		//+format!(     "pcr duplicates    : {} reads ({:.2}% of cellular)\n\n", results.pcr_duplicates, ( self.pcr_duplicates as f32 / self.ok_reads as f32 ) * 100.0 ).as_str();
+	    	+format!(     "unique reads      : {} reads ({:.2}% of cellular)\n\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
+	    	+format!(     "pca duplicates or bad cells: {} reads ({:.2}% of cellular)\n\n", pcr_duplicates, ( pcr_duplicates as f32 / self.cellular_reads as f32 ) * 100.0 ).as_str()
 	   		+"timings:\n";
 	   	let  (mut hours,mut min,mut sec ,mut mulli ) = Self::split_duration( self.absolute_start.elapsed().unwrap() );
 	   	result += format!("   overall run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
