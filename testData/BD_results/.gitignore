@@ -1,6 +1,8 @@
 *.cwl
 *.yml
 *.sif
+*.h5ad
+/realAnalysis_genomic_index_v3/
 /S1_local_BD/
 /S2_local_BD/
 /ighj_test/

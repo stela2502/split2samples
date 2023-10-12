@@ -16,6 +16,7 @@ Cargo.lock
 
 #and my example data analysis
 /realAnalysis_genomic_index_v3/
+/Rustody_S1/
 
 .RData
 .Rhistory
