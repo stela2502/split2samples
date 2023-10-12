@@ -25,6 +25,8 @@ use std::time::SystemTime;
 use glob::glob; // to search for files
 use regex::Regex;
 
+use this::int_to_str::IntToStr;
+
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
 
@@ -410,6 +412,8 @@ fn sample_split( opts: &Opts){
     ];
 
     let mut missing:u32 = 0;
+    let tool = IntToStr::new( b"AAAAAAAAAAA".to_vec(), 9);
+
     while let Some(record2) = readefile.next() {
         if let Some(record1) = readereads.next() {
             let seqrec = record2.expect("invalid record");
@@ -436,9 +440,15 @@ fn sample_split( opts: &Opts){
                             // here comes the seq
                             let mut seq = seqrec1.seq().into_owned();
                             let expected = cells.to_sequence( id );
-                            seq[..9].copy_from_slice(&expected[0][..9]);
-                            seq[21..30].copy_from_slice(&expected[1][..9]);
-                            seq[43..52].copy_from_slice(&expected[2][..9]);
+
+                            let mut s =String::from("");
+                            tool.u64_to_str( 9, &expected[0], &mut s );
+
+                            seq[..9].copy_from_slice(&s.as_bytes()[..9]);
+                            tool.u64_to_str( 9, &expected[1], &mut s );
+                            seq[21..30].copy_from_slice(&s.as_bytes()[..9]);
+                            tool.u64_to_str( 9, &expected[2], &mut s );
+                            seq[43..52].copy_from_slice(&s.as_bytes()[..9]);
 
                             ofiles[loc_id].buff1.write_all( &seq ).unwrap();
                             ofiles[loc_id].buff1.write_all(b"\n+\n").unwrap();

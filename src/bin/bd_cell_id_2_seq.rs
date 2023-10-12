@@ -1,5 +1,6 @@
 use clap::Parser;
 use this::cellids::CellIds;
+use this::int_to_str::IntToStr;
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
@@ -16,9 +17,19 @@ fn main() {
 	let opts: Opts = Opts::parse();
 
 	let cells = CellIds::new(&opts.version, 9);
-	let seq: Vec<&[u8; 9]> = cells.to_sequence( opts.id );
-	
+	let seq: Vec<u64> = cells.to_sequence( opts.id );
 
-	println!( "The sequence is:\n{:?}\n{:?}\n{:?}\n", std::str::from_utf8(seq[0]), std::str::from_utf8(seq[1]), std::str::from_utf8(seq[2]) );
+	let mut info = format!("The sequence is:\n");
+
+	let mut s = String::from("");
+	let tool = IntToStr::new( b"AAAAAAAAA".to_vec(), 9 );
+	tool.u64_to_str(9, &seq[0], &mut s);
+	info += &s.clone();
+	tool.u64_to_str(9, &seq[1], &mut s);
+	info += &s.clone();
+	tool.u64_to_str(9, &seq[2], &mut s);
+	info += &s.clone();
+
+	println!( "{}", info );
 }
 

@@ -51,9 +51,9 @@ fn mean_u8( data:&[u8] ) -> f32 {
 
 /// the analysis calss is a wrapper around my 'old' quantify_rhapsody main funtion.
 /// I started it to easily process multiple fastq files in a row.
-pub struct Analysis<'a>{
+pub struct Analysis{
 	genes: FastMapper,
-	cells: CellIds<'a>,
+	cells: CellIds,
 	gex: SingleCellData,
 	sample_names:Vec<String>,
 	gene_names:Vec<String>,
@@ -62,7 +62,7 @@ pub struct Analysis<'a>{
 }
 
 
-impl Analysis<'_>{
+impl Analysis{
 
 
 	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 

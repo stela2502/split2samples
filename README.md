@@ -54,6 +54,22 @@ To run the test data (a tiny bit of a real dataset):
 target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
 ```
 
+Latest results:
+
+```
+Summary:
+total      reads  : 100000 reads
+no cell ID reads  : 16355 reads (16.35% of total)
+no gene ID reads  : 1217 reads (1.22% of total)
+N's or too short  : 14080 reads (14.08% of total)
+cellular reads    : 69565 reads (69.56% of total)
+expression reads  : 338 reads (0.49% of cellular)
+antibody reads    : 15 reads (0.02% of cellular)
+sample   reads    : 0 reads (0.00% of cellular)
+mapped reads      : 353 reads (0.51% of cellular)
+```
+
+
 Or test the multi processor version:
 
 ```

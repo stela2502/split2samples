@@ -4,8 +4,8 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
-use kmers::naive_impl::Kmer;
-
+//use kmers::naive_impl::Kmer;
+use crate::int_to_str::IntToStr;
 //use crate::sampleids::SampleIds;
 
 //use std::thread;
@@ -15,11 +15,11 @@ use kmers::naive_impl::Kmer;
 
 
 /// and here the data
-pub struct CellIds<'a>{    
+pub struct CellIds{    
     //kmer_len: usize,
-    c1s: Vec<&'a [u8; 9]>,
-    c2s: Vec<&'a [u8; 9]>,
-    c3s: Vec<&'a [u8; 9]>,
+    c1s: Vec<u64>,
+    c2s: Vec<u64>,
+    c3s: Vec<u64>,
     csl1: BTreeMap<u64, u32>,
     csl2: BTreeMap<u64, u32>,
     csl3: BTreeMap<u64, u32>,
@@ -30,7 +30,7 @@ pub struct CellIds<'a>{
 }
 
 // here the functions
-impl CellIds<'_>{
+impl CellIds{
 
     pub fn new( ver:&String, mut size: u8 )-> Self {
 
@@ -42,10 +42,9 @@ impl CellIds<'_>{
             size = 9;
             println!( "CellIDs::new size set to 9");
         }
-        let  c1s: Vec<&[u8; 9]>;
-        let  c2s: Vec<&[u8; 9]>;
-        let  c3s: Vec<&[u8; 9]>;
-
+        let  c1s: Vec<u64>;
+        let  c2s: Vec<u64>;
+        let  c3s: Vec<u64>;
         let mut csl1 = BTreeMap::<u64, u32>::new();
         let mut csl2 = BTreeMap::<u64, u32>::new();
         let mut csl3 = BTreeMap::<u64, u32>::new();
@@ -56,7 +55,7 @@ impl CellIds<'_>{
 
 
         if ver == "v2.96" || ver == "v1"{
-            c1s = vec![ 
+            c1s = Self::into_u64(vec![ 
             b"GTCGCTATA", b"CTTGTACTA", b"CTTCACATA",
             b"ACACGCCGG", b"CGGTCCAGG", b"AATCGAATG", b"CCTAGTATA", b"ATTGGCTAA", b"AAGACATGC",
             b"AAGGCGATC", b"GTGTCCTTA", b"GGATTAGGA", b"ATGGATCCA", b"ACATAAGCG", b"AACTGTATT",
@@ -73,8 +72,8 @@ impl CellIds<'_>{
             b"TATGTGGCA", b"GCTGCCAAT", b"ATCAGAGCT", b"TCGAAGTGA", b"ATAGACGAG", b"AGCCCAATC",
             b"CAGAATCGT", b"ATCTCCACA", b"ACGAAAGGT", b"TAGCTTGTA", b"ACACGAGAT", b"AACCGCCTC",
             b"ATTTAGATG", b"CAAGCAAGC", b"CAAAGTGTG", b"GGCAAGCAA", b"GAGCCAATA", b"ATGTAATGG",
-            b"CCTGAGCAA", b"GAGTACATT", b"TGCGATCTA" ];
-            c2s = vec![ 
+            b"CCTGAGCAA", b"GAGTACATT", b"TGCGATCTA" ]);
+            c2s = Self::into_u64( vec![ 
             b"TACAGGATA", b"CACCAGGTA", b"TGTGAAGAA", b"GATTCATCA", b"CACCCAAAG",
             b"CACAAAGGC", b"GTGTGTCGA", b"CTAGGTCCT", b"ACAGTGGTA", b"TCGTTAGCA", b"AGCGACACC",
             b"AAGCTACTT", b"TGTTCTCCA", b"ACGCGAAGC", b"CAGAAATCG", b"ACCAAAATG", b"AGTGTTGTC",
@@ -91,8 +90,8 @@ impl CellIds<'_>{
             b"AGATAGTTC", b"CAATTGATC", b"GCATGGCTA", b"ACCAGGTGT", b"AGCTGCCGT", b"TATAGCCCT",
             b"AGAGGACCA", b"ACAATATGG", b"CAGCACTTC", b"CACTTATGT", b"AGTGAAAGG", b"AACCCTCGG",
             b"AGGCAGCTA", b"AACCAAAGT", b"GAGTGCGAA", b"CGCTAAGCA", b"AATTATAAC", b"TACTAGTCA",
-            b"CAACAACGG" ] ;
-            c3s = vec![
+            b"CAACAACGG" ] );
+            c3s = Self::into_u64( vec![
             b"AAGCCTTCT", b"ATCATTCTG",
             b"CACAAGTAT", b"ACACCTTAG", b"GAACGACAA", b"AGTCTGTAC", b"AAATTACAG", b"GGCTACAGA",
             b"AATGTATCG", b"CAAGTAGAA", b"GATCTCTTA", b"AACAACGCG", b"GGTGAGTTA", b"CAGGGAGGG",
@@ -109,10 +108,10 @@ impl CellIds<'_>{
             b"TCAGATTCA", b"CACGATCCG", b"AACAGAAAC", b"CATGAATGA", b"CGTACTACG", b"TTCAGCTCA",
             b"AAGGCCGCA", b"GGTTGGACA", b"CGTCTAGGT", b"AATTCGGCG", b"CAACCTCCA", b"CAATAGGGT",
             b"ACAGGCTCC", b"ACAACTAGT", b"AGTTGTTCT", b"AATTACCGG", b"ACAAACTTT", b"TCTCGGTTA",
-            b"ACTAGACCG", b"ACTCATACG", b"ATCGAGTCT", b"CATAGGTCA" ] ;
+            b"ACTAGACCG", b"ACTCATACG", b"ATCGAGTCT", b"CATAGGTCA" ] );
         }
         else if ver == "v2.384" {
-            c1s = vec![
+            c1s = Self::into_u64( vec![
             b"TGTGTTCGC", b"TGTGGCGCC", b"TGTCTAGCG", b"TGGTTGTCC", b"TGGTTCCTC",
             b"TGGTGTGCT", b"TGGCGACCG", b"TGCTGTGGC", b"TGCTGGCAC", b"TGCTCTTCC", b"TGCCTCACC",
             b"TGCCATTAT", b"TGATGTCTC", b"TGATGGCCT", b"TGATGCTTG", b"TGAAGGACC", b"TCTGTCTCC",
@@ -177,9 +176,9 @@ impl CellIds<'_>{
             b"AGGTGCTAC", b"AGGCTTGCG", b"AGGCCTTCC", b"AGGCACCTT", b"AGGAATATG", b"AGCGGCCAG",
             b"AGCCTGGTC", b"AGCCTGACT", b"AGCAATCCG", b"AGAGATGTT", b"AGAGAATTC", b"ACTCGCTTG",
             b"ACTCGACCT", b"ACGTACACC", b"ACGGATGGT", b"ACCAGTCTG", b"ACATTCGGC", b"ACATGAGGT",
-            b"ACACTAATT" ] ;
+            b"ACACTAATT" ] );
 
-            c2s = vec![
+            c2s = Self::into_u64( vec![
             b"TTGTGTTGT", b"TTGTGGTAG",
             b"TTGTGCGGA", b"TTGTCTGTT", b"TTGTCTAAG", b"TTGTCATAT", b"TTGTCACGA", b"TTGTATGAA",
             b"TTGTACAGT", b"TTGGTTAAT", b"TTGGTGCAA", b"TTGGTCGAG", b"TTGGTATTA", b"TTGGCACAG",
@@ -244,9 +243,9 @@ impl CellIds<'_>{
             b"AGATGTACG", b"AGAGTTAAT", b"AGACCTCTG", b"ACTTCTATA", b"ACTGTCGAG", b"ACTGTATGT",
             b"ACTCTGTAA", b"ACTCGCGAA", b"ACTAGATCT", b"ACTAACGTT", b"ACGTTACTG", b"ACGTGGAAT",
             b"ACGGACTCT", b"ACGCCTAAT", b"ACGCCGTTA", b"ACGACGTGT", b"ACCTCGCAT", b"ACCATCATA",
-            b"ACATATATT", b"ACAGGCACA", b"ACACCTGAG", b"ACACATTCT" ] ;
+            b"ACATATATT", b"ACAGGCACA", b"ACACCTGAG", b"ACACATTCT" ] );
 
-            c3s = vec![
+            c3s = Self::into_u64( vec![
             b"TTGTGGCTG", b"TTGTGGAGT", b"TTGTGCGAC", b"TTGTCTTCA", b"TTGTAAGAT",
             b"TTGGTTCTG", b"TTGGTGCGT", b"TTGGTCTAC", b"TTGGTAACT", b"TTGGCGTGC", b"TTGGATTAG",
             b"TTGGAGACG", b"TTGGAATCA", b"TTGCGGCGA", b"TTGCGCTCG", b"TTGCCTTAC", b"TTGCCGGAT",
@@ -311,7 +310,7 @@ impl CellIds<'_>{
             b"ACCTAATCG", b"ACCGTAGCA", b"ACCGGTAGT", b"ACCGGCTAC", b"ACCGCTTCA", b"ACATTGTGC",
             b"ACATTCTCG", b"ACATGGCTG", b"ACATGACGA", b"ACATATGAT", b"ACATATACG", b"ACAGCGTAC",
             b"ACACTTGCT", b"ACACTATCA", b"ACACGCATG", b"ACACCAGTA", b"ACACCAACT", b"ACACATAGT",
-            b"ACACACCTA" ] ;
+            b"ACACACCTA" ] );
         }
         else {
             panic!( "The version '{ver}' is unknown!" );
@@ -334,72 +333,40 @@ impl CellIds<'_>{
 
         let mut i: u32 = 0;
 
-        for kmer_u8 in &c1s{
-            for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
-                let km = Kmer::from(kmer).into_u64();
-
-                if let std::collections::btree_map::Entry::Vacant(e) = csl1.entry(km) {
-                    //let info = Info::new(km, name.clone() );
-                    e.insert(i);
-                } else {
-                    bad_entries.insert( km );
-                    csl1.remove( &km );
-                    // println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
-                    //     std::str::from_utf8( kmer ))
-                }
-
-                // if bad_entries.contains( &km ){
-                //     println!( "CellIDs start cls1 found a duplicate entry #3 at id={i}: {:?}",
-                //         std::str::from_utf8( kmer ));
-                //     continue
-                // }
-                // if csl1.contains_key ( &km ){
-                //     bad_entries.insert( km );
-                //     csl1.remove( &km );
-                //     println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}", 
-                //         std::str::from_utf8( kmer ))
-                // }else {
-                //     //let info = Info::new(km, name.clone() );
-                //     csl1.insert(km, i );
-                    
-                // }
+        // lets ditch the kmer library
+        for km in &c1s{
+            if let std::collections::btree_map::Entry::Vacant(e) = csl1.entry(*km) {
+                //let info = Info::new(km, name.clone() );
+                e.insert(i);
+            } else {
+                bad_entries.insert( *km );
+                csl1.remove( km );
             }
             i +=1;
         }
 
         i = 0;
         bad_entries.clear();
-        for kmer_u8 in &c2s{
-            for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
-                let km = Kmer::from(kmer).into_u64();
-                if let std::collections::btree_map::Entry::Vacant(e) = csl2.entry(km) {
-                    //let info = Info::new(km, name.clone() );
-                    e.insert(i);
-                } else {
-                    bad_entries.insert( km );
-                    csl2.remove( &km );
-                    // println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
-                    //     std::str::from_utf8( kmer ))
-                }
-
+        for km in &c2s{
+            if let std::collections::btree_map::Entry::Vacant(e) = csl2.entry(*km) {
+                //let info = Info::new(km, name.clone() );
+                e.insert(i);
+            } else {
+                bad_entries.insert( *km );
+                csl2.remove( km );
             }
             i +=1;
         }
 
         i = 0;
         bad_entries.clear();
-        for kmer_u8 in &c3s{
-            for kmer in needletail::kmer::Kmers::new( *kmer_u8, size ) { // exactly 1
-                let km = Kmer::from(kmer).into_u64();
-                if let std::collections::btree_map::Entry::Vacant(e) = csl3.entry(km) {
-                    //let info = Info::new(km, name.clone() );
-                    e.insert(i);
-                } else {
-                    bad_entries.insert( km );
-                    csl3.remove( &km );
-                    // println!( "CellIDs start cls1 found a duplicate entry at id={i}: {:?}",
-                    //     std::str::from_utf8( kmer ))
-                }
+        for km in &c3s{
+            if let std::collections::btree_map::Entry::Vacant(e) = csl3.entry(*km) {
+                //let info = Info::new(km, name.clone() );
+                e.insert(i);
+            } else {
+                bad_entries.insert( *km );
+                csl3.remove( km );
             }
             i +=1;
         }
@@ -418,6 +385,47 @@ impl CellIds<'_>{
             size
         }
     }
+
+    /// convert the hard coded cell identifiers to u64 instead of &[u8;9]
+    fn into_u64( seq_a:Vec<&[u8;9]> ) -> Vec<u64>{
+        let mut ret = Vec::<u64>::with_capacity( seq_a.len() );
+        let mut tool: IntToStr;
+        for seq in seq_a {
+            tool = IntToStr::new(seq.to_vec(), 9);
+            ret.push( tool.into_u64().clone() );
+        }
+        ret
+    }
+
+    /// returns the first entry in the tuple that has the lowest second entry
+    /// and only if there is only one tuple with the lowest second entry 
+    fn best_entry( data:Vec<(usize, usize)> ) -> Option<u32>{
+        if data.len() == 0 {
+            return None
+        }
+        if data.len() == 1 {
+            return Some(data[0].0 as u32)
+        }
+        else {
+            let mut counter = vec![0,0,0];
+            let mut min = usize::MAX;
+            for ( _i, mismatch ) in &data{
+                if min > *mismatch{
+                    min = *mismatch;
+                }
+                counter[*mismatch] +=1;
+            }
+            if counter[min] == 1{
+                // this is great - we have a minimum overlap and that has exactly one match!
+                for ( i, mismatch ) in &data{
+                    if *mismatch == min{
+                        return Some( data[*i].0 as u32 )
+                    }
+                }
+            }
+        }
+        None
+    } 
 
     pub fn to_cellid (&self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result< u32, &str>{
         let mut cell_id:u32 = 0;
@@ -443,113 +451,90 @@ impl CellIds<'_>{
 
         let mut ok = false;
 
-        for kmer in needletail::kmer::Kmers::new(&r1[c1[0]..c1[1]], self.size ) { // exactly 1 if size == 9
-            let km = Kmer::from(kmer).into_u64();
-            
-            cell_id += match self.csl1.get( &km ){
-                Some(c1) => {
-                        //println!("to_cellid the c1 {}", c1 );
-                        ok = true;
-                        *c1 * max * max
-                    },
-                None => {
-                    // let's see if we 'only' have one mismatch in the entry
-                    // for i in 0..self.c1s-len(){
-                    //     if (&km ^ self.c1s[i] ).count_ones() < 3 { // max 2 bits changed 1-2 nucl diff
-                    //         return (i)
-                    //     }
-                    // }
-                    0
-                    // //println!("trying to fix a problem: {:?}", std::str::from_utf8(kmer));
-                    // match self.csl1kmer.get( &kmer, 1, 0 ){
-                    //     Ok(c1) => {
-                    //         //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
-                    //         c1 * max * max
-                    //     },
-                    //     Err(_err) => {
-                    //         //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
-                    //         return  Err::<u32, &str>( "Cells no match 1" )
-                    //     }
-                    // }
+        let mut tool = IntToStr::new( r1[c1[0]..c1[1]].to_vec(), c1[1]- c1[0]);
+        let km = tool.into_u64();
+        cell_id += match self.csl1.get( &km ){
+            Some(c1) => {
+                    //println!("to_cellid the c1 {}", c1 );
+                    ok = true;
+                    *c1 * max * max
+                },
+            None => {
+                let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                for i in 0..self.c1s.len(){
+                    if ( km ^ self.c1s[i]) < 3 {
+                        // could be as little as one bd change - max two
+                        good.push( (i, ( km ^ self.c1s[i])  as usize ) );
+                    }
                 }
-            };
-            if ok {
-                break
+                if let Some(c1) = Self::best_entry( good ){
+                    ok = true;
+                    c1 * max * max
+                }else {
+                    0
+                }
             }
-            //println!("to_cellid 1: {}", cell_id);
-        }
+        };
         if !ok {
             return  Err::<u32, &str>( "Cells no match 1" )
         }
-        ok = false;
+        ok = false;         
 
-        for kmer in needletail::kmer::Kmers::new(&r1[c2[0]..c2[1]], self.size ) {
-            
-            let km = Kmer::from(kmer).into_u64();
-            cell_id +=match self.csl2.get( &km ){
-                Some(c2) => {
-                        //println!("to_cellid the c2 {}", c2 );
-                        ok = true;
-                         *c2 * max 
+        tool = IntToStr::new( r1[c2[0]..c2[1]].to_vec(), c2[1]- c2[0]);
+        let km = tool.into_u64();
+        cell_id += match self.csl2.get( &km ){
+            Some(c2) => {
+                //println!("to_cellid the c1 {}", c1 );
+                ok = true;
+                *c2 * max 
+            },
+            None => {
+                let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                for i in 0..self.c2s.len(){
+                    if ( km ^ self.c2s[i]) < 3 {
+                        // could be as little as one bd change - max two
+                        good.push( (i, ( km ^ self.c2s[i])  as usize)  );
                     }
-                    ,
-                None => {
-                    // println!("{:?}\ntrying to find a problem in the csl2 object - could not find id for seq: {:?}",std::str::from_utf8(&r1), std::str::from_utf8(kmer));
-                    0
-                    
-                    // //return  Err::<u32, &str>( "Cells no match 1" )
-                    // match self.csl2kmer.get( &kmer, 1, 0 ){ // jump = 1 and start = 0 =>take every kmer you can get
-                    //     Ok(c1) => {
-                    //         //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
-                    //         c1 * max
-                    //     },
-                    //     Err(_err) => {
-                    //         //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
-                    //         return  Err::<u32, &str>( "Cells no match 1" )
-                    //     }
-                    // }
                 }
-            };
-            if ok {
-                break
-            }
-            //println!("to_cellid 2: {}", cell_id);
-        }
-        if !ok {
-            return  Err::<u32, &str>( "Cells no match 2" )
-        }
-        ok = false;
-
-        for kmer in needletail::kmer::Kmers::new(&r1[c3[0]..c3[1]], self.size ) {
-            let km = Kmer::from(kmer).into_u64();
-            cell_id +=match self.csl3.get( &km ){
-                Some(c3) => {
-                    //println!("to_cellid the c3 {}", c3 );
+                if let Some(c2) = Self::best_entry( good ){
                     ok = true;
-                    *c3
-                },
-                None => {
+                    c2 * max 
+                }else {
                     0
-                    // //println!("trying to fir a problem: {:?}", std::str::from_utf8(kmer));
-                    // match self.csl3kmer.get( &kmer, 1, 0 ){
-                    //     Ok(c1) => {
-                    //         //println!("   fix worked for seq: {:?} -> id {}", std::str::from_utf8(kmer), c1 );
-                    //         c1
-                    //     },
-                    //     Err(_err) => {
-                    //         //println!("   {} fix failed problem: {:?}",err, std::str::from_utf8(kmer));
-                    //         return  Err::<u32, &str>( "Cells no match 1" )
-                    //     }
-                    // }
                 }
-            };
-            if ok {
-                break
-            }
-            //println!("to_cellid 3: {}", cell_id);
-        }
+            }.try_into().unwrap(),
+        };
         if !ok {
-            return  Err::<u32, &str>( "Cells no match 3" )
+            return  Err::<u32, &str>( "Cells no match 1" )
+        }
+        ok = false;    
+
+        tool = IntToStr::new( r1[c3[0]..c3[1]].to_vec(), c3[1]- c3[0]);
+        let km = tool.into_u64();
+        cell_id += match self.csl3.get( &km ){
+            Some(c3) => {
+                //println!("to_cellid the c1 {}", c1 );
+                ok = true;
+                *c3 
+            },
+            None => {
+                let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                for i in 0..self.c3s.len(){
+                    if ( km ^ self.c3s[i]) < 3 {
+                        // could be as little as one bd change - max two
+                        good.push( (i, ( km ^ self.c3s[i])  as usize)  );
+                    }
+                }
+                if let Some(c3) = Self::best_entry( good ){
+                    ok = true;
+                    c3 
+                }else {
+                    0
+                }
+            }.try_into().unwrap(),
+        };
+        if !ok {
+            return  Err::<u32, &str>( "Cells no match 1" )
         }
 
         cell_id += 1;
@@ -557,7 +542,7 @@ impl CellIds<'_>{
         Ok(cell_id)
     }
 
-    pub fn to_sequence(&self, index:u32) -> Vec<&[u8; 9]>{
+    pub fn to_sequence(&self, index:u32) -> Vec<u64>{
         let mut idx: u32 = index - 1;
         let max:u32 = 384;
         //let max:u32 = self.c1s.len() as u32;
@@ -566,8 +551,7 @@ impl CellIds<'_>{
         let code2 = ((idx / max) as f64).floor() as u32;
         idx -= code2 * max;
         //println!("index {} -> I translated to the ids {}, {}, {}", index, code1, code2, idx );
-        let ret = vec![ self.c1s[code1 as usize], self.c2s[code2 as usize], self.c3s[idx as usize]];
-        ret
+        vec![ self.c1s[code1 as usize], self.c2s[code2 as usize], self.c3s[idx as usize] ]
     }
 
 }
