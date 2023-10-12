@@ -3,6 +3,7 @@ use std::fs::File;
 use indicatif::{ProgressBar};
 
 use std::io::Write;
+use std::time::{Duration, SystemTime};
 
 /// MappingInfo captures all mapping data and is a way to easily copy this data over multiple analysis runs.
 pub struct MappingInfo{
@@ -28,6 +29,12 @@ pub struct MappingInfo{
     pub ofile:Ofiles,
     pub local_dup:usize,
     pub total:usize,
+    absolute_start: SystemTime,
+    realtive_start: Option<SystemTime>,
+    pub single_processor_time: Duration,
+    pub multi_processor_time: Duration,
+    pub file_io_time: Duration,
+
 }
 
 impl MappingInfo{
@@ -42,6 +49,11 @@ impl MappingInfo{
 		let log_iter = 0;
 		let local_dup = 0;
 		let total = 0;
+		let absolute_start = SystemTime::now();
+		let realtive_start = None;
+		let single_processor_time = Duration::new(0,0);
+		let multi_processor_time = Duration::new(0,0);
+		let file_io_time = Duration::new(0,0);
 		Self{
 			unknown,
 			no_sample,
@@ -57,8 +69,49 @@ impl MappingInfo{
 			ofile,
 			local_dup,
 			total,
+			absolute_start,
+			realtive_start,
+			single_processor_time,
+			multi_processor_time,
+			file_io_time,
 		}
 	}
+
+	pub fn start_counter ( &mut self ){
+		self.realtive_start = Some( SystemTime::now() );
+	}
+
+	pub fn stop_single_processor_time ( &mut self ) {
+		self.single_processor_time += self.realtive_start.unwrap().elapsed().unwrap();
+		self.start_counter();
+	}
+
+	pub fn stop_multi_processor_time ( &mut self ) {
+		self.multi_processor_time += self.realtive_start.unwrap().elapsed().unwrap();
+		self.start_counter();
+	}
+
+	pub fn stop_file_io_time ( &mut self ) {
+		self.file_io_time += self.realtive_start.unwrap().elapsed().unwrap();
+		self.start_counter();
+	}
+
+	fn split_duration( elapsed:Duration ) -> ( u128, u128, u128, u128 ){
+
+        let mut milli = elapsed.as_millis();
+
+        let mil = milli % 1000;
+        milli= (milli - mil) /1000;
+
+        let sec = milli % 60;
+        milli= (milli -sec) /60;
+
+        let min = milli % 60;
+        milli= (milli -min) /60;
+
+        return (milli, min, sec, mil )
+
+    }
 
 
 	pub fn merge(&mut self, other:&MappingInfo ){
@@ -103,7 +156,7 @@ impl MappingInfo{
 	}
 
 	pub fn summary( &mut self, reads_genes:usize, reads_ab:usize, reads_samples:usize ) -> String{
-	    let result = "\nSummary:\n".to_owned()
+	    let mut result = "\nSummary:\n".to_owned()
 	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
 	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data, (self.no_data as f32 / self.total as f32) * 100.0).as_str()
@@ -112,8 +165,17 @@ impl MappingInfo{
 	    	+format!(     "expression reads  : {} reads ({:.2}% of cellular)\n", reads_genes, (reads_genes as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "antibody reads    : {} reads ({:.2}% of cellular)\n", reads_ab, (reads_ab as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "sample   reads    : {} reads ({:.2}% of cellular)\n", reads_samples, (reads_samples as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
-	    	+format!(     "mapped reads      : {} reads ({:.2}% of cellular)\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str();
+	    	+format!(     "mapped reads      : {} reads ({:.2}% of cellular)\n\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	   		//+format!(     "pcr duplicates    : {} reads ({:.2}% of cellular)\n\n", results.pcr_duplicates, ( self.pcr_duplicates as f32 / self.ok_reads as f32 ) * 100.0 ).as_str();
+	   		+"timings:\n";
+	   	let  (mut hours,mut min,mut sec ,mut mulli ) = Self::split_duration( self.absolute_start.elapsed().unwrap() );
+	   	result += format!("   overall run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	( hours, min, sec , mulli ) = Self::split_duration( self.file_io_time);
+	   	result += format!("   file-io run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	( hours, min, sec , mulli ) = Self::split_duration( self.single_processor_time);
+	   	result += format!("single-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	( hours, min, sec , mulli ) = Self::split_duration( self.multi_processor_time);
+	   	result += format!(" multi-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
 	   	match writeln!( self.log_writer, "{result}" ){
                 Ok(_) => (),
                 Err(err) => {

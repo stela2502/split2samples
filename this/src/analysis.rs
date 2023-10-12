@@ -362,6 +362,7 @@ impl Analysis{
 
     	println!("I am using {} cpus", self.num_threads);
 
+    	report.start_counter();
 
     	let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
             .unwrap()
@@ -416,6 +417,7 @@ impl Analysis{
         		}
     		}
     		else {
+    			report.stop_file_io_time();
     			//eprintln!("Mapping one batch");
     			good_read_count = 0;
 		    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
@@ -445,18 +447,24 @@ impl Analysis{
 		    	    }) // Analyze each chunk in parallel
 		        .collect(); // Collect the results into a Vec
 		        //eprintln!("sum up temp results");
+
+		        report.stop_multi_processor_time();
+
 			    for gex in total_results{
 			    	self.gex.merge(&gex.0);
 			       	report.merge( &gex.1 );
 			    }
 			    //eprintln!("Collecting more reads");
 			    good_reads.clear();
+
+			    report.stop_single_processor_time();
 			}
 			report.log(&pb);
 		}
 		
 
 	    if reads_perl_chunk > 0{
+	    	report.stop_file_io_time();
 	    	// there is data in the good_reads
 	    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 		        .par_chunks(good_reads.len() / self.num_threads + 1) // Split the data into chunks for parallel processing
@@ -486,12 +494,16 @@ impl Analysis{
 	    	    ) // Analyze each chunk in parallel
 	        .collect(); // Collect the results into a Vec
 
+	        report.stop_multi_processor_time();
+
 	        for gex in total_results{
 	        	self.gex.merge(&gex.0);
 	        	report.merge( &gex.1 );
 	        }
 	    }
 
+	    report.stop_single_processor_time();
+	    
 	    let log_str = report.log_str();
 
         pb.finish_with_message( log_str );
