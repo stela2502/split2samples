@@ -456,7 +456,7 @@ impl Analysis{
 			    }
 			    //eprintln!("Collecting more reads");
 			    good_reads.clear();
-
+			    println!("{}", report.log_str());
 			    report.stop_single_processor_time();
 			}
 			report.log(&pb);
@@ -503,7 +503,7 @@ impl Analysis{
 	    }
 
 	    report.stop_single_processor_time();
-	    
+
 	    let log_str = report.log_str();
 
         pb.finish_with_message( log_str );
