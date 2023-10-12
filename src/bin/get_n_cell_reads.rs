@@ -243,7 +243,7 @@ fn main() {
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 match cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-                    Ok(cell_id) => {
+                    Ok( ( cell_id, _add ) ) => {
                         // this is removing complexity from the data - in the test dataset 111 reads are ignored.
                         // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );
                         // if ! cell_umi.insert( cell_id_umi ){

@@ -267,11 +267,10 @@ impl Analysis{
 
         for i in 0..data.len() {
 
-
-        	let tool = IntToStr::new( data[i].0[pos[6]..pos[7]].to_vec(), 32 );
-        	let umi:u64 = tool.into_u64();
         	match &self.cells.to_cellid( &data[i].0, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-	            Ok(cell_id) => {
+	            Ok( (cell_id, add) ) => {
+	            	let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
+        			let umi:u64 = tool.into_u64();
 	            	report.cellular_reads +=1;
 	                match &self.genes.get( &data[i].1, report ){
 	                    Some(gene_id) =>{
@@ -585,12 +584,13 @@ impl Analysis{
                 }
 
                 //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
-                let umi = Kmer::from( &seqrec1.seq()[pos[6]..pos[7]]).into_u64();
+                
 
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 match &self.cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-                    Ok(cell_id) => {
+                    Ok( (cell_id, add) ) => {
+                    	let umi = Kmer::from( &seqrec1.seq()[(pos[6]+add)..(pos[7]+add)]).into_u64();
                     	report.cellular_reads +=1;
                         // this is removing complexity from the data - in the test dataset 111 reads are ignored.
                         // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );

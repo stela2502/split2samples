@@ -111,7 +111,7 @@ fn main() {
             //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
             
         
-            if let Ok(cell_id) = cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]) {
+            if let Ok((cell_id, _add)) = cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]) {
                 total += 1;
                 if total % split == 0{
                     let log_str = format!("cell read (any/{}) {total}/{count} here I have cell {cell_id}", opts.id );
