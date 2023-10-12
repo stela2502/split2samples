@@ -160,7 +160,7 @@ fn main() {
         if let Some(f2) = split2.next(){
             id += 1;
             println!("\nParsing file pair {id}\n");
-            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath );
+            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath, opts.max_reads );
         }
         
     }

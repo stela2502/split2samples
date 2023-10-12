@@ -358,7 +358,7 @@ impl Analysis{
 
     /// Analze BPO Rhapsody data in a paralel way.
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
-    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str ){
+    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str, max_reads:usize ){
 
     	println!("I am using {} cpus", self.num_threads);
 
@@ -392,7 +392,9 @@ impl Analysis{
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
-
+        	if report.total > max_reads{
+        		break 'main
+        	}
         	if good_read_count < reads_perl_chunk*self.num_threads {
         		report.total += 1;
 	            let read2 = match record2{
@@ -456,7 +458,7 @@ impl Analysis{
 			    }
 			    //eprintln!("Collecting more reads");
 			    good_reads.clear();
-			    println!("{}", report.log_str());
+			    //println!("{}", report.log_str());
 			    report.stop_single_processor_time();
 			}
 			report.log(&pb);
