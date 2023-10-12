@@ -126,9 +126,11 @@ fn main() {
         min_sizes = &[ 66, 60 ];
     }
     else {
-        pos = &[1,10, 14,23, 27,36 , 36,42 ];
+        pos = &[0,9, 13,22, 26,35 , 36,42 ];
+        //pos = &[1,10, 14,22, 28,36 , 36,42 ];
         min_sizes = &[ 51, 51 ];
     }
+
 
     let num_threads = match opts.num_threads{
         Some(n) => {
