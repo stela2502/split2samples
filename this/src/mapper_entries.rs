@@ -250,18 +250,18 @@ mod tests {
     fn check_geneids() {
         let mut mapper = MapperEntry::new();
 
-        let tool = IntToStr::new(b"AGCTGTGAGACTCTTCACACTATCATCATTATTCGGAGG".to_vec(), 16);
+        //let tool = IntToStr::new(b"AGCTGTGAGACTCTTCACACTATCATCATTATTCGGAGG".to_vec(), 16);
         mapper.add(12, 4, 16 );
         mapper.add(45, 3, 16 );
 
-        assert_eq!( mapper.get(&12, &tool), Some(vec![4]) );
-        assert_eq!( mapper.get(&45, &tool), Some(vec![3]) );
+        assert_eq!( mapper.get(&12), Some(vec![4]) );
+        assert_eq!( mapper.get(&45), Some(vec![3]) );
 
 		mapper.add(12, 14, 16 );
-		assert_eq!( mapper.get(&12, &tool), Some(vec![4, 14]) );
+		assert_eq!( mapper.get(&12), Some(vec![4, 14]) );
 
 
-        assert_eq!( mapper.get(&14, &tool), None );
+        assert_eq!( mapper.get(&14), None );
 
         assert_eq!( mapper.info(), [2,1,1] );
     }

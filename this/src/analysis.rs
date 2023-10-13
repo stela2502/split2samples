@@ -590,13 +590,21 @@ impl Analysis{
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 match &self.cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
                     Ok( (cell_id, add) ) => {
-                    	let umi = Kmer::from( &seqrec1.seq()[(pos[6]+add)..(pos[7]+add)]).into_u64();
+                    	//let umi = Kmer::from( &seqrec1.seq()[(pos[6]+add)..(pos[7]+add)]).into_u64();
+                    	let tool = IntToStr::new( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
+        				let umi:u64 = tool.into_u64();
                     	report.cellular_reads +=1;
                         // this is removing complexity from the data - in the test dataset 111 reads are ignored.
                         // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );
                         // if ! cell_umi.insert( cell_id_umi ){
                         //     continue 'main;
                         // }
+                        // match writeln!( report.log_writer, "add\t{add}" ){
+                		// 	Ok(_) => (),
+                		// 	Err(err) => {
+                    	// 		eprintln!("write error: {err}" );
+                		// 	}
+            			// };
                         match &self.genes.get( &seqrec.seq(), report ){
                             Some(gene_id) =>{
                                 self.gex.try_insert( 
