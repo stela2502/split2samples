@@ -56,6 +56,8 @@ impl NameEntry{
 		if ! self.data.contains( &id ) {
 			self.data.push(id);
 			self.significant_bp.push(sign);
+		}else {
+			eprintln!("I already contain the secondary match {} - rejected", id );
 		}
 	}
 	pub fn get( &self ) -> Vec<usize>{

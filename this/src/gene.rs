@@ -43,8 +43,8 @@ const CHECK: [Option<u8>; 256] = {
 /// MappingInfo captures all mapping data and is a way to easily copy this data over multiple analysis runs.
 pub struct Gene{
 	pub chrom:String, // the cromosome id to look for the sequence
-	start:usize, // the start position for this entry
-	end:usize, // the end position for this entry
+	pub start:usize, // the start position for this entry
+	pub end:usize, // the end position for this entry
 	exons:Vec<[usize;2]>, // a vector of start and end positions
 	sense_strand:bool, // sense_strand in the genome true 1->n; false n <- 1
 	pub name:String, // the gene symbol
@@ -136,7 +136,7 @@ impl Gene{
 				};
 			}
 		}else {
-			match  self.to_mrna( seq.to_owned()){
+			match self.to_mrna( seq.to_owned()){
 				Some( mrna ) => {
 					let compl_mrna = Self::rev_compl ( mrna );
 					println!(">{}\n{}", self.id.to_string() + " " + &self.name + " " + &self.chrom + " reverse" , std::str::from_utf8( &compl_mrna ).unwrap() );

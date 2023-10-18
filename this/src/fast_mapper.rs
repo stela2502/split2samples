@@ -94,6 +94,28 @@ impl  FastMapper{
         }
     }
 
+    pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:usize, name:String )  ->Result<(), &str>{
+
+        match self.mapper[initial_match].get(&secondary_match.try_into().unwrap()) {
+            Some(names_store) => {
+                // crap - we alerads had that entry
+                // for now just complain
+                eprintln!("FastMapper::incorporate_mapper - I already have the match {initial_match} {secondary_match} linking to {} you wanted {name} - implement the right thing here!", &self.names_store[names_store[0]] );
+            },
+            None => {
+                // Puh - a specifc match
+                if ! self.names.contains_key( &name ){
+                    self.names.insert( name.clone(), self.max_id );
+                    self.names_store.push( name.clone() );
+                    self.max_id += 1;
+                }
+                let gene_id = self.get_id( name.to_string() ).clone();
+                self.mapper[initial_match].add( secondary_match.try_into().unwrap(), gene_id , self.kmer_len );
+            }
+        }
+        Ok( () )
+    }
+
     pub fn fill_sequence_with_a( self, seq:&u64 ) -> u64{
         let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_len )));
         return filled_sed
@@ -199,7 +221,7 @@ impl  FastMapper{
             Some( id ) => id,
             None => panic!("Gene {name} not defined in the GeneID object"),
         };
-        *id
+        id.clone()
     }
 
     pub fn get_name( &self, id:usize) -> String{
