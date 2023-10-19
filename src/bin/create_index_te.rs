@@ -177,34 +177,34 @@ fn main() {
         if parts.len() < 8{
             continue;
         }
-        if parts[2] == "transcript"{
-            // capture the parts I need using my regexp modules
-            if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
-                gene_name = captures.get(1).unwrap().as_str().to_string();
-            }else {
-                if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
-                    continue; // this likely clutters up the data anyhow.
-                }
-                else {
-                    panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
-                }
-            }
-            // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
-            //     gene_id = captures.get(1).unwrap().as_str().to_string();
-            // }else {
-            //     panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
-            // }
-            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
-                transcript_id = captures.get(1).unwrap().as_str().to_string();
-            }else {
-                panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8].to_string() );
-            }
+        // if parts[2] == "transcript"{
+        //     // capture the parts I need using my regexp modules
+        //     if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
+        //         gene_name = captures.get(1).unwrap().as_str().to_string();
+        //     }else {
+        //         if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
+        //             continue; // this likely clutters up the data anyhow.
+        //         }
+        //         else {
+        //             panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
+        //         }
+        //     }
+        //     // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
+        //     //     gene_id = captures.get(1).unwrap().as_str().to_string();
+        //     // }else {
+        //     //     panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
+        //     // }
+        //     if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
+        //         transcript_id = captures.get(1).unwrap().as_str().to_string();
+        //     }else {
+        //         panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8].to_string() );
+        //     }
             
-            // and add a gene
-            // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
-            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
-            genes.insert( transcript_id.clone(), gene );
-        }
+        //     // and add a gene
+        //     // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
+        //     let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
+        //     genes.insert( transcript_id.clone(), gene );
+        // }
 
         if parts[2] == "exon"{
             // capture the parts I need

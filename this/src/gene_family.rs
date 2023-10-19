@@ -25,6 +25,21 @@ impl GeneFamily{
 			name,
 		}
 	}
+
+	pub fn add_entry( &mut self, gene: Gene ) {
+		let mut alread_in = false;
+		for chr in &self.chrom{
+			if chr == gene.chrom {
+				alread_in = true;
+				break;
+			}
+		}
+		if ! alread_in {
+			self.chrom.push(  gene.chrom.to_string() );
+		}
+		self.family.push( gene );
+	}
+
 	/// index this gene family - This function will work differently if you give it a filled in index or an empty one.
 	/// The empty index will be filled with family specific (highest overlap) or parially family mapping ( less than max_per_mapper)
 	/// different family mambers have this sequence or member specififc with one family member specific sequence combinatrions.
