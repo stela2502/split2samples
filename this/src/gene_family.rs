@@ -15,7 +15,7 @@ pub struct GeneFamily{
 }
 
 impl GeneFamily{
-	pub fn new( gene:Gene, name: String ) -> Self {
+	pub fn new( name: String, gene:Gene ) -> Self {
 		let family = Vec::<Gene>::with_capacity( 100 ); 
 		let mut chrom = Vec::<String>::with_capacity( 5 ); 
 		chrom.push( gene.chrom.clone() );
@@ -26,10 +26,10 @@ impl GeneFamily{
 		}
 	}
 
-	pub fn add_entry( &mut self, gene: Gene ) {
+	pub fn push( &mut self, gene: Gene ) {
 		let mut alread_in = false;
 		for chr in &self.chrom{
-			if chr == gene.chrom {
+			if chr == &gene.chrom {
 				alread_in = true;
 				break;
 			}
@@ -40,12 +40,11 @@ impl GeneFamily{
 		self.family.push( gene );
 	}
 
-	/// index this gene family - This function will work differently if you give it a filled in index or an empty one.
-	/// The empty index will be filled with family specific (highest overlap) or parially family mapping ( less than max_per_mapper)
-	/// different family mambers have this sequence or member specififc with one family member specific sequence combinatrions.
-	/// Depending on the class of the mapping the gene name will either be family.name::member::name for the singlets, family.name::n
-	/// for all multi mappers. This can of cause add some issues downstream, but that is a problem for another day.
-	pub fn index( &self, index:&mut FastMapper, max_area:usize, seq_records:&HashSet<String> , max_per_mapper:usize ) {
+	/// index this gene family - This function will simply add all info into the index 
+	/// Use the make_index_te_ready function
+	/// I need a mut gene_id_storage where the gene information that is needed later on
+	/// to 'qualify' the mapping evens. These contain all info I have about a gene.
+	pub fn index( &self, index:&mut FastMapper, max_area:usize, seq_records:&HashSet<String> , max_per_mapper:usize, gene_id_storage: mut Vec<Vec<usize>> ) {
 		let mut loc_idx = FastMapper::new( index.kmer_len.clone() ); // use the other mappers kmer length
 		let mut max_area_loc = max_area;
 
@@ -75,7 +74,8 @@ impl GeneFamily{
 	                }else {
 	                    match seq_records.get( &format!("chr{}", &gene.chrom.to_string()) ){
 	                        Some(seq) => {
-	                            gene.add_to_index( seq.as_bytes(), &mut loc_idx, max_area_loc );
+	                            let gene_id = gene.add_to_index( seq.as_bytes(), &mut loc_idx, max_area_loc );
+	                            
 	                            //println!("The genes detected: {:?}", index.names_store );
 	                        },
 	                        None => {

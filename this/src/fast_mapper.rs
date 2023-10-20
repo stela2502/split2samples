@@ -45,7 +45,9 @@ pub struct FastMapper{
     pub mapper: Vec<MapperEntry>, // the position is the sequence!
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
-    pub names_store: Vec<String>, //store gene names as vector
+    pub names_store: Vec<String>, // store gene names as vector
+    pub classes_store: Vec<String>, // The TE mapper needs more info on each match that only the names
+    pub classes: BTreeMap<std::string::String, usize>, // additional classes storage element
     pub max_id: usize,// hope I get the ids right this way...
     pub last_count: usize,
     pub last_kmers: Vec<String>,
@@ -69,6 +71,8 @@ impl  FastMapper{
         let names = BTreeMap::<std::string::String, usize>::new();
         let names4sparse = BTreeMap::<std::string::String, usize>::new();
         let names_store = Vec::with_capacity(1000);
+        let classes_store = Vec::with_capacity(10);
+        let classes = BTreeMap::<std::string::String, usize>::new();
         let max_id = 0;
         let last_count = 0;
         let last_kmers = Vec::with_capacity(60);
@@ -84,6 +88,8 @@ impl  FastMapper{
             names,
             names4sparse,
             names_store,
+            classes_store,
+            classes,
             max_id,
             last_count,
             last_kmers,
@@ -98,7 +104,7 @@ impl  FastMapper{
 
         match self.mapper[initial_match].get(&secondary_match.try_into().unwrap()) {
             Some(names_store) => {
-                // crap - we alerads had that entry
+                // crap - we already had that entry
                 // for now just complain
                 eprintln!("FastMapper::incorporate_mapper - I already have the match {initial_match} {secondary_match} linking to {} you wanted {name} - implement the right thing here!", &self.names_store[names_store[0]] );
             },
@@ -122,7 +128,7 @@ impl  FastMapper{
     }
 
 
-    pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String ){
+    pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, classes: Vec<Sting> ) -> usize{
         
         //println!("fast_mapper adds this genes: {} of length {}", name, seq.len() );
 
@@ -131,6 +137,22 @@ impl  FastMapper{
             self.names_store.push( name.clone() );
             self.max_id += 1;
         }
+
+        let class_ids = match classes{
+            Some( cnames ) => {
+                let ret = Vec::<usize>::with_capacity( cnames.len() );
+                for cname in cnames{
+                    if ! self.classes.contains_key( &cname ){
+                    self.classes.insert( cname.clone(), self.classes_store.len() );
+                    self.classes_store.push( cname.clone() );
+                }
+                ret
+            }
+            None =>{
+                Vec::<usize>::with_capacity( 0 );
+            }
+        };
+
         
 
         //println!("Adding gene {name} to the index:");
@@ -193,6 +215,27 @@ impl  FastMapper{
 
         //self.with_data += i;
         //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );
+        gene_id
+    }
+
+
+    /// The index is assumed to have been build using a gene family object.
+    /// Therefore we have a lot of almost sequences indexed here.
+    /// It is to be assumed that the index contains many not informative 40 bp areas.
+    /// This function tries to get the maximum out of the index by chaning the 40 index elements associated gene lists tp onyl contain the
+    /// least diverse class of the matching elements (the new classes objects in this class).
+    /// The class object is mean to have the same kind of entry in the same position of the vector - say
+    /// [NameEntry.name, "gene_name", "family_name", "class_name"] - each position will be summed for 40bp mapping elements
+    /// and only the contents of the least class will be used. The original gene name will also be used - that does not need to be part of the ids.
+    pub make_index_te_ready() {
+
+        for mapper_entry in &self.mapper {
+            if mapper_entry.has_data() {
+                for name_entry in &mapper_entry.map.values(){
+                    // the contents of this name_entry object are the mapping elements for the 40bp match
+
+                }
+
 
     }
     /// [entries with values, total second level entries, total single gene first/second pairs, total >1 first/second level pairs]

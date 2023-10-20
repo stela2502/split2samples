@@ -104,7 +104,12 @@ fn main() {
     }
 
 
-
+    /*
+    The TE transcrip gtf I have looks like that:
+    chr14_KI270722v1_random hg38_rmsk       exon    100070  100378  2251    +       .       gene_id "AluSp"; transcript_id "AluSp_dup53774"; family_id "Alu"; class_id "SINE";
+    chr14_KI270722v1_random hg38_rmsk       exon    100379  101084  12116   -       .       gene_id "Tigger1"; transcript_id "Tigger1_dup12525"; family_id "TcMar-Tigger"; class_id "DNA";
+    chr14_KI270722v1_random hg38_rmsk       exon    101085  101457  1599    -       .       gene_id "L1MCa"; transcript_id "L1MCa_dup7723"; family_id "L1"; class_id "LINE";
+    */
 
     // and init the Index:
 
@@ -127,7 +132,7 @@ fn main() {
     attribute 8 
     */
     
-    let mut genes = HashMap::<String, GeneFamily>::new();
+    let mut families = HashMap::<String, GeneFamily>::new();
 
     let gtf = Regex::new(r".*gtf.?g?z?$").unwrap();
     let chr = Regex::new(r"^chr").unwrap();
@@ -135,20 +140,23 @@ fn main() {
     let re_gene_name: Regex;
     let re_gene_id: Regex;
     let re_transcript_id : Regex;
+    let re_class_id : Regex;
 
-
+    // gene_id "AluSp"; transcript_id "AluSp_dup53774"; family_id "Alu"; class_id "SINE";
     match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
-            re_gene_name =  Regex::new(r#".* gene_name "([\(\)\w\d\-\._]*)""#).unwrap();
+            re_family_name =  Regex::new(r#".* family_id "([\(\)\w\d\-\._]*)""#).unwrap();
             re_gene_id = Regex::new(r#"gene_id "([\(\)\w\d\-\._]*)";"#).unwrap();
             re_transcript_id = Regex::new(r#"transcript_id "([\(\)\w\d\-\._]*)";"#).unwrap();
+            re_class_id = Regex::new(r#"class_id "([\(\)\w\d\-\._]*)";"#).unwrap();
         },
         false => {
             eprintln!("gff mode.");
-            re_gene_name =  Regex::new(r#".* ?gene_name=([\(\)\w\d\-\._]*); ?"#).unwrap();
+            re_family_name =  Regex::new(r#".* ?family_id=([\(\)\w\d\-\._]*); ?"#).unwrap();
             re_gene_id = Regex::new(r#"gene_id=([\(\)\w\d\-\._]*);"#).unwrap();
             re_transcript_id = Regex::new(r#"transcript_id=([\(\)\w\d\-\._]*);"#).unwrap();
+            re_class_id = Regex::new(r#"class_id "([\(\)\w\d\-\._]*)";"#).unwrap();
         },
     }
     //let mut gene_id:String;
@@ -173,125 +181,136 @@ fn main() {
 
     for line in reader.lines() {
         let rec = line.ok().expect("Error reading record.");
-        let mut parts: Vec<String> = rec.split('\t').map(|s| s.to_string()).collect();
+        let parts: Vec<String> = rec.split('\t').map(|s| s.to_string()).collect();
         if parts.len() < 8{
             continue;
         }
-        // if parts[2] == "transcript"{
-        //     // capture the parts I need using my regexp modules
-        //     if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
-        //         gene_name = captures.get(1).unwrap().as_str().to_string();
-        //     }else {
-        //         if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
-        //             continue; // this likely clutters up the data anyhow.
-        //         }
-        //         else {
-        //             panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
-        //         }
-        //     }
-        //     // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
-        //     //     gene_id = captures.get(1).unwrap().as_str().to_string();
-        //     // }else {
-        //     //     panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
-        //     // }
-        //     if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
-        //         transcript_id = captures.get(1).unwrap().as_str().to_string();
-        //     }else {
-        //         panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8].to_string() );
-        //     }
-            
-        //     // and add a gene
-        //     // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
-        //     let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
-        //     genes.insert( transcript_id.clone(), gene );
-        // }
+        if parts[2] == "transcript"{
+            panic!("transcripts are not expected in this gtf file - please implement what to do with them!")
+            // capture the parts I need using my regexp modules
+            if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
+                gene_name = captures.get(1).unwrap().as_str().to_string();
+            }else {
+                if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
+                    match genes.get_mut( gene_name ){
+                        Some(family) => {
+                            family.push( gene );
+                        }
+                        None => {
+                            // now I need a new gene
 
-        if parts[2] == "exon"{
-            // capture the parts I need
-            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
-                transcript_id = captures.get(1).unwrap().as_str().to_string();
-                // and add an exon
-                match genes.get_mut( &transcript_id.clone().to_string() ){
-                    Some(gene) => gene.add_exon( parts[3].to_string(), parts[4].to_string() ),
-                    None => eprintln!( "ignoring transcript! ({})", transcript_id.to_string())
+                        }
+                    }
+
                 }
-                // Ha this is a brutal hack for the TE gtfs only - just treat this entry as a gene, too.
-                if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
-                    gene_name = captures.get(1).unwrap().as_str().to_string();
-                    let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
-                    genes.insert( transcript_id, gene );
-                }else {
+                else {
                     panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
                 }
-                // and issue the clean up
-                parts[2] = "gene".to_string();
+            }
+            // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
+            //     gene_id = captures.get(1).unwrap().as_str().to_string();
+            // }else {
+            //     panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
+            // }
+            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
+                transcript_id = captures.get(1).unwrap().as_str().to_string();
+            }else {
+                panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8].to_string() );
             }
             
+            // and add a gene
+            // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
+            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
+            genes.insert( transcript_id.clone(), gene );
         }
 
-        if parts[2] == "gene"{
-            // here we should start to 'clean out the old ones'!
-            let start = match parts[3].parse::<usize>(){
-                Ok(v) => v,
-                Err(e) => panic!("I could not parse the start of the transcript as usize: {e:?}"),
-            };
-            let mut to_remove = Vec::new();
-
-            // clean up
-            'genes: for (k, gene) in &genes {
-                if let Some(_entry) = missing_chr.get( &gene.chrom.to_string() ){
-                    eprintln!("gene '{}' - no sequence for chr '{}'", &gene.name.to_string(), &gene.chrom.to_string() );
-                    continue 'genes;
-                }
-                if gene.passed(start) {
-                    // Do something with the gene, e.g. remove it
-                    match seq_records.get( &gene.chrom.to_string() ){
-                        Some(seq) => {
-                            gene.add_to_index( seq, &mut index, COVERED_AREA );
-                            //println!("The genes detected: {:?}", index.names_store );
-                        },
-                        None => {
-                            if chr.is_match ( &gene.chrom.to_string() ){
-                                match seq_records.get( &gene.chrom.to_string()[3..] ){
-                                    Some(seq) => {
-                                        gene.add_to_index( seq, &mut index, COVERED_AREA );
-                                        //println!("The genes detected: {:?}", index.names_store );
-                                    },
-                                    None => {
-                                        missing_chr.insert( gene.chrom.to_string() );
-                                        eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
-                                    }
-                                }
-                            }else {
-                                match seq_records.get( &format!("chr{}", &gene.chrom.to_string()) ){
-                                    Some(seq) => {
-                                        gene.add_to_index( seq, &mut index, COVERED_AREA );
-                                        //println!("The genes detected: {:?}", index.names_store );
-                                    },
-                                    None => {
-                                        missing_chr.insert( gene.chrom.to_string() );
-                                        eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
-                                    }
-                                }
-
-                            }
-                        }
-                            
+        if parts[2] == "exon"{
+            // For this example the exons info is all there is in the gtf file
+            // so here I need to treat this as a whole gene
+            let transcript_id = match re_transcript_id.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    match genes.get_mut(&transcript_id.clone().to_string()) {
+                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
+                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
                     }
-                    
-                    to_remove.push(k.clone());
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a transcript id from this line!" ); //hope I nerver get to see that
+                    continue;
                 }
-            }
-
-            for k in to_remove {
-                genes.remove(&k);
+            };
+            let family_name = match re_family_name.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    match genes.get_mut(&transcript_id.clone().to_string()) {
+                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
+                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
+                    }
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a family_name from this line!" ); //hope I nerver get to see that
+                    continue;
+                }
+            };
+            let gene_name = match re_gene_id.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    match genes.get_mut(&transcript_id.clone().to_string()) {
+                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
+                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
+                    }
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a gene_name from this line!" ); //hope I nerver get to see that
+                    continue;
+                }
+            };
+            let class_name = match re_class_id.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    match genes.get_mut(&transcript_id.clone().to_string()) {
+                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
+                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
+                    }
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a gene_name from this line!" ); //hope I nerver get to see that
+                    continue;
+                }
+            };
+            // for this approach we need to use the family model?
+            let gene = Gene::new(
+                parts[0].to_string(),
+                parts[3].to_string(),
+                parts[4].to_string(),
+                parts[6].to_string(),
+                transcript_id.to_string(), // this will be the id we add to the index
+                vec![gene_name.to_string(), family_name.to_string(), class_name.to_string()],
+            );
+            
+            match families.get_mut( family_name ){
+                Some( family_object ) => {
+                    family_object.push( gene );
+                },
+                None => {
+                    let mut family_object : GeneFamily = 
+                    GeneFamily::new( family_name.to_string(), class_name.to_string() );
+                    family_object.push( gene );
+                    families.insert( family_name.to_string(), family_object);
+                }
             }
         }
     }
 
-    for (_, gene) in &genes {
+    for (_, family) in &families {
         // Do something with the gene, e.g. remove it
-        match seq_records.get( &gene.chrom.to_string() ){
+        family.index( index:&mut FastMapper, max_area:usize, seq_records:&HashSet<String> , max_per_mapper:usize)
+        match seq_records.get( &family.chrom.to_string() ){
             Some(seq) => {
                 gene.add_to_index( seq, &mut index, COVERED_AREA );
                 //println!("The genes detected: {:?}", index.names_store );

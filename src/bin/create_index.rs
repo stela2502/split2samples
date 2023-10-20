@@ -24,6 +24,9 @@ use flate2::read::GzDecoder;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+
+static EMPTY_VEC: Vec<String> = Vec::new();
+
 // use std::convert::TryInto;
 
 /// Just run a test case for speed reproducability and simplicity
@@ -202,7 +205,7 @@ fn main() {
             // and add a gene
             // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
             let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
-            genes.insert( transcript_id, gene );
+            genes.insert( transcript_id, gene ); 
         }
 
         if parts[2] == "exon"{

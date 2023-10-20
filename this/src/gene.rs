@@ -48,11 +48,11 @@ pub struct Gene{
 	exons:Vec<[usize;2]>, // a vector of start and end positions
 	sense_strand:bool, // sense_strand in the genome true 1->n; false n <- 1
 	pub name:String, // the gene symbol
-	pub id:String, // e.g. ENSMBL ID
+	pub ids:Vec<String>, // e.g. ENSMBL ID and other entries like family name or class 
 }
 
 impl Gene{
-	pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String ) -> Self {
+	pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, ids:Vec<String> ) -> Self {
 		let exons = Vec::<[usize;2]>::new();
 		let start = match start_s.parse::<usize>(){
 			Ok(v) => v,
@@ -72,7 +72,7 @@ impl Gene{
 			exons,
 			sense_strand,
 			name,
-			id,
+			ids,
 		}
 	}
 	/// Return if the exon matched to the transcript
@@ -106,7 +106,7 @@ impl Gene{
 					}
 					else {
 						//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna).expect("Invalid UTF-8") );
-						index.add( &mrna , self.name.to_string() );
+						index.add( &mrna , self.name.to_string(), &self.ids );
 					}
 				},
 				None=> {
@@ -126,7 +126,7 @@ impl Gene{
 							index.add( &nascent[ nascent.len()-covered_area..].to_owned() , self.name.to_string() + &addon );
 						}else{
 							//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent).expect("Invalid UTF-8") );
-							index.add( &nascent , self.name.to_string() + &addon );
+							index.add( &nascent , self.name.to_string() + &addon, &self.ids  );
 						}
 					},
 					None=> {
@@ -146,7 +146,7 @@ impl Gene{
 					}
 					else {
 						//eprintln!( "adding this compl_mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&compl_mrna).expect("Invalid UTF-8") );
-						index.add( &compl_mrna , self.name.to_string() );
+						index.add( &compl_mrna , self.name.to_string(), &self.ids  );
 					}
 				},
 				None=> {
@@ -169,7 +169,7 @@ impl Gene{
 							index.add( &compl[ compl.len()-covered_area.. ].to_owned() , self.name.to_string() + &addon );
 						}else{
 							//eprintln!( "adding this compl to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&compl).expect("Invalid UTF-8") );
-							index.add( &compl , self.name.to_string() + &addon );
+							index.add( &compl , self.name.to_string() + &addon, &self.ids  );
 						}
 					},
 					None=> {

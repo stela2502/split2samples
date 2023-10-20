@@ -133,7 +133,7 @@ target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz,testDa
 
 ## createIndex
 
-BD Rhapsody now also supports whole genome transcriptomics. For thsi setting it becomes vital to have a mapping index that is capable of storing the genome information.
+BD Rhapsody now also supports whole genome transcriptomics. For this setting it becomes vital to have a mapping index that is capable of storing the genome information.
 In order to do this a 2bit based 8mer numeric initial mapper has been combined with 32bp full length match to build up a 40bp full length match.
 
 The creatIndex produces these indices for quantifyRhapsody. It only needs a geneome fasta file and a genome gtf or gff annotation file:
@@ -500,9 +500,58 @@ The multiprocessor tool breaks if very view cells are detected. Try using less p
 Version 0.1.0 and likely previouse version do detect Cd3e in this cell, but it should not be expressed.
 
 ```
-target/release/quantify_rhapsody -r  testData/OneSingleCell.66.R2.fastq.gz -f testData/OneSingleCell.66.R1.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
+target/release/quantify_rhapsody_mulit -r  testData/OneSingleCell.66.R2.fastq.gz -f testData/OneSingleCell.66.R1.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
 
 zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
+```
+
+```
+init models
+the log file: Mapping_log.txt
+After indexing all fastq files we have the following index:
+I have 7855 kmers and 467 genes
+Writing index version 3
+with kmer_len 32
+And a total of 8063 data entries
+
+Parsing file pair 1
+
+I am using 12 cpus
+Starting with data collection
+   0.03 mio reads (99.98% with cell info, 89.64% with gene match
+
+Writing outfiles ...
+filtering cells
+Dropping cell with too little counts (n=0)
+sparse Matrix: 1 cell(s), 136 gene(s) and 136 entries written (0 cells too view umis) to path Ok("testData/output_one_cell/BD_Rhapsody_expression");
+Writing Antibody counts
+sparse Matrix: 1 cell(s), 3 gene(s) and 3 entries written (0 cells too view umis) to path Ok("testData/output_one_cell/BD_Rhapsody_antibodies");
+Writing GeneEXpression counts
+dense matrix: 1 cell written
+
+Summary:
+total      reads  : 32972 reads
+no cell ID reads  : 0 reads (0.00% of total)
+no gene ID reads  : 3411 reads (10.35% of total)
+N's or too short  : 6 reads (0.02% of total)
+cellular reads    : 32966 reads (99.98% of total)
+expression reads  : 24125 reads (73.18% of cellular)
+antibody reads    : 4275 reads (12.97% of cellular)
+sample   reads    : 1155 reads (3.50% of cellular)
+unique reads      : 29555 reads (89.65% of cellular)
+
+pca duplicates or bad cells: 3411 reads (10.35% of cellular)
+
+timings:
+   overall run time 0 h 0 min 0 sec 90 millisec
+   file-io run time 0 h 0 min 0 sec 47 millisec
+single-cpu run time 0 h 0 min 0 sec 4 millisec
+ multi-cpu run time 0 h 0 min 0 sec 24 millisec
+
+
+Cell->Sample table written to "testData/output_one_cell/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 0 sec 91milli sec
 ```
 
 This should not return a match. As actuall Cd3e is not detected in 1.0.0.

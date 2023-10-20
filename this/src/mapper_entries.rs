@@ -7,7 +7,11 @@ use std::collections::HashSet;
 
 #[derive(Debug,PartialEq)]
 pub struct NameEntry{
-	pub data:Vec<usize>, // the data storage
+	// the gene ids storage - they identify the genes in the fast_mapper::names_store vector
+	pub data:Vec<usize>,
+	// a short vector with class info. This is needed for the TE scanner.
+	// the ids point to the fast_mapper::
+	pub classes:Vec<usize>, 
 	pub significant_bp:Vec<usize>, // how much data should be matched against here(e.g. sample IDs are quite short)
 	pos:usize,// the position to return with next
 }
@@ -15,10 +19,12 @@ pub struct NameEntry{
 impl NameEntry{
 	pub fn new() -> Self{
 		let data = Vec::new();
+		let classes = Vec::new();
 		let significant_bp = Vec::new();
 		let pos = 0;
 		Self{ 
 			data,
+			classes,
 			significant_bp,
 			pos
 		}
