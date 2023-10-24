@@ -285,7 +285,7 @@ fn main() {
             .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
     pb.set_style(spinner_style);
 
-    let reads_per_chunk = 100;
+    let reads_per_chunk = 100_000;
     eprintln!("Starting with data collection");
     let mut good_read_count = 0;
     let max_dim = reads_per_chunk * num_threads;
