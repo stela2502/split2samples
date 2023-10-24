@@ -290,6 +290,7 @@ fn main() {
     let mut good_read_count = 0;
     let max_dim = reads_per_chunk * num_threads;
     let mut lines = Vec::<String>::with_capacity( max_dim );
+    eprintln!("In one batch I will analyze {} elemets {} cores x {} elements per batche", max_dim, num_threads, reads_per_chunk);
 
     for line in reader.lines() {
         if good_read_count < max_dim{

@@ -18,9 +18,9 @@ pub struct NameEntry{
 
 impl NameEntry{
 	pub fn new() -> Self{
-		let data = Vec::new();
-		let classes = Vec::new();
-		let significant_bp = Vec::new();
+		let data = Vec::with_capacity(4);
+		let classes = Vec::with_capacity(4);
+		let significant_bp = Vec::with_capacity(4);
 		let pos = 0;
 		Self{ 
 			data,
@@ -135,7 +135,7 @@ pub struct MapperEntry{
 
 impl MapperEntry{
 	pub fn new() -> Self{
-		let map = Vec::<(u64, NameEntry)>::new();
+		let map = Vec::<(u64, NameEntry)>::with_capacity(4);
 		let only =0;
 		let hamming_cut = 4;
 		Self{
