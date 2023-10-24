@@ -1,5 +1,4 @@
 use needletail::parse_fastx_file;
-use kmers::naive_impl::Kmer;
 use needletail::parser::SequenceRecord;
 //use std::collections::HashSet;
 
@@ -30,6 +29,10 @@ use rayon::prelude::*;
 use rayon::slice::ParallelSlice;
 
 use crate::ofiles::Ofiles;
+
+
+static EMPTY_VEC: Vec<String> = Vec::new();
+
 
 fn mean_u8( data:&[u8] ) -> f32 {
     let this = b"!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
@@ -114,7 +117,7 @@ impl Analysis{
 		                		if ! genes.names.contains_key(  id ){
 		                			seq_temp = seqrec.seq().to_vec();
 		                			//seq_temp.reverse();
-			                    	genes.add( &seq_temp, id.to_string() );
+			                    	genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
 		                    		gene_names.push( id.to_string() );
 		                    	}
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
@@ -140,7 +143,7 @@ impl Analysis{
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		seq_temp = seqrec.seq().to_vec();
 		                		//seq_temp.reverse();
-			                    genes.add( &seq_temp, id.to_string() );
+			                    genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
 		                    	ab_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 		                	};
@@ -158,7 +161,7 @@ impl Analysis{
 		genes.print();
 
 	    //  now we need to get a CellIDs object, too
-	    let cells = CellIds::new( &version, 7);
+	    let cells = CellIds::new( &version);
 
 	    // that is a class to strore gene expression data.
 	    // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
@@ -184,7 +187,7 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	genes.add( &seq, format!("Sample{id}") );
+	        	genes.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	id +=1;
 	        }
 	    }
@@ -199,7 +202,7 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	genes.add( &seq, format!("Sample{id}") );
+	        	genes.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	id +=1;
 	        }
 

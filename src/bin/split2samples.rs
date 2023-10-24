@@ -245,7 +245,7 @@ fn cell_ident( opts:&Opts ){
     // let mut file2_path = PathBuf::from(&opts.outpath).join("ambig.R2.fq.gz");
 
     //  now we need to get a CellIDs object, too
-    let cells = CellIds::new( &opts.version, 9);
+    let cells = CellIds::new( &opts.version);
 
     let mut unknown = 0;
     let mut no_sample = 0;
@@ -345,7 +345,7 @@ fn sample_split( opts: &Opts){
     let mut cells2sample =  BTreeMap::<u32, u32>::new(); //: BTreeMap<u32, u32>;
 
     //  now we need to get a CellIDs object, too
-    let cells = CellIds::new(&opts.version, 9);
+    let cells = CellIds::new(&opts.version);
 
     // and we need to collect all cell2sample data
     let re = Regex::new(r"sample(\d*).int").unwrap();

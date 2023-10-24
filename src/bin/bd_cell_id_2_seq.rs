@@ -16,7 +16,7 @@ struct Opts {
 fn main() {
 	let opts: Opts = Opts::parse();
 
-	let cells = CellIds::new(&opts.version, 9);
+	let cells = CellIds::new(&opts.version);
 	let seq: Vec<u64> = cells.to_sequence( opts.id );
 
 	let mut info = format!("The sequence is:\n");

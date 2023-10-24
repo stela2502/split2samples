@@ -11,7 +11,7 @@ use needletail::parse_fastx_file;
 //use this::sampleids::SampleIds;
 //use this::analysis::
 
-//use std::path::PathBuf;
+use std::path::PathBuf;
 use std::fs;
 //use std::path::Path;
 
@@ -23,9 +23,19 @@ use std::io::BufRead;
 
 use flate2::read::GzDecoder;
 use std::collections::HashMap;
-use std::collections::HashSet;
+//use std::collections::HashSet;
 
 // use std::convert::TryInto;
+
+use std::thread;
+use rayon::prelude::*;
+use rayon::slice::ParallelSlice;
+use indicatif::MultiProgress;
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
+
+use this::mapping_info::MappingInfo;
+use this::ofiles::Ofiles;
 
 /// Just run a test case for speed reproducability and simplicity
 
@@ -41,8 +51,6 @@ struct Opts {
     /// the outpath
     #[clap(default_value=  "testData/TEmapperTest",short, long)]
     outpath: String,
-    #[clap(default_value= "testData/MyAbSeqPanel.fasta", short, long)]
-    antibody: String,
     /// the mapping kmer length
     #[clap(default_value_t=32, long)]
     gene_kmers: usize,
@@ -57,6 +65,93 @@ struct Opts {
     umi_count: u8,
 */
 
+
+fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashMap< String, Vec<u8>>, re_class_id: &Regex, re_family_name: &Regex, re_gene_id: &Regex, re_transcript_id: &Regex){
+
+    let mut families = HashMap::<String, GeneFamily>::new();
+
+    for line in lines.iter() {
+
+        let parts: Vec<String> = line.split('\t').map(|s| s.to_string()).collect();
+        if parts.len() < 8{
+            continue;
+        }
+
+        if parts[2] == "exon"{
+            // For this example the exons info is all there is in the gtf file
+            // so here I need to treat this as a whole gene
+            let transcript_id = match re_transcript_id.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a transcript id from this line!\n{:?}", &parts[8].to_string() ); //hope I nerver get to see that
+                    continue;
+                }
+            };
+            let family_name = match re_family_name.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a family_name from this line!\n{:?}", &parts[8].to_string() ); //hope I nerver get to see that
+                    continue;
+                }
+            };
+            let gene_name = match re_gene_id.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a gene_name from this line!\n{:?}", &parts[8].to_string() ); //hope I nerver get to see that
+                    continue;
+                }
+            };
+            let class_name = match re_class_id.captures(&parts[8].to_string()) {
+                Some(captures) => {
+                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
+                    transcript_id
+                },
+                None => {
+                    eprintln!("I could not get a class_name from this line!\n{:?}", &parts[8].to_string() ); //hope I nerver get to see that
+                    continue;
+                }
+            };
+            // for this approach we need to use the family model?
+            let mut gene = Gene::new(
+                parts[0].to_string(),
+                parts[3].to_string(),
+                parts[4].to_string(),
+                parts[6].to_string(),
+                transcript_id.to_string(), // this will be the id we add to the index
+                vec![gene_name.to_string(), family_name.to_string(), class_name.to_string()],
+            );
+            gene.add_exon( parts[3].to_string(),parts[4].to_string());
+            
+            match families.get_mut( &family_name ){
+                Some( family_object ) => {
+                    family_object.push( gene );
+                },
+                None => {
+                    let family_object : GeneFamily = 
+                    GeneFamily::new( family_name.to_string(), gene );
+                    families.insert( family_name.to_string(), family_object);
+                }
+            }
+        }
+    }
+
+    for (_, family) in &families {
+        // Do something with the gene, e.g. remove it
+        family.index( index, 0, &seq_records );
+    }
+
+}
+
+
 // the main function nowadays just calls the other data handling functions
 fn main() {
     // parse the options
@@ -65,29 +160,34 @@ fn main() {
     
     let opts: Opts = Opts::parse();
 
+
+
     let mut kmer_size = opts.gene_kmers;
     if opts.gene_kmers > 32{
         eprintln!("Sorry the max size of the kmers is 32 bp");
         kmer_size = 32;
     }
 
-    const COVERED_AREA:usize = 400; // cover 600 bp of the transcript
+    //const COVERED_AREA:usize = 400; // cover 600 bp of the transcript
     fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
 
-    // let log_file_str = PathBuf::from(&opts.outpath).join(
-    //     "index_log.txt"
-    // );
+    let log_file_str = PathBuf::from(&opts.outpath).join(
+        "index_log.txt"
+    );
 
-    // println!( "the log file: {}", log_file_str.file_name().unwrap().to_str().unwrap() );
-    
-    // let log_file = match File::create( log_file_str ){
-    //     Ok(file) => file,
-    //     Err(err) => {
-    //         panic!("Error: {err:#?}" );
-    //     }
-    // };
+    println!( "the log file: {}", log_file_str.file_name().unwrap().to_str().unwrap() );
 
+    let log_file = match File::create( log_file_str ){
+        Ok(file) => file,
+        Err(err) => {
+            panic!("Error: {err:#?}" );
+        }
+    };
+    let ofile = Ofiles::new( 1, "NOT_USED", "A.gz", "B.gz",  opts.outpath.as_str() );
 
+    let mut report = MappingInfo::new(log_file, 32.0 , 0, ofile );
+
+    report.start_counter();
     // read the fasta data in!
     let mut seq_records = HashMap::< String, Vec<u8>>::new();
 
@@ -132,12 +232,9 @@ fn main() {
     attribute 8 
     */
     
-    let mut families = HashMap::<String, GeneFamily>::new();
-
     let gtf = Regex::new(r".*gtf.?g?z?$").unwrap();
-    let chr = Regex::new(r"^chr").unwrap();
 
-    let re_gene_name: Regex;
+    let re_family_name: Regex;
     let re_gene_id: Regex;
     let re_transcript_id : Regex;
     let re_class_id : Regex;
@@ -146,24 +243,24 @@ fn main() {
     match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
-            re_family_name =  Regex::new(r#".* family_id "([\(\)\w\d\-\._]*)""#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id "([\(\)\w\d\-\._]*)";"#).unwrap();
-            re_transcript_id = Regex::new(r#"transcript_id "([\(\)\w\d\-\._]*)";"#).unwrap();
-            re_class_id = Regex::new(r#"class_id "([\(\)\w\d\-\._]*)";"#).unwrap();
+            re_family_name =  Regex::new(r#"family_id "([\(\)/\w\d\-\._]*)""#).unwrap();
+            re_gene_id = Regex::new(r#"gene_id "([\(\)/\w\d\-\._]*)";"#).unwrap();
+            re_transcript_id = Regex::new(r#"transcript_id "([\(\)/\w\d\-\._]*)";"#).unwrap();
+            re_class_id = Regex::new(r#"class_id "([\(\)/\w\d\-\._\?]*)";"#).unwrap();
         },
         false => {
             eprintln!("gff mode.");
-            re_family_name =  Regex::new(r#".* ?family_id=([\(\)\w\d\-\._]*); ?"#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id=([\(\)\w\d\-\._]*);"#).unwrap();
-            re_transcript_id = Regex::new(r#"transcript_id=([\(\)\w\d\-\._]*);"#).unwrap();
-            re_class_id = Regex::new(r#"class_id "([\(\)\w\d\-\._]*)";"#).unwrap();
+            re_family_name =  Regex::new(r#"family_id=([\(\)/\w\d\-\._]*); ?"#).unwrap();
+            re_gene_id = Regex::new(r#"gene_id=([\(\)/\w\d\-\._]*);"#).unwrap();
+            re_transcript_id = Regex::new(r#"transcript_id=([\(\)/\w\d\-\._]*);"#).unwrap();
+            re_class_id = Regex::new(r#"class_id "([\(\)/\w\d\-\._\?]*)";"#).unwrap();
         },
     }
     //let mut gene_id:String;
-    let mut gene_name:String;
-    let mut transcript_id:String;
+    //let mut gene_name:String;
+    //let mut transcript_id:String;
 
-    // now we need to read the gtf info and get all genes out of that
+    // now we need to read the gtf info and get all families out of that
     // we specificly need the last 64bp of the end of the gene as that is what we are going to map
     // if there is a splice entry in that area we need to create a spliced and an unspliced entry
 
@@ -177,151 +274,108 @@ fn main() {
     };
     let file1 = GzDecoder::new(f1);
     let reader = BufReader::new( file1 );
-    let mut missing_chr:HashSet<String>  = HashSet::new();
+    //let mut missing_chr:HashSet<String>  = HashSet::new();
+
+    let num_threads = num_cpus::get();
+
+    let m = MultiProgress::new();
+    let pb = m.add(ProgressBar::new(5000));
+    let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
+            .unwrap()
+            .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
+    pb.set_style(spinner_style);
+
+    let reads_per_chunk = 100;
+    eprintln!("Starting with data collection");
+    let mut good_read_count = 0;
+    let max_dim = reads_per_chunk * num_threads;
+    let mut lines = Vec::<String>::with_capacity( max_dim );
 
     for line in reader.lines() {
-        let rec = line.ok().expect("Error reading record.");
-        let parts: Vec<String> = rec.split('\t').map(|s| s.to_string()).collect();
-        if parts.len() < 8{
-            continue;
+        if good_read_count < max_dim{
+            let rec = line.ok().expect("Error reading record.");
+            lines.push(rec);
+            good_read_count+=1;
         }
-        if parts[2] == "transcript"{
-            panic!("transcripts are not expected in this gtf file - please implement what to do with them!")
-            // capture the parts I need using my regexp modules
-            if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
-                gene_name = captures.get(1).unwrap().as_str().to_string();
-            }else {
-                if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
-                    match genes.get_mut( gene_name ){
-                        Some(family) => {
-                            family.push( gene );
-                        }
-                        None => {
-                            // now I need a new gene
-
-                        }
-                    }
-
-                }
-                else {
-                    panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
-                }
-            }
-            // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
-            //     gene_id = captures.get(1).unwrap().as_str().to_string();
-            // }else {
-            //     panic!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
-            // }
-            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
-                transcript_id = captures.get(1).unwrap().as_str().to_string();
-            }else {
-                panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8].to_string() );
-            }
+        else {
+            report.stop_file_io_time();
+            eprintln!("creating mapper");
+            good_read_count = 0;
+            let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
+                .map(|data_split| {
+                    // Get the unique identifier for the current thread
+                    let _thread_id = thread::current().id();
+                
+                    // Convert the thread ID to a string for use in filenames or identifiers
+                    //let thread_id_str = format!("{:?}",thread_id );
+                    //let ofile = Ofiles::new( 1, &("Umapped_with_cellID".to_owned()+&thread_id_str), "R2.fastq.gz", "R1.fastq.gz",  outpath );
+                    //let log_file_str = PathBuf::from(outpath).join(
+                    //    format!("Mapping_log_{}.txt",thread_id_str )
+                    //);
             
-            // and add a gene
-            // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
-            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), transcript_id.to_string() );
-            genes.insert( transcript_id.clone(), gene );
-        }
+                    //let log_file = match File::create( log_file_str ){
+                    //        Ok(file) => file,
+                    //        Err(err) => {
+                    //        panic!("thread {thread_id_str} Error: {err:#?}" );
+                    //    }
+                    //};
+                    let mut idx = FastMapper::new( kmer_size );
+                    // Clone or create a new thread-specific report for each task      
+                    let _res = process_lines(&data_split, &mut idx, &seq_records, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
+                    idx
 
-        if parts[2] == "exon"{
-            // For this example the exons info is all there is in the gtf file
-            // so here I need to treat this as a whole gene
-            let transcript_id = match re_transcript_id.captures(&parts[8].to_string()) {
-                Some(captures) => {
-                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
-                    match genes.get_mut(&transcript_id.clone().to_string()) {
-                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
-                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
-                    }
-                    transcript_id
-                },
-                None => {
-                    eprintln!("I could not get a transcript id from this line!" ); //hope I nerver get to see that
-                    continue;
-                }
-            };
-            let family_name = match re_family_name.captures(&parts[8].to_string()) {
-                Some(captures) => {
-                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
-                    match genes.get_mut(&transcript_id.clone().to_string()) {
-                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
-                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
-                    }
-                    transcript_id
-                },
-                None => {
-                    eprintln!("I could not get a family_name from this line!" ); //hope I nerver get to see that
-                    continue;
-                }
-            };
-            let gene_name = match re_gene_id.captures(&parts[8].to_string()) {
-                Some(captures) => {
-                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
-                    match genes.get_mut(&transcript_id.clone().to_string()) {
-                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
-                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
-                    }
-                    transcript_id
-                },
-                None => {
-                    eprintln!("I could not get a gene_name from this line!" ); //hope I nerver get to see that
-                    continue;
-                }
-            };
-            let class_name = match re_class_id.captures(&parts[8].to_string()) {
-                Some(captures) => {
-                    let transcript_id = captures.get(1).unwrap().as_str().to_string();
-                    match genes.get_mut(&transcript_id.clone().to_string()) {
-                        Some(gene) => gene.add_exon(parts[3].to_string(), parts[4].to_string()),
-                        None => eprintln!("ignoring transcript! ({})", transcript_id.to_string()),
-                    }
-                    transcript_id
-                },
-                None => {
-                    eprintln!("I could not get a gene_name from this line!" ); //hope I nerver get to see that
-                    continue;
-                }
-            };
-            // for this approach we need to use the family model?
-            let gene = Gene::new(
-                parts[0].to_string(),
-                parts[3].to_string(),
-                parts[4].to_string(),
-                parts[6].to_string(),
-                transcript_id.to_string(), // this will be the id we add to the index
-                vec![gene_name.to_string(), family_name.to_string(), class_name.to_string()],
-            );
-            
-            match families.get_mut( family_name ){
-                Some( family_object ) => {
-                    family_object.push( gene );
-                },
-                None => {
-                    let mut family_object : GeneFamily = 
-                    GeneFamily::new( family_name.to_string(), class_name.to_string() );
-                    family_object.push( gene );
-                    families.insert( family_name.to_string(), family_object);
-                }
+                }) // Analyze each chunk in parallel
+            .collect(); // Collect the results into a Vec
+            report.stop_multi_processor_time();
+            eprintln!("Integrating multicore results");
+            for idx in results{
+                index.merge(idx);
+                //report.merge( &gex.1 );
             }
+            report.stop_single_processor_time();
+            eprintln!("Reading more regions");
+            let (h,m,s,ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
+            eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
         }
     }
 
-    for (_, family) in &families {
-        // Do something with the gene, e.g. remove it
-        family.index( index:&mut FastMapper, max_area:usize, seq_records:&HashSet<String> , max_per_mapper:usize)
-        match seq_records.get( &family.chrom.to_string() ){
-            Some(seq) => {
-                gene.add_to_index( seq, &mut index, COVERED_AREA );
-                //println!("The genes detected: {:?}", index.names_store );
-            },
-            None => {
-                let keys_vec: Vec<_> = seq_records.keys().collect();
-                panic!("I do not have the sequence for the chromosome {} {:?}", gene.chrom.to_string(), keys_vec )
-            },
-        }
+    if good_read_count > 0{
+        //good_read_count = 0;
+        let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
+            .map(|data_split| {
+                // Get the unique identifier for the current thread
+                let _thread_id = thread::current().id();
+            
+                // Convert the thread ID to a string for use in filenames or identifiers
+                //let thread_id_str = format!("{:?}",thread_id );
+                //let ofile = Ofiles::new( 1, &("Umapped_with_cellID".to_owned()+&thread_id_str), "R2.fastq.gz", "R1.fastq.gz",  outpath );
+                //let log_file_str = PathBuf::from(outpath).join(
+                //    format!("Mapping_log_{}.txt",thread_id_str )
+                //);
+        
+                //let log_file = match File::create( log_file_str ){
+                //        Ok(file) => file,
+                //        Err(err) => {
+                //        panic!("thread {thread_id_str} Error: {err:#?}" );
+                //    }
+                //};
+                let mut index = FastMapper::new( kmer_size );
+                // Clone or create a new thread-specific report for each task
+                let _res = process_lines(&data_split, &mut index, &seq_records, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
+                index
 
+            }) // Analyze each chunk in parallel
+        .collect(); // Collect the results into a Vec
+
+        for idx in results{
+            index.merge(idx);
+            //report.merge( &gex.1 );
+        }
     }
+
+    index.make_index_te_ready();
+
+
     eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
 
     index.write_index( opts.outpath.to_string() ).unwrap();
@@ -333,6 +387,7 @@ fn main() {
     //index.write_index_txt( opts.outpath.to_string() ).unwrap();
     //eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
     
+    eprintln!("{}", report.summary(0,0,0) );
 
     match now.elapsed() {
         Ok(elapsed) => {

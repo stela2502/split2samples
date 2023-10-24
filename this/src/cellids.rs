@@ -26,22 +26,22 @@ pub struct CellIds{
     //csl1kmer: SampleIds,
     //csl2kmer: SampleIds,
     //csl3kmer: SampleIds,
-    size:u8
+    //size:u8
 }
 
 // here the functions
 impl CellIds{
 
-    pub fn new( ver:&String, mut size: u8 )-> Self {
+    pub fn new( ver:&String )-> Self {
 
-        if size < 5{
+        /*if size < 5{
             size = 5;
             println!( "CellIDs::new size was set to 5");
         }
         else if size > 9{
             size = 9;
             println!( "CellIDs::new size set to 9");
-        }
+        }*/
         let  c1s: Vec<u64>;
         let  c2s: Vec<u64>;
         let  c3s: Vec<u64>;
@@ -382,7 +382,7 @@ impl CellIds{
             //csl1kmer,
             //csl2kmer,
             //csl3kmer,
-            size
+            //size
         }
     }
 

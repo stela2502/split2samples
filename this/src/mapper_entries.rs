@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-
+use std::collections::HashMap;
 
 /// A mapper entry is a simplistic storage for the fast mapper class.
 /// It mainly consists of a list of u64 sequences that can be used for mapping (32bp binary)
@@ -11,7 +11,7 @@ pub struct NameEntry{
 	pub data:Vec<usize>,
 	// a short vector with class info. This is needed for the TE scanner.
 	// the ids point to the fast_mapper::
-	pub classes:Vec<usize>, 
+	pub classes:Vec<Vec<usize>>, 
 	pub significant_bp:Vec<usize>, // how much data should be matched against here(e.g. sample IDs are quite short)
 	pos:usize,// the position to return with next
 }
@@ -55,17 +55,56 @@ impl NameEntry{
     	self.pos=0;
     } 
 
-	pub fn add( &mut self, id:usize, sign:usize) {
+	pub fn add( &mut self, gene_id:usize, sign:usize, classes:Vec<usize>) {
 		if sign == 0 {
 			panic!("This does not make sense - I can not use a u64 with {sign} significant bits!");
 		}
-		if ! self.data.contains( &id ) {
-			self.data.push(id);
+		if ! self.data.contains( &gene_id ) {
+			self.data.push(gene_id);
 			self.significant_bp.push(sign);
+			self.classes.push(classes);
 		}else {
-			eprintln!("I already contain the secondary match {} - rejected", id );
+			eprintln!("This mapping region already links to the gene {} - ignored", gene_id );
 		}
 	}
+
+	/// this requires the classes vectors to be filled with optional names for the genes.
+	/// like family or class names.
+	/// If the classes vector is not populated and we have more than one gene matching here it will break.
+	/// The classes vector should be filled with incresingly common entries line [ transcript_id, gene_id, family_id, class_id ]
+	pub fn best_name_4_entries( &mut self ) -> Option<usize> {
+
+		// if this 40bp mapper links to only one gene the most likely return value is this gene_id
+		if self.data.len() == 1{
+			//println!("best_name_4_entries - I only have one! {}", self.data[0]);
+			return Some(self.data[0]);
+		}
+
+		let mut counter: HashMap<usize, usize> = HashMap::new();
+		if self.classes[0].is_empty(){
+			panic!("This function can only be used while creating an index - I am missing the gene classes info here!")
+		}
+		// for every position in the classes vectors (should be sorted by expected rarity many ... view)
+		for yid in 0..self.classes[0].len(){
+			counter.clear();
+			// check every classes vector and collect the id of the same rarity class
+			for xid in 0..self.data.len(){
+				if ! xid < self.classes.len() {
+					self.classes.push(vec![0;self.classes[0].len()]);
+				}
+				*counter.entry(self.classes[xid][yid]).or_insert(0) += 1;
+			}
+			if counter.len() == 1{
+				// we only got one ID in one rarity class - that is what is the best match!
+				let best = *counter.keys().next().unwrap();
+				//println!("best_name_4_entries - aaand the best one is {}",best);
+				return Some( best )
+			}
+		}
+		// so here we have not obtained any unique hit - best approach is possibly to return a None then - or?!
+		None
+	}
+
 	pub fn get( &self ) -> Vec<usize>{
 		self.data.clone()
 	}
@@ -106,6 +145,18 @@ impl MapperEntry{
 		}
 	}
 
+	pub fn collapse_classes (&mut self ){
+		// afterwards we should only have the mapper entries left that actually contained unique information.
+		self.map.retain_mut( |(_second_seq, name_entry)|  match name_entry.best_name_4_entries(){
+			Some(gene_id) => {
+				name_entry.data = vec![gene_id];
+				name_entry.classes = Vec::<Vec<usize>>::with_capacity(0);
+				true
+			},
+			None => false,
+		} );
+	}
+
 	pub fn possible_ids(&self) -> Vec<usize>{
 		let mut ids = HashSet::<usize>::with_capacity(5);
 		for entry in &self.map {
@@ -117,19 +168,19 @@ impl MapperEntry{
 	}
 
 	/// add a match pair 8bp + <sign> bp.
-	pub fn add( &mut self, seq:u64, id:usize, sign:usize) {
+	pub fn add( &mut self, seq:u64, id:usize, sign:usize, classes:Vec<usize>) {
 
 		let mut added = false;
 		for i in 0..self.map.len() {
 			if self.map[i].0 == seq {
-				self.map[i].1.add( id, sign);
+				self.map[i].1.add( id, sign, classes.clone());
 				added = true;
 				self.only = 0;
 			}
 		}
 		if ! added{
 			let mut name_entry = NameEntry::new();
-			name_entry.add( id , sign);
+			name_entry.add( id , sign, classes.clone() );
 			self.map.push( ( seq, name_entry ) );
 			if self.map.len() == 1{
 				self.only = id;
@@ -146,14 +197,28 @@ impl MapperEntry{
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
-	pub fn get( &self,seq:&u64 ) -> Option<Vec<usize>> {
+	pub fn get( &self,seq:&u64 ) -> Option<&NameEntry> {
 
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
 				// if self.map[i].1.data.len() > 1{
 				// 	eprintln!("Ooops - we have a get in more than one gene: {:?}", self.map[i].1.data);
 				// }
-				return Some( self.map[i].1.data.clone() )
+				return Some( &self.map[i].1 )
+			}
+		}
+		// now we have an initial match, but no secondary.
+		None
+	}
+
+	pub fn get_mut( &mut self,seq:&u64 ) -> Option<&mut NameEntry> {
+
+		for i in 0..self.map.len() {
+			if &self.map[i].0 == seq {
+				// if self.map[i].1.data.len() > 1{
+				// 	eprintln!("Ooops - we have a get in more than one gene: {:?}", self.map[i].1.data);
+				// }
+				return Some( &mut self.map[i].1 )
 			}
 		}
 		// now we have an initial match, but no secondary.
@@ -163,13 +228,13 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&self, seq:&u64 ) -> Option<Vec<usize>> {
+	pub fn find (&self, seq:&u64 ) -> Option<&NameEntry> {
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
 				if self.map[i].1.data.len() > 1{
 					eprintln!("Ooops - we have a find in more than one gene: {:?}", self.map[i].1.data);
 				}
-				return Some( self.map[i].1.data.clone() )
+				return Some( &self.map[i].1 )
 			}
 		}
 		// now we have an initial match, but no secondary.
@@ -182,7 +247,7 @@ impl MapperEntry{
 				// tool.u64_to_str(32, &self.map[i].0, &mut b);
 				// eprintln!("I have a match between sequence \nA{:?}\nB{:?}\nhamming_dist: {}\nsignificant_bp: {significant_bp}\ngenes: {:?}",a, b,MapperEntry::hamming_distance( self.map[i].0, *seq ), self.map[i].1.data );
 			
-				return Some( self.map[i].1.data.clone() )
+				return Some( &self.map[i].1 )
 			}
 			// else {
 			// 	let mut a:String = String::from("");
@@ -203,7 +268,7 @@ impl MapperEntry{
 				}
 			}
 			if sum > 2 { // at least 24 bp exact match + position
-				return Some( self.map[i].1.data.clone() )
+				return Some( &self.map[i].1 )
 			}
 		}
 		// so now we could have a frameshift due to a long stretch of a single nucleotide

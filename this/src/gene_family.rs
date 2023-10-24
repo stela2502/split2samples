@@ -1,6 +1,6 @@
 use crate::fast_mapper::FastMapper;
-use crate::mapper_entries::MapperEntry;
-use std::collections::HashSet;
+use std::collections::HashMap;
+
 
 use crate::gene::Gene;
 
@@ -44,8 +44,8 @@ impl GeneFamily{
 	/// Use the make_index_te_ready function
 	/// I need a mut gene_id_storage where the gene information that is needed later on
 	/// to 'qualify' the mapping evens. These contain all info I have about a gene.
-	pub fn index( &self, index:&mut FastMapper, max_area:usize, seq_records:&HashSet<String> , max_per_mapper:usize, gene_id_storage: mut Vec<Vec<usize>> ) {
-		let mut loc_idx = FastMapper::new( index.kmer_len.clone() ); // use the other mappers kmer length
+	pub fn index( &self, index:&mut FastMapper, max_area:usize, seq_records:&HashMap<String, Vec<u8>> ) {
+		//let mut loc_idx = FastMapper::new( index.kmer_len.clone() ); // use the other mappers kmer length
 		let mut max_area_loc = max_area;
 
 		let chr = Regex::new(r"^chr").unwrap();
@@ -56,14 +56,16 @@ impl GeneFamily{
 			}
 			match seq_records.get( &gene.chrom.to_string() ){
 	            Some(seq) => {
-	                gene.add_to_index( seq.as_bytes(), &mut loc_idx, max_area_loc );
+	            	//println!( "Trying to add a gene to the index with a total seq length of {}", seq.len());
+	            	//println!( "gene start {} and end {}", gene.start, gene.end );
+	                gene.add_to_index( seq, index, max_area_loc );
 	                //println!("The genes detected: {:?}", index.names_store );
 	            },
 	            None => {
 	                if chr.is_match ( &gene.chrom.to_string() ){
 	                    match seq_records.get( &gene.chrom.to_string()[3..] ){
 	                        Some(seq) => {
-	                            gene.add_to_index( seq.as_bytes(), &mut loc_idx, max_area_loc );
+	                            gene.add_to_index( seq, index, max_area_loc );
 	                            //println!("The genes detected: {:?}", index.names_store );
 	                        },
 	                        None => {
@@ -74,7 +76,7 @@ impl GeneFamily{
 	                }else {
 	                    match seq_records.get( &format!("chr{}", &gene.chrom.to_string()) ){
 	                        Some(seq) => {
-	                            let gene_id = gene.add_to_index( seq.as_bytes(), &mut loc_idx, max_area_loc );
+	                            let _gene_id = gene.add_to_index( seq, index, max_area_loc);
 	                            
 	                            //println!("The genes detected: {:?}", index.names_store );
 	                        },
@@ -88,44 +90,6 @@ impl GeneFamily{
 	        }
     	}
 
-
-    	// Now we have an loc_idx that describes the gene family. We should now be able to identify the entry sepecific
-    	// unique sequences
-    	let mut entry_specific = 0;
-    	let mut id = 0;
-    	for mapper_entries in &loc_idx.mapper { // mapper entries is a MapperEntry object
-    		if mapper_entries.has_data(){
-	    		for ( secondary_key, name_entry ) in &mapper_entries.map{
-	    			if name_entry.data.len() == 1 {
-	    				eprintln!("I go a unique match for the famliy {} and the entry {}", self.name, loc_idx.names_store[name_entry.data[0]] );
-		    			match index.incorporate_match_combo( id, name_entry.data[0], loc_idx.names_store[name_entry.data[0]].to_string() ){
-		    				Err(e) => {println!("index.incorporate_match_combo hit a wall: {e:?}")}
-		    				_ => (),
-		    			}
-		    		}
-		    		else if name_entry.data.len() <= max_per_mapper{
-		    			let this_name = format!("{}::{}", self.name, name_entry.data.len() );
-		    			eprintln!("I go a unique low family member mapper for the famliy {} and the entry {}", self.name, this_name );
-		    			match index.incorporate_match_combo( id, name_entry.data[0], this_name ){
-		    				Err(e) => {println!("index.incorporate_match_combo hit a wall: {e:?}")}
-		    				_ => (),
-		    			}
-		    		}
-		    		else {
-		    			let this_name = format!("{}::multi", self.name );
-		    			eprintln!("I go a unique low family member mapper for the famliy {} and the entry {}", self.name, this_name );
-		    			match index.incorporate_match_combo( id, name_entry.data[0], this_name ){
-		    				Err(e) => {println!("index.incorporate_match_combo hit a wall: {e:?}")}
-		    				_ => (),
-		    			}
-		    		}
-	    		}
-	    	}
-	    	id +=1;
-    	}
-
-    	// And now get rid of all the BAD mappers - not sure of how to do that.
-    	// Lets check how this works for now.
 	}
 }
 

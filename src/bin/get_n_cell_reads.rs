@@ -125,7 +125,7 @@ fn main() {
     };
 
     //  now we need to get a CellIDs object, too
-    let cells = CellIds::new(&opts.version, 7);
+    let cells = CellIds::new(&opts.version);
 
     // let mut gex = SingleCellData::new( );
 

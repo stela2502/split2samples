@@ -29,7 +29,7 @@ pub struct MappingInfo{
     pub ofile:Ofiles,
     pub local_dup:usize,
     pub total:usize,
-    absolute_start: SystemTime,
+    pub absolute_start: SystemTime,
     realtive_start: Option<SystemTime>,
     pub single_processor_time: Duration,
     pub multi_processor_time: Duration,
@@ -96,7 +96,7 @@ impl MappingInfo{
 		self.start_counter();
 	}
 
-	fn split_duration( elapsed:Duration ) -> ( u128, u128, u128, u128 ){
+	pub fn split_duration( elapsed:Duration ) -> ( u128, u128, u128, u128 ){
 
         let mut milli = elapsed.as_millis();
 

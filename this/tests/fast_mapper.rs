@@ -110,5 +110,27 @@ mod tests {
 
     }
 
+    #[test]
+    fn check_merge() {
+
+        let mut mapper = FastMapper::new( 16 );
+
+
+        let mut geneid = 0;
+        
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
+        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
+
+        let mut other = FastMapper::new( 16 );
+
+        other.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
+
+        assert!( mapper.names_store.len() = 1, "Not exactly one gene in mapper 1" );
+        assert!( other.names_store.len() = 1, "Not exactly one gene in mapper 2" );
+        mapper.merge( other );
+
+        assert!( mapper.names_store.len() = 2, "Not exactly two genes in the merged mapper" );
+
+    }
 
 }
