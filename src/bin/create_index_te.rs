@@ -337,6 +337,7 @@ fn main() {
             eprintln!("Reading more regions");
             let (h,m,s,ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
             eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
+            eprintln!("{}", report.program_states_string() );
         }
     }
 
