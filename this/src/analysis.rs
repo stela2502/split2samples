@@ -76,7 +76,7 @@ impl Analysis{
 
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
-	    let mut genes :FastMapper = FastMapper::new( gene_kmers ); // split them into 9 bp kmers
+	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000 ); // split them into 9 bp kmers
 	    let mut gene_count = 600;
 	    
 	    if let Some(i) = index {

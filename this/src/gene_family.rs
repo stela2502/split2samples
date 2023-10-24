@@ -45,7 +45,6 @@ impl GeneFamily{
 	/// I need a mut gene_id_storage where the gene information that is needed later on
 	/// to 'qualify' the mapping evens. These contain all info I have about a gene.
 	pub fn index( &self, index:&mut FastMapper, max_area:usize, seq_records:&HashMap<String, Vec<u8>> ) {
-		//let mut loc_idx = FastMapper::new( index.kmer_len.clone() ); // use the other mappers kmer length
 		let mut max_area_loc = max_area;
 
 		let chr = Regex::new(r"^chr").unwrap();

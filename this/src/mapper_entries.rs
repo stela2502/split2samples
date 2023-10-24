@@ -134,8 +134,12 @@ pub struct MapperEntry{
 }
 
 impl MapperEntry{
-	pub fn new() -> Self{
-		let map = Vec::<(u64, NameEntry)>::with_capacity(4);
+	pub fn new( allocate: usize) -> Self{
+		let mut all = allocate;
+		if allocate < 4 {
+			all = 4
+		}
+		let map = Vec::<(u64, NameEntry)>::with_capacity(all);
 		let only =0;
 		let hamming_cut = 4;
 		Self{

@@ -11,7 +11,7 @@ mod tests {
 
     #[test]
     fn check_geneids() {
-        let mut mapper = FastMapper::new( 16 );
+        let mut mapper = FastMapper::new( 16, 10 );
 
         let mut geneid = 0;
         let outpath = String::from("testData/");
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn check_write_index() {
-        let mut mapper = FastMapper::new( 16 );
+        let mut mapper = FastMapper::new( 16, 10 );
 
         //log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles,
         let outpath = String::from("testData/");
@@ -93,7 +93,7 @@ mod tests {
         mapper.write_index( opath.to_string() ).unwrap();
         mapper.print();
 
-        let mut mapper2 = FastMapper::new( 16 );
+        let mut mapper2 = FastMapper::new( 16, 10 );
         mapper2.load_index( opath.to_string() ).unwrap();
 
         assert_eq!(  mapper.with_data, mapper2.with_data );
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn check_merge() {
 
-        let mut mapper = FastMapper::new( 16 );
+        let mut mapper = FastMapper::new( 16, 10 );
 
 
         let mut geneid = 0;
@@ -121,7 +121,7 @@ mod tests {
         mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        let mut other = FastMapper::new( 16 );
+        let mut other = FastMapper::new( 16, 10 );
 
         other.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
 

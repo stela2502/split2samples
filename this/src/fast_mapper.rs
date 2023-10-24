@@ -47,11 +47,8 @@ pub struct FastMapper{
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names_store: Vec<String>, // store gene names as vector
-    pub classes_store: Vec<String>, // The TE mapper needs more info on each match that only the names
-    pub classes: BTreeMap<std::string::String, usize>, // additional classes storage element
     pub max_id: usize,// hope I get the ids right this way...
     pub last_count: usize,
-    pub last_kmers: Vec<String>,
     pub with_data: usize,
     pub version: usize, //the version of this
     pub tool: IntToStr,
@@ -62,21 +59,18 @@ pub struct FastMapper{
 
 impl  FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
-    pub fn new( kmer_len:usize )-> Self {
+    pub fn new( kmer_len:usize, allocate:usize )-> Self {
         //println!("I would add {} new entries here:", u16::MAX);
         let mut mapper: Vec<MapperEntry> = Vec::with_capacity(u16::MAX as usize);
         for _i in 0..u16::MAX{
-            let b = MapperEntry::new( );
+            let b = MapperEntry::new( 10 );
             mapper.push( b );
         }
         let names = BTreeMap::<std::string::String, usize>::new();
         let names4sparse = BTreeMap::<std::string::String, usize>::new();
-        let names_store = Vec::with_capacity(1000);
-        let classes_store = Vec::with_capacity(10);
-        let classes = BTreeMap::<std::string::String, usize>::new();
+        let names_store = Vec::with_capacity( allocate );
         let max_id = 0;
         let last_count = 0;
-        let last_kmers = Vec::with_capacity(60);
         let with_data = 0;
         let spacer = 3;
         let tool = IntToStr::new(b"".to_vec(), kmer_len );
@@ -89,11 +83,8 @@ impl  FastMapper{
             names,
             names4sparse,
             names_store,
-            classes_store,
-            classes,
             max_id,
             last_count,
-            last_kmers,
             with_data,
             version: 3,
             tool,
