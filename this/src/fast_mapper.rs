@@ -90,7 +90,7 @@ impl  FastMapper{
             max_id,
             last_count,
             with_data,
-            version: 4,
+            version: 5,
             tool,
             mask,
             pos,
@@ -111,8 +111,7 @@ impl  FastMapper{
                     // And get my own ids for these names
                     //let gene_ids = self.ids_for_gene_names( &gene_names );
                     let _ = self.incorporate_match_combo( primary_id, *secondary_match as usize, gene_names[0].clone(), gene_names );
-                }
-                
+                }           
             }
         }
 
@@ -153,7 +152,7 @@ impl  FastMapper{
             // will add in the next step so
             self.with_data +=1;
         }
-        match self.mapper[initial_match].add( secondary_match.try_into().unwrap(), gene_id, classes ){
+        match self.mapper[initial_match].add( secondary_match.try_into().unwrap(), ( gene_id, 0), classes ){
             Ok(_) => self.pos += 1,
             Err(_) => {
                 //eprintln!("incorporate_match_combo - gene seq was already registered {}", name);
@@ -225,7 +224,7 @@ impl  FastMapper{
             // if entries.2  < self.kmer_len{
             //     println!("adding a smaller than expected sequence for gene {name}/{gene_id} ({})", entries.2);
             // }
-            match self.mapper[entries.0 as usize].add( entries.1, gene_id, classes.clone() ){
+            match self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
                 Ok(_) => self.pos += 1,
                 Err(_) => self.neg +=1,
             };
@@ -256,9 +255,8 @@ impl  FastMapper{
     /// and only the contents of the least class will be used. The original gene name will also be used - that does not need to be part of the ids.
     pub fn make_index_te_ready( &mut self ) {
 
-        
-        println!("Before make_index_te_ready:");
-        self.print();
+        //println!("Before make_index_te_ready:");
+        //self.print();
         for mapper_entry in self.mapper.iter_mut() {
             if mapper_entry.has_data() {
                 mapper_entry.collapse_classes();
@@ -272,8 +270,8 @@ impl  FastMapper{
             }
         }
 
-        println!("\nAfter:");
-        self.print();
+        //println!("\nAfter:");
+        //self.print();
     }
     /// [entries with values, total second level entries, total single gene first/second pairs, total >1 first/second level pairs]
     pub fn info( &self ) -> [usize;4]{
@@ -315,22 +313,39 @@ impl  FastMapper{
         name.to_string()
     }
 
-    fn get_best_gene( &self, genes:&HashMap::<usize, usize> , ret: &mut Vec::<usize> ) -> bool{
+    fn get_best_gene( &self, genes:&HashMap::<usize, usize>, 
+        possible_gene_levels:&HashMap::<usize, usize>, ret: &mut Vec::<usize> ) -> bool{
         ret.clear();
         if genes.len() > 0{
             let mut max = 0;
             let mut id= usize::MAX;
             let mut i = usize::MAX;
 
-            for (gene_id, count) in genes{
-                if count > &max{
-                    max = *count;
-                    id = *gene_id;
-                    i = 0;
-                }else if count == &max {
-                    i+=1;
+            let mut min_level = usize::MAX;
+            for level in possible_gene_levels{
+                if min_level > *level.1{
+                    min_level = *level.1
                 }
             }
+
+            for gene_id in genes.keys() {
+                // Access the values in both HashMaps using the key
+                if let Some(level) = possible_gene_levels.get(gene_id) {
+                    if level > &min_level {
+                        continue;
+                    }
+                    if let Some(count) = genes.get(gene_id) {
+                        if count > &max{
+                            max = *count;
+                            id = *gene_id;
+                            i = 0;
+                        }else if count == &max {
+                            i+=1;
+                        }
+                    }
+                }
+            }
+
             if max > 1{
                 // there needs to be some reproducibility here!
                 return true
@@ -350,7 +365,6 @@ impl  FastMapper{
                     }
                 }
                 if gene_ids.len() == 2{
-
                     if self.names_store[gene_ids[0]] == self.names_store[gene_ids[1]].to_string()+"_int"{
                         ret.push( gene_ids[0] )
                     }
@@ -375,49 +389,23 @@ impl  FastMapper{
     }
 
 
-    pub fn get(&self, seq: &[u8], report:&mut MappingInfo ) -> Option<usize>{
+    pub fn get(&self, seq: &[u8], report:&mut MappingInfo ) -> Option<  usize >{ // gene_id, gene_level
         
         //let mut id:usize;
         let mut genes:HashMap::<usize, usize>= HashMap::new();
 
-        //let mut total = 0;
-        //let mut i =0;
-
-        //let mut long:u64;
-        //let mut short:u16;
         let mut stop: bool;
-        //let mut tmp = "".to_string();
-        //let mut no_8bp_match = 0;
-        //let mut no_32bp_match = 0;
-        //let mut multimapper = 0;
-        //let mut total_oligos = 0;
 
         let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
+        let mut possible_gene_levels = HashMap::<usize, usize>::with_capacity(10);
 
         let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
+        let mut i = 0;
         tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
 
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
-
-        //let mut significant_bp = seq.len();
-        //let mut start = 0;
-        // let mut last_a = 0;
-        // for i in 0..seq.len() {
-        //     if seq[i] == b'A' | b'A' {
-        //         last_a +=1;
-        //         if last_a >5{
-        //             //println!("This contains a polyA stretch - last significant_bo is {}", i - last_a );
-        //             //println!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") );
-        //             //significant_bp = i - last_a;
-        //             break;
-        //         }
-        //     }
-        //     else {
-        //        last_a = 0; 
-        //     }
-        // }
 
         // entries is a Option<(u16, u64, usize)
         stop = false;
@@ -425,13 +413,15 @@ impl  FastMapper{
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
-                if matching_geneids.len() == 1 {
+                i +=1;
+                if matching_geneids.len() == 1 && i > 3 {
                     // we have one best gene identified!
                     return Some( matching_geneids[0] )
                     //break;
                 }
                 for gid in self.mapper[entries.0 as usize].possible_ids(){
-                    *possible_genes.entry(gid).or_insert(0) += 1;
+                    *possible_genes.entry(gid.0).or_insert(0) += 1;
+                    *possible_gene_levels.entry(gid.0).or_insert(0) = gid.1;
                 }
 
                 let seq_u64 = tool.mask_u64( &entries.1 );
@@ -441,7 +431,7 @@ impl  FastMapper{
                         //println!("Got one: {gene_id:?}");
                         //return ( gene_id );
                         for gid in &gene_id.data{
-                            match genes.get_mut(gid) {
+                            match genes.get_mut( &gid.0) {
                                 Some(gene_count) => {
                                     *gene_count +=1;
                                     if *gene_count == 4 {
@@ -449,9 +439,11 @@ impl  FastMapper{
                                     }
                                 },
                                 None => {
-                                    genes.insert( *gid, 1);
+                                    genes.insert( gid.0, 1);
+                                    possible_gene_levels.insert( gid.0, gid.1 );
                                 },
                             };
+
                         }
                     },
                     None => {
@@ -460,7 +452,7 @@ impl  FastMapper{
                                 //println!("Got one: {gene_id:?}");
                                 //return ( gene_id );
                                 for gid in &gene_id.data{
-                                    match genes.get_mut(&gid) {
+                                    match genes.get_mut(&gid.0) {
                                         Some(gene_count) => {
                                             *gene_count +=1;
                                             if *gene_count == 4 {
@@ -468,7 +460,8 @@ impl  FastMapper{
                                             }
                                         },
                                         None => {
-                                            genes.insert( *gid, 1);
+                                            genes.insert( gid.0, 1);
+                                            possible_gene_levels.insert( gid.0, gid.1 );
                                         },
                                     };
                                 }
@@ -480,7 +473,7 @@ impl  FastMapper{
                     },
                 }
             }
-            if self.get_best_gene( &genes, &mut matching_geneids ){
+            if self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids ){
                 break 'main;
             }
             if stop{
@@ -515,6 +508,7 @@ impl  FastMapper{
         }
         if no_int.len() ==1 {
             //eprintln!("I selected the only RNA seqence {}",self.names_store[ no_int[0] ]);
+
             return Some(no_int[0])
         }
 
@@ -626,7 +620,12 @@ impl  FastMapper{
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
                     for id in 0..tuple.1.data.len(){
-                        match ofile.buff1.write( &tuple.1.data[id].to_le_bytes() ){
+                        match ofile.buff1.write( &tuple.1.data[id].0.to_le_bytes() ){
+                            Ok(_) => (),
+                            //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
+                            Err(_err) => return Err::<(), &str>("value could not be written"),
+                        };
+                        match ofile.buff1.write( &tuple.1.data[id].1.to_le_bytes() ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
@@ -670,7 +669,7 @@ impl  FastMapper{
 
         let mut kmer:u64;
         let mut gene_id:usize;
-        //let mut sig_bits:usize;
+        let mut gene_level:usize;
         let mut len:usize;
 
 
@@ -717,10 +716,12 @@ impl  FastMapper{
                 for _id in 0..len{
                     ifile.buff1.read_exact(&mut buff_u64).unwrap();
                     gene_id = usize::from_le_bytes( buff_u64 );
+                    ifile.buff1.read_exact(&mut buff_u64).unwrap();
+                    gene_level = usize::from_le_bytes( buff_u64 );
                     // ifile.buff1.read_exact(&mut buff_u64).unwrap();
                     // sig_bits= usize::from_le_bytes( buff_u64 );
                     // this should never throw an error.
-                    let _ = self.mapper[idx].add( kmer, gene_id, EMPTY_VEC.clone() );
+                    let _ = self.mapper[idx].add( kmer, (gene_id, gene_level), EMPTY_VEC.clone() );
 
                 }
             }
@@ -832,7 +833,12 @@ impl  FastMapper{
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
                     for id in 0..tuple.1.data.len(){
-                        match write!(ofile.buff1, "gene id: {} resp {} ", tuple.1.data[id], self.names_store[tuple.1.data[id]] ){
+                        match write!(ofile.buff1, "gene id: {} resp {} ", tuple.1.data[id].0, self.names_store[tuple.1.data[id].0] ){
+                            Ok(_) => (),
+                            //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
+                            Err(_err) => return Err::<(), &str>("value could not be written"),
+                        };
+                        match write!(ofile.buff1, "gene level: {}  ", tuple.1.data[id].1 ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
