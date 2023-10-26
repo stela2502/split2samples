@@ -154,6 +154,18 @@ impl MappingInfo{
             self.ok_reads as f32 / (self.total) as f32 * 100.0 
          )
 	}
+	pub fn program_states_string( &self ) -> String{
+		let mut result = String::from("");
+		let  (mut hours,mut min,mut sec ,mut mulli ) = Self::split_duration( self.absolute_start.elapsed().unwrap() );
+	   	result += format!("   overall run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	( hours, min, sec , mulli ) = Self::split_duration( self.file_io_time);
+	   	result += format!("   file-io run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	( hours, min, sec , mulli ) = Self::split_duration( self.single_processor_time);
+	   	result += format!("single-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	( hours, min, sec , mulli ) = Self::split_duration( self.multi_processor_time);
+	   	result += format!(" multi-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	result
+	}
 
 	pub fn summary( &mut self, reads_genes:usize, reads_ab :usize, reads_samples:usize ) -> String{
 
@@ -170,14 +182,7 @@ impl MappingInfo{
 	    	+format!(     "unique reads      : {} reads ({:.2}% of cellular)\n\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "pca duplicates or bad cells: {} reads ({:.2}% of cellular)\n\n", pcr_duplicates, ( pcr_duplicates as f32 / self.cellular_reads as f32 ) * 100.0 ).as_str()
 	   		+"timings:\n";
-	   	let  (mut hours,mut min,mut sec ,mut mulli ) = Self::split_duration( self.absolute_start.elapsed().unwrap() );
-	   	result += format!("   overall run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
-	   	( hours, min, sec , mulli ) = Self::split_duration( self.file_io_time);
-	   	result += format!("   file-io run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
-	   	( hours, min, sec , mulli ) = Self::split_duration( self.single_processor_time);
-	   	result += format!("single-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
-	   	( hours, min, sec , mulli ) = Self::split_duration( self.multi_processor_time);
-	   	result += format!(" multi-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	result += &self.program_states_string();
 	   	match writeln!( self.log_writer, "{result}" ){
                 Ok(_) => (),
                 Err(err) => {

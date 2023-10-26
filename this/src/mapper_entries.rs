@@ -55,17 +55,18 @@ impl NameEntry{
     	self.pos=0;
     } 
 
-	pub fn add( &mut self, gene_id:usize, sign:usize, classes:Vec<usize>) {
-		if sign == 0 {
-			panic!("This does not make sense - I can not use a u64 with {sign} significant bits!");
-		}
+	pub fn add( &mut self, gene_id:usize, classes:Vec<usize>) -> Option<()> {
+
 		if ! self.data.contains( &gene_id ) {
 			self.data.push(gene_id);
-			self.significant_bp.push(sign);
+			//self.significant_bp.push(sign);
 			self.classes.push(classes);
-		}else {
-			eprintln!("This mapping region already links to the gene {} - ignored", gene_id );
 		}
+		else {
+			return None;
+		 	//eprintln!("This NameEntry already links to the gene {} - ignored", gene_id );
+		}
+		Some(())
 	}
 
 	/// this requires the classes vectors to be filled with optional names for the genes.
@@ -134,8 +135,12 @@ pub struct MapperEntry{
 }
 
 impl MapperEntry{
-	pub fn new() -> Self{
-		let map = Vec::<(u64, NameEntry)>::with_capacity(4);
+	pub fn new( allocate: usize) -> Self{
+		let mut all = allocate;
+		if allocate < 4 {
+			all = 4
+		}
+		let map = Vec::<(u64, NameEntry)>::with_capacity(all);
 		let only =0;
 		let hamming_cut = 4;
 		Self{
@@ -168,26 +173,29 @@ impl MapperEntry{
 	}
 
 	/// add a match pair 8bp + <sign> bp.
-	pub fn add( &mut self, seq:u64, id:usize, sign:usize, classes:Vec<usize>) {
+	pub fn add( &mut self, seq:u64, id:usize, classes:Vec<usize>) -> Result<(), &str> {
 
-		let mut added = false;
 		for i in 0..self.map.len() {
 			if self.map[i].0 == seq {
-				self.map[i].1.add( id, sign, classes.clone());
-				added = true;
 				self.only = 0;
+				match self.map[i].1.add( id, classes.clone()){
+					Some(_) => {
+						return Ok(())
+					},
+					None => return Err("sequence gene pair was already stored"),
+				};
 			}
 		}
-		if ! added{
-			let mut name_entry = NameEntry::new();
-			name_entry.add( id , sign, classes.clone() );
-			self.map.push( ( seq, name_entry ) );
-			if self.map.len() == 1{
-				self.only = id;
-			}else {
-				self.only = 0;
-			}
+		// now we have no match to the seq and therefore need to add one
+		let mut name_entry = NameEntry::new();
+		let _ = name_entry.add( id , classes.clone() );
+		self.map.push( ( seq, name_entry ) );
+		if self.map.len() == 1{
+			self.only = id;
+		}else {
+			self.only = 0;
 		}
+		Ok(())
 	}
 
 	/// calculate the bit flips between two u64 sequences

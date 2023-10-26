@@ -47,41 +47,39 @@ pub struct FastMapper{
     pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names_store: Vec<String>, // store gene names as vector
-    pub classes_store: Vec<String>, // The TE mapper needs more info on each match that only the names
-    pub classes: BTreeMap<std::string::String, usize>, // additional classes storage element
     pub max_id: usize,// hope I get the ids right this way...
     pub last_count: usize,
-    pub last_kmers: Vec<String>,
     pub with_data: usize,
     pub version: usize, //the version of this
     pub tool: IntToStr,
     mask:u64, //a mask to fill matching sequences to match the index's kmer_len
+    pub pos: usize, // when creating the index - this is the amount of times we added a new matching sequence
+    pub neg: usize, // when creating the index - this is the amount of times we failed to add a new matching sequence (as we already had this connection)
 }
 
 // here the functions
 
 impl  FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
-    pub fn new( kmer_len:usize )-> Self {
+    pub fn new( kmer_len:usize, allocate:usize )-> Self {
         //println!("I would add {} new entries here:", u16::MAX);
         let mut mapper: Vec<MapperEntry> = Vec::with_capacity(u16::MAX as usize);
         for _i in 0..u16::MAX{
-            let b = MapperEntry::new( );
+            let b = MapperEntry::new( 10 );
             mapper.push( b );
         }
         let names = BTreeMap::<std::string::String, usize>::new();
         let names4sparse = BTreeMap::<std::string::String, usize>::new();
-        let names_store = Vec::with_capacity(1000);
-        let classes_store = Vec::with_capacity(10);
-        let classes = BTreeMap::<std::string::String, usize>::new();
+        let names_store = Vec::with_capacity( allocate );
         let max_id = 0;
         let last_count = 0;
-        let last_kmers = Vec::with_capacity(60);
         let with_data = 0;
         let spacer = 3;
         let tool = IntToStr::new(b"".to_vec(), kmer_len );
         //let mask:u64 = 0b11 << (2* 32- kmer_len);
         let mask: u64 = (1 << (2 * kmer_len)) - 1;
+        let neg = 0;
+        let pos = 0;
         Self {
             kmer_len,
             spacer,
@@ -89,15 +87,14 @@ impl  FastMapper{
             names,
             names4sparse,
             names_store,
-            classes_store,
-            classes,
             max_id,
             last_count,
-            last_kmers,
             with_data,
-            version: 3,
+            version: 4,
             tool,
             mask,
+            pos,
+            neg,
         }
     }
 
@@ -145,56 +142,24 @@ impl  FastMapper{
 
     pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:usize, name:String, ids: Vec<String> )  ->Result<(), &str>{
 
-        match self.mapper[initial_match].get(&secondary_match.try_into().unwrap()) {
-
-            Some( names_store) => {
-
-                if ! self.names.contains_key( &name ){
-                    self.names.insert( name.clone(), self.max_id );
-                    self.names_store.push( name.clone() );
-                    self.max_id += 1;
-                }
-                let gene_id = self.get_id( name.to_string() ).clone();
-                let classes = Vec::<usize>::with_capacity(ids.len());
-                for n in &ids{
-                    let mut classes = Vec::<usize>::with_capacity(ids.len());
-                    if ! self.names.contains_key( n ){
-                        self.names.insert( n.clone(), self.max_id );
-                        self.names_store.push( n.clone() );
-                        self.max_id += 1;
-                    }
-                    let id = self.get_id( n.to_string() ).clone();
-                    classes.push( id );
-                }
-                self.mapper[initial_match].add( secondary_match.try_into().unwrap(), gene_id , self.kmer_len, classes );
-                // crap - we already had that entry
-                // for now just complain
-                //eprintln!("FastMapper::incorporate_mapper - I already have the match {initial_match} {secondary_match} linking to {} you wanted {name} - implement the right thing here!", &self.names_store[names_store.data[0]] );
-            },
-            None => {
-                // Puh - a specifc match
-                if ! self.names.contains_key( &name ){
-                    self.names.insert( name.clone(), self.max_id );
-                    self.names_store.push( name.clone() );
-                    self.max_id += 1;
-                }
-                let gene_id = self.get_id( name.to_string() ).clone();
-
-                let classes = Vec::<usize>::with_capacity(ids.len());
-                for n in &ids{
-                    let mut classes = Vec::<usize>::with_capacity(ids.len());
-                    if ! self.names.contains_key( n ){
-                        self.names.insert( n.clone(), self.max_id );
-                        self.names_store.push( n.clone() );
-                        self.max_id += 1;
-                    }
-                    let id = self.get_id( n.to_string() ).clone();
-                    classes.push( id );
-                }
-                
-                self.mapper[initial_match].add( secondary_match.try_into().unwrap(), gene_id , self.kmer_len, classes );
-            }
+        if ! self.names.contains_key( &name ){
+            self.names.insert( name.clone(), self.max_id );
+            self.names_store.push( name.clone() );
+            self.max_id += 1;
         }
+        let gene_id = self.get_id( name.to_string() ).clone();
+        let classes =  self.ids_for_gene_names( &ids );
+        if ! self.mapper[initial_match].has_data() {
+            // will add in the next step so
+            self.with_data +=1;
+        }
+        match self.mapper[initial_match].add( secondary_match.try_into().unwrap(), gene_id, classes ){
+            Ok(_) => self.pos += 1,
+            Err(_) => {
+                //eprintln!("incorporate_match_combo - gene seq was already registered {}", name);
+                self.neg +=1
+            },
+        };
         Ok( () )
     }
 
@@ -214,22 +179,7 @@ impl  FastMapper{
             self.max_id += 1;
         }
 
-        let mut classes = Vec::<usize>::with_capacity(class_ids.len());
-
-        for n in class_ids{
-            if ! self.names.contains_key( &n ){
-                self.names.insert( n.clone(), self.max_id );
-                self.names_store.push( n.clone() );
-                self.max_id += 1;
-            }
-            let id = self.get_id( n.to_string() ).clone();
-            classes.push( id );
-        }
-
-        
-
-        //println!("Adding gene {name} to the index:");
-
+        let classes =  self.ids_for_gene_names( &class_ids );
         let gene_id = self.get_id( name.to_string() );
 
         //let mut long:u64;
@@ -250,6 +200,7 @@ impl  FastMapper{
         //let mut short = String::from("");
         //let mut long = String::from("");
         let mut n =20;
+
         while let Some(entries) = self.tool.next(){
             n -=1;
             if n == 0{
@@ -274,7 +225,10 @@ impl  FastMapper{
             // if entries.2  < self.kmer_len{
             //     println!("adding a smaller than expected sequence for gene {name}/{gene_id} ({})", entries.2);
             // }
-            self.mapper[entries.0 as usize].add( entries.1, gene_id, entries.2, classes.clone() );
+            match self.mapper[entries.0 as usize].add( entries.1, gene_id, classes.clone() ){
+                Ok(_) => self.pos += 1,
+                Err(_) => self.neg +=1,
+            };
             i+=1;
         }
         
@@ -338,8 +292,11 @@ impl  FastMapper{
     }
 
     pub fn print( &self ){
+        println!("I have {} kmers and {} genes and {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
+    }
 
-        println!("I have {} kmers and {} genes", self.with_data, self.names.len() );
+    pub fn eprint( &self ){
+        eprintln!("I have {} kmers and {} genesand {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
     }
 
     pub fn get_id( &self, name: String ) -> usize{
@@ -542,6 +499,8 @@ impl  FastMapper{
 
 
         // check if there is only one gene //
+        let names = self.gene_names_for_ids( &matching_geneids );
+        eprintln!("I got multi matchers here: {:?}", names);
 
         //let mut max = 0;
         //let mut gid = 0;
@@ -672,11 +631,11 @@ impl  FastMapper{
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
                         };
-                        match ofile.buff1.write( &tuple.1.significant_bp[id].to_le_bytes() ){
-                            Ok(_) => (),
-                            //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
-                            Err(_err) => return Err::<(), &str>("value could not be written"),
-                        };
+                        // match ofile.buff1.write( &tuple.1.significant_bp[id].to_le_bytes() ){
+                        //     Ok(_) => (),
+                        //     //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
+                        //     Err(_err) => return Err::<(), &str>("value could not be written"),
+                        // };
                     }
                     
                 }
@@ -711,7 +670,7 @@ impl  FastMapper{
 
         let mut kmer:u64;
         let mut gene_id:usize;
-        let mut sig_bits:usize;
+        //let mut sig_bits:usize;
         let mut len:usize;
 
 
@@ -758,9 +717,11 @@ impl  FastMapper{
                 for _id in 0..len{
                     ifile.buff1.read_exact(&mut buff_u64).unwrap();
                     gene_id = usize::from_le_bytes( buff_u64 );
-                    ifile.buff1.read_exact(&mut buff_u64).unwrap();
-                    sig_bits= usize::from_le_bytes( buff_u64 );
-                    self.mapper[idx].add( kmer, gene_id, sig_bits, EMPTY_VEC.clone() );
+                    // ifile.buff1.read_exact(&mut buff_u64).unwrap();
+                    // sig_bits= usize::from_le_bytes( buff_u64 );
+                    // this should never throw an error.
+                    let _ = self.mapper[idx].add( kmer, gene_id, EMPTY_VEC.clone() );
+
                 }
             }
         }
@@ -871,7 +832,7 @@ impl  FastMapper{
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
                     for id in 0..tuple.1.data.len(){
-                        match write!(ofile.buff1, "gene id: {} ", tuple.1.data[id] ){
+                        match write!(ofile.buff1, "gene id: {} resp {} ", tuple.1.data[id], self.names_store[tuple.1.data[id]] ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),

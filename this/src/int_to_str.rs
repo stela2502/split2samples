@@ -178,7 +178,10 @@ impl IntToStr {
     		None => {
     			if self.shifted < 5{
     				//println!("I am shifting on bp");
-    				self.shift();
+    				match self.shift(){
+    					Some(_) => {},
+    					None => { return None },
+    				}
     				//self.print();
     				return self.next();
     			}
@@ -320,11 +323,18 @@ impl IntToStr {
 
 	/// shift the underlying sequence by 1 (frameshift)
 	/// can be regenrated using deep_refresh().
-	pub fn shift(&mut self ){
-		let tmp = self.shifted +1;
-		self.storage.remove(0);
-		self.regenerate();
-		self.shifted = tmp;
+	pub fn shift(&mut self )-> Option<()> {
+		if self.storage.len() > 1{
+			let tmp = self.shifted +1;
+			self.storage.remove(0);
+			self.regenerate();
+			self.shifted = tmp;
+		}
+		else {
+			eprintln!("My sequence is to short to be shifted!");
+			return None;
+		}
+		Some(())
 	}
 
 

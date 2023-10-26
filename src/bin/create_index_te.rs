@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use std::fs;
 //use std::path::Path;
 
-use std::time::SystemTime;
+//use std::time::SystemTime;
 
 use std::fs::File;
 use std::io::BufReader;
@@ -57,9 +57,27 @@ struct Opts {
     /// create text outfile instead of binary
     #[clap(default_value_t=false, long)]
     text: bool,
+    /// the string to check for family level names
+    #[clap(default_value="family_id", long)]
+    family: String,
+    /// the string to check for class level names
+    #[clap(default_value="class_id", long)]
+    class: String,
+    /// the string to check for gene levels names
+    #[clap(default_value="gene_id", long)]
+    gene: String,
+    /// the string to check for transcript levels names
+    #[clap(default_value="transcript_id", long)]
+    transcript: String,
 }
 
+
 /*
+re_family_name =  Regex::new(r#"family_id "([\(\)/\w\d\-\._]*)""#).unwrap();
+re_gene_id = Regex::new(r#"gene_id "([\(\)/\w\d\-\._]*)";"#).unwrap();
+re_transcript_id = Regex::new(r#"transcript_id "([\(\)/\w\d\-\._]*)";"#).unwrap();
+re_class_id = Regex::new(r#"class_id "([\(\)/\w\d\-\._\?]*)";"#).unwrap();
+
     /// UMI min count - use every umi (per gene; 1) or only reoccuring ones (>1)
     #[clap(default_value_t=1,short, long)]
     umi_count: u8,
@@ -156,7 +174,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
 fn main() {
     // parse the options
 
-    let now = SystemTime::now();
+    //let now = SystemTime::now();
     
     let opts: Opts = Opts::parse();
 
@@ -213,7 +231,7 @@ fn main() {
 
     // and init the Index:
 
-    let mut index = FastMapper::new( kmer_size );
+    let mut index = FastMapper::new( kmer_size, 900_000 );
 
     // in short I need to get an internal model of a gene to work.
     // I want to know where the gene starts ans ends (likely transcripts)
@@ -240,22 +258,38 @@ fn main() {
     let re_class_id : Regex;
 
     // gene_id "AluSp"; transcript_id "AluSp_dup53774"; family_id "Alu"; class_id "SINE";
-    match gtf.is_match( &opts.gtf ){
+    let gtf = match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
-            re_family_name =  Regex::new(r#"family_id "([\(\)/\w\d\-\._]*)""#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id "([\(\)/\w\d\-\._]*)";"#).unwrap();
-            re_transcript_id = Regex::new(r#"transcript_id "([\(\)/\w\d\-\._]*)";"#).unwrap();
-            re_class_id = Regex::new(r#"class_id "([\(\)/\w\d\-\._\?]*)";"#).unwrap();
+            let family_regex = format!(r#"{} "([\(\)/\w\d\-\._]*)""#, opts.family );
+            re_family_name =  Regex::new(&family_regex).unwrap();
+
+            let gene_regex = format!(r#"{} "([\(\)/\w\d\-\._]*)""#, opts.gene );
+            re_gene_id = Regex::new(&gene_regex).unwrap();
+
+            let transcript_regex = format!(r#"{} "([\(\)/\w\d\-\._]*)""#, opts.transcript );
+            //panic!("{:?}", transcript_regex);
+            re_transcript_id = Regex::new(&transcript_regex).unwrap();
+
+            let class_regex = format!(r#"{} "([\(\)/\w\d\-\._\?]*)""#, opts.class );
+            re_class_id = Regex::new(&class_regex).unwrap();
         },
         false => {
             eprintln!("gff mode.");
-            re_family_name =  Regex::new(r#"family_id=([\(\)/\w\d\-\._]*); ?"#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id=([\(\)/\w\d\-\._]*);"#).unwrap();
-            re_transcript_id = Regex::new(r#"transcript_id=([\(\)/\w\d\-\._]*);"#).unwrap();
-            re_class_id = Regex::new(r#"class_id "([\(\)/\w\d\-\._\?]*)";"#).unwrap();
+            let family_regex = format!(r#"{}=([\(\)/\w\d\-\._]*);"#, opts.family );
+            re_family_name =  Regex::new(&family_regex).unwrap();
+
+            let gene_regex = format!(r#"{}=([\(\)/\w\d\-\._]*);"#, opts.gene );
+            re_gene_id = Regex::new(&gene_regex).unwrap();
+
+            let transcript_regex = format!(r#"{}=([\(\)/\w\d\-\._]*);"#, opts.transcript );
+            //panic!("{:?}", transcript_regex);
+            re_transcript_id = Regex::new(&transcript_regex).unwrap();
+
+            let class_regex = format!(r#"{}=([\(\)/\w\d\-\._\?]*);"#, opts.class );
+            re_class_id = Regex::new(&class_regex).unwrap();
         },
-    }
+    };
     //let mut gene_id:String;
     //let mut gene_name:String;
     //let mut transcript_id:String;
@@ -285,13 +319,13 @@ fn main() {
             .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
     pb.set_style(spinner_style);
 
-    let reads_per_chunk = 100;
+    let reads_per_chunk = 100_000;
     eprintln!("Starting with data collection");
     let mut good_read_count = 0;
     let max_dim = reads_per_chunk * num_threads;
     let mut lines = Vec::<String>::with_capacity( max_dim );
     eprintln!("In one batch I will analyze {} elemets {} cores x {} elements per batche", max_dim, num_threads, reads_per_chunk);
-
+    let mut batch = 0;
     for line in reader.lines() {
         if good_read_count < max_dim{
             let rec = line.ok().expect("Error reading record.");
@@ -299,6 +333,7 @@ fn main() {
             good_read_count+=1;
         }
         else {
+            batch +=1;
             report.stop_file_io_time();
             eprintln!("creating mapper");
             good_read_count = 0;
@@ -320,7 +355,7 @@ fn main() {
                     //        panic!("thread {thread_id_str} Error: {err:#?}" );
                     //    }
                     //};
-                    let mut idx = FastMapper::new( kmer_size );
+                    let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
                     // Clone or create a new thread-specific report for each task      
                     let _res = process_lines(&data_split, &mut idx, &seq_records, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
                     idx
@@ -334,9 +369,16 @@ fn main() {
                 //report.merge( &gex.1 );
             }
             report.stop_single_processor_time();
-            eprintln!("Reading more regions");
-            let (h,m,s,ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
-            eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
+            let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
+
+            eprintln!("For {} sequence regions (x {} steps) we needed {} h {} min and {} sec to process.",max_dim, batch, h, m, s );
+            
+            //eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
+            eprintln!("{}", report.program_states_string() );
+
+            eprintln!("We created this fast_mapper object:");
+            index.eprint();
+            eprintln!("Reading up to {} more regions", max_dim);
         }
     }
 
@@ -360,7 +402,7 @@ fn main() {
                 //        panic!("thread {thread_id_str} Error: {err:#?}" );
                 //    }
                 //};
-                let mut index = FastMapper::new( kmer_size );
+                let mut index = FastMapper::new( kmer_size, reads_per_chunk );
                 // Clone or create a new thread-specific report for each task
                 let _res = process_lines(&data_split, &mut index, &seq_records, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
                 index
@@ -388,24 +430,24 @@ fn main() {
     //index.write_index_txt( opts.outpath.to_string() ).unwrap();
     //eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
     
-    eprintln!("{}", report.summary(0,0,0) );
+    eprintln!("{}", report.program_states_string() );
 
-    match now.elapsed() {
-        Ok(elapsed) => {
-            let mut milli = elapsed.as_millis();
+    // match now.elapsed() {
+    //     Ok(elapsed) => {
+    //         let mut milli = elapsed.as_millis();
 
-            let mil = milli % 1000;
-            milli= (milli - mil) /1000;
+    //         let mil = milli % 1000;
+    //         milli= (milli - mil) /1000;
 
-            let sec = milli % 60;
-            milli= (milli -sec) /60;
+    //         let sec = milli % 60;
+    //         milli= (milli -sec) /60;
 
-            let min = milli % 60;
-            milli= (milli -min) /60;
+    //         let min = milli % 60;
+    //         milli= (milli -min) /60;
 
-            eprintln!("finished in {milli} h {min} min {sec} sec {mil} milli sec");
-        },
-        Err(e) => {println!("Error: {e:?}");}
-    }
+    //         eprintln!("finished in {milli} h {min} min {sec} sec {mil} milli sec");
+    //     },
+    //     Err(e) => {println!("Error: {e:?}");}
+    // }
 
 }
