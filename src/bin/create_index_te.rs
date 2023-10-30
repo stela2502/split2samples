@@ -258,7 +258,7 @@ fn main() {
     let re_class_id : Regex;
 
     // gene_id "AluSp"; transcript_id "AluSp_dup53774"; family_id "Alu"; class_id "SINE";
-    let gtf = match gtf.is_match( &opts.gtf ){
+    match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
             let family_regex = format!(r#"{} "([\(\)/\w\d\-\._]*)""#, opts.family );

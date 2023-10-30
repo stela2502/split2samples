@@ -29,6 +29,7 @@ use rayon::prelude::*;
 use rayon::slice::ParallelSlice;
 
 use crate::ofiles::Ofiles;
+//use std::fs::write;
 
 
 static EMPTY_VEC: Vec<String> = Vec::new();
@@ -423,10 +424,14 @@ impl Analysis{
     		else {
     			report.stop_file_io_time();
     			//eprintln!("Mapping one batch");
+
+            	eprintln!("I have {} lines of data and {} threads", good_reads.len(), self.num_threads);
+
     			good_read_count = 0;
 		    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 			        .par_chunks(good_reads.len() / self.num_threads + 1) // Split the data into chunks for parallel processing
 		    	    .map(|data_split| {
+		    	    	eprintln!("I am processing {} lines of data", data_split.len() );
 		    	    	// Get the unique identifier for the current thread
 		            	let thread_id = thread::current().id();
 		            
@@ -443,7 +448,9 @@ impl Analysis{
 			           			panic!("thread {thread_id_str} Error: {err:#?}" );
 			        		}
 			    		};
+
 			    		let mut rep = MappingInfo::new( log_file, report.min_quality, report.max_reads, ofile );
+			    		rep.write_to_log( format!("I am processing {} lines of data", data_split.len() ));
 			            // Clone or create a new thread-specific report for each task
 			    	    let res = self.analyze_paralel(&data_split, &mut rep, pos );
 			    	    (res, rep)
@@ -531,9 +538,10 @@ impl Analysis{
         //pb.set_prefix(format!("[{}/?]", i + 1));
 
         //let report_gid = self.genes.get_id( "Sample1".to_string() );
-
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {
+
+
 
             	report.total += 1;
                 
@@ -552,6 +560,10 @@ impl Analysis{
                     }
                 };
 
+                //eprintln!("Processing line {}", report.total);
+            	//let id_fq = String::from_utf8_lossy(&seqrec.seq()).to_string();
+            	//let id_fq1 = String::from_utf8_lossy(&seqrec1.seq()).to_string();
+            	//eprintln!("These are my seqs:\n{:?},\n{:?}", id_fq,id_fq1);
 
                 // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
                 //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));

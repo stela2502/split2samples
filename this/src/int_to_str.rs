@@ -48,6 +48,7 @@ impl IntToStr {
 
 	pub fn new(seq:Vec::<u8>, kmer_size:usize) -> Self{
 		// 4 of the array u8 fit into one result u8
+		//eprintln!("Somtimes I die?! -> processed seq: {:?}", seq);
 		let storage:Vec::<u8> = seq.iter().copied().collect();
 		let long_term_storage = seq.iter().copied().collect();
 
@@ -172,8 +173,14 @@ impl IntToStr {
     		},
     		Some(false) => {
     			//eprintln!("useless oligos!");
-    			self.drop_n(1); // shift 4 bp
-    			return self.next()
+    			match self.drop_n(1){// shift 4 bp
+    				Some(_) => {
+    					return self.next()
+    				},
+    				None => {
+    					return None;
+    				}
+    			}; // shift 4 bp
     		},
     		None => {
     			if self.shifted < 5{
@@ -191,7 +198,12 @@ impl IntToStr {
 
     	//println!("Start with next - test finished");
         let short = self.into_u16().clone();
-        self.drop_n(2); // shift 8 bp to get the bp after the initial 8bp matcher
+        match self.drop_n(2){// shift 8 bp
+        	Some(_) => {},
+        	None => {
+        		return None;
+        	}
+        };
         let long = self.into_u64_nbp( self.kmer_size ).clone();
         let sign:usize;
         //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
@@ -199,10 +211,10 @@ impl IntToStr {
         	sign = self.kmer_size/4;
         }else {
         	sign = self.storage.len() - self.lost *4 ;
-        	//println!("next reporting a SHORTER VALUE! {sign}" );
+        	//eprintln!("next reporting a SHORTER VALUE! {sign}" );
         }
   
-        //println!( "short {short}, long {long}, sign {sign}" );
+        //eprintln!( "short {short}, long {long}, sign {sign}" );
         Some(( short , long, sign *4 ))
     }
 
@@ -312,13 +324,17 @@ impl IntToStr {
 
 	/// drop the last n u8 2 bit encoded sequences (n=1 => 4bp dropped from encoded)
 	/// this can be reset using the self.reset() function.
-	pub fn drop_n (&mut self, n:usize ){
+	pub fn drop_n (&mut self, n:usize ) -> Option<()>{
+		if self.u8_encoded.len() < 2{
+			return None;
+		}
 		for _i in 0..n{
 			let _a =self.u8_encoded.remove(0);
 			//println!("drop_n {i} has dropped {a:b}");
 			//self.print();
 		}
 		self.lost +=n;
+		Some ( () )
 	}
 
 	/// shift the underlying sequence by 1 (frameshift)

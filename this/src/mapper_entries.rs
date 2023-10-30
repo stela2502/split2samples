@@ -58,7 +58,7 @@ impl NameEntry{
 	pub fn add( &mut self, tup:(usize, usize), classes:Vec<usize>) -> Option<()> {
 
 		let mut need = true;
-		for ( gene_id, gene_level) in &self.data{
+		for ( gene_id, _gene_level) in &self.data{
 			if gene_id == &tup.0{
 				need = false;
 				break;
