@@ -37,7 +37,12 @@ use indicatif::ProgressStyle;
 use this::mapping_info::MappingInfo;
 use this::ofiles::Ofiles;
 
-/// Just run a test case for speed reproducability and simplicity
+/// Create a binary indes for the quantify_rhapsody program.
+/// In contrast to the not te version of this tool we here expect a lot of overlap between different genes.
+/// So instead of actively removing sequences that mapp to multiple genes we here try to identify the family of the gene.
+/// We still only report unique mapper combinations, but we here allow for family or class specific mappers, too. 
+/// Make sure to not cat any gzipped files for Rust.
+/// At least here we will only read from the first stream in a catted gz file!
 
 #[derive(Parser)]
 #[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
@@ -69,6 +74,9 @@ struct Opts {
     /// the string to check for transcript levels names
     #[clap(default_value="transcript_id", long)]
     transcript: String,
+    /// the maximum area of the transcript tend to be indexed (useful for single cell transcriptomes like 10x or Rhapsody)
+    #[clap(default_value_t=200, long)]
+    max_length: usize,
 }
 
 
@@ -84,7 +92,7 @@ re_class_id = Regex::new(r#"class_id "([\(\)/\w\d\-\._\?]*)";"#).unwrap();
 */
 
 
-fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashMap< String, Vec<u8>>, re_class_id: &Regex, re_family_name: &Regex, re_gene_id: &Regex, re_transcript_id: &Regex){
+fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashMap< String, Vec<u8>>, max_length:usize, re_class_id: &Regex, re_family_name: &Regex, re_gene_id: &Regex, re_transcript_id: &Regex){
 
     let mut families = HashMap::<String, GeneFamily>::new();
 
@@ -164,7 +172,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
 
     for (_, family) in &families {
         // Do something with the gene, e.g. remove it
-        family.index( index, 0, &seq_records );
+        family.index( index, max_length , &seq_records );
     }
 
 }
@@ -357,7 +365,7 @@ fn main() {
                     //};
                     let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
                     // Clone or create a new thread-specific report for each task      
-                    let _res = process_lines(&data_split, &mut idx, &seq_records, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
+                    let _res = process_lines(&data_split, &mut idx, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
                     idx
 
                 }) // Analyze each chunk in parallel
@@ -404,7 +412,7 @@ fn main() {
                 //};
                 let mut index = FastMapper::new( kmer_size, reads_per_chunk );
                 // Clone or create a new thread-specific report for each task
-                let _res = process_lines(&data_split, &mut index, &seq_records, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
+                let _res = process_lines(&data_split, &mut index, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
                 index
 
             }) // Analyze each chunk in parallel

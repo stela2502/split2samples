@@ -94,7 +94,7 @@ impl Gene{
 	/// not 2bit binaries!
 	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper, covered_area:usize ){
 
-		if self.sense_strand{ // I need the reverse sequence in the index!
+		if ! self.sense_strand{ // I need the reverse sequence in the index!
 			// assume that the first exon would be the one that we need to care about.
 			// 8bp initial mapper and 32bp additional - does the exon boundary lie in that area?
 			match  &self.to_mrna( seq.to_owned()){

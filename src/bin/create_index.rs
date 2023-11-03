@@ -37,12 +37,14 @@ use indicatif::{ProgressStyle, ProgressBar, MultiProgress};
 
 // use std::convert::TryInto;
 
-/// Just run a test case for speed reproducability and simplicity
+/// Create a binary indes for the quantify_rhapsody program.
+/// Make sure to not cat any gzipped files for Rust.
+/// At least here we will only read from the first stream in a catted gz file!
 
 #[derive(Parser)]
 #[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
-    /// the gff gene information table
+    /// the gff/gtf gene information table (ONE gzipped stream - do NOT cat these files!)
     #[clap(default_value= "testData/testGenes.gtf.gz",short, long)]
     gtf: String,
     /// the fasta genome data

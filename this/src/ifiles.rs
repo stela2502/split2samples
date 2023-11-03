@@ -1,6 +1,6 @@
 
 use std::io::BufReader;
-use flate2::write::GzDecoder;
+use flate2::read::GzDecoder;
 
 use std::fs::File;
 use std::path::PathBuf;

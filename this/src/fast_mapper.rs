@@ -233,7 +233,8 @@ impl  FastMapper{
         
         //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
-            eprintln!("gene {} does not get an entry in the fast_mapper object! - too short!!", &name.as_str() );
+            eprint!(".");
+            //eprintln!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short? {} bp", &name.as_str(), classes, seq.len() );
         }
         /*else {
             println!("I added {i} mappper entries for gene {name}");
@@ -419,11 +420,12 @@ impl  FastMapper{
                 // the 8bp bit is a match
                 i +=1;
                 //eprintln!("We are at iteration {i}");
-                if matching_geneids.len() == 1 && i > 3 {
-                    //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
-                    return Some( matching_geneids[0] )
-                    //break;
-                }
+
+                // if matching_geneids.len() == 1 && i > 3 {
+                //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
+                //     return Some( matching_geneids[0] )
+                //     //break;
+                // }
 
                 //eprintln!("Ill create a new tool here based on seq {}", entries.1);
                 let seq_u64 = tool.mask_u64( &entries.1 );
@@ -479,14 +481,20 @@ impl  FastMapper{
                     },
                 }
             }
-            if self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids ){
-                //eprintln!("We found a best gene!");
-                break 'main;
-            }
-            if stop{
-                //eprintln!("We did not find a best gene!");
-                break 'main;
-            }
+            // if self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids ){
+            //     //eprintln!("We found a best gene!");
+            //     break 'main;
+            // }
+            // if stop{
+            //     //eprintln!("We did not find a best gene!");
+            //     break 'main;
+            // }
+        }
+        // check if there is only one gene //
+        let _ = self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids );
+        let names = self.gene_names_for_ids( &matching_geneids );
+        if names.len() > 1 {
+            eprintln!("I have multiple genes for this read: {:?}", names);
         }
         //eprintln!("I have {} matching genes", matching_geneids.len());
         if matching_geneids.len() == 0 {
@@ -498,9 +506,7 @@ impl  FastMapper{
             return Some( matching_geneids[0] )
         }
 
-        // check if there is only one gene //
-        let names = self.gene_names_for_ids( &matching_geneids );
-        eprintln!("I have multiple genes for this read: {:?}", names);
+
 
         //let mut max = 0;
         //let mut gid = 0;
