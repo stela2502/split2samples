@@ -1,3 +1,5 @@
+[![Rust](https://github.com/stela2502/Rustody/actions/workflows/rust.yml/badge.svg)](https://github.com/stela2502/Rustody/actions/workflows/rust.yml)
+
 # Rustody - a tool to quickly analyze targeted BD-Rhapsody sequencings
 
 This tool replaces the official 7-Bridges BD analysis programs first steps.
