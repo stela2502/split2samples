@@ -59,11 +59,12 @@ pub struct FastMapper{
 
 // here the functions
 
-impl  FastMapper{
+impl FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
     pub fn new( kmer_len:usize, allocate:usize )-> Self {
         //println!("I would add {} new entries here:", u16::MAX);
         let mut mapper: Vec<MapperEntry> = Vec::with_capacity(u16::MAX as usize);
+        
         for _i in 0..u16::MAX{
             let b = MapperEntry::new( 10 );
             mapper.push( b );
@@ -76,8 +77,13 @@ impl  FastMapper{
         let with_data = 0;
         let spacer = 3;
         let tool = IntToStr::new(b"".to_vec(), kmer_len );
-        //let mask:u64 = 0b11 << (2* 32- kmer_len);
-        let mask: u64 = (1 << (2 * kmer_len)) - 1;
+        // this mask will nerver mask ALL bits.
+        // But that would also be an error in this whole approach!
+        let size = match kmer_len <= 31{
+            true => kmer_len,
+            false => 31,
+        };
+        let mask: u64 = (1 << (2 * size)) - 1;
         let neg = 0;
         let pos = 0;
         Self {
@@ -95,6 +101,13 @@ impl  FastMapper{
             mask,
             pos,
             neg,
+        }
+    }
+
+    pub fn change_start_id ( &mut self, new_start :usize ){
+        self.last_count = new_start;
+        for _i in 0..new_start{
+            self.names_store.push("na".to_string());
         }
     }
 
@@ -314,96 +327,59 @@ impl  FastMapper{
         name.to_string()
     }
 
-    fn get_best_gene( &self, genes:&HashMap::<usize, usize>, 
-        possible_gene_levels:&HashMap::<usize, usize>, ret: &mut Vec::<usize> ) -> bool{
+    fn get_best_gene( &self, genes:&HashMap::<(usize, usize), usize>, ret: &mut Vec::<usize> ) -> bool{
         ret.clear();
         //eprintln!("I suppose we have a problem with the level being 1 and not 0 here? {genes:?}");
+        if genes.len() == 1 {
+            if let Some((key, _)) = genes.iter().next() {
+               ret.push(key.0.clone());
+               return true
+            }
+        }
         if genes.len() > 0{
-            let mut max = 0;
-            let mut id= usize::MAX;
-            let mut i = usize::MAX;
-
-            let mut min_level = usize::MAX;
-            for level in possible_gene_levels{
-                //eprintln!("The optional gene level is {:?} < {min_level}?", level);
-                if min_level > *level.1{
-                    min_level = *level.1
+            let mut prob_level= usize::MAX;
+            for (gene_id, level ) in genes.keys(){
+                if level < &prob_level{
+                    prob_level = *level
                 }
             }
-            //eprintln!("The min gene level is {min_level}");
-            for gene_id in genes.keys() {
-                // Access the values in both HashMaps using the key
-                if let Some(level) = possible_gene_levels.get(gene_id) {
-                    if level > &min_level {
-                        continue;
-                    }
-                    if let Some(count) = genes.get(gene_id) {
-                        if count > &max{
-                            max = *count;
-                            id = *gene_id;
-                            i = 0;
-                        }else if count == &max {
-                            i+=1;
-                        }
+            let mut good = Vec::<usize>::with_capacity( genes.len() );
+            let mut most_matches = &0;
+            let mut best_gene = 0; //otherwise this trows an error later
+            let mut genes_with_best_matches = 0;
+            for ((gene_id, level ), matches) in genes{
+                if level == &prob_level{
+                    good.push( *gene_id );
+                    if most_matches < matches{
+                        most_matches = matches;
+                        best_gene = *gene_id;
+                        genes_with_best_matches = 1;
+                    }else if most_matches == matches{
+                        genes_with_best_matches +=1;
                     }
                 }
             }
-
-            //eprintln!("We have obtained the max gene count of {max}");
-
-            if max > 1{
-                // there needs to be some reproducibility here!
+            if good.len() ==1 {
+                ret.push( good[0] );
                 return true
             }
-            if i == 0{
-                // we have exactly one gene with the max count
-                //eprintln!("I found one gene: {}", self.names_store[id] );
-                ret.push(id);
+            if genes_with_best_matches == 1{
+                ret.push( best_gene );
                 return true
-            }else {
-                // we have more than one gene as a max count - that is inacceptable
-                // for the debug I need to know which genes I get here!
-                let mut gene_ids= Vec::<usize>::with_capacity(i);
-                for (gene_id, count) in genes{
-                    if count == &max {
-                        gene_ids.push(*gene_id);
-                    }
-                }
-                if gene_ids.len() == 2{
-                    if self.names_store[gene_ids[0]] == self.names_store[gene_ids[1]].to_string()+"_int"{
-                        ret.push( gene_ids[0] )
-                    }
-                    if self.names_store[gene_ids[1]] == self.names_store[gene_ids[0]].to_string()+"_int" {
-                        ret.push( gene_ids[1] )
-                    }
-                }
-                
-                let mut genes = Vec::<String>::with_capacity( gene_ids.len() );
-                for gid in gene_ids{
-                    ret.push(gid);
-                    genes.push( self.names_store[gid].to_string())
-                }
-                return false;
-                //println!("I got a multi mapper ({i}): {:?} -> returning None", genes );
-                //multimapper += 1;
             }
-            
+
+
         }
         return false
 
     }
 
-
-    pub fn get(&self, seq: &[u8], report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
+    pub fn get_strict(&self, seq: &[u8], report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
         
         //let mut id:usize;
-        let mut genes:HashMap::<usize, usize>= HashMap::new();
-
-        let mut stop: bool;
+        let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
-        let mut possible_gene_levels = HashMap::<usize, usize>::with_capacity(10);
-
         let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
         let mut i = 0;
         tool.from_vec_u8( seq.to_vec() );
@@ -413,7 +389,6 @@ impl  FastMapper{
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
 
         // entries is a Option<(u16, u64, usize)
-        stop = false;
         'main :while let Some(entries) = tool.next(){
 
             if self.mapper[entries.0 as usize].has_data() {
@@ -432,20 +407,85 @@ impl  FastMapper{
 
                 match &self.mapper[entries.0 as usize].get( &seq_u64 ){
                     Some( gene_id ) => {
-                        //eprintln!("Got one: {gene_id:?}");
-                        //return ( gene_id );
                         for gid in &gene_id.data{
-                            match genes.get_mut( &gid.0) {
+                            match genes.get_mut( gid) {
                                 Some(gene_count) => {
                                     *gene_count +=1;
-                                    if *gene_count == 4 {
-                                        stop = true;
+                                    if *gene_count == 4 && genes.len() == 1 {
+                                        break 'main;
                                     }
                                 },
                                 None => {
                                     //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-                                    genes.insert( gid.0, 1);
-                                    possible_gene_levels.insert( gid.0, gid.1 );
+                                    genes.insert( gid.clone(), 1);
+                                },
+                            };
+
+                        }
+                    },
+                    None => {
+                    },
+                }
+            }
+
+        }
+        // check if there is only one gene //
+        if self.get_best_gene( &genes, &mut matching_geneids ){
+            return Some( matching_geneids[0] )
+        }
+        None
+    }
+
+
+    pub fn get(&self, seq: &[u8], report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
+        
+        //let mut id:usize;
+        let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
+
+        //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
+
+        let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
+        let mut i = 0;
+        tool.from_vec_u8( seq.to_vec() );
+
+        //let mut item = self.tool.next();
+
+        let mut matching_geneids = Vec::< usize>::with_capacity(10);
+
+        // entries is a Option<(u16, u64, usize)
+
+        'main :while let Some(entries) = tool.next(){
+
+            if self.mapper[entries.0 as usize].has_data() {
+                // the 8bp bit is a match
+                i +=1;
+
+                //eprintln!("We are at iteration {i}");
+
+                // if matching_geneids.len() == 1 && i > 3 {
+                //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
+                //     return Some( matching_geneids[0] )
+                //     //break;
+                // }
+
+                //eprintln!("Ill create a new tool here based on seq {}", entries.1);
+                let seq_u64 = tool.mask_u64( &entries.1 );
+
+                match &self.mapper[entries.0 as usize].get( &seq_u64 ){
+                    Some( gene_id ) => {
+                        //eprintln!("Got one: {:?}", gene_id);
+                        //return ( gene_id );
+                        for gid in &gene_id.data{
+                            match genes.get_mut( &gid) {
+                                Some(gene_count) => {
+                                    *gene_count +=1;
+                                    if *gene_count == 4 && genes.len() ==1 {
+                                        break 'main;
+                                    }
+                                },
+                                None => {
+                                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+                                    genes.insert( gid.clone(), 1);
                                 },
                             };
 
@@ -458,17 +498,16 @@ impl  FastMapper{
                                 //eprintln!("But in the second I got one: {gene_id:?}");
                                 //return ( gene_id );
                                 for gid in &gene_id.data{
-                                    match genes.get_mut(&gid.0) {
+                                    match genes.get_mut(&gid) {
                                         Some(gene_count) => {
                                             *gene_count +=1;
-                                            if *gene_count == 4 {
-                                                stop = true;
+                                            if *gene_count == 4 && genes.len() ==1 {
+                                                break 'main;
                                             }
                                         },
                                         None => {
                                             //eprintln!("This is a new gene - I'll insert {} and {}",gid.0, gid.1 );
-                                            genes.insert( gid.0, 1);
-                                            possible_gene_levels.insert( gid.0, gid.1 );
+                                            genes.insert( gid.clone(), 1);
                                             //eprintln!("I have finished with the indert");
                                         },
                                     };
@@ -490,44 +529,11 @@ impl  FastMapper{
             //     break 'main;
             // }
         }
+        //eprintln!("Here I have this gene counts: {:?}", genes );
         // check if there is only one gene //
-        let _ = self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids );
-        let names = self.gene_names_for_ids( &matching_geneids );
-        if names.len() > 1 {
-            eprintln!("I have multiple genes for this read: {:?}", names);
-        }
-        //eprintln!("I have {} matching genes", matching_geneids.len());
-        if matching_geneids.len() == 0 {
-            return None
-        }
-        // we have not found any gene here!
-        // only if all the 8bp have only linked to a single gene...
-        if matching_geneids.len() == 1{
+        if self.get_best_gene( &genes, &mut matching_geneids ){
             return Some( matching_geneids[0] )
         }
-
-
-
-        //let mut max = 0;
-        //let mut gid = 0;
-        //let mut n =0;
-        let mut no_int = Vec::<usize>::with_capacity(5);
-        let re = Regex::new(r".*_int").unwrap();
-        
-        for id in &matching_geneids{
-            if ! re.is_match(&self.names_store[*id]) { 
-                no_int.push(*id);
-            };
-        }
-        if no_int.len() ==1 {
-            //eprintln!("I selected the only RNA seqence {}",self.names_store[ no_int[0] ]);
-
-            return Some(no_int[0])
-        }
-
-        let gnames: Vec<String> = matching_geneids.iter().map(|&index| self.names_store[index].to_string()).collect();
-        report.write_to_log( format!("Multimapping sequence to {} genes: {:?}", matching_geneids.len(), gnames ));
-        report.write_to_log( format!("For the sequence {}", std::str::from_utf8(&seq).expect("Invalid UTF-8") ));
         None
     }
 

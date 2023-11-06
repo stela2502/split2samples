@@ -103,6 +103,7 @@ impl CellData{
         }
     }
 
+    // returns false if the gene/umi combo has already been recorded!
     pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
         //println!("adding gene id {}", geneid );
         return match self.genes.get_mut( &geneid ) {

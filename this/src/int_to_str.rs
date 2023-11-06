@@ -56,7 +56,11 @@ impl IntToStr {
 		let lost = 0;
 		let shifted = 0;
 		let checker = BTreeMap::<u8, usize>::new();
-		let mask = !0u64 >> ( (32 - kmer_size )  * 2) as u32;
+		let size = match kmer_size >= 31 {
+		    true => kmer_size,
+		    false => 31,
+		};
+		let mask = !0u64 >> ( (32 - size )  * 2) as u32;
 		//let mask: u64 = (1 << (2 * kmer_size)) - 1;
 
 		let mut ret = Self{
@@ -432,8 +436,8 @@ impl IntToStr {
 		for u8_4bp in self.u8_encoded.iter(){
 			i += 4;
 			if i >= bases {
-				//println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);
-				self.u8_to_str( bases - i +4, &u8_4bp, data );
+				//eprintln!("decoding {} bits of this number: {:b}", bases +4 - i, u8_4bp);
+				self.u8_to_str( bases +4 - i, &u8_4bp, data );
 				break;
 			}else {
 				//println!("decoding 4 bits of this number: {:b}", u8_4bp);
@@ -445,8 +449,7 @@ impl IntToStr {
 	pub fn u8_to_str ( &self, kmer_size:usize, u8_rep:&u8,  data:&mut String ){
 
 		let mut loc:u8 = *u8_rep;
-		//println!("converting u8 {loc:b} to string:");
-
+		//println!("converting u8 {loc:b} to string with {kmer_size} bp.");
 		for _i in 0..kmer_size{
 			let ch = match loc & 0b11{
 	            0 => "A",
@@ -460,7 +463,7 @@ impl IntToStr {
 	       	//println!("{ch} and loc {loc:b}");
 		}
 
-		//println!("\nMakes sense?");
+		//println!("\nMakes sense? {:?}", data);
 	}
 
 	pub fn u8_array_to_str ( &self, kmer_size:usize, u8_rep:Vec::<u8>,  data:&mut String ){

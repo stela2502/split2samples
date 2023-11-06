@@ -148,7 +148,7 @@ impl MappingInfo{
 		}
 	}
 	pub fn log_str( &mut self ) -> String{
-		format!("{:.2} mio reads ({:.2}% with cell info, {:.2}% with gene match",
+		format!("{:.2} mio reads ({:.2}% with cell info, {:.2}% with gene match)",
             self.total as f32 / self.split as f32,
             self.cellular_reads as f32 / (self.total) as f32 * 100.0 , 
             self.ok_reads as f32 / (self.total) as f32 * 100.0 

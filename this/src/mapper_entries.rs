@@ -243,14 +243,14 @@ impl MapperEntry{
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
 	pub fn find (&self, seq:&u64 ) -> Option<&NameEntry> {
-		for i in 0..self.map.len() {
-			if &self.map[i].0 == seq {
-				if self.map[i].1.data.len() > 1{
-					eprintln!("Ooops - we have a find in more than one gene: {:?}", self.map[i].1.data);
-				}
-				return Some( &self.map[i].1 )
-			}
-		}
+		// for i in 0..self.map.len() {
+		// 	if &self.map[i].0 == seq {
+		// 		if self.map[i].1.data.len() > 1{
+		// 			eprintln!("Ooops - we have a find in more than one gene: {:?}", self.map[i].1.data);
+		// 		}
+		// 		return Some( &self.map[i].1 )
+		// 	}
+		// }
 		// now we have an initial match, but no secondary.
 		for i in 0..self.map.len() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );

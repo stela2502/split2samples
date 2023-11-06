@@ -57,6 +57,8 @@ fn mean_u8( data:&[u8] ) -> f32 {
 /// I started it to easily process multiple fastq files in a row.
 pub struct Analysis{
 	genes: FastMapper,
+	samples: FastMapper,
+	antibodies: FastMapper,
 	cells: CellIds,
 	gex: SingleCellData,
 	sample_names:Vec<String>,
@@ -78,6 +80,9 @@ impl Analysis{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000 ); // split them into 9 bp kmers
+	    let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000 );
+	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000 );
+
 	    let mut gene_count = 600;
 	    
 	    if let Some(i) = index {
@@ -131,10 +136,14 @@ impl Analysis{
 		    	eprintln!("Expression file could not be read - ignoring")
 		    }
 	    }
-	    
+
+	    eprintln!("Changing the expression start gene id to {}", genes.last_count );
+		antibodies.change_start_id( genes.last_count);
+
 	    if let Some(ab) = antibody {
 
 		    if Path::new(&ab).exists(){
+
 
 		   		let mut ab_file = parse_fastx_file(ab).expect("valid path/file");
 		    	while let Some(ab_record) = ab_file.next() {
@@ -144,8 +153,9 @@ impl Analysis{
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		seq_temp = seqrec.seq().to_vec();
 		                		//seq_temp.reverse();
-			                    genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
+			                    antibodies.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
 		                    	ab_names.push( id.to_string() );
+		                    	//gene_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 		                	};
 		            	},
@@ -158,8 +168,8 @@ impl Analysis{
 
 		}
 
-		println!("After indexing all fastq files we have the following index:");
-		genes.print();
+
+
 
 	    //  now we need to get a CellIDs object, too
 	    let cells = CellIds::new( &version);
@@ -177,6 +187,7 @@ impl Analysis{
 	        sample_names.push( format!("Sample{i}") )
 	    }
 	    let mut id = 1;
+	    samples.change_start_id( antibodies.last_count );
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
 	        let sequences = [ b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG".to_vec(), b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG".to_vec(),
@@ -188,7 +199,7 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	genes.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	id +=1;
 	        }
 	    }
@@ -203,7 +214,7 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	genes.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	id +=1;
 	        }
 
@@ -211,9 +222,19 @@ impl Analysis{
 	        println!("Sorry, but I have no primers for species {}", specie);
 	        std::process::exit(1)
 	    }
+
+	    println!("After indexing all fastq files we have the following indices:");
+		println!("the mRNA index:");
+		genes.print();
+		println!("the sample id index:");
+		samples.print();
+		println!("and the antibodies index:");
+		antibodies.print();
 	    
 		Self{
 			genes,
+			samples,
+			antibodies,
 	//		genes2,
 			cells,
 			gex,
@@ -268,6 +289,7 @@ impl Analysis{
         // first match the cell id - if that does not work the read is unusable
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
         let mut gex = SingleCellData::new( self.num_threads );
+        let mut ok : bool;
 
         for i in 0..data.len() {
 
@@ -276,29 +298,78 @@ impl Analysis{
 	            	let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
         			let umi:u64 = tool.into_u64();
 	            	report.cellular_reads +=1;
-	                match &self.genes.get( &data[i].1, report ){
+
+	            	// now I have three possibilites here:
+	            	// an antibody tag match
+	            	// a sample id match
+	            	// or a mRNA match
+	            	// And of casue not a match at all
+
+	            	ok = match &self.antibodies.get( &data[i].1, report ){
 	                    Some(gene_id) =>{
-	                        gex.try_insert( 
+	                    	//eprintln!("I got an ab id {gene_id}");
+	                    	if ! gex.try_insert( 
 	                        	&(*cell_id as u64),
 	                        	gene_id,
 	                        	umi,
 	                        	report
-	                        );
+	                        ){
+	                        	report.pcr_duplicates += 1 
+	                        }
+	                        true
 	                    },
 	                    None => {
-	                    	// I want to be able to check why this did not work
-	                    	let _ =report.ofile.buff1.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
-	                    	let _ =report.ofile.buff1.write( &data[i].1 ).unwrap();
-	                    	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
-
-	                    	let _ =report.ofile.buff2.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
-	                    	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
-	                    	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
-
-	                    	report.no_data +=1;
+							false
 	                    }
 	                };
 
+	                if ! ok{
+	                	ok = match &self.samples.get( &data[i].1, report ){
+		                    Some(gene_id) =>{
+		                    	//eprintln!("I got a samples id {gene_id}");
+		                        if ! gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	gene_id,
+		                        	umi,
+		                        	report
+		                        ) { 
+		                        	report.pcr_duplicates += 1 
+		                        }
+		                        true
+		                    },
+		                    None => {
+								false
+		                    }
+		                };
+	                }
+
+	                if ! ok{
+	                	
+		                match &self.genes.get( &data[i].1, report ){
+		                    Some(gene_id) =>{
+		                        if ! gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	gene_id,
+		                        	umi,
+		                        	report
+		                        ){
+		                        	report.pcr_duplicates += 1 
+		                        }
+		                    },
+		                    None => {
+		                    	// I want to be able to check why this did not work
+		                    	let _ =report.ofile.buff1.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
+		                    	let _ =report.ofile.buff1.write( &data[i].1 ).unwrap();
+		                    	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+
+		                    	let _ =report.ofile.buff2.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
+		                    	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
+		                    	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+
+		                    	report.no_data +=1;
+		                    }
+		                };
+		            }
 	            },
 	            Err(_err) => {
 	            	// this is fucked up - the ids are changed!
@@ -326,37 +397,6 @@ impl Analysis{
     	}
         gex
     }
-
-    // fn map_paralel( &self, data1:&Vec<u8>, data2:&Vec<u8>, report:&mut MappingInfo, pos: &[usize;8] ) -> Result< (usize, usize, u64), &'static str >{
-    	
-
-
-    //     // first match the cell id - if that does not work the read is unusable
-    //     //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-    //     let tool = IntToStr::new( data1[pos[6]..pos[7]].to_vec(), 32 );
-    //     let umi:u64 = tool.into_u64();
-    //     //let umi = Kmer::from( data1.seq()[pos[6]..pos[7]]).into_u64();	
-    // 	return match &self.cells.to_cellid( &data1, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-    //         Ok(cell_id) => {
-    //             match &self.genes.get( &data2, report ){
-    //             	Some(gene_id) =>{ Ok( (*cell_id as usize, *gene_id, umi ) ) },
-    //             	None => { Err("no gene match")}
-    //             }
-    //         },
-    //         Err(_err) => {
-    //         	// match data1.write(&mut report.ofile.buff1, None){
-    //             //     Ok(_) => (),
-    //             //     Err(err) => println!("{err}")
-    //             // };
-    //             // match data2.write(&mut report.ofile.buff1, None){
-    //             //     Ok(_) => (),
-    //             //     Err(err) => println!("{err}")
-    //             // };
-                
-    //         	Err("no cell match")
-    //         }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
-   	// 	}
-    // }
 
 
     /// Analze BPO Rhapsody data in a paralel way.
@@ -424,14 +464,14 @@ impl Analysis{
     		else {
     			report.stop_file_io_time();
     			//eprintln!("Mapping one batch");
-
-            	eprintln!("I have {} lines of data and {} threads", good_reads.len(), self.num_threads);
+    			pb.set_message( "mapping reads" );
+            	//eprintln!("I have {} lines of data and {} threads", good_reads.len(), self.num_threads);
 
     			good_read_count = 0;
 		    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 			        .par_chunks(good_reads.len() / self.num_threads + 1) // Split the data into chunks for parallel processing
 		    	    .map(|data_split| {
-		    	    	eprintln!("I am processing {} lines of data", data_split.len() );
+		    	    	//eprintln!("I am processing {} lines of data", data_split.len() );
 		    	    	// Get the unique identifier for the current thread
 		            	let thread_id = thread::current().id();
 		            
@@ -476,6 +516,7 @@ impl Analysis{
 
 	    if reads_perl_chunk > 0{
 	    	report.stop_file_io_time();
+	    	pb.set_message( "mapping reads".to_string() );
 	    	// there is data in the good_reads
 	    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 		        .par_chunks(good_reads.len() / self.num_threads + 1) // Split the data into chunks for parallel processing
@@ -511,6 +552,7 @@ impl Analysis{
 	        	self.gex.merge(&gex.0);
 	        	report.merge( &gex.1 );
 	        }
+	        pb.set_message( report.log_str().clone() );
 	    }
 
 	    report.stop_single_processor_time();
@@ -540,9 +582,6 @@ impl Analysis{
         //let report_gid = self.genes.get_id( "Sample1".to_string() );
         'main: while let Some(record2) = readefile.next() {
             if let Some(record1) = readereads.next() {
-
-
-
             	report.total += 1;
                 
                 let seqrec = match record2{
@@ -600,86 +639,73 @@ impl Analysis{
 
                 //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
                 
-
+                let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 match &self.cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
                     Ok( (cell_id, add) ) => {
-                    	//let umi = Kmer::from( &seqrec1.seq()[(pos[6]+add)..(pos[7]+add)]).into_u64();
-                    	let tool = IntToStr::new( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
-        				let umi:u64 = tool.into_u64();
-                    	report.cellular_reads +=1;
-                        // this is removing complexity from the data - in the test dataset 111 reads are ignored.
-                        // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );
-                        // if ! cell_umi.insert( cell_id_umi ){
-                        //     continue 'main;
-                        // }
-                        // match writeln!( report.log_writer, "add\t{add}" ){
-                		// 	Ok(_) => (),
-                		// 	Err(err) => {
-                    	// 		eprintln!("write error: {err}" );
-                		// 	}
-            			// };
-                        match &self.genes.get( &seqrec.seq(), report ){
-                            Some(gene_id) =>{
-                                self.gex.try_insert( 
-                                	&(*cell_id as u64),
-                                	gene_id,
-                                	umi,
-                                	report
-                                );
-                                //println!("analysis.parse() has a match to {gene_id} for sequence {:?}", self.genes.tool.encode2bit_u8( seqrec.seq().to_vec() ));
-                                // if *gene_id == report_gid {
-                                // 	match seqrec1.write(&mut report.ofile.buff1, None){
-	                            //         Ok(_) => (),
-	                            //         Err(err) => println!("{err}")
-	                            //     };
-	                            //     match seqrec.write( &mut report.ofile.buff2, None){
-			                    //         Ok(_) => (),
-			                    //         Err(err) => println!("{err}")
-			                    //     };                       
-                            	// 	//println!("Cool I got a gene id: {gene_id}", );
-                            	// }
-                            },
-                            None => {
+		            	let tool = IntToStr::new( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
+	        			let umi:u64 = tool.into_u64();
+		            	report.cellular_reads +=1;
 
-                            	match seqrec1.write(&mut report.ofile.buff1, None){
-                                    Ok(_) => (),
-                                    Err(err) => println!("{err}")
-                                };
-                                // split this up to look at this in an other tool, but with the cell IDs!
-                                // seqrec.write_fastq( id:&[u8], seq:&[u8], qual:Option<&[u8]>, writer, line_ending: crate::parser::utils::LineEnding::Unix | '\n'?)
-                                // add the cell id to the fastq id
-                                let id_fq = String::from_utf8_lossy(seqrec.id()).to_string();
-                       			let concatenated = format!("{} Cell{}", id_fq, cell_id);
-                                match write_fastq(
-                                	concatenated.as_bytes(),
-                                	seqrec.raw_seq(),
-                                	seqrec.qual(),
-									&mut report.ofile.buff2 ){
-                                    Ok(_) => (),
-                                    Err(err) => println!("{err}")
-                                };     
-                                //println!("Added cell id {} to the unmapped read: {}", cell_id, concatenated);    
-                                //println!("Not matching seq  {}", std::str::from_utf8(&seqrec.seq()).expect("Invalid UTF-8") );
-                                //println!("Not matching qual {}", std::str::from_utf8(&seqrec.qual().unwrap()).expect("Invalid UTF-8") );
-                                //println!("The quality scores for the seqiuence:\n{:?}", &seqrec1.qual());
-                                report.no_data +=1;
+		            	// now I have three possibilites here:
+		            	// an antibody tag match
+		            	// a sample id match
+		            	// or a mRNA match
+		            	// And of casue not a match at all
 
-                                // all - samples genes and antibodies are classed as genes here.
-                            }
-                        };
+		            	ok = match &self.antibodies.get_strict( &seqrec.seq(), report ){
+		                    Some(gene_id) =>{
+		                    	//eprintln!("Got an antibody match! {gene_id}");
+		                        self.gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	gene_id,
+		                        	umi,
+		                        	report
+		                        );
+		                        true
+		                    },
+		                    None => {
+								false
+		                    }
+		                };
 
-                    },
+		                if ! ok{
+		                	ok = match &self.samples.get_strict( &seqrec.seq(), report ){
+			                    Some(gene_id) =>{
+			                    	//eprintln!("Got a samples match! {gene_id}");
+			                        self.gex.try_insert( 
+			                        	&(*cell_id as u64),
+			                        	gene_id,
+			                        	umi,
+			                        	report
+			                        );
+			                        true
+			                    },
+			                    None => {
+									false
+			                    }
+			                };
+		                }
+
+		                if ! ok{
+		                	
+			                match &self.genes.get( &seqrec.seq(), report ){
+			                    Some(gene_id) =>{
+			                        self.gex.try_insert( 
+			                        	&(*cell_id as u64),
+			                        	gene_id,
+			                        	umi,
+			                        	report
+			                        );
+			                    },
+			                    None => {
+			                    	report.no_data +=1;
+			                    }
+			                };
+			            }
+		            },
                     Err(_err) => {
-                        // cell id could not be recovered
-                        
-                        // println!("Cell ID could not be recovered from {:?}:\n{}\n{:?}, {:?}, {:?}", std::str::from_utf8(&seqrec1.seq()), _err, 
-                        //      std::str::from_utf8( &seqrec1.seq()[pos[0]..pos[1]]),
-                        //      std::str::from_utf8( &seqrec1.seq()[pos[2]..pos[3]]),
-                        //      std::str::from_utf8( &seqrec1.seq()[pos[4]..pos[5]])
-                        // );
-                        
                         report.no_sample +=1;
                         continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
@@ -716,7 +742,7 @@ impl Analysis{
 
     // this always first as this will decide which cells are OK ones!
 
-    println!("filtering cells");
+    println!("filtering cells and writing gene expression");
     match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}")
@@ -727,21 +753,22 @@ impl Analysis{
     );
 
     println!("Writing Antibody counts");
-    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes, &self.ab_names, 0 ) {
+    match self.gex.write_sparse_sub ( file_path_sp, &mut self.antibodies, &self.ab_names, 0 ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}")
     };
 
-	println!("Writing GeneEXpression counts");
-    match self.gex.write_sub ( file_path, &mut self.genes, &self.sample_names, 0 ) {
+	println!("Writing samples table");
+
+    match self.gex.write_sub ( file_path, &mut self.samples, &self.sample_names, 0 ) {
         Ok(_) => (),
         Err(err) => panic!("Error in the data write: {err}" )
     };
 
     
     let reads_genes = self.gex.n_reads( &mut self.genes , &self.gene_names );
-    let reads_ab = self.gex.n_reads( &mut self.genes , &self.ab_names );
-    let reads_samples = self.gex.n_reads( &mut self.genes , &self.sample_names );
+    let reads_ab = self.gex.n_reads( &mut self.antibodies , &self.ab_names );
+    let reads_samples = self.gex.n_reads( &mut self.samples , &self.sample_names );
 
     println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
 

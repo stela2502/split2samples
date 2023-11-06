@@ -56,6 +56,14 @@ mod tests {
         mapper.print();
 
     }
+    #[test]
+    fn check_changed_start() {
+        let mut mapper = FastMapper::new( 16, 10 );
+        mapper.last_count = 10;
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
+        assert_eq!( mapper.last_count, 11 );
+        assert_eq!(mapper.names_store[11] == "Gene1".to_string());
+    }
 
     #[test]
     fn check_write_index() {
