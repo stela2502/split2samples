@@ -9,7 +9,7 @@ use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 
-use regex::Regex;
+//use regex::Regex;
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
@@ -338,7 +338,7 @@ impl FastMapper{
         }
         if genes.len() > 0{
             let mut prob_level= usize::MAX;
-            for (gene_id, level ) in genes.keys(){
+            for ( _gene_id, level ) in genes.keys(){
                 if level < &prob_level{
                     prob_level = *level
                 }
@@ -374,14 +374,14 @@ impl FastMapper{
 
     }
 
-    pub fn get_strict(&self, seq: &[u8], report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
+    pub fn get_strict(&self, seq: &[u8], _report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
         
         //let mut id:usize;
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
         let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
-        let mut i = 0;
+        //let mut i = 0;
         tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
@@ -393,7 +393,7 @@ impl FastMapper{
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
-                i +=1;
+                //i +=1;
                 //eprintln!("We are at iteration {i}");
 
                 // if matching_geneids.len() == 1 && i > 3 {
@@ -437,7 +437,7 @@ impl FastMapper{
     }
 
 
-    pub fn get(&self, seq: &[u8], report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
+    pub fn get(&self, seq: &[u8], _report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
         
         //let mut id:usize;
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
@@ -445,7 +445,6 @@ impl FastMapper{
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
         let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
-        let mut i = 0;
         tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
@@ -453,12 +452,12 @@ impl FastMapper{
         let mut matching_geneids = Vec::< usize>::with_capacity(10);
 
         // entries is a Option<(u16, u64, usize)
-
+        //let mut i = 0;
         'main :while let Some(entries) = tool.next(){
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
-                i +=1;
+                //i +=1;
 
                 //eprintln!("We are at iteration {i}");
 
