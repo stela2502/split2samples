@@ -144,7 +144,6 @@ impl MappingInfo{
                 }
             };
             self.local_dup = 0;
-            //std::thread::sleep(Duration::from_millis(100));
 		}
 	}
 	pub fn log_str( &mut self ) -> String{
