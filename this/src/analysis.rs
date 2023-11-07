@@ -464,7 +464,7 @@ impl Analysis{
     		else {
     			report.stop_file_io_time();
     			//eprintln!("Mapping one batch");
-    			pb.set_message( "mapping reads" );
+    			pb.set_message( format!("mapping reads - {}", report.log_str() ) );
             	//eprintln!("I have {} lines of data and {} threads", good_reads.len(), self.num_threads);
 
     			good_read_count = 0;
@@ -516,7 +516,7 @@ impl Analysis{
 
 	    if reads_perl_chunk > 0{
 	    	report.stop_file_io_time();
-	    	pb.set_message( "mapping reads".to_string() );
+	    	pb.set_message( format!("mapping reads - {}", report.log_str() ) );
 	    	// there is data in the good_reads
 	    	let total_results: Vec<(SingleCellData, MappingInfo)> = good_reads
 		        .par_chunks(good_reads.len() / self.num_threads + 1) // Split the data into chunks for parallel processing
