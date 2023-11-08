@@ -61,6 +61,18 @@ struct Opts {
     /// create text outfile instead of binary
     #[clap(default_value_t=false, long)]
     text: bool,
+    /// how many threads to use to analyze this (default 1)
+    #[clap(short, long)]
+    num_threads: Option<usize>,
+    /// the string to check for gene level names (default gene_name)
+    #[clap(default_value="gene_name", long)]
+    genename: String,
+    /// the string to check for gene id (default gene_id)
+    #[clap(default_value="gene_id", long)]
+    geneid: String,
+    /// the string to check for transcript levels names (transcript_id)
+    #[clap(default_value="transcript_id", long)]
+    transcript: String,
 }
 
 /*
@@ -117,6 +129,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
 
         if parts[2] == "exon"{
             // capture the parts I need
+            //eprintln!("I found an exon!");
             if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
                 transcript_id = captures.get(1).unwrap().as_str().to_string();
             }else {
@@ -131,6 +144,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
 
         if parts[2] == "gene"{
             // here we should start to 'clean out the old ones'!
+            //eprintln!("We got a gene!");
             let start = match parts[3].parse::<usize>(){
                 Ok(v) => v,
                 Err(e) => panic!("I could not parse the start of the transcript as usize: {e:?}"),
@@ -151,7 +165,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
                                 match seq_records.get( &gene.chrom.to_string()[3..] ){
                                     Some(seq) => {
                                         gene.add_to_index( seq, index, COVERED_AREA );
-                                        //println!("The genes detected: {:?}", index.names_store );
+                                        //eprintln!("The genes detected: {:?}", index.names_store );
                                     },
                                     None => {
                                         eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
@@ -257,15 +271,15 @@ fn main() {
     let mut expr_file = parse_fastx_file(&opts.file).expect("valid path/file");
     let mut id: &[u8];
     let delimiter: &[u8] = b"  ";  // The byte sequence you want to split by
-
+    eprint!("sequence names: ");
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
         id = seqrec.id().split(|&x| x == delimiter[0]).collect::<Vec<&[u8]>>()[0];
         //id = seqrec.id().split(|&x| x == delimiter[0]).collect()[0];
-        eprintln!("'{}'", std::str::from_utf8(id).unwrap() );
+        eprint!("'{}', ", std::str::from_utf8(id).unwrap() );
         seq_records.insert( std::str::from_utf8( id ).unwrap().to_string() , seqrec.seq().to_vec());
     }
-
+    eprint!("\n");
 
 
 
@@ -301,15 +315,25 @@ fn main() {
     match gtf.is_match( &opts.gtf ){
         true => {
             eprintln!("gtf mode");
-            re_gene_name =  Regex::new(r#".* gene_name "([\(\)\w\d\-\._]*)""#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id "([\d\w\.]*)";"#).unwrap();
-            re_transcript_id = Regex::new(r#"transcript_id "([\d\w\.]*)";"#).unwrap();
+            let gene_name = format!(r#"{} "([\(\)/\w\d\-\._]*)""#, opts.genename );
+            re_gene_name =  Regex::new(&gene_name).unwrap();
+
+            let gene_id = format!(r#"{} "([\(\)/\w\d\-\._]*)""#, opts.geneid );
+            re_gene_id =  Regex::new(&gene_id).unwrap();
+
+            let transcript_id = format!(r#"{} "([\(\)/\w\d\-\._]*)""#, opts.transcript );
+            re_transcript_id =  Regex::new(&transcript_id).unwrap();
         },
         false => {
             eprintln!("gff mode.");
-            re_gene_name =  Regex::new(r#".* ?gene_name=([\(\)\w\d\-\._]*); ?"#).unwrap();
-            re_gene_id = Regex::new(r#"gene_id=([\d\w\.]*);"#).unwrap();
-            re_transcript_id = Regex::new(r#"transcript_id=([\d\w\.]*);"#).unwrap();
+            let gene_name = format!(r#"{}=([\(\)/\w\d\-\._]*);"#, opts.genename );
+            re_gene_name =  Regex::new(&gene_name).unwrap();
+
+            let gene_id = format!(r#"{}=([\(\)/\w\d\-\._]*);"#, opts.geneid );
+            re_gene_id =  Regex::new(&gene_id).unwrap();
+
+            let transcript_id = format!(r#"{}=([\(\)/\w\d\-\._]*);"#, opts.transcript );
+            re_transcript_id =  Regex::new(&transcript_id).unwrap();
         },
     }
     //let mut gene_id:String;
@@ -330,7 +354,15 @@ fn main() {
     let file1 = GzDecoder::new(f1);
     let reader = BufReader::new( file1 );
 
-    let num_threads = num_cpus::get();
+    // let num_threads = match &opts.num_threads{
+    //     Some(n) => *n,
+    //     None => num_cpus::get(),
+    // };
+    // this needs to be run like that as the gene info is split over multiple lines. Therefore if we split
+    // the gtf data up into random slices we loose the gene transcript exon connections!
+    // In the future I could crete the genes and then create the index using multi processor approach.
+    let num_threads = 1;
+
     let m = MultiProgress::new();
     let pb = m.add(ProgressBar::new(5000));
     let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
@@ -347,11 +379,13 @@ fn main() {
 
     for line in reader.lines() {
         if good_read_count < max_dim{
+            //eprintln!("Reading one gtf entry!");
             let rec = line.ok().expect("Error reading record.");
             lines.push(rec);
             good_read_count+=1;
         }
         else {
+            eprintln!("Analyzing read gtf entries!");
             batch +=1;
             report.stop_file_io_time();
             eprintln!("creating mapper");
@@ -400,8 +434,47 @@ fn main() {
             eprintln!("Reading up to {} more regions", max_dim);
         }
     }
+    if good_read_count > 0{
+        eprintln!("Analyzing read gtf entries!");
+        batch +=1;
+        report.stop_file_io_time();
+        eprintln!("creating mapper");
+        good_read_count = 0;
+        let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
+            .map(|data_split| {
+                // Get the unique identifier for the current thread
+                let _thread_id = thread::current().id();
+            
+                // Convert the thread ID to a string for use in filenames or identifiers
+                //let thread_id_str = format!("{:?}",thread_id );
+                //let ofile = Ofiles::new( 1, &("Umapped_with_cellID".to_owned()+&thread_id_str), "R2.fastq.gz", "R1.fastq.gz",  outpath );
+                //let log_file_str = PathBuf::from(outpath).join(
+                //    format!("Mapping_log_{}.txt",thread_id_str )
+                //);
+        
+                //let log_file = match File::create( log_file_str ){
+                //        Ok(file) => file,
+                //        Err(err) => {
+                //        panic!("thread {thread_id_str} Error: {err:#?}" );
+                //    }
+                //};
+                let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
+                // Clone or create a new thread-specific report for each task      
+                let _res = process_lines(&data_split, &mut idx, &seq_records, &chr, &re_gene_name, &re_gene_id, &re_transcript_id );
+                idx
 
-    eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
+            }) // Analyze each chunk in parallel
+        .collect(); // Collect the results into a Vec
+        report.stop_multi_processor_time();
+        eprintln!("Integrating multicore results");
+        for idx in results{
+            index.merge(idx);
+            //report.merge( &gex.1 );
+        }
+        report.stop_single_processor_time();
+    }
+
+    index.eprint();
 
     index.write_index( opts.outpath.to_string() ).unwrap();
 
