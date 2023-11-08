@@ -227,6 +227,9 @@ OPTIONS:
 ```
 ./target/release/create_index -n 12 --transcript "gene_name" -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index > testData/mapperTest/mRNA.fa
 ```
+
+The program by default creates transcipt specific indices. Which is kind of counter intuitive and could be changed later on if necessary.
+
 **Performance**
 
 ```
