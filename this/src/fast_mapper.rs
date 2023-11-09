@@ -304,13 +304,21 @@ impl FastMapper{
     }
 
     pub fn print( &self ){
-        println!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
-        println!("gene names like '{}'", self.names_store[0]);
+        if self.names_store.len() > 0 {
+            println!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
+            println!("gene names like '{}'", self.names_store[0]);
+        }else {
+            println!("This index is empty");
+        }    
     }
 
     pub fn eprint( &self ){
-        eprintln!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
-        eprintln!("gene names like '{}'", self.names_store[0]);
+        if self.names_store.len() > 0 {
+            eprintln!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
+            eprintln!("gene names like '{}'", self.names_store[0]);
+        }else {
+            eprintln!("This index is empty");
+        }
     }
 
     pub fn get_id( &self, name: String ) -> usize{
