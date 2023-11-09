@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
-needletail = "0.4"
+needletail = "0.5.1"
 flate2 = "1.0.24"
 indicatif = {version = "*", features = ["rayon"]}
 regex = "1.0.0"

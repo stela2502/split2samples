@@ -19,7 +19,6 @@ use std::time::SystemTime;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
-use std::io::Lines;
 
 use flate2::read::GzDecoder;
 use std::collections::HashMap;
@@ -85,7 +84,7 @@ struct Opts {
 
 
 
-fn process_lines ( gtf: &str, chr:&Regex, re_gene_name: &Regex, 
+fn process_lines ( gtf: &str, re_gene_name: &Regex, 
     re_gene_id: &Regex, re_transcript_id: &Regex) -> HashMap::<String, Gene> {
 
 
@@ -160,14 +159,15 @@ fn process_lines ( gtf: &str, chr:&Regex, re_gene_name: &Regex,
             }
         }
 
-        if parts[2] == "gene"{
-            // here we should start to 'clean out the old ones'!
-            //eprintln!("We got a gene!");
-            let start = match parts[3].parse::<usize>(){
-                Ok(v) => v,
-                Err(e) => panic!("I could not parse the start of the transcript as usize: {e:?}"),
-            };
-        }
+        // genes are collected from transcripts! to also catch aternative transcription ends.
+        // if parts[2] == "gene"{
+        //     // here we should start to 'clean out the old ones'!
+        //     //eprintln!("We got a gene!");
+        //     let start = match parts[3].parse::<usize>(){
+        //         Ok(v) => v,
+        //         Err(e) => panic!("I could not parse the start of the transcript as usize: {e:?}"),
+        //     };
+        // }
     }
     genes
 }
@@ -361,14 +361,12 @@ fn main() {
     eprintln!("Starting with data collection");
     
     let max_dim = reads_per_chunk * num_threads;
-    let mut lines = Vec::<String>::with_capacity( max_dim );
-    let mut batch = 0;
+    //let mut lines = Vec::<String>::with_capacity( max_dim );
+    //let mut batch = 0;
 
-    let genes_hash = process_lines( &opts.gtf, &chr, &re_gene_name, &re_gene_id, &re_transcript_id );
+    let genes_hash = process_lines( &opts.gtf, &re_gene_name, &re_gene_id, &re_transcript_id );
     let genes: Vec<Gene> = genes_hash.into_values().collect();
     
-    let mut good_read_count = genes.len();
-
     let results:Vec<FastMapper> = genes.par_chunks(genes.len() / num_threads + 1) // Split the data into chunks for parallel processing
         .map(|data_split| {
             // Get the unique identifier for the current thread
@@ -405,7 +403,7 @@ fn main() {
     report.stop_single_processor_time();
     let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
 
-    eprintln!("For {} sequence regions (x {} steps) we needed {} h {} min and {} sec to process.",max_dim, batch, h, m, s );
+    eprintln!("For {} sequence regions we needed {} h {} min and {} sec to process.",max_dim, h, m, s );
     
     //eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
     eprintln!("{}", report.program_states_string() );
@@ -417,6 +415,7 @@ fn main() {
 
     if opts.text{
         index.write_index_txt( opts.outpath.to_string() ).unwrap();
+        eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.");
     }
 
     //index.write_index_txt( opts.outpath.to_string() ).unwrap();
