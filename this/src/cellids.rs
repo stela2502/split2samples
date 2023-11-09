@@ -448,7 +448,7 @@ impl CellIds{
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
         let max:u32 = 384;
-        let fuzziness = 5;
+        let fuzziness = 7;
         //let max:u32 = self.c1s.len() as u32;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
         
