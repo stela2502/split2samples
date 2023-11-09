@@ -448,6 +448,7 @@ impl CellIds{
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
         let max:u32 = 384;
+        let fuzziness = 5;
         //let max:u32 = self.c1s.len() as u32;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
         
@@ -480,7 +481,7 @@ impl CellIds{
                 None => {
                     let mut good = Vec::<(usize,usize)>::with_capacity(3);
                     for i in 0..self.c1s.len(){
-                        if ( km1 ^ self.c1s[i]) < 5 {
+                        if ( km1 ^ self.c1s[i]) < fuzziness {
                             // could be as little as one bd change - max two
                             good.push( (i, ( km1 ^ self.c1s[i])  as usize ) );
                         }
@@ -494,7 +495,7 @@ impl CellIds{
                 }
             };
             if ! ok{
-                continue
+                continue;
             }
             ok = false;
             cell_id += match self.csl2.get( &km2 ){
@@ -506,7 +507,7 @@ impl CellIds{
                 None => {
                     let mut good = Vec::<(usize,usize)>::with_capacity(3);
                     for i in 0..self.c2s.len(){
-                        if ( km2 ^ self.c2s[i]) < 5 {
+                        if ( km2 ^ self.c2s[i]) < fuzziness {
                             // could be as little as one bd change - max two
                             good.push( (i, ( km2 ^ self.c2s[i])  as usize)  );
                         }
@@ -519,8 +520,8 @@ impl CellIds{
                     }
                 }.try_into().unwrap(),
             };
-            if !ok {
-                continue
+            if ! ok{
+                continue;
             }
             ok = false; 
             cell_id += match self.csl3.get( &km3 ){
@@ -532,7 +533,7 @@ impl CellIds{
                 None => {
                     let mut good = Vec::<(usize,usize)>::with_capacity(3);
                     for i in 0..self.c3s.len(){
-                        if ( km3 ^ self.c3s[i]) < 5 {
+                        if ( km3 ^ self.c3s[i]) < fuzziness {
                             // could be as little as one bd change - max two
                             good.push( (i, ( km3 ^ self.c3s[i])  as usize)  );
                         }
@@ -546,7 +547,7 @@ impl CellIds{
                 }.try_into().unwrap(),
             };
             if ok {
-                return Ok( (cell_id, add) ); // to make it overlap with the BD results
+                return Ok( (cell_id, add) ); 
             }
             // ok no match for shift add == iteration of this loop
         }

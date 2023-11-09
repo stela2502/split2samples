@@ -188,6 +188,36 @@ The benefit between running all files separately is that the umis are controlled
 target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz,testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz,testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
 ```
 
+output of that call (version 1.2.1).
+
+```
+dense matrix: 71 cell written
+
+Summary:
+total      reads  : 200000 reads
+no cell ID reads  : 32132 reads (16.07% of total)
+no gene ID reads  : 8910 reads (4.45% of total)
+N's or too short  : 28160 reads (14.08% of total)
+cellular reads    : 139708 reads (69.85% of total)
+expression reads  : 1706 reads (1.22% of cellular)
+antibody reads    : 480 reads (0.34% of cellular)
+sample   reads    : 488 reads (0.35% of cellular)
+unique reads      : 2674 reads (1.91% of cellular)
+
+pca duplicates or bad cells: 137034 reads (98.09% of cellular)
+
+timings:
+   overall run time 0 h 0 min 6 sec 916 millisec
+   file-io run time 0 h 0 min 0 sec 0 millisec
+single-cpu run time 0 h 0 min 0 sec 0 millisec
+ multi-cpu run time 0 h 0 min 0 sec 0 millisec
+
+
+Cell->Sample table written to "testData/output_1e5/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 6 sec 934milli sec
+```
+
 
 ## createIndex
 
