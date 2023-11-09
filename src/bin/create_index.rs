@@ -415,7 +415,7 @@ fn main() {
 
     if opts.text{
         index.write_index_txt( opts.outpath.to_string() ).unwrap();
-        eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.");
+        eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.",opts.outpath.to_string());
     }
 
     //index.write_index_txt( opts.outpath.to_string() ).unwrap();
