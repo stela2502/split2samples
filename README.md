@@ -255,8 +255,22 @@ OPTIONS:
 ```
 
 ```
-./target/release/create_index -n 12 --transcript "gene_name" -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index > testData/mapperTest/mRNA.fa
+./target/release/create_index -n 12 -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index > testData/mapperTest/mRNA.fa
 ```
+
+And does that work?
+
+```
+target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
+```
+
+The same as the result of that?
+
+```
+target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1_index -s mouse  -i testData/mapperTest/index/ -e testData/addOn.fa -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
+```
+
+In version 1.2.2 quantify_rhapsody_multi foudn 8 more cells using the index than using the fasta data only. This might be due to the \_int unprocessed transcripts being recoreded using the index. In total 31 of these internal transcript were recorded. 
 
 The program by default creates transcipt specific indices. Which is kind of counter intuitive and could be changed later on if necessary.
 
@@ -427,7 +441,7 @@ Little less than 2h. Let's check how much time BD's version does need...
 ## And BD software for the S2 sample
 
 
-Repeated runs on my desktop did faile after up to 38h runtime.
+Repeated runs on my desktop did fale after up to 38h runtime.
 Therefore I report the seven bridges run time here: 7 hours, 39 minutes.
 That is significantly faster than the 38h on my system, but it nevertheless is ~4x slower than my Rhapsody implementation on a single core.
 
@@ -435,6 +449,7 @@ Why single core? The system IO does affect the Rust implementation.
 The splitting of large gzipped fastq files can easiliy take more than halve an hour and  given the fast processing time
 the additional work to implement mutiprocessor capabilities for Rustody seams unnecessary.
 
+Actually single core is history - new multicore processing is working WAY faster now.
 
 ## The last run on my desktop:
 

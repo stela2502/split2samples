@@ -33,6 +33,7 @@ pub struct CellData{
     pub genes: BTreeMap<usize, HashSet<u64>>, // I want to know how many times I got the same UMI
     pub genes_with_data: HashSet<String>, // when exporting genes it is helpfule to know which of the possible genomic genes actually have an expression reported...
     pub total_reads: BTreeMap<usize, usize>, // instead of the per umi counting
+    //pub cell_counts: BTreeMap<usize, usize>,
     pub passing: bool // check if this cell is worth exporting. Late game
 }
 
@@ -108,18 +109,20 @@ impl CellData{
         //println!("adding gene id {}", geneid );
         return match self.genes.get_mut( &geneid ) {
             Some( gene ) => {
-                match self.total_reads.get_mut( &geneid ){
-                    Some( count ) => *count += 1,
-                    None => panic!("This must not happen - libraray error"),
+                if gene.insert( umi ){
+                    match self.total_reads.get_mut( &geneid ){
+                        Some( count ) => *count += 1,
+                        None => panic!("This must not happen - libraray error"),
+                    }
+                    return true
                 }
-                gene.insert( umi )
+                false
             }, 
             None => {
                 let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
                 gc.insert( umi );
                 self.total_reads.insert( geneid, 1 );
-                self.genes.insert( geneid, gc );
-                true
+                self.genes.insert( geneid, gc ).is_some()
             }
         }
     }
@@ -143,11 +146,11 @@ impl CellData{
                 None => panic!("I could not resolve the gene name {gname}" ),
             };
             n += match self.total_reads.get( id  ){
-            Some( reads ) => {
-                *reads
-            }
-            None => 0
-        };
+                Some( reads ) => {
+                    *reads
+                },
+                None => 0
+            };
         }
         n
     }

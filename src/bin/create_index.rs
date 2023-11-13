@@ -169,6 +169,7 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
         //     };
         // }
     }
+
     genes
 }
 
@@ -366,6 +367,7 @@ fn main() {
 
     let genes_hash = process_lines( &opts.gtf, &re_gene_name, &re_gene_id, &re_transcript_id );
     let genes: Vec<Gene> = genes_hash.into_values().collect();
+    report.stop_file_io_time();
     
     let results:Vec<FastMapper> = genes.par_chunks(genes.len() / num_threads + 1) // Split the data into chunks for parallel processing
         .map(|data_split| {
@@ -399,8 +401,9 @@ fn main() {
         //report.merge( &gex.1 );
     }
 
-    index.make_index_te_ready(); 
+    //index.make_index_te_ready(); 
     report.stop_single_processor_time();
+
     let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
 
     eprintln!("For {} sequence regions we needed {} h {} min and {} sec to process.",max_dim, h, m, s );

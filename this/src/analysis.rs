@@ -247,6 +247,7 @@ impl Analysis{
 
 	pub fn write_index(&mut self, path:&String ){
 		self.genes.write_index( path.to_string() ).unwrap();
+		self.genes.write_index_txt( path.to_string() ).unwrap();
 	}
 
 

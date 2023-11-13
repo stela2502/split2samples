@@ -153,7 +153,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
                 parts[4].to_string(),
                 parts[6].to_string(),
                 transcript_id.to_string(), // this will be the id we add to the index
-                vec![gene_name.to_string(), family_name.to_string(), class_name.to_string()],
+                vec![transcript_id.to_string(), gene_name.to_string(), family_name.to_string(), class_name.to_string()],
             );
             gene.add_exon( parts[3].to_string(),parts[4].to_string());
             

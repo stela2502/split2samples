@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 use std::collections::HashMap;
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 /// A mapper entry is a simplistic storage for the fast mapper class.
 /// It mainly consists of a list of u64 sequences that can be used for mapping (32bp binary)
 
@@ -15,6 +18,8 @@ pub struct NameEntry{
 	// a short vector with class info. This is needed for the TE scanner.
 	// the ids point to the fast_mapper::
 	pub classes:Vec<Vec<usize>>,
+	// I want to quickly find if a dataset has alreadxy been added.
+	hashes: HashSet<u64>, 
 	pos:usize,// the position to return with next
 }
 
@@ -22,10 +27,12 @@ impl NameEntry{
 	pub fn new() -> Self{
 		let data = Vec::with_capacity(4);
 		let classes = Vec::with_capacity(4);
+		let hashes = HashSet::new();
 		let pos = 0;
 		Self{ 
 			data,
 			classes,
+			hashes,
 			pos
 		}
 	}
@@ -53,26 +60,34 @@ impl NameEntry{
 
     pub fn reset(&mut self) {
     	self.pos=0;
-    } 
+    }
 
-	pub fn add( &mut self, tup:(usize, usize), classes:Vec<usize>) -> Option<()> {
+    fn hash_classes(tup: &(usize, usize), vals: &Vec<usize> ) -> u64 {
+	    let mut hasher = DefaultHasher::new();
 
-		let mut need = true;
-		for ( gene_id, _gene_level) in &self.data{
-			if gene_id == &tup.0{
-				need = false;
-				break;
-			}
+	    tup.0.hash(&mut hasher);
+	    tup.1.hash(&mut hasher);
+	    // Hash the usize values
+	    for val in vals {
+	    	val.hash(&mut hasher);
+	    }
+	    // Finalize and return the hash value
+	    hasher.finish()
+	}
+
+	pub fn add( &mut self, tup:(usize, usize), classes:Vec<usize>) -> bool {
+
+		let hash = Self::hash_classes(&tup, &classes );
+
+		if self.hashes.contains( &hash){
+			// the combo of gene id, mapping class, [gene tags] has already been added here.
+			return false
 		}
-		if need {
-			self.data.push( tup );
-			self.classes.push(classes);
-		}
-		else {
-			return None;
-		 	//eprintln!("This NameEntry already links to the gene {} - ignored", gene_id );
-		}
-		Some(())
+		//eprintln!("Mapper_entries: I add {:?} and {:?} with hash {}", tup, classes, hash);
+		self.data.push( tup );
+		self.classes.push(classes);
+		self.hashes.insert( hash );
+		true
 	}
 
 	/// this requires the classes vectors to be filled with optional names for the genes.
@@ -179,29 +194,26 @@ impl MapperEntry{
 	}
 
 	/// add a match pair 8bp + <sign> bp.
-	pub fn add( &mut self, seq:u64, id:(usize,usize), classes:Vec<usize>) -> Result<(), &str> {
+	pub fn add( &mut self, seq:u64, id:(usize,usize), classes:Vec<usize>) -> bool{
 
 		for i in 0..self.map.len() {
 			if self.map[i].0 == seq {
 				self.only = 0;
-				match self.map[i].1.add( id, classes.clone()){
-					Some(_) => {
-						return Ok(())
-					},
-					None => return Err("sequence gene pair was already stored"),
-				};
+				return  self.map[i].1.add( id, classes.clone());
 			}
 		}
 		// now we have no match to the seq and therefore need to add one
 		let mut name_entry = NameEntry::new();
-		let _ = name_entry.add( id , classes.clone() );
-		self.map.push( ( seq, name_entry ) );
-		if self.map.len() == 1{
-			self.only = id.0;
-		}else {
-			self.only = 0;
+		if name_entry.add( id , classes.clone() ){
+			self.map.push( ( seq, name_entry ) );
+			if self.map.len() == 1{
+				self.only = id.0;
+			}else {
+				self.only = 0;
+			}
 		}
-		Ok(())
+		
+		true
 	}
 
 	/// calculate the bit flips between two u64 sequences
