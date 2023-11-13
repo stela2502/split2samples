@@ -258,22 +258,6 @@ OPTIONS:
 ./target/release/create_index -n 12 -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index > testData/mapperTest/mRNA.fa
 ```
 
-And does that work?
-
-```
-target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
-```
-
-The same as the result of that?
-
-```
-target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1_index -s mouse  -i testData/mapperTest/index/ -e testData/addOn.fa -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
-```
-
-In version 1.2.2 quantify_rhapsody_multi foudn 8 more cells using the index than using the fasta data only. This might be due to the \_int unprocessed transcripts being recoreded using the index. In total 31 of these internal transcript were recorded. 
-
-The program by default creates transcipt specific indices. Which is kind of counter intuitive and could be changed later on if necessary.
-
 **Performance**
 
 ```
@@ -298,6 +282,123 @@ single-cpu run time 0 h 0 min 0 sec 18 millisec
 2,2M index.1.Index
 (6,3M mRNA.fa)
 ```
+**And does that work?**
+
+
+```
+target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
+
+
+...
+
+Writing outfiles ...
+filtering cells and writing gene expression
+Dropping cell with too little counts (n=67)
+sparse Matrix: 54 cell(s), 311 gene(s) and 4242 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1/BD_Rhapsody_expression"); 
+Writing Antibody counts
+sparse Matrix: 54 cell(s), 5 gene(s) and 203 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1/BD_Rhapsody_antibodies"); 
+Writing samples table
+dense matrix: 54 cell written
+
+Summary:
+total      reads  : 500000 reads
+no cell ID reads  : 17436 reads (3.49% of total)
+no gene ID reads  : 5146 reads (1.03% of total)
+N's or too short  : 152 reads (0.03% of total)
+cellular reads    : 482412 reads (96.48% of total)
+expression reads  : 197597 reads (40.96% of cellular)
+antibody reads    : 4229 reads (0.88% of cellular)
+sample   reads    : 4628 reads (0.96% of cellular)
+unique reads      : 206454 reads (42.80% of cellular)
+
+pca duplicates or bad cells: 275958 reads (57.20% of cellular)
+
+timings:
+   overall run time 0 h 0 min 4 sec 668 millisec
+   file-io run time 0 h 0 min 0 sec 823 millisec
+single-cpu run time 0 h 0 min 0 sec 63 millisec
+ multi-cpu run time 0 h 0 min 3 sec 486 millisec
+
+```
+
+The same as the result of that?
+
+```
+target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1_index -s mouse  -i testData/mapperTest/index/ -e testData/addOn.fa -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
+
+...
+
+Writing outfiles ...
+filtering cells and writing gene expression
+Dropping cell with too little counts (n=66)
+sparse Matrix: 46 cell(s), 151 gene(s) and 1185 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index/BD_Rhapsody_expression"); 
+Writing Antibody counts
+sparse Matrix: 46 cell(s), 5 gene(s) and 186 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index/BD_Rhapsody_antibodies"); 
+Writing samples table
+dense matrix: 46 cell written
+
+Summary:
+total      reads  : 500000 reads
+no cell ID reads  : 17436 reads (3.49% of total)
+no gene ID reads  : 275828 reads (55.17% of total)
+N's or too short  : 152 reads (0.03% of total)
+cellular reads    : 482412 reads (96.48% of total)
+expression reads  : 97402 reads (20.19% of cellular)
+antibody reads    : 3998 reads (0.83% of cellular)
+sample   reads    : 4322 reads (0.90% of cellular)
+unique reads      : 105722 reads (21.92% of cellular)
+
+pca duplicates or bad cells: 376690 reads (78.08% of cellular)
+
+timings:
+   overall run time 0 h 0 min 5 sec 626 millisec
+   file-io run time 0 h 0 min 0 sec 834 millisec
+single-cpu run time 0 h 0 min 0 sec 38 millisec
+ multi-cpu run time 0 h 0 min 4 sec 465 millisec
+
+```
+
+In version 1.2.2 quantify_rhapsody_multi found 8 more cells using the fasta data. So tere is more work needed until this index does do it's job! But on the positive side: 31 unspliced transcripts were recorded. A more detailed analysis has to follow.
+
+The program by default creates transcipt specific indices. Which is kind of counter intuitive and could be changed later on if necessary.
+
+And what about a genomic index combining Mus_musculus.GRCm39.dna.toplevel.fa.gz and Mus_musculus.GRCm39.104.subset.gtf.gz - I need to check what this subset does actually mean...
+
+
+```
+
+target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1_index_genomic -s mouse  -i /mnt/data1/Rustody_Test_Files/indices/mouse/GRCm39 -e testData/addOn.fa -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
+
+Writing outfiles ...
+filtering cells and writing gene expression
+Dropping cell with too little counts (n=65)
+sparse Matrix: 49 cell(s), 217 gene(s) and 1422 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index_genomic/BD_Rhapsody_expression");
+Writing Antibody counts
+sparse Matrix: 49 cell(s), 5 gene(s) and 185 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index_genomic/BD_Rhapsody_antibodies");
+Writing samples table
+dense matrix: 49 cell written
+
+Summary:
+total      reads  : 500000 reads
+no cell ID reads  : 17436 reads (3.49% of total)
+no gene ID reads  : 244108 reads (48.82% of total)
+N's or too short  : 152 reads (0.03% of total)
+cellular reads    : 482412 reads (96.48% of total)
+expression reads  : 111234 reads (23.06% of cellular)
+antibody reads    : 4059 reads (0.84% of cellular)
+sample   reads    : 4385 reads (0.91% of cellular)
+unique reads      : 119678 reads (24.81% of cellular)
+
+pca duplicates or bad cells: 362734 reads (75.19% of cellular)
+
+timings:
+   overall run time 0 h 0 min 14 sec 237 millisec
+   file-io run time 0 h 0 min 0 sec 841 millisec
+single-cpu run time 0 h 0 min 0 sec 21 millisec
+ multi-cpu run time 0 h 0 min 6 sec 240 millisec
+```
+
+I hope you found my little easter egg: you can combine --expression and --index options in the program call. This way you can have a global index and nevertheless add project specific transcriptions like dtTomato in this specific case.
 
 
 # Speed comparisons to local BD software installation
@@ -471,7 +572,7 @@ This way intron/exon boundaries can be addressed.
 
 ```
 
-./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index --gene-kmers 16 > testData/mapperTest/index/mRNA.fa
+./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index > testData/mapperTest/index/mRNA.fa
 
 ```
 
