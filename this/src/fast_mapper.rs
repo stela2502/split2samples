@@ -417,11 +417,16 @@ impl FastMapper{
                 }
             }
 
-
+            eprintln!("genes: {:?}\ngood: {:?}\nNo good gene identified!\n", genes, good );
+            for  gene_id in good {
+                eprint!(" {}", self.names_store[*gene_id] );
+            }
+            eprint!("\n");
         }
         // if report {
         //     eprintln!("! No good gene identified!\n" )
         // }
+
         return false
 
     }
