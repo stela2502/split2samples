@@ -22,3 +22,8 @@ Cargo.lock
 .Rhistory
 check_matrix.mtx
 cmp
+
+
+# projedct specififcs
+
+fastq_ids_not_in_index.txt
