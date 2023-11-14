@@ -412,6 +412,24 @@ impl FastMapper{
                 return true
             }
 
+            // now we have one possibility left -> As many int reads as there are normal reads.
+            // that is exactly what one would expect if it is actually a normal read
+            fn remove_suffix_string_int(s: &str) -> String {
+                let suffix_to_remove = format!("{}_int", suffix);
+
+                if s.ends_with("_int") {
+                    return s[..s.len() - 4 ].to_string();
+                }
+
+                s.to_string()
+            }
+            if good.len() == 2{
+                if self.names_store[good[0]].to_string() == remove_suffix_string_int( self.names_store[good[1]] ){
+                    if report {
+                        eprintln!("4 This was selected as good: {} or {}\n",best_gene, self.names_store[good[0]] )
+                    }
+                }
+
 
         }
         if report {
