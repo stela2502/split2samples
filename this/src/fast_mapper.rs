@@ -356,21 +356,21 @@ impl FastMapper{
     fn get_best_gene( &self, genes:&HashMap::<(usize, usize), usize>, ret: &mut Vec::<usize> ) -> bool{
         ret.clear();
 
-        // let mut report = false;
-        // if genes.len() > 2{
-        //     report = true;
-        //     eprintln!("Lots of genes matched here?: {genes:?}");
-        //     for  (gene_id, _level) in genes.keys(){
-        //         eprint!(" {}", self.names_store[*gene_id] );
-        //     }
-        //     eprint!("\n");
-        // }
+        let mut report = false;
+        if genes.len() > 2{
+            report = true;
+            eprintln!("Lots of genes matched here?: {genes:?}");
+            for  (gene_id, _level) in genes.keys(){
+                eprint!(" {}", self.names_store[*gene_id] );
+            }
+            eprint!("\n");
+        }
         if genes.len() == 1 {
             if let Some((key, _)) = genes.iter().next() {
                ret.push(key.0.clone());
-               // if report {
-               //  eprintln!("1 This was selected as good: {} or {}\n",key.0, self.names_store[key.0] )
-               // }
+               if report {
+                eprintln!("1 This was selected as good: {} or {}\n",key.0, self.names_store[key.0] )
+               }
                return true
             }
         }
@@ -399,24 +399,24 @@ impl FastMapper{
             }
             if good.len() ==1 {
                 ret.push( good[0] );
-                // if report {
-                //     eprintln!("2 This was selected as good: {} or {}\n",good[0], self.names_store[good[0]] )
-                // }
+                if report {
+                    eprintln!("2 This was selected as good: {} or {}\n",good[0], self.names_store[good[0]] )
+                }
                 return true
             }
             if genes_with_best_matches == 1{
                 ret.push( best_gene );
-                // if report {
-                //     eprintln!("3 This was selected as good: {} or {}\n",best_gene, self.names_store[best_gene] )
-                // }
+                if report {
+                    eprintln!("3 This was selected as good: {} or {}\n",best_gene, self.names_store[best_gene] )
+                }
                 return true
             }
 
 
         }
-        // if report {
-        //     eprintln!("! No good gene identified!\n" )
-        // }
+        if report {
+            eprintln!("! No good gene identified!\n" )
+        }
         return false
 
     }
