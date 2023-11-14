@@ -382,19 +382,13 @@ impl FastMapper{
                 }
             }
             let mut good = Vec::<usize>::with_capacity( genes.len() );
-            let mut most_matches = &0;
-            let mut best_gene = 0; //otherwise this trows an error later
+            let most_matches = genes.values().max().unwrap_or(&0);
+            let mut best_gene = 0; //otherwise this throws an error later
             let mut genes_with_best_matches = 0;
             for ((gene_id, level ), matches) in genes{
-                if level == &prob_level{
+                if level == &prob_level && matches == most_matches {
                     good.push( *gene_id );
-                    if most_matches < matches{
-                        most_matches = matches;
-                        best_gene = *gene_id;
-                        genes_with_best_matches = 1;
-                    }else if most_matches == matches{
-                        genes_with_best_matches +=1;
-                    }
+                    genes_with_best_matches +=1;
                 }
             }
             if good.len() ==1 {
