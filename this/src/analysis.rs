@@ -699,6 +699,7 @@ impl Analysis{
 			                        	umi,
 			                        	report
 			                        );
+			                        println!("{}",String::from_utf8_lossy(&seqrec.id()).to_owned() );
 			                    },
 			                    None => {
 			                    	report.no_data +=1;
