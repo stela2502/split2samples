@@ -408,10 +408,10 @@ impl FastMapper{
                 s.to_string()
             }
             if good.len() == 2{
-                if self.names_store[good[0]].to_string() == remove_suffix_string_int( &self.names_store[good[1]] ){
-                    ret.push( good[0] );
+                if remove_suffix_string_int( &self.names_store[good[0]] ) == remove_suffix_string_int( &self.names_store[good[1]] ){
+                    ret.push( self.get_id(remove_suffix_string_int( &self.names_store[good[0]] ) ) );
                     if report {
-                        eprintln!("4 This was selected as good: {} or {}\n",best_gene, self.names_store[good[0]] )
+                        eprintln!("4 This was selected as good: {} or {}\n",best_gene, ret[ret.len()-1] )
                     }
                     return true
                 }
