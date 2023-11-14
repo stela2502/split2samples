@@ -26,4 +26,5 @@ cmp
 
 # projedct specififcs
 
-fastq_ids_not_in_index.txt
+*_not_in_index.txt
+log

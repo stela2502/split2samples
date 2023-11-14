@@ -383,6 +383,9 @@ impl FastMapper{
             }
             let mut good = Vec::<usize>::with_capacity( genes.len() );
             let most_matches = genes.values().max().unwrap_or(&0);
+            if most_matches < &3_usize {
+                return false
+            }
             let mut best_gene = 0; //otherwise this throws an error later
             for ((gene_id, level ), matches) in genes{
                 if level == &prob_level && matches == most_matches {
@@ -419,7 +422,7 @@ impl FastMapper{
 
             eprintln!("genes: {:?}\ngood: {:?}\nNo good gene identified!\n", genes, good );
             for  gene_id in good {
-                eprint!(" {}", self.names_store[*gene_id] );
+                eprint!(" {}", self.names_store[ gene_id ] );
             }
             eprint!("\n");
         }
