@@ -9,7 +9,7 @@ use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 
-//use regex::Regex;
+use regex::Regex;
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
@@ -355,6 +355,9 @@ impl FastMapper{
 
     fn get_best_gene( &self, genes:&HashMap::<(usize, usize), usize>, ret: &mut Vec::<usize> ) -> bool{
         ret.clear();
+        if genes.is_empty(){
+            return false
+        }
 
         // let mut report = false;
         // if genes.len() > 2{
@@ -420,15 +423,39 @@ impl FastMapper{
                 }
             }
 
-            eprintln!("genes: {:?}\ngood: {:?}\nNo good gene identified!\n", genes, good );
+            let re = Regex::new(r"^G[mM]").unwrap();
+            let gene_names = self.gene_names_for_ids( &good );
+            let mut better = Vec::<String>::with_capacity( good.len());
+            for name in &gene_names{
+                if re.is_match( name ){
+                    better.push( name.to_string() );
+                }
+            }
+            if better.len() == 1 {
+                eprintln!("Filtering G[mM] was sucessful!: {:?}", better);
+                ret.push( self.get_id( better[0].to_string() ));
+                return true;
+            }
+            if better.len() == 2{
+                if remove_suffix_string_int( &better[0] ) == remove_suffix_string_int( &better[1] ){
+                    ret.push( self.get_id(remove_suffix_string_int( &better[0] ) ) );
+                    // if report {
+                    //     eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1]  &self.names_store[ret[ret.len()-1]] )
+                    // }
+                    return true
+                }
+            }
+
+
+            eprintln!("genes: {:?}\ngood: {:?}\nnames: {:?}\nNo good gene identified!\n", genes, good, gene_names );
             for  gene_id in good {
                 eprint!(" {}", self.names_store[ gene_id ] );
             }
             eprint!("\n");
         }
-        // if report {
-        //     eprintln!("! No good gene identified!\n" )
-        // }
+        //if report {
+            eprintln!("! No good gene identified! {:?}\n", genes );
+        //}
 
         return false
 
