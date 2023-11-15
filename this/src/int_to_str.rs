@@ -168,6 +168,28 @@ impl IntToStr {
         return Some(true)
     }
 
+    pub fn iter_8bp_4bp_hops (&mut self) -> Option<u16> {
+    	if self.storage.len() < 2{
+    		return None
+    	} 
+    	let short = self.into_u16().clone();
+    	let _ = self.drop_n(1);
+    	return Some(short);
+    }
+
+    pub fn iter_8bp (&mut self) -> Option<u16> {
+    	if self.storage.len() < 2{
+    		if self.shifted < 4{
+    			self.shift();
+    		}else {
+    			return None
+    		}
+    	}
+    	let short = self.into_u16().clone();
+    	let _ = self.drop_n(1);
+    	return Some(short);
+    }
+
     pub fn next(&mut self) -> Option<(u16, u64, usize)> {
 
     	//println!("Start with next");

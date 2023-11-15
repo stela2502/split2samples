@@ -1,4 +1,5 @@
 use crate::fast_mapper::FastMapper;
+use crate::traits::Index;
 
 const COMPLEMENT: [Option<u8>; 256] = {
     let mut lookup = [None; 256];

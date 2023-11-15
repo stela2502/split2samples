@@ -26,9 +26,11 @@ mod tests {
 }
 
 
+
+pub mod traits;
 pub mod cellids;
 pub mod geneids;
-pub mod sampleids;
+pub mod samples;
 pub mod singlecelldata;
 pub mod ofiles;
 pub mod ifiles;

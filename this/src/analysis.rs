@@ -4,9 +4,10 @@ use needletail::parser::SequenceRecord;
 
 use crate::cellids::CellIds;
 use crate::singlecelldata::SingleCellData;
-//use crate::geneids::GeneIds;
+use crate::samples::Samples;
 use crate::fast_mapper::FastMapper;
 use crate::int_to_str::IntToStr;
+use crate::traits::Index;
 
 use crate::mapping_info::MappingInfo;
 //use std::io::BufReader;
@@ -57,8 +58,8 @@ fn mean_u8( data:&[u8] ) -> f32 {
 /// I started it to easily process multiple fastq files in a row.
 pub struct Analysis{
 	genes: FastMapper,
-	samples: FastMapper,
-	antibodies: FastMapper,
+	samples: Samples,
+	antibodies: Samples,
 	cells: CellIds,
 	gex: SingleCellData,
 	sample_names:Vec<String>,
@@ -80,8 +81,8 @@ impl Analysis{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000 ); // split them into 9 bp kmers
-	    let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000 );
-	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000 );
+	    let mut samples :Samples = Samples::new(12,12 ); // number are totally irrelevant here
+	    let mut antibodies :Samples = Samples::new( gene_kmers, 10_000 );
 
 	    let mut gene_count = 600;
 	    
@@ -199,7 +200,7 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	samples.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq, format!("Sample{id}"), EMPTY_VEC.clone() );
 	        	id +=1;
 	        }
 	    }
@@ -214,7 +215,7 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	samples.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq, format!("Sample{id}"), EMPTY_VEC.clone() );
 	        	id +=1;
 	        }
 
@@ -306,7 +307,7 @@ impl Analysis{
 	            	// or a mRNA match
 	            	// And of casue not a match at all
 
-	            	ok = match &self.antibodies.get( &data[i].1, report ){
+	            	ok = match &self.antibodies.get( &data[i].1 ){
 	                    Some(gene_id) =>{
 	                    	//eprintln!("I got an ab id {gene_id}");
 	                    	if ! gex.try_insert( 
@@ -325,7 +326,7 @@ impl Analysis{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1, report ){
+	                	ok = match &self.samples.get( &data[i].1 ){
 		                    Some(gene_id) =>{
 		                    	//eprintln!("I got a samples id {gene_id}");
 		                        if ! gex.try_insert( 
@@ -346,7 +347,7 @@ impl Analysis{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get( &data[i].1, report ){
+		                match &self.genes.get( &data[i].1 ){
 		                    Some(gene_id) =>{
 		                        if ! gex.try_insert( 
 		                        	&(*cell_id as u64),
@@ -655,7 +656,7 @@ impl Analysis{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec.seq(), report ){
+		            	ok = match &self.antibodies.get_strict( &seqrec.seq() ){
 		                    Some(gene_id) =>{
 		                    	//eprintln!("Got an antibody match! {gene_id}");
 		                        self.gex.try_insert( 
@@ -672,7 +673,7 @@ impl Analysis{
 		                };
 
 		                if ! ok{
-		                	ok = match &self.samples.get_strict( &seqrec.seq(), report ){
+		                	ok = match &self.samples.get( &seqrec.seq() ){
 			                    Some(gene_id) =>{
 			                    	//eprintln!("Got a samples match! {gene_id}");
 			                        self.gex.try_insert( 
@@ -691,7 +692,7 @@ impl Analysis{
 
 		                if ! ok{
 		                	
-			                match &self.genes.get( &seqrec.seq(), report ){
+			                match &self.genes.get( &seqrec.seq() ){
 			                    Some(gene_id) =>{
 			                        self.gex.try_insert( 
 			                        	&(*cell_id as u64),

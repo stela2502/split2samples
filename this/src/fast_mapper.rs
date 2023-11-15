@@ -6,6 +6,9 @@
 use std::collections::BTreeMap;
 //use needletail::bitkmer::BitKmer;
 use crate::int_to_str::IntToStr;
+use crate::traits::Index;
+
+
 use std::collections::HashMap;
 //use std::collections::HashSet;
 
@@ -60,9 +63,9 @@ pub struct FastMapper{
 
 // here the functions
 
-impl FastMapper{
+impl Index for FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
-    pub fn new( kmer_len:usize, allocate:usize )-> Self {
+    fn new( kmer_len:usize, allocate:usize )-> Self {
         //println!("I would add {} new entries here:", u16::MAX);
         let mut mapper: Vec<MapperEntry> = Vec::with_capacity(u16::MAX as usize);
         
@@ -107,87 +110,123 @@ impl FastMapper{
         }
     }
 
-    pub fn change_start_id ( &mut self, new_start :usize ){
+    fn names( &self ) -> Vec<String> {
+        self.names_store.clone();
+    }
+
+    fn names_len( &self ) -> usize {
+        self.names_store.len()
+    }
+
+    fn change_start_id ( &mut self, new_start :usize ){
         self.last_count = new_start;
+        self.max_id = new_start;
         for _i in 0..new_start{
             self.names_store.push("na".to_string());
             self.names_count.push(0);
         }
     }
+    fn get(&self, seq: &[u8] ) -> Option< usize >{ // gene_id, gene_level
+        
+        //let mut id:usize;
+        let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
 
-    /// For the multicore processing I need this object to be mergable
-    /// All genes from the other object need to be incorporated and all primaryid - secondaryid compbos need to be collected.
-    /// All other classes have to be copied, too. So we need to use our own incorporate_match_combo function.
-    pub fn merge( &mut self, other: FastMapper ) {
+        //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
-        for (primary_id, mapper_object) in other.mapper.iter().enumerate(){
-            for ( secondary_match, name_entry) in mapper_object.map.iter(){
-                for idx in 0..name_entry.classes.len(){
-                    // Now I need to copy the gene names from the other object to my own.
-                    let gene_names = other.gene_names_for_ids( &name_entry.classes[idx] );
-                    let gene_name = other.gene_names_for_ids( &vec![ name_entry.data[idx].0 ]);
-                    // And get my own ids for these names
-                    //let gene_ids = self.ids_for_gene_names( &gene_names );
-                    let _ = self.incorporate_match_combo( primary_id, *secondary_match as usize, gene_name[0].clone(), gene_names );
-                }           
+        let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
+        tool.from_vec_u8( seq.to_vec() );
+
+        //let mut item = self.tool.next();
+
+        let mut matching_geneids = Vec::< usize>::with_capacity(10);
+
+        // entries is a Option<(u16, u64, usize)
+        //let mut i = 0;
+        'main :while let Some(entries) = tool.next(){
+
+            if self.mapper[entries.0 as usize].has_data() {
+                // the 8bp bit is a match
+                //i +=1;
+
+                //eprintln!("We are at iteration {i}");
+
+                // if matching_geneids.len() == 1 && i > 3 {
+                //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
+                //     return Some( matching_geneids[0] )
+                //     //break;
+                // }
+
+                //eprintln!("Ill create a new tool here based on seq {}", entries.1);
+                let seq_u64 = tool.mask_u64( &entries.1 );
+
+                match &self.mapper[entries.0 as usize].get( &seq_u64 ){
+                    Some( gene_id ) => {
+                        //eprintln!("Got one: {:?}", gene_id);
+                        //return ( gene_id );
+                        for gid in &gene_id.data{
+                            match genes.get_mut( &gid) {
+                                Some(gene_count) => {
+                                    *gene_count +=1;
+                                    if *gene_count == 4 && genes.len() ==1 {
+                                        break 'main;
+                                    }
+                                },
+                                None => {
+                                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+                                    genes.insert( gid.clone(), 1);
+                                },
+                            };
+
+                        }
+                    },
+                    None => {
+                        //eprintln!("Got one no  gene id in the first run:");
+                        match self.mapper[entries.0 as usize].find(&seq_u64 ){
+                            Some( gene_id ) => {
+                                //eprintln!("But in the second I got one: {gene_id:?}");
+                                //return ( gene_id );
+                                for gid in &gene_id.data{
+                                    match genes.get_mut(&gid) {
+                                        Some(gene_count) => {
+                                            *gene_count +=1;
+                                            if *gene_count == 4 && genes.len() ==1 {
+                                                break 'main;
+                                            }
+                                        },
+                                        None => {
+                                            //eprintln!("This is a new gene - I'll insert {} and {}",gid.0, gid.1 );
+                                            genes.insert( gid.clone(), 1);
+                                            //eprintln!("I have finished with the indert");
+                                        },
+                                    };
+                                }
+                            },
+                            None => {        
+                                //no_32bp_match +=1;
+                            },
+                        }
+                    },
+                }
             }
+            // if self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids ){
+            //     //eprintln!("We found a best gene!");
+            //     break 'main;
+            // }
+            // if stop{
+            //     //eprintln!("We did not find a best gene!");
+            //     break 'main;
+            // }
         }
-
-    }
-
-    pub fn gene_names_for_ids( &self, ids:&Vec<usize> ) -> Vec<String> {
-        let mut ret = Vec::<String>::with_capacity( ids.len() );
-        for id in ids.iter(){
-            ret.push( self.names_store[*id].clone())
+        //eprintln!("Here I have this gene counts: {:?}", genes );
+        // check if there is only one gene //
+        if self.get_best_gene( &genes, &mut matching_geneids ){
+            return Some( matching_geneids[0] )
         }
-        ret
-    }
-
-    pub fn ids_for_gene_names( &mut self, ids:&Vec<String> ) -> Vec<usize> {
-        let mut ret = Vec::<usize>::with_capacity( ids.len() );
-        for name in ids.iter(){
-            if ! self.names.contains_key( name ){
-                self.names.insert( name.clone(), self.max_id );
-                self.names_store.push( name.clone() );
-                self.names_count.push( 0 );
-                self.max_id += 1;
-            }
-            let id = self.get_id( name.to_string() ).clone();
-            ret.push( id);
-        }
-        ret
-    }
-
-    pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:usize, name:String, ids: Vec<String> )  ->Result<(), &str>{
-
-        if ! self.names.contains_key( &name ){
-            self.names.insert( name.clone(), self.max_id );
-            self.names_store.push( name.clone() );
-            self.names_count.push( 0 );
-            self.max_id += 1;
-        }
-        let gene_id = self.get_id( name.to_string() ).clone();
-        let classes =  self.ids_for_gene_names( &ids );
-        if ! self.mapper[initial_match].has_data() {
-            // will add in the next step so
-            self.with_data +=1;
-        }
-        if self.mapper[initial_match].add( secondary_match.try_into().unwrap(), ( gene_id, 0), classes ){
-            self.pos += 1
-        }else{
-            self.neg +=1
-        }
-
-        Ok( () )
-    }
-
-    pub fn fill_sequence_with_a( self, seq:&u64 ) -> u64{
-        let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_len )));
-        return filled_sed
+        None
     }
 
 
-    pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
+    fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
 
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.max_id );
@@ -274,6 +313,126 @@ impl FastMapper{
         gene_id
     }
 
+    fn get_id( &self, name: String ) -> usize{
+        let id = match self.names.get( &name ) {
+            Some( id ) => id,
+            None => panic!("Gene {name} not defined in the GeneID object"),
+        };
+        id.clone()
+    }
+
+
+    fn print( &self ){
+        if self.names_store.len() > 0 {
+            println!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
+            println!("gene names like '{}'", self.names_store[0]);
+        }else {
+            println!("This index is empty");
+        }    
+    }
+
+    fn to_header_n(&self, names: &Vec<String> ) -> String {
+        let mut ret = names.to_vec();
+        ret.extend_from_slice(&["AsignedSampleName".to_string(), "FractionTotal".to_string(), "n".to_string()]);
+        format!("CellID\t{}", ret.join("\t"))
+    }
+
+    fn names4sparse(&self) -> Vec<String> {
+        self.names4sparse.keys()
+    }
+
+    fn reset_names4sparse( &mut self ){
+        self.names4sparse.clear();
+        self.max_id =0;
+    }
+    fn add_2_names4sparse( &mut self, name:&str ){
+        if ! self.names4sparse.contains_key ( name ){
+            // Insert gene names into the FastMapper
+            self.max_id +=1;
+            self.names4sparse.insert( name.to_string() , self.max_id );
+        }
+    }
+    fn max_id(&self) -> usize{
+        self.max_id
+    }
+
+}
+
+impl FastMapper{
+    /// For the multicore processing I need this object to be mergable
+    /// All genes from the other object need to be incorporated and all primaryid - secondaryid compbos need to be collected.
+    /// All other classes have to be copied, too. So we need to use our own incorporate_match_combo function.
+    pub fn merge( &mut self, other: FastMapper ) {
+
+        for (primary_id, mapper_object) in other.mapper.iter().enumerate(){
+            for ( secondary_match, name_entry) in mapper_object.map.iter(){
+                for idx in 0..name_entry.classes.len(){
+                    // Now I need to copy the gene names from the other object to my own.
+                    let gene_names = other.gene_names_for_ids( &name_entry.classes[idx] );
+                    let gene_name = other.gene_names_for_ids( &vec![ name_entry.data[idx].0 ]);
+                    // And get my own ids for these names
+                    //let gene_ids = self.ids_for_gene_names( &gene_names );
+                    let _ = self.incorporate_match_combo( primary_id, *secondary_match as usize, gene_name[0].clone(), gene_names );
+                }           
+            }
+        }
+
+    }
+
+    pub fn gene_names_for_ids( &self, ids:&Vec<usize> ) -> Vec<String> {
+        let mut ret = Vec::<String>::with_capacity( ids.len() );
+        for id in ids.iter(){
+            ret.push( self.names_store[*id].clone())
+        }
+        ret
+    }
+
+    pub fn ids_for_gene_names( &mut self, ids:&Vec<String> ) -> Vec<usize> {
+        let mut ret = Vec::<usize>::with_capacity( ids.len() );
+        for name in ids.iter(){
+            if ! self.names.contains_key( name ){
+                self.names.insert( name.clone(), self.max_id );
+                self.names_store.push( name.clone() );
+                self.names_count.push( 0 );
+                self.max_id += 1;
+            }
+            let id = self.get_id( name.to_string() ).clone();
+            ret.push( id);
+        }
+        ret
+    }
+
+    pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:usize, name:String, ids: Vec<String> )  ->Result<(), &str>{
+
+        if ! self.names.contains_key( &name ){
+            self.names.insert( name.clone(), self.max_id );
+            self.names_store.push( name.clone() );
+            self.names_count.push( 0 );
+            self.max_id += 1;
+        }
+        let gene_id = self.get_id( name.to_string() ).clone();
+        let classes =  self.ids_for_gene_names( &ids );
+        if ! self.mapper[initial_match].has_data() {
+            // will add in the next step so
+            self.with_data +=1;
+        }
+        if self.mapper[initial_match].add( secondary_match.try_into().unwrap(), ( gene_id, 0), classes ){
+            self.pos += 1
+        }else{
+            self.neg +=1
+        }
+
+        Ok( () )
+    }
+
+    pub fn fill_sequence_with_a( self, seq:&u64 ) -> u64{
+        let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_len )));
+        return filled_sed
+    }
+
+
+
+
 
     /// The index is assumed to have been build using a gene family object.
     /// Therefore we have a lot of almost sequences indexed here.
@@ -319,14 +478,7 @@ impl FastMapper{
         ret
     }
 
-    pub fn print( &self ){
-        if self.names_store.len() > 0 {
-            println!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
-            println!("gene names like '{}'", self.names_store[0]);
-        }else {
-            println!("This index is empty");
-        }    
-    }
+
 
     pub fn eprint( &self ){
         if self.names_store.len() > 0 {
@@ -337,13 +489,7 @@ impl FastMapper{
         }
     }
 
-    pub fn get_id( &self, name: String ) -> usize{
-        let id = match self.names.get( &name ) {
-            Some( id ) => id,
-            None => panic!("Gene {name} not defined in the GeneID object"),
-        };
-        id.clone()
-    }
+
 
     pub fn get_name( &self, id:usize) -> String{
         let name = match self.names_store.get( id ){
@@ -496,131 +642,6 @@ impl FastMapper{
         None
     }
 
-
-    pub fn get(&self, seq: &[u8], _report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
-        
-        //let mut id:usize;
-        let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
-
-        //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
-
-        let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
-        tool.from_vec_u8( seq.to_vec() );
-
-        //let mut item = self.tool.next();
-
-        let mut matching_geneids = Vec::< usize>::with_capacity(10);
-
-        // entries is a Option<(u16, u64, usize)
-        //let mut i = 0;
-        'main :while let Some(entries) = tool.next(){
-
-            if self.mapper[entries.0 as usize].has_data() {
-                // the 8bp bit is a match
-                //i +=1;
-
-                //eprintln!("We are at iteration {i}");
-
-                // if matching_geneids.len() == 1 && i > 3 {
-                //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
-                //     return Some( matching_geneids[0] )
-                //     //break;
-                // }
-
-                //eprintln!("Ill create a new tool here based on seq {}", entries.1);
-                let seq_u64 = tool.mask_u64( &entries.1 );
-
-                match &self.mapper[entries.0 as usize].get( &seq_u64 ){
-                    Some( gene_id ) => {
-                        //eprintln!("Got one: {:?}", gene_id);
-                        //return ( gene_id );
-                        for gid in &gene_id.data{
-                            match genes.get_mut( &gid) {
-                                Some(gene_count) => {
-                                    *gene_count +=1;
-                                    if *gene_count == 4 && genes.len() ==1 {
-                                        break 'main;
-                                    }
-                                },
-                                None => {
-                                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-                                    genes.insert( gid.clone(), 1);
-                                },
-                            };
-
-                        }
-                    },
-                    None => {
-                        //eprintln!("Got one no  gene id in the first run:");
-                        match self.mapper[entries.0 as usize].find(&seq_u64 ){
-                            Some( gene_id ) => {
-                                //eprintln!("But in the second I got one: {gene_id:?}");
-                                //return ( gene_id );
-                                for gid in &gene_id.data{
-                                    match genes.get_mut(&gid) {
-                                        Some(gene_count) => {
-                                            *gene_count +=1;
-                                            if *gene_count == 4 && genes.len() ==1 {
-                                                break 'main;
-                                            }
-                                        },
-                                        None => {
-                                            //eprintln!("This is a new gene - I'll insert {} and {}",gid.0, gid.1 );
-                                            genes.insert( gid.clone(), 1);
-                                            //eprintln!("I have finished with the indert");
-                                        },
-                                    };
-                                }
-                            },
-                            None => {        
-                                //no_32bp_match +=1;
-                            },
-                        }
-                    },
-                }
-            }
-            // if self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids ){
-            //     //eprintln!("We found a best gene!");
-            //     break 'main;
-            // }
-            // if stop{
-            //     //eprintln!("We did not find a best gene!");
-            //     break 'main;
-            // }
-        }
-        //eprintln!("Here I have this gene counts: {:?}", genes );
-        // check if there is only one gene //
-        if self.get_best_gene( &genes, &mut matching_geneids ){
-            return Some( matching_geneids[0] )
-        }
-        None
-    }
-
-    pub fn to_header( &self ) -> std::string::String {
-
-        let mut ret= Vec::<std::string::String>::with_capacity( self.names.len() +2 );
-        //println!( "I get try to push into a {} sized vector", self.names.len());
-        for obj in self.names.keys() {
-            //println!( "Pushing {} -> {}", obj, *id-1);
-            ret.push(  obj.to_string() ) ;
-        }
-        ret.push("Most likely name".to_string());
-        ret.push("Faction total".to_string());
-        "CellID\t".to_owned()+&ret.join("\t")
-    }
-
-    pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
-        let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
-        //println!( "I get try to push into a {} sized vector", self.names.len());
-        for name in names {
-            //println!( "Pushing {} -> {}", obj, *id-1);
-            ret.push( name.to_string() ) ;
-        }
-        ret.push("AsignedSampleName".to_string());
-        ret.push("FractionTotal".to_string());
-        ret.push("n".to_string());
-        "CellID\t".to_owned()+&ret.join("\t")
-    }
 
     pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
         let rs = Path::new( &path ).exists();
