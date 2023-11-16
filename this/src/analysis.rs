@@ -452,7 +452,7 @@ impl Analysis{
         pb.set_style(spinner_style);
 
         let reads_perl_chunk = 1_000_000;
-        eprintln!("Starting with data collection");
+        //eprintln!("Starting with data collection");
         let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_chunk * self.num_threads );
         let mut good_read_count = 0;
 
