@@ -220,25 +220,25 @@ impl CellData{
         // n
     }
 
-    /// probably also woring if I check for the total umis for the respective cells
-    /// This could be WAY faster
+    /// This is used to calculate the subset specific umi counts after the
+    /// crap cells have been discarded - definitely necessary to get it gene specific!
     pub fn n_reads( &self, gene_info:&FastMapper, gnames: &Vec<String> ) -> usize {
         //println!("I got {} umis for cell {}", n, self.name );
-        return self.total_umis;
-        // let mut n = 0;
-        // for gname in gnames{
-        //     let id = match gene_info.names.get( gname ){
-        //         Some(g_id) => g_id,
-        //         None => panic!("I could not resolve the gene name {gname}" ),
-        //     };
-        //     n += match self.total_reads.get( id  ){
-        //         Some( count ) => {
-        //             *count
-        //         },
-        //         None => 0
-        //     };
-        // }
-        // n
+        //return self.total_umis;
+        let mut n = 0;
+        for gname in gnames{
+            let id = match gene_info.names.get( gname ){
+                Some(g_id) => g_id,
+                None => panic!("I could not resolve the gene name {gname}" ),
+            };
+            n += match self.total_reads.get( id  ){
+                Some( count ) => {
+                    *count
+                },
+                None => 0
+            };
+        }
+        n
     }
 
     fn fix_multimappers( &mut self ){
