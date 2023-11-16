@@ -187,13 +187,100 @@ impl FastMapper{
     }
 
 
+    pub fn add_small(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
+
+        if ! self.names.contains_key( &name ){
+            self.names.insert( name.clone(), self.last_count );
+            self.names_store.push( name.clone() );
+            self.names_count.push( 0 );
+            self.last_count += 1;
+        }
+
+        let classes =  self.ids_for_gene_names( &class_ids );
+        let gene_id = self.get_id( name.to_string() );
+        //eprintln!("fast_mapper: I have {} -> {}", name, gene_id);
+
+        //let mut long:u64;
+        //let mut short:u16;
+
+        self.tool.from_vec_u8( seq.to_vec() );
+        let mut tmp = "".to_string();
+        self.tool.to_string( seq.len(), &mut tmp );
+        //self.tool.print();
+        //println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
+
+        // self.tool.shift(); // I will only add one set of kmers!
+        // self.tool.shift();
+        // self.tool.shift();
+
+        //let mut item = self.tool.next();
+        let mut i =0;
+        //let mut short = String::from("");
+        //let mut long = String::from("");
+        let mut n = 50;
+
+        while let Some(entries) = self.tool.next_small(){
+            n -=1;
+            if n == 0{
+                break;
+            }
+            // index_read, longer_read, longer length
+            //short.clear();
+            //long.clear();
+            //self.tool.u16_to_str( 8, &entries.0, &mut short);
+            //self.tool.u64_to_str( entries.2, &entries.1, &mut long);
+            //println!("I got some entry [short {short}, long {long}, length {}", entries.2 );
+
+            if entries.2 < 5{
+                // too short second entry
+                break;
+            }
+            if entries.0 > 65534{
+                continue; // this would be TTTTTTTT and hence not use that!
+            }
+            if ! self.mapper[entries.0 as usize].has_data() {
+                // will add in the next step so
+                self.with_data +=1;
+            }
+            if entries.2  < self.kmer_len{
+                //eprintln!("Too small sequence");
+                continue;
+            }
+            if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
+                //eprintln!("I have added a sequence!");
+                self.pos += 1;
+                self.names_count[gene_id] +=1;
+                i+=1;
+            }else {
+                //eprintln!("NOT - I have added a sequence!");
+                self.neg +=1
+            }
+            
+        }
+
+        //eprintln!("fast_mapper adds this genes: {} of length {} ({}, {})", name, seq.len(), self.pos, self.neg );
+        
+        //println!("I have now {i} mappers for the gene {name}");
+        if i == 0 {
+            //eprint!(".");
+            eprintln!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short? {} bp", &name.as_str(), classes, seq.len() );
+        }
+        /*else {
+            println!("I added {i} mappper entries for gene {name}");
+        }*/
+
+        //self.with_data += i;
+        //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );
+        gene_id
+    }
+
     pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
 
         if ! self.names.contains_key( &name ){
-            self.names.insert( name.clone(), self.max_id );
+            self.names.insert( name.clone(), self.last_count );
             self.names_store.push( name.clone() );
             self.names_count.push( 0 );
-            self.max_id += 1;
+            self.last_count += 1;
         }
 
         let classes =  self.ids_for_gene_names( &class_ids );
@@ -320,20 +407,22 @@ impl FastMapper{
     }
 
     pub fn print( &self ){
-        if self.names_store.len() > 0 {
+        if self.names.len() > 0 {
             println!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
-            println!("gene names like '{}'", self.names_store[0]);
+            println!("gene names like '{}'", self.names_store[self.names_store.len()-1]);
+            println!("gene_ids range from {:?} to {:?}\n", self.names.values().min(), self.names.values().max());
         }else {
-            println!("This index is empty");
+            println!("This index is empty\n");
         }    
     }
 
     pub fn eprint( &self ){
-        if self.names_store.len() > 0 {
+        if self.names.len() > 0 {
             eprintln!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
-            eprintln!("gene names like '{}'", self.names_store[0]);
+            eprintln!("gene names like '{}'", self.names_store[self.names_store.len()-1]);
+            eprintln!("gene_ids range from {:?} to {:?}\n", self.names.values().min(), self.names.values().max());
         }else {
-            eprintln!("This index is empty");
+            eprintln!("This index is empty\n");
         }
     }
 
@@ -427,12 +516,12 @@ impl FastMapper{
             let gene_names = self.gene_names_for_ids( &good );
             let mut better = Vec::<String>::with_capacity( good.len());
             for name in &gene_names{
-                if re.is_match( name ){
+                if ! re.is_match( name ){
                     better.push( name.to_string() );
                 }
             }
             if better.len() == 1 {
-                eprintln!("Filtering G[mM] was sucessful!: {:?}", better);
+                //eprintln!("Filtering G[mM] was sucessful!: {:?}", better);
                 ret.push( self.get_id( better[0].to_string() ));
                 return true;
             }
@@ -445,29 +534,53 @@ impl FastMapper{
                     return true
                 }
             }
-
-
-            eprintln!("genes: {:?}\ngood: {:?}\nnames: {:?}\nNo good gene identified!\n", genes, good, gene_names );
-            for  gene_id in good {
-                eprint!(" {}", self.names_store[ gene_id ] );
+            if most_matches < &5 {
+                return false
             }
-            eprint!("\n");
+
+            let re2 = Regex::new(r"_int$").unwrap();
+            let mut no_int = Vec::<String>::with_capacity( better.len());
+            for name in &better{
+                if ! re2.is_match( name ){
+                    no_int.push( name.to_string() );
+                }
+            }
+
+            match no_int.len(){
+                0 => {
+                    return false
+                },
+                _ => {
+                    for name in &no_int{
+                        ret.push( self.get_id( name.to_string() ) );
+                        return true
+                    }
+                }
+            }
+
+            panic!("You should not be able to get here! {}  matches to the sequence:\n{:?}", most_matches, no_int);
+            
+            // eprintln!("genes: {:?}\ngood: {:?}\nnames: {:?}\nNo good gene identified!\n", genes, good, gene_names );
+            // for  gene_id in good {
+            //     eprint!(" {}", self.names_store[ gene_id ] );
+            // }
+            // eprint!("\n");
         }
         //if report {
-            eprintln!("! No good gene identified! {:?}\n", genes );
+        //    eprintln!("! No good gene identified! {:?}\n", genes );
         //}
 
         return false
 
     }
 
-    pub fn get_strict(&self, seq: &[u8], _report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
+    pub fn get_strict(&self, seq: &[u8], tool: &mut IntToStr ) -> Option< Vec<usize> >{ // gene_id, gene_level
         
         //let mut id:usize;
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
-        let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
+        //let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
         //let mut i = 0;
         tool.from_vec_u8( seq.to_vec() );
 
@@ -518,20 +631,20 @@ impl FastMapper{
         }
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
-            return Some( matching_geneids[0] )
+            return Some( matching_geneids )
         }
         None
     }
 
 
-    pub fn get(&self, seq: &[u8], _report:&mut MappingInfo ) -> Option< usize >{ // gene_id, gene_level
+    pub fn get(&self, seq: &[u8], tool: &mut IntToStr  ) -> Option< Vec<usize> >{ // gene_id, gene_level
         
         //let mut id:usize;
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
-        let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
+        //let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
         tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
@@ -618,7 +731,16 @@ impl FastMapper{
         //eprintln!("Here I have this gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
-            return Some( matching_geneids[0] )
+            return Some( matching_geneids )
+        }
+        if matching_geneids.len() > 2{
+            // ohoh - we might have found too manny as we did not be specific enough!
+            if let Some(gene_id) = self.get_strict( seq, tool ){
+                eprintln!("get_strict was a better choise here! {gene_id:?}");
+                return Some(gene_id)
+            }else {
+                eprintln!("these genes seam to have the same mRNA end sequences: {:?}", self.gene_names_for_ids( &matching_geneids ) );
+            }
         }
         None
     }
@@ -807,6 +929,7 @@ impl FastMapper{
                         self.names_store.push( n.clone() );
                         self.names_count.push(0); // will be populated later.
                         self.max_id += 1;
+                        self.last_count +=1;
                     }
                 },
                 Err(e) => panic!("I could not read from the genes table {e:?}"),

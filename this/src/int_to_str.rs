@@ -168,6 +168,61 @@ impl IntToStr {
         return Some(true)
     }
 
+
+	pub fn next_small(&mut self) -> Option<(u16, u64, usize)> {
+
+    	//println!("Start with next");
+
+    	match self.seq_ok(){
+    		Some(true) => {//eprintln!("Seq OK") 
+    		},
+    		Some(false) => {
+    			//eprintln!("useless oligos!");
+    			match self.drop_n(1){// shift 4 bp
+    				Some(_) => {
+    					return self.next()
+    				},
+    				None => {
+    					return None;
+    				}
+    			}; // shift 4 bp
+    		},
+    		None => {
+    			if self.shifted < 15{
+    				//eprintln!("I am shifting on bp");
+    				match self.shift(){
+    					Some(_) => {},
+    					None => { return None },
+    				}
+    				//self.print();
+    				return self.next();
+    			}
+    			return None
+    		},
+    	};
+
+    	//println!("Start with next - test finished");
+        let short = self.into_u16().clone();
+        match self.drop_n(2){// shift 8 bp
+        	Some(_) => {},
+        	None => {
+        		return None;
+        	}
+        };
+        let long = self.into_u64_nbp( self.kmer_size ).clone();
+        let sign:usize;
+        //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
+        if self.storage.len() - self.lost *4 >= self.kmer_size / 4{
+        	sign = self.kmer_size/4;
+        }else {
+        	sign = self.storage.len() - self.lost *4 ;
+        	//eprintln!("next reporting a SHORTER VALUE! {sign}" );
+        }
+  
+        //eprintln!( "short {short}, long {long}, sign {sign}" );
+        Some(( short , long, sign *4 ))
+    }
+
     pub fn next(&mut self) -> Option<(u16, u64, usize)> {
 
     	//println!("Start with next");

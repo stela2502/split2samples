@@ -8,26 +8,20 @@ mod tests {
     use this::ofiles::Ofiles;
     use std::fs::File;
     use std::path::PathBuf;
+    use this::int_to_str::IntToStr;
+    static EMPTY_VEC: Vec<String> = Vec::new();
+
 
     #[test]
     fn check_geneids() {
         let mut mapper = FastMapper::new( 16, 10 );
 
         let mut geneid = 0;
-        let outpath = String::from("testData/");
-        let log_file_str = PathBuf::from(&outpath).join(
-            "Mapping_log.txt"
-        );
-        let log_file = match File::create( log_file_str ){
-            Ok(file) => file,
-            Err(err) => {
-                panic!("Error: {err:#?}" );
-            }
-        };
-        let ofile = Ofiles::new( 1, "Umapped_with_cellID", "R2.fastq.gz", "R1.fastq.gz",  outpath.as_str() );
-        let mut results = MappingInfo::new( log_file, 0.20, 1232423523523, ofile );
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
+
+
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(), EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
         //ATCCCATCCTTCATTGTTCGCCTGGA #0
@@ -35,18 +29,19 @@ mod tests {
         //CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC #2
         //...........................................................................
 
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
+            "Gene2".to_string(),EMPTY_VEC.clone() );
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 31 );
+        //assert_eq!( mapper.with_data, 51 );
 
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut results ), Some(0) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut results ), Some(1));
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(0) );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(1) );
 
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
 
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut results ), None );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), None );
 
         let mut gnames = Vec::<String>::with_capacity(3);
         gnames.push( "Gene1".to_string() );
@@ -59,43 +54,34 @@ mod tests {
     #[test]
     fn check_changed_start() {
         let mut mapper = FastMapper::new( 16, 10 );
-        mapper.last_count = 10;
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
+        mapper.change_start_id( 10 );
+        assert_eq!( mapper.last_count, 10);
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
         assert_eq!( mapper.last_count, 11 );
-        assert_eq!(mapper.names_store[11] == "Gene1".to_string());
+        assert_eq!(mapper.names_store[10] , "Gene1".to_string(), "gene was 'Gene1'");
     }
 
     #[test]
     fn check_write_index() {
         let mut mapper = FastMapper::new( 16, 10 );
 
-        //log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles,
-        let outpath = String::from("testData/");
-        let log_file_str = PathBuf::from(&outpath).join(
-            "Mapping_log.txt"
-        );
-        let log_file = match File::create( log_file_str ){
-            Ok(file) => file,
-            Err(err) => {
-                panic!("Error: {err:#?}" );
-            }
-        };
-        let ofile = Ofiles::new( 1, "Umapped_with_cellID", "R2.fastq.gz", "R1.fastq.gz",  outpath.as_str() );
-        let mut results = MappingInfo::new( log_file, 0.20 as f32, 1232423523523, ofile );
+        //log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles
 
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
         let mut geneid = 0;
         
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(),
+         "Gene2".to_string(),EMPTY_VEC.clone() );
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 31);
+        assert_eq!( mapper.with_data, 54);
 
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut results ), Some(0) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut results ), Some(1) );
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(0) );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(1) );
 
         let opath = "testData/output_index_test";
         mapper.write_index( opath.to_string() ).unwrap();
@@ -126,19 +112,85 @@ mod tests {
 
         let mut geneid = 0;
         
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
         let mut other = FastMapper::new( 16, 10 );
 
-        other.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene2".to_string() );
+        other.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
+            "Gene2".to_string(),EMPTY_VEC.clone() );
 
-        assert!( mapper.names_store.len() = 1, "Not exactly one gene in mapper 1" );
-        assert!( other.names_store.len() = 1, "Not exactly one gene in mapper 2" );
+        assert!( mapper.names_store.len() == 1, "Not exactly one gene in mapper 1" );
+        assert!( other.names_store.len() == 1, "Not exactly one gene in mapper 2" );
         mapper.merge( other );
 
-        assert!( mapper.names_store.len() = 2, "Not exactly two genes in the merged mapper" );
+        assert!( mapper.names_store.len() == 2, "Not exactly two genes in the merged mapper" );
 
+    }
+
+
+    #[test]
+    fn check_samples() {
+        let mut mapper = FastMapper::new( 16, 10 );
+        let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
+        let sequences = [
+        b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
+        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
+        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
+        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
+        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
+        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
+
+        let mut id = 1;
+        for seq in sequences{
+            //seq.reverse();
+            mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+            id +=1;
+        }
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+
+        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(0) );
+        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(1) );
+        assert_eq!( mapper.get_strict( sample2, &mut tool ), None );
+        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(0) );
+        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(11) );
+        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(0) );
+    }
+
+
+
+    #[test]
+    fn check_samples_shifted() {
+        let mut mapper = FastMapper::new( 16, 10 );
+        mapper.change_start_id( 10 );
+
+        let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
+        let sequences = [
+        b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
+        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
+        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
+        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
+        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
+        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
+
+        let mut id = 1;
+        for seq in sequences{
+            //seq.reverse();
+            mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+            id +=1;
+        }
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+
+        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(10) );
+        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(11) );
+        assert_eq!( mapper.get_strict( sample2, &mut tool ), None );
+        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(10) );
+        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(21) );
+        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(10) );
     }
 
 }

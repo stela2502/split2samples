@@ -153,7 +153,7 @@ impl Analysis{
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		seq_temp = seqrec.seq().to_vec();
 		                		//seq_temp.reverse();
-			                    antibodies.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
+			                    antibodies.add_small( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
 		                    	ab_names.push( id.to_string() );
 		                    	//gene_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
@@ -182,10 +182,6 @@ impl Analysis{
 
 	    let mut sample_names:Vec<String> = Vec::with_capacity(12);
 
-
-	    for i in 1..13{
-	        sample_names.push( format!("Sample{i}") )
-	    }
 	    let mut id = 1;
 	    samples.change_start_id( antibodies.last_count );
 	    if  specie.eq("human") {
@@ -199,7 +195,8 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	samples.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add_small( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 	    }
@@ -214,7 +211,8 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	samples.add( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add_small( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 
@@ -292,11 +290,14 @@ impl Analysis{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
 
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+
         for i in 0..data.len() {
 
         	match &self.cells.to_cellid( &data[i].0, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
 	            Ok( (cell_id, add) ) => {
-	            	let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
+	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
+	            	tool.from_vec_u8(data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec());
         			let umi:u64 = tool.into_u64();
 	            	report.cellular_reads +=1;
 
@@ -306,18 +307,23 @@ impl Analysis{
 	            	// or a mRNA match
 	            	// And of casue not a match at all
 
-	            	ok = match &self.antibodies.get( &data[i].1, report ){
+
+	            	ok = match &self.antibodies.get_strict( &data[i].1, &mut tool ){
 	                    Some(gene_id) =>{
 	                    	//eprintln!("I got an ab id {gene_id}");
-	                    	if ! gex.try_insert( 
-	                        	&(*cell_id as u64),
-	                        	gene_id,
-	                        	umi,
-	                        	report
-	                        ){
-	                        	report.pcr_duplicates += 1 
-	                        }
-	                        true
+	                    	if gene_id.len() == 1 {
+		                    	if ! gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	&gene_id[0],
+		                        	umi,
+		                        	report
+		                        ){
+		                        	report.pcr_duplicates += 1 
+		                        }
+		                        true
+		                    }else {
+		                    	false
+		                    }
 	                    },
 	                    None => {
 							false
@@ -325,18 +331,22 @@ impl Analysis{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1, report ){
+	                	ok = match &self.samples.get_strict( &data[i].1,  &mut tool ){
 		                    Some(gene_id) =>{
-		                    	//eprintln!("I got a samples id {gene_id}");
-		                        if ! gex.try_insert( 
-		                        	&(*cell_id as u64),
-		                        	gene_id,
-		                        	umi,
-		                        	report
-		                        ) { 
-		                        	report.pcr_duplicates += 1 
-		                        }
-		                        true
+		                    	//eprintln!("I got a sample umi id {umi}");
+		                    	if gene_id.len() == 1 {
+			                        if ! gex.try_insert( 
+			                        	&(*cell_id as u64),
+			                        	&gene_id[0],
+			                        	umi,
+			                        	report
+			                        ) { 
+			                        	report.pcr_duplicates += 1 
+			                        }
+			                        true
+			                    }else {
+			                    	false
+			                    }
 		                    },
 		                    None => {
 								false
@@ -346,16 +356,27 @@ impl Analysis{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get( &data[i].1, report ){
-		                    Some(gene_id) =>{
-		                        if ! gex.try_insert( 
-		                        	&(*cell_id as u64),
-		                        	gene_id,
-		                        	umi,
-		                        	report
-		                        ){
-		                        	report.pcr_duplicates += 1 
-		                        }
+		                match &self.genes.get( &data[i].1,  &mut tool ){
+		                	Some(gene_id) =>{
+			                    if gene_id.len() == 1 {
+			                        if ! gex.try_insert( 
+			                        	&(*cell_id as u64),
+			                        	&gene_id[0],
+			                        	umi,
+			                        	report
+			                        ){
+			                        	report.pcr_duplicates += 1 
+			                        }
+			                    }else {
+			                    	if ! gex.try_insert_multimapper(
+				                    		&(*cell_id as u64),
+				                    		gene_id,
+				                    		umi,
+				                    		report
+				                    	) {
+			                    		report.pcr_duplicates += 1 
+			                    	}
+			                    }
 		                    },
 		                    None => {
 		                    	// I want to be able to check why this did not work
@@ -565,16 +586,17 @@ impl Analysis{
     }
 
 
-	pub fn parse(&mut self,  f1:String, f2:String,  report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2]  ){
+    pub fn parse(&mut self,  f1:String, f2:String,  report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2]  ){
 
-        let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
-            .unwrap()
-            .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
+    	let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
+    	.unwrap()
+    	.tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
 
         // need better error handling here too    
         // for now, we're assuming FASTQ and not FASTA.
         let mut readereads = parse_fastx_file(&f1).expect("valid path/file");
         let mut readefile = parse_fastx_file(&f2).expect("valid path/file");
+        let mut tool = IntToStr::new(b"AAGGCCTT".to_vec(), 32);
         let m = MultiProgress::new();
         let pb = m.add(ProgressBar::new(5000));
         pb.set_style(spinner_style);
@@ -582,23 +604,23 @@ impl Analysis{
 
         //let report_gid = self.genes.get_id( "Sample1".to_string() );
         'main: while let Some(record2) = readefile.next() {
-            if let Some(record1) = readereads.next() {
-            	report.total += 1;
-                
-                let seqrec = match record2{
-                    Ok( res ) => res,
-                    Err(err) => {
-                        eprintln!("could not read from R2:\n{err}");
-                        continue 'main;
-                    }
-                };
-                let seqrec1 = match record1{
-                    Ok(res) => res,
-                    Err(err) => {
-                        eprintln!("could not read from R1:\n{err}");
-                        continue 'main;
-                    }
-                };
+        	if let Some(record1) = readereads.next() {
+        		report.total += 1;
+
+        		let seqrec = match record2{
+        			Ok( res ) => res,
+        			Err(err) => {
+        				eprintln!("could not read from R2:\n{err}");
+        				continue 'main;
+        			}
+        		};
+        		let seqrec1 = match record1{
+        			Ok(res) => res,
+        			Err(err) => {
+        				eprintln!("could not read from R1:\n{err}");
+        				continue 'main;
+        			}
+        		};
 
                 //eprintln!("Processing line {}", report.total);
             	//let id_fq = String::from_utf8_lossy(&seqrec.seq()).to_string();
@@ -609,12 +631,12 @@ impl Analysis{
                 //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
 
                 if mean_u8( seqrec.qual().unwrap() ) < report.min_quality {
-                    report.unknown +=1;
+                	report.unknown +=1;
                     //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec.seq()), mean_u8( seqrec.qual().unwrap()  ) );
                     continue 'main;
                 }
                 if mean_u8( seqrec1.qual().unwrap() ) < report.min_quality {
-                    report.unknown +=1;
+                	report.unknown +=1;
                     //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec1.seq()), mean_u8( seqrec1.qual().unwrap() ) );
                     continue 'main;
                 }
@@ -623,19 +645,19 @@ impl Analysis{
                 // as described in the BD rhapsody Bioinformatic Handbook
                 // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
                 if seqrec1.seq().len() < min_sizes[0] {
-                    report.unknown +=1;
-                    continue 'main;
+                	report.unknown +=1;
+                	continue 'main;
                 }
                 if seqrec.seq().len() < min_sizes[1] {
-                    report.unknown +=1;
-                    continue 'main;
+                	report.unknown +=1;
+                	continue 'main;
                 }
                 //let seq = seqrec.seq().into_owned();
                 for nuc in &seqrec1.seq()[pos[6]..pos[7]] {  
-                    if *nuc ==b'N'{
-                        report.unknown +=1;
-                        continue 'main;
-                    }
+                	if *nuc ==b'N'{
+                		report.unknown +=1;
+                		continue 'main;
+                	}
                 }
 
                 //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
@@ -643,10 +665,11 @@ impl Analysis{
                 let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                match &self.cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
-                    Ok( (cell_id, add) ) => {
-		            	let tool = IntToStr::new( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
-	        			let umi:u64 = tool.into_u64();
+                	match &self.cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
+                		Ok( (cell_id, add) ) => {
+		            	//let mut tool = IntToStr::new( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
+		            	tool.from_vec_u8( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec() );
+		            	let umi:u64 = tool.into_u64();
 		            	report.cellular_reads +=1;
 
 		            	// now I have three possibilites here:
@@ -655,71 +678,93 @@ impl Analysis{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec.seq(), report ){
-		                    Some(gene_id) =>{
-		                    	//eprintln!("Got an antibody match! {gene_id}");
-		                        self.gex.try_insert( 
-		                        	&(*cell_id as u64),
-		                        	gene_id,
-		                        	umi,
-		                        	report
-		                        );
-		                        true
+		            	ok = match &self.antibodies.get_strict( &seqrec.seq(),  &mut tool ){
+		            		Some(gene_id) =>{
+		                    	if gene_id.len() == 1 {
+			                    	self.gex.try_insert( 
+			                    		&(*cell_id as u64),
+			                    		&gene_id[0],
+			                    		umi,
+			                    		report
+			                    		);
+			                    	true
+			                    }
+			                    else {
+			                    	false
+
+			                    }
 		                    },
 		                    None => {
-								false
+		                    	false
 		                    }
 		                };
 
 		                if ! ok{
-		                	ok = match &self.samples.get_strict( &seqrec.seq(), report ){
-			                    Some(gene_id) =>{
+		                	ok = match &self.samples.get_strict( &seqrec.seq(),  &mut tool ){
+		                		Some(gene_id) =>{
 			                    	//eprintln!("Got a samples match! {gene_id}");
-			                        self.gex.try_insert( 
-			                        	&(*cell_id as u64),
-			                        	gene_id,
-			                        	umi,
-			                        	report
-			                        );
-			                        true
+			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );
+			                    	if gene_id.len() == 1 {
+				                    	self.gex.try_insert( 
+				                    		&(*cell_id as u64),
+				                    		&gene_id[0],
+				                    		umi,
+				                    		report
+				                    		);
+				                    	true
+				                    }
+				                    else {
+				                    	false
+				                    }
 			                    },
 			                    None => {
-									false
+			                    	false
 			                    }
 			                };
-		                }
+			            }
 
-		                if ! ok{
-		                	
-			                match &self.genes.get( &seqrec.seq(), report ){
-			                    Some(gene_id) =>{
-			                        self.gex.try_insert( 
-			                        	&(*cell_id as u64),
-			                        	gene_id,
-			                        	umi,
-			                        	report
-			                        );
-			                        println!("R2 {}",String::from_utf8_lossy(&seqrec.id()).to_owned() );
-			                        println!("R1 {}",String::from_utf8_lossy(&seqrec1.id()).to_owned() );
+			            if ! ok{
+			            	// multimapper are only allowed for expression reads - 
+			            	// if either sample ids or AB reads would have this it would be a library design fault!
+			            	match &self.genes.get( &seqrec.seq(),  &mut tool ){
+			            		Some(gene_id) =>{
+			            			if gene_id.len() == 1 {
+				            			self.gex.try_insert( 
+				            				&(*cell_id as u64),
+				            				&gene_id[0],
+				            				umi,
+				            				report
+				            			);
+				            		}
+				            		else {
+			            				self.gex.try_insert_multimapper(
+				                    		&(*cell_id as u64),
+				                    		gene_id,
+				                    		umi,
+				                    		report
+				                    	);
+				            		}
+			                        //println!("R2 {}",String::from_utf8_lossy(&seqrec.id()).to_owned() );
+			                        //println!("R1 {}",String::from_utf8_lossy(&seqrec1.id()).to_owned() );
 			                    },
 			                    None => {
 			                    	report.no_data +=1;
 			                    }
 			                };
 			            }
-		            },
-                    Err(_err) => {
-                        report.no_sample +=1;
-                        continue
+			        },
+			        Err(_err) => {
+			        	report.no_sample +=1;
+			        	continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
                 };
                 if report.ok_reads == report.max_reads{
-                    break 'main;
+                	break 'main;
                 }
                 report.log(&pb);
 
             } else {
-                println!("file 2 had reads remaining, but file 1 ran out of reads!");
+            	println!("file 2 had reads remaining, but file 1 ran out of reads!");
             }
         }
         
@@ -727,83 +772,91 @@ impl Analysis{
 
         pb.finish_with_message( log_str );
 
-	}
+    }
 
-	pub fn write_data( &mut self, outpath:String, results:&mut MappingInfo, min_umi : usize ) {
+    pub fn write_data( &mut self, outpath:String, results:&mut MappingInfo, min_umi : usize ) {
 		    // calculating a little bit wrong - why? no idea...
-    //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
+	    //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
 
-    //let fp1 = PathBuf::from(opts.reads.clone());
-    //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
-    let file_path = PathBuf::from(&outpath).join(
-        "SampleCounts.tsv"
-    );
+	    //let fp1 = PathBuf::from(opts.reads.clone());
+	    //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
+	    let file_path = PathBuf::from(&outpath).join(
+	    	"SampleCounts.tsv"
+	    	);
 
-    let file_path_sp = PathBuf::from(&outpath).join(
-        "BD_Rhapsody_expression"
-    );
+	    let file_path_sp = PathBuf::from(&outpath).join(
+	    	"BD_Rhapsody_expression"
+	    	);
 
-    // this always first as this will decide which cells are OK ones!
+	    // this always first as this will decide which cells are OK ones!
+	    results.stop_file_io_time();
+	    
+	    println!("filtering cells");
+	    self.gex.mtx_counts( &mut self.genes, &self.gene_names, min_umi, self.gex.num_threads ) ;
+	    
+	    results.stop_multi_processor_time();
+	    println!("writing gene expression");
 
-    println!("filtering cells and writing gene expression");
-    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
-        Ok(_) => (),
-        Err(err) => panic!("Error in the data write: {err}")
-    };
+	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
+	    	Ok(_) => (),
+	    	Err(err) => panic!("Error in the data write: {err}")
+	    };
 
-    let file_path_sp = PathBuf::from(&outpath).join(
-        "BD_Rhapsody_antibodies"
-    );
+	    let file_path_sp = PathBuf::from(&outpath).join(
+	    	"BD_Rhapsody_antibodies"
+	    	);
 
-    println!("Writing Antibody counts");
-    match self.gex.write_sparse_sub ( file_path_sp, &mut self.antibodies, &self.ab_names, 0 ) {
-        Ok(_) => (),
-        Err(err) => panic!("Error in the data write: {err}")
-    };
+	    println!("Writing Antibody counts");
+	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.antibodies, &self.ab_names, 0 ) {
+	    	Ok(_) => (),
+	    	Err(err) => panic!("Error in the data write: {err}")
+	    };
 
-	println!("Writing samples table");
+	    println!("Writing samples table");
 
-    match self.gex.write_sub ( file_path, &mut self.samples, &self.sample_names, 0 ) {
-        Ok(_) => (),
-        Err(err) => panic!("Error in the data write: {err}" )
-    };
+	    match self.gex.write_sub ( file_path, &mut self.samples, &self.sample_names, 0 ) {
+	    	Ok(_) => (),
+	    	Err(err) => panic!("Error in the data write: {err}" )
+	    };
 
-    
-    let reads_genes = self.gex.n_reads( &mut self.genes , &self.gene_names );
-    let reads_ab = self.gex.n_reads( &mut self.antibodies , &self.ab_names );
-    let reads_samples = self.gex.n_reads( &mut self.samples , &self.sample_names );
+	    
+	    let reads_genes = self.gex.n_reads( &mut self.genes , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( &mut self.antibodies , &self.ab_names );
+	    let reads_samples = self.gex.n_reads( &mut self.samples , &self.sample_names );
 
-    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
+	    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
 
-    let file_path2 = format!("{}/SampleCounts.tsv", outpath );
-    println!( "\nCell->Sample table written to {file_path2:?}\n" );
+	    let file_path2 = format!("{}/SampleCounts.tsv", outpath );
+	    println!( "\nCell->Sample table written to {file_path2:?}\n" );
+	    results.stop_file_io_time();
 	}
+	
 }
 
 
 /// taken from https://github.com/onecodex/needletail/blob/eea49d01e5895a28ea85ba23a5e1a20a2fd7b378/src/parser/record.rs
 /// as the library defines this part as private? Or at least I was not able to load it from there...  :-(
 pub fn write_fastq(
-    id: &[u8],
-    seq: &[u8],
-    qual: Option<&[u8]>,
-    writer: &mut dyn Write,
-) -> Result<(), ParseError> {
-    let ending = b"\n".to_owned();
-    writer.write_all(b"@")?;
-    writer.write_all(id)?;
-    writer.write_all(&ending)?;
-    writer.write_all(seq)?;
-    writer.write_all(&ending)?;
-    writer.write_all(b"+")?;
-    writer.write_all(&ending)?;
+	id: &[u8],
+	seq: &[u8],
+	qual: Option<&[u8]>,
+	writer: &mut dyn Write,
+	) -> Result<(), ParseError> {
+	let ending = b"\n".to_owned();
+	writer.write_all(b"@")?;
+	writer.write_all(id)?;
+	writer.write_all(&ending)?;
+	writer.write_all(seq)?;
+	writer.write_all(&ending)?;
+	writer.write_all(b"+")?;
+	writer.write_all(&ending)?;
     // this is kind of a hack, but we want to allow writing out sequences
     // that don't have qualitys so this will mask to "good" if the quality
     // slice is empty
     if let Some(qual) = qual {
-        writer.write_all(qual)?;
+    	writer.write_all(qual)?;
     } else {
-        writer.write_all(&vec![b'I'; seq.len()])?;
+    	writer.write_all(&vec![b'I'; seq.len()])?;
     }
     writer.write_all(&ending)?;
     Ok(())

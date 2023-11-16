@@ -5,9 +5,12 @@
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
+
 //use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
-
 use crate::mapping_info::MappingInfo;
 
 use std::io::BufWriter;
@@ -34,7 +37,13 @@ pub struct CellData{
     pub genes_with_data: HashSet<String>, // when exporting genes it is helpfule to know which of the possible genomic genes actually have an expression reported...
     pub total_reads: BTreeMap<usize, usize>, // instead of the per umi counting
     //pub cell_counts: BTreeMap<usize, usize>,
-    pub passing: bool // check if this cell is worth exporting. Late game
+    pub passing: bool, // check if this cell is worth exporting. Late game
+    pub total_umis:usize, // brute force adding all different gene types together to speed cell subsetting up
+    // Some sequences do not uniquely map to only one gene
+    // I want to make sure I find a good way to deal with this problem.
+    // I hope that some reads would also map to one of the genes uniquely.
+    // This way we could easily add this data there
+    pub multimapper: BTreeMap<u64, (HashSet<u64>, Vec<usize>) >,
 }
 
 impl Default for CellData {
@@ -45,6 +54,8 @@ impl Default for CellData {
             genes_with_data: HashSet::new(),
             total_reads: BTreeMap::new(),
             passing: false,
+            total_umis: 0,
+            multimapper:BTreeMap::new(),
         }
     }
 }
@@ -55,13 +66,26 @@ impl CellData{
         let total_reads = BTreeMap::new();
         let genes_with_data = HashSet::new();
         let passing = false;
+        let total_umis = 0;
+        let multimapper = BTreeMap::new();
         Self{
             name,
             genes,
             genes_with_data,
             total_reads,
             passing,
+            total_umis,
+            multimapper,
         }
+    }
+
+    fn hash_classes(vals: &Vec<usize> ) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        for val in vals {
+            val.hash(&mut hasher);
+        }
+        // Finalize and return the hash value
+        hasher.finish()
     }
 
     pub fn deep_clone(&self) -> CellData {
@@ -75,18 +99,23 @@ impl CellData{
 
         let cloned_total_reads: BTreeMap<usize, usize> = self.total_reads.clone();
 
+        let cloned_multimapper:  BTreeMap<u64, (HashSet<u64>, Vec<usize>) > = self.multimapper.clone();
+
         CellData {
             name: self.name,
             genes: cloned_genes,
             genes_with_data: cloned_genes_with_data,
             total_reads: cloned_total_reads,
             passing: self.passing,
+            total_umis: self.total_umis,
+            multimapper: cloned_multimapper,
         }
     }
 
     /// adds the other values into this object
     pub fn merge(&mut self, other:&CellData ){
         let mut too_much:usize;
+        self.total_umis += other.total_umis;
         for (gene_id, umis) in &other.genes {
             too_much = 0;
             for umi in umis {
@@ -96,10 +125,23 @@ impl CellData{
             match self.total_reads.get_mut( &gene_id ){
                 Some( val ) => {
                     let add = other.total_reads.get( &gene_id ).unwrap_or(&too_much) - too_much;
-
                     *val += add
                 },
                 None => panic!("merge could not copy the total gene values for gene {gene_id}",  ),
+            };
+        }
+        for (hash, (umis, ids) ) in &other.multimapper {
+            too_much = 0;
+            for umi in umis {
+                self.add_multimapper( ids.clone(), *umi );
+                too_much += 1;
+            }
+            match self.total_reads.get_mut( &(*hash as usize) ){
+                Some( val ) => {
+                    let add = other.total_reads.get( &(*hash as usize) ).unwrap_or(&too_much) - too_much;
+                    *val += add
+                },
+                None => panic!("merge could not copy the total gene values for multimapper hash {hash}",  ),
             };
         }
     }
@@ -114,49 +156,167 @@ impl CellData{
                         Some( count ) => *count += 1,
                         None => panic!("This must not happen - libraray error"),
                     }
+                    //eprintln!("Good data");
+                    self.total_umis += 1;
                     return true
                 }
+                //eprintln!("UMI already known {umi}");
                 false
             }, 
             None => {
                 let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
                 gc.insert( umi );
                 self.total_reads.insert( geneid, 1 );
-                self.genes.insert( geneid, gc ).is_some()
+                self.genes.insert( geneid, gc );
+                //eprintln!("Good data2");
+                self.total_umis += 1;
+                true
+            }
+        }
+    }
+
+    // returns false if the gene/umi combo has already been recorded!
+    pub fn add_multimapper(&mut self, geneids: Vec::<usize>, umi:u64 ) -> bool{
+        //println!("adding gene id {}", geneid );
+        //    pub multimapper: BTreeMap<u64, (HashSet<u64>, Vec<usize>) >,
+
+        let hash = Self::hash_classes( &geneids );
+
+        return match self.multimapper.get_mut( &hash ) {
+            Some( (gene, _ids) ) => {
+                if gene.insert( umi ){
+                    match self.total_reads.get_mut( &(hash as usize) ){
+                        Some( count ) => *count += 1,
+                        None => panic!("This must not happen - libraray error"),
+                    }
+                    //eprintln!("Good data");
+                    self.total_umis += 1;
+                    return true
+                }
+                //eprintln!("UMI already known {umi}");
+                false
+            }, 
+            None => {
+                let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
+                gc.insert( umi );
+                self.total_reads.insert( hash as usize , 1 );
+                self.multimapper.insert( hash, (gc, geneids) );
+                //eprintln!("Good data2");
+                self.total_umis += 1;
+                true
             }
         }
     }
 
     pub fn n_umi( &self, gene_info:&FastMapper, gnames: &Vec<String> ) -> usize {
-        let mut n = 0;
+        return self.total_umis;
 
-        for name in gnames{
-            n += self.n_umi_4_gene( gene_info, name );
-        }
-        //println!("I got {} umis for cell {}", n, self.name );
-        n
+        // let mut n = 0;
+
+        // for name in gnames{
+        //     n += self.n_umi_4_gene( gene_info, name );
+        // }
+        // //println!("I got {} umis for cell {}", n, self.name );
+        // n
     }
 
+    /// probably also woring if I check for the total umis for the respective cells
+    /// This could be WAY faster
     pub fn n_reads( &self, gene_info:&FastMapper, gnames: &Vec<String> ) -> usize {
         //println!("I got {} umis for cell {}", n, self.name );
-        let mut n = 0;
-        for gname in gnames{
-            let id = match gene_info.names.get( gname ){
-                Some(g_id) => g_id,
-                None => panic!("I could not resolve the gene name {gname}" ),
-            };
-            n += match self.total_reads.get( id  ){
-                Some( reads ) => {
-                    *reads
+        return self.total_umis;
+        // let mut n = 0;
+        // for gname in gnames{
+        //     let id = match gene_info.names.get( gname ){
+        //         Some(g_id) => g_id,
+        //         None => panic!("I could not resolve the gene name {gname}" ),
+        //     };
+        //     n += match self.total_reads.get( id  ){
+        //         Some( count ) => {
+        //             *count
+        //         },
+        //         None => 0
+        //     };
+        // }
+        // n
+    }
+
+    fn fix_multimappers( &mut self ){
+        for (umis, geneids ) in self.multimapper.values(){
+            eprintln!("I have a multimapper group: {:?}", geneids);
+            eprintln!("With this umi count: {}", umis.len());
+            // do we have data on these genes alone?
+            //let with_data = geneids.map(|k|, self.genes.contains_key(k) );
+            let with_data: Vec<_> = geneids.iter().filter(|&k| self.genes.contains_key(k)).cloned().collect();
+            eprintln!("We have data on these genes?\n{:?}\n", with_data);
+            
+            match with_data.len(){
+                // worst possibility:
+                // none of the multimappers are also single mappers here
+                0 => { eprintln!("Sorry - no reference points here: ignoring expression of the multimapper set {:?}", geneids); },
+                // perfect outcomes would be 
+                // 1. I only have one gene from the list of genes
+                1 => {
+                    match self.genes.get_mut( &with_data[0] ){
+                        Some(umi_store) => {
+                            for umi in umis{
+                                if umi_store.insert( *umi ) {
+                                    self.total_umis += 1;
+                                    match self.total_reads.get_mut( &with_data[0] ){
+                                        Some( count ) => *count += 1,
+                                        None => panic!("This must not happen - libraray error"),
+                                    }
+                                }
+                            }
+                        },
+                        None => {}
+                    }
                 },
-                None => 0
+                // 2. I have a list of other genes that are also expressed in this cell
+                count => {
+                    // then I need to add the umis from the multimapper to the singles
+                    // but this should be done in an inteligent way.
+                    // first get rid of all umis that are already known.
+                    let mut already_known= Vec::<u64>::with_capacity( umis.len() );
+                    let mut gene_counts = Vec::<(usize, usize)>::with_capacity( count );
+                    for geneid in &with_data{
+                        match self.genes.get_mut( geneid ){
+                            Some(umi_store) => {
+                                for umi in umis{
+                                    if already_known.contains( &umi ){
+                                        continue 
+                                    }
+                                    if umi_store.contains( umi ){
+                                        already_known.push( *umi );
+                                    }
+                                }
+                                gene_counts.push( (*geneid, umis.len()) );
+                            },
+                            None => {},
+                        }
+                    }
+                    eprintln!("I have a total of {} counts to still deal with", umis.len() - already_known.len() );
+                    match umis.len() - already_known.len(){
+                        0 => { }, // cool finished!
+                        1 => {
+                            // add that to the top scorer
+                            panic!("This need to be implemented!\nthe umis we need to get rid of {} the umis we already have handled {}\nthe available genes {:?}\n",
+                                umis.len(), already_known.len(),gene_counts );
+                        }
+                        _ => {
+                            panic!("This need to be implemented!\nthe umis we need to get rid of {} the umis we already have handled {}\nthe available genes {:?}\n",
+                                umis.len(), already_known.len(),gene_counts );
+                        }
+                    }
+                },
             };
         }
-        n
+        self.multimapper.clear();
     }
 
     pub fn n_umi_4_gene( &self, gene_info:&FastMapper, gname:&String) -> usize {
         let mut n = 0;
+
         let id = match gene_info.names.get( gname ){
             Some(g_id) => g_id,
             None => panic!("I could not resolve the gene name {gname}" ),
@@ -284,7 +444,6 @@ impl SingleCellData{
         self.checked= false;
         self.genes_with_data.insert( *gene_id );
         self.cells.entry(*name).or_insert_with( || { CellData::new( *name ) });
-        let mut ret = true;
         match self.cells.get_mut(&name){
             Some(cell_info) =>  {
                 //println!("I got gene {} for cell {}", gene_id , cell_info.name);
@@ -293,12 +452,42 @@ impl SingleCellData{
                     //println!("  -> pcr duplicate");
                     report.pcr_duplicates += 1;
                     report.local_dup += 1;
-                    ret = false;
+                    false
+                }else {
+                    true
                 }
+                //println!("I got gene {} for cell {} and managed to add this data? {}", gene_id , cell_info.name, ret);
             },
             None => panic!("Could not add a gene expression: gene_id = {gene_id}, umi = {umi}" ),
-        };
-        ret
+        }
+    }
+
+
+    /// here the get checks for a complete match of the cell ID
+    /// and if that fails we need to add
+    pub fn try_insert_multimapper(&mut self, name: &u64, 
+        gene_id:&Vec<usize>,umi:u64, report: &mut MappingInfo ) ->bool{
+        
+        //println!("CellIDs::get cell_id: {}", cell_id );
+        self.checked= false;
+        //self.genes_with_data.insert( *gene_id );
+        self.cells.entry(*name).or_insert_with( || { CellData::new( *name ) });
+        match self.cells.get_mut(&name){
+            Some(cell_info) =>  {
+                //println!("I got gene {} for cell {}", gene_id , cell_info.name);
+                report.ok_reads += 1;
+                if ! &cell_info.add_multimapper( gene_id.clone(), umi ) {
+                    //println!("  -> pcr duplicate");
+                    report.pcr_duplicates += 1;
+                    report.local_dup += 1;
+                    false
+                }else {
+                    true
+                }
+                //println!("I got gene {} for cell {} and managed to add this data? {}", gene_id , cell_info.name, ret);
+            },
+            None => panic!("Could not add a gene expression: gene_id = {gene_id:?}, umi = {umi}" ),
+        }
     }
 
     pub fn write (&mut self, file_path: PathBuf, genes: &mut FastMapper, min_count:usize) -> Result< (), &str>{
@@ -478,7 +667,7 @@ impl SingleCellData{
             }
         }
 
-        println!( "sparse Matrix: {} cell(s), {} gene(s) and {} entries written ({} cells too view umis) to path {:?}; ", passed, genes.names4sparse.len(), entries, failed, file_path.into_os_string().into_string());
+        println!( "sparse Matrix: {} cell(s), {} gene(s) and {} entries written to path {:?}; ", passed, genes.names4sparse.len(), entries, file_path.into_os_string().into_string());
         Ok( () )
     }
     /// Update the gene names for export to sparse
@@ -597,6 +786,9 @@ impl SingleCellData{
             println!("Dropping cell with too little counts (n={bad_cells})");
             self.cells.retain( |&_key, cell_data| cell_data.passing );
 
+            for cellObj in self.cells.values_mut(){
+                cellObj.fix_multimappers();
+            }
             // for cell_obj in self.cells.values_mut() {
             //     // total umi check
             //     let n = cell_obj.n_umi( genes, names );
@@ -605,7 +797,7 @@ impl SingleCellData{
             //     }
             // }
             self.checked = true;
-            //println!("{} cells have passed the cutoff of {} counts per cell and {} occurances per umi",ncell, min_count ); 
+            println!("{} cells have passed the cutoff of {} umi counts per cell",self.cells.len(), min_count ); 
         }
         
         let ncell_and_entries = self.update_names_4_sparse( genes, names );

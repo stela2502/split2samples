@@ -157,7 +157,9 @@ impl SampleIds{
             let km = kmer_vec[id];
             //println!("SampleIds::get - checking this sequence: {} and the at pos {}", km, id );
             if let Some(c1) = self.kmers.get_mut(&km) {
-                        if let Some(read) = self.read.get_mut(c1) { read.add_part() };
+                        if let Some(read) = self.read.get_mut(c1) { 
+                            read.add_part() 
+                        };
             };
             id += jump;
         }

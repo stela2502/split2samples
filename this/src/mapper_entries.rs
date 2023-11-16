@@ -347,17 +347,17 @@ mod tests {
 
     #[test]
     fn check_geneids() {
-        let mut mapper = MapperEntry::new();
+        let mut mapper = MapperEntry::new( 4 );
 
         //let tool = IntToStr::new(b"AGCTGTGAGACTCTTCACACTATCATCATTATTCGGAGG".to_vec(), 16);
-        mapper.add(12, 4, 16 );
-        mapper.add(45, 3, 16 );
+        mapper.add(12, (4,0), vec![16]);
+        mapper.add(45, (3,0), vec![16] );
 
-        assert_eq!( mapper.get(&12), Some(vec![4]) );
-        assert_eq!( mapper.get(&45), Some(vec![3]) );
+        assert_eq!( mapper.get(&12).unwrap().get(), vec![(4,0)] );
+        assert_eq!( mapper.get(&45).unwrap().get(), vec![(3,0)] );
 
-		mapper.add(12, 14, 16 );
-		assert_eq!( mapper.get(&12), Some(vec![4, 14]) );
+		mapper.add(12, (14,0), vec![16] );
+		assert_eq!( mapper.get(&12).unwrap().get(), vec![(4,0), (14,0)] );
 
 
         assert_eq!( mapper.get(&14), None );
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn hamming_distance() {
-        let mut mapper = MapperEntry::new();
+        let mut mapper = MapperEntry::new(4);
 
         let a:u64 = 0b11010101;
         let b:u64 = 0b10110001;

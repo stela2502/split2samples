@@ -54,7 +54,7 @@ impl MappingInfo{
 		let single_processor_time = Duration::new(0,0);
 		let multi_processor_time = Duration::new(0,0);
 		let file_io_time = Duration::new(0,0);
-		Self{
+		let mut this = Self{
 			unknown,
 			no_sample,
 			no_data,
@@ -74,7 +74,9 @@ impl MappingInfo{
 			single_processor_time,
 			multi_processor_time,
 			file_io_time,
-		}
+		};
+		this.start_counter();
+		this
 	}
 
 	pub fn start_counter ( &mut self ){
