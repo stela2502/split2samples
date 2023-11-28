@@ -67,51 +67,68 @@ Analysis will stop after having processed 18446744073709551615 fastq entries con
 
 init models
 the log file: Mapping_log.txt
-Changing the expression start gene id to 0
+Changing the expression start gene id to 462
 After indexing all fastq files we have the following indices:
 the mRNA index:
-I have 7784 kmers and 462 genes and 0% duplicate entries
+I have 16929 kmers for 462 genes with 0% duplicate entries
+gene names like 'Rpl36a'
+gene_ids range from Some(0) to Some(461)
+
 the sample id index:
-I have 226 kmers and 12 genes and 0.004385965% duplicate entries
+I have 370 kmers for 12 genes with 0.010398613% duplicate entries
+gene names like 'Sample12'
+gene_ids range from Some(467) to Some(478)
+
 and the antibodies index:
-I have 77 kmers and 5 genes and 0% duplicate entries
+I have 97 kmers for 5 genes with 0.3445946% duplicate entries
+gene names like 'IgM'
+gene_ids range from Some(462) to Some(466)
+
 Writing index version 5
 with kmer_len 32
-And a total of 7784 data entries
-   0.10 mio reads (69.85% with cell info, 65.40% with gene match)                                                                                                                                           
+And a total of 16929 data entries
+   0.10 mio reads (69.86% with cell_id, 66.12% with gene_id)                                                                                                                                                       
 
 Writing outfiles ...
-filtering cells and writing gene expression
-Dropping cell with too little counts (n=35873)
-sparse Matrix: 71 cell(s), 106 gene(s) and 572 entries written (0 cells too view umis) to path Ok("testData/output_1e5/BD_Rhapsody_expression"); 
+filtering cells
+Dropping cell with too little counts (n=36109)
+75 cells have passed the cutoff of 10 umi counts per cell
+writing gene expression
+sparse Matrix: 75 cell(s), 104 gene(s) and 520 entries written to path Ok("testData/output_1e5/BD_Rhapsody_expression"); 
 Writing Antibody counts
-sparse Matrix: 71 cell(s), 5 gene(s) and 86 entries written (0 cells too view umis) to path Ok("testData/output_1e5/BD_Rhapsody_antibodies"); 
+sparse Matrix: 75 cell(s), 5 gene(s) and 85 entries written to path Ok("testData/output_1e5/BD_Rhapsody_antibodies"); 
 Writing samples table
-dense matrix: 71 cell written
+dense matrix: 75 cell written
 
 Summary:
 total      reads  : 100000 reads
-no cell ID reads  : 16066 reads (16.07% of total)
-no gene ID reads  : 4455 reads (4.45% of total)
+no cell ID reads  : 16060 reads (16.06% of total)
+no gene ID reads  : 3736 reads (3.74% of total)
 N's or too short  : 14080 reads (14.08% of total)
-cellular reads    : 69854 reads (69.85% of total)
-expression reads  : 853 reads (1.22% of cellular)
-antibody reads    : 240 reads (0.34% of cellular)
-sample   reads    : 244 reads (0.35% of cellular)
-unique reads      : 1337 reads (1.91% of cellular)
+cellular reads    : 69860 reads (69.86% of total)
 
-pca duplicates or bad cells: 68517 reads (98.09% of cellular)
+collected read counts:
+expression reads  : 47845 reads (68.49% of cellular)
+antibody reads    : 17304 reads (24.77% of cellular)
+sample reads      : 975 reads (1.40% of cellular)
+
+reported umi counts:
+expression reads  : 654 reads (0.94% of cellular)
+antibody reads    : 235 reads (0.34% of cellular)
+sample reads      : 12 reads (0.02% of cellular)
+
+PCR duplicates or bad cells: 68959 reads (98.71% of cellular)
 
 timings:
-   overall run time 0 h 0 min 4 sec 283 millisec
-   file-io run time 0 h 0 min 0 sec 0 millisec
+   overall run time 0 h 0 min 3 sec 158 millisec
+   file-io run time 0 h 0 min 3 sec 125 millisec
 single-cpu run time 0 h 0 min 0 sec 0 millisec
- multi-cpu run time 0 h 0 min 0 sec 0 millisec
+ multi-cpu run time 0 h 0 min 0 sec 25 millisec
 
 
 Cell->Sample table written to "testData/output_1e5/SampleCounts.tsv"
 
-quantify_rhapsody finished in 0h 0min 4 sec 284milli sec
+quantify_rhapsody finished in 0h 0min 3 sec 158milli sec
 
 ```
 
@@ -126,10 +143,10 @@ target/release/quantify_rhapsody_multi -r  testData/1e5_mRNA_S1_R1_001.fastq.gz 
 ...
 
 timings:
-   overall run time 0 h 0 min 0 sec 959 millisec
-   file-io run time 0 h 0 min 0 sec 192 millisec
-single-cpu run time 0 h 0 min 0 sec 75 millisec
- multi-cpu run time 0 h 0 min 0 sec 429 millisec
+   overall run time 0 h 0 min 0 sec 975 millisec
+   file-io run time 0 h 0 min 0 sec 195 millisec
+single-cpu run time 0 h 0 min 0 sec 71 millisec
+ multi-cpu run time 0 h 0 min 0 sec 479 millisec
 
 ```
 
@@ -145,13 +162,13 @@ from the command line using `quantifyRhapsody -h`.
 
 ```
 target/release/quantify_rhapsody  -h
-Rustody 1.0.0
+rustody 1.2.1
 Stefan L. <stefan.lang@med.lu.se>
 Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles. You need quite long R1 and
-R2 reads for this! (>70R1 and >70R2 [v1] and 52 bp reads for v2.96 and v2.384)
+R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
 
 USAGE:
-    quantify_rhapsody.exe [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --expression <EXPRESSION> --antibody <ANTIBODY> --min-umi <MIN_UMI> --version <VERSION>
+    quantify_rhapsody [OPTIONS] --reads <READS> --file <FILE> --specie <SPECIE> --outpath <OUTPATH> --min-umi <MIN_UMI> --version <VERSION>
 
 OPTIONS:
     -a, --antibody <ANTIBODY>          the fasta database containing the antibody tags
@@ -159,7 +176,8 @@ OPTIONS:
     -f, --file <FILE>                  the input R2 samples file
         --gene-kmers <GENE_KMERS>      minimal sequencing quality [default: 32]
     -h, --help                         Print help information
-    -m, --min-umi <MIN_UMI>            the minimum reads per cell (sample + genes + antibody
+    -i, --index <INDEX>                a pre-defined index folder produced by the cerateIndex scipt
+    -m, --min-umi <MIN_UMI>            the minimum (UMI) reads per cell (sample + genes + antibody
                                        combined)
         --max-reads <MAX_READS>        Optional: end the analysis after processing <max_reads> cell
                                        fastq entries [default: 18446744073709551615]
@@ -191,31 +209,38 @@ target/release/quantify_rhapsody -r  testData/1e5_mRNA_S1_R1_001.fastq.gz,testDa
 output of that call (version 1.2.1).
 
 ```
-dense matrix: 71 cell written
+dense matrix: 75 cell written
 
 Summary:
 total      reads  : 200000 reads
-no cell ID reads  : 32132 reads (16.07% of total)
-no gene ID reads  : 8910 reads (4.45% of total)
+no cell ID reads  : 32120 reads (16.06% of total)
+no gene ID reads  : 7472 reads (3.74% of total)
 N's or too short  : 28160 reads (14.08% of total)
-cellular reads    : 139708 reads (69.85% of total)
-expression reads  : 1706 reads (1.22% of cellular)
-antibody reads    : 480 reads (0.34% of cellular)
-sample   reads    : 488 reads (0.35% of cellular)
-unique reads      : 2674 reads (1.91% of cellular)
+cellular reads    : 139720 reads (69.86% of total)
 
-pca duplicates or bad cells: 137034 reads (98.09% of cellular)
+collected read counts:
+expression reads  : 95690 reads (68.49% of cellular)
+antibody reads    : 34608 reads (24.77% of cellular)
+sample reads      : 1950 reads (1.40% of cellular)
+
+reported umi counts:
+expression reads  : 654 reads (0.47% of cellular)
+antibody reads    : 235 reads (0.17% of cellular)
+sample reads      : 12 reads (0.01% of cellular)
+
+PCR duplicates or bad cells: 138819 reads (99.36% of cellular)
 
 timings:
-   overall run time 0 h 0 min 6 sec 916 millisec
-   file-io run time 0 h 0 min 0 sec 0 millisec
+   overall run time 0 h 0 min 6 sec 181 millisec
+   file-io run time 0 h 0 min 6 sec 145 millisec
 single-cpu run time 0 h 0 min 0 sec 0 millisec
- multi-cpu run time 0 h 0 min 0 sec 0 millisec
+ multi-cpu run time 0 h 0 min 0 sec 28 millisec
 
 
 Cell->Sample table written to "testData/output_1e5/SampleCounts.tsv"
 
-quantify_rhapsody finished in 0h 0min 6 sec 934milli sec
+quantify_rhapsody finished in 0h 0min 6 sec 182milli sec
+
 ```
 
 
@@ -261,27 +286,32 @@ OPTIONS:
 **Performance**
 
 ```
-creating mapper
-Integrating multicore results
- total first keys 13263
- total second keys 16180
- total single gene per second key 16117
- total multimapper per second key 63
+We created this fast_mapper object:
+I have 45846 kmers for 2481 genes with 0% duplicate entries
+gene names like 'ENSMUST00000156250.1'
+gene_ids range from Some(0) to Some(2480)
+
 Writing index version 5
 with kmer_len 32
-And a total of 13263 data entries
-   overall run time 0 h 0 min 0 sec 262 millisec
-   file-io run time 0 h 0 min 0 sec 135 millisec
-single-cpu run time 0 h 0 min 0 sec 18 millisec
- multi-cpu run time 0 h 0 min 0 sec 87 millisec
+And a total of 45846 data entries
+A text version of the index was written to testData/mapperTest/index - you can simply remove that after an optional inspection.
+   overall run time 0 h 0 min 2 sec 249 millisec
+   file-io run time 0 h 0 min 0 sec 196 millisec
+single-cpu run time 0 h 0 min 0 sec 359 millisec
+ multi-cpu run time 0 h 0 min 1 sec 570 millisec
+
+finished in 0 h 0 min 2 sec 250 milli sec
 ```
 
 **File size**
 ```
- 48K index.1.gene.txt
-2,2M index.1.Index
-(6,3M mRNA.fa)
+ 39K index.1.gene.txt
+6,1M index.1.Index
+
+(22M index.1.Index.txt
+5,8M mRNA.fa)
 ```
+
 **And does that work?**
 
 
@@ -292,32 +322,45 @@ target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1
 ...
 
 Writing outfiles ...
-filtering cells and writing gene expression
-Dropping cell with too little counts (n=67)
-sparse Matrix: 54 cell(s), 311 gene(s) and 4242 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1/BD_Rhapsody_expression"); 
+filtering cells
+Dropping cell with too little counts (n=54)
+67 cells have passed the cutoff of 200 umi counts per cell
+writing gene expression
+sparse Matrix: 67 cell(s), 305 gene(s) and 4199 entries written to path Ok("testData/BD_results/Rustody_S1/BD_Rhapsody_expression"); 
 Writing Antibody counts
-sparse Matrix: 54 cell(s), 5 gene(s) and 203 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1/BD_Rhapsody_antibodies"); 
+sparse Matrix: 67 cell(s), 3 gene(s) and 139 entries written to path Ok("testData/BD_results/Rustody_S1/BD_Rhapsody_antibodies"); 
 Writing samples table
-dense matrix: 54 cell written
+dense matrix: 67 cell written
 
 Summary:
 total      reads  : 500000 reads
 no cell ID reads  : 17436 reads (3.49% of total)
-no gene ID reads  : 5146 reads (1.03% of total)
+no gene ID reads  : 5893 reads (1.18% of total)
 N's or too short  : 152 reads (0.03% of total)
 cellular reads    : 482412 reads (96.48% of total)
-expression reads  : 197597 reads (40.96% of cellular)
-antibody reads    : 4229 reads (0.88% of cellular)
-sample   reads    : 4628 reads (0.96% of cellular)
-unique reads      : 206454 reads (42.80% of cellular)
 
-pca duplicates or bad cells: 275958 reads (57.20% of cellular)
+collected read counts:
+expression reads  : 472057 reads (97.85% of cellular)
+antibody reads    : 3498 reads (0.73% of cellular)
+sample reads      : 964 reads (0.20% of cellular)
+
+reported umi counts:
+expression reads  : 195010 reads (40.42% of cellular)
+antibody reads    : 2866 reads (0.59% of cellular)
+sample reads      : 834 reads (0.17% of cellular)
+
+PCR duplicates or bad cells: 283702 reads (58.81% of cellular)
 
 timings:
-   overall run time 0 h 0 min 4 sec 668 millisec
-   file-io run time 0 h 0 min 0 sec 823 millisec
-single-cpu run time 0 h 0 min 0 sec 63 millisec
- multi-cpu run time 0 h 0 min 3 sec 486 millisec
+   overall run time 0 h 0 min 3 sec 452 millisec
+   file-io run time 0 h 0 min 0 sec 722 millisec
+single-cpu run time 0 h 0 min 0 sec 31 millisec
+ multi-cpu run time 0 h 0 min 2 sec 539 millisec
+
+
+Cell->Sample table written to "testData/BD_results/Rustody_S1/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 3 sec 453milli sec
 
 ```
 
@@ -329,36 +372,49 @@ target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1
 ...
 
 Writing outfiles ...
-filtering cells and writing gene expression
-Dropping cell with too little counts (n=66)
-sparse Matrix: 46 cell(s), 151 gene(s) and 1185 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index/BD_Rhapsody_expression"); 
+filtering cells
+Dropping cell with too little counts (n=55)
+62 cells have passed the cutoff of 200 umi counts per cell
+writing gene expression
+sparse Matrix: 62 cell(s), 257 gene(s) and 2647 entries written to path Ok("testData/BD_results/Rustody_S1_index/BD_Rhapsody_expression"); 
 Writing Antibody counts
-sparse Matrix: 46 cell(s), 5 gene(s) and 186 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index/BD_Rhapsody_antibodies"); 
+sparse Matrix: 62 cell(s), 3 gene(s) and 136 entries written to path Ok("testData/BD_results/Rustody_S1_index/BD_Rhapsody_antibodies"); 
 Writing samples table
-dense matrix: 46 cell written
+dense matrix: 62 cell written
 
 Summary:
 total      reads  : 500000 reads
 no cell ID reads  : 17436 reads (3.49% of total)
-no gene ID reads  : 275828 reads (55.17% of total)
+no gene ID reads  : 180719 reads (36.14% of total)
 N's or too short  : 152 reads (0.03% of total)
 cellular reads    : 482412 reads (96.48% of total)
-expression reads  : 97402 reads (20.19% of cellular)
-antibody reads    : 3998 reads (0.83% of cellular)
-sample   reads    : 4322 reads (0.90% of cellular)
-unique reads      : 105722 reads (21.92% of cellular)
 
-pca duplicates or bad cells: 376690 reads (78.08% of cellular)
+collected read counts:
+expression reads  : 297231 reads (61.61% of cellular)
+antibody reads    : 3498 reads (0.73% of cellular)
+sample reads      : 964 reads (0.20% of cellular)
+
+reported umi counts:
+expression reads  : 129870 reads (26.92% of cellular)
+antibody reads    : 2863 reads (0.59% of cellular)
+sample reads      : 828 reads (0.17% of cellular)
+
+PCR duplicates or bad cells: 348851 reads (72.31% of cellular)
 
 timings:
-   overall run time 0 h 0 min 5 sec 626 millisec
-   file-io run time 0 h 0 min 0 sec 834 millisec
-single-cpu run time 0 h 0 min 0 sec 38 millisec
- multi-cpu run time 0 h 0 min 4 sec 465 millisec
+   overall run time 0 h 0 min 4 sec 941 millisec
+   file-io run time 0 h 0 min 0 sec 741 millisec
+single-cpu run time 0 h 0 min 0 sec 22 millisec
+ multi-cpu run time 0 h 0 min 4 sec 10 millisec
+
+
+Cell->Sample table written to "testData/BD_results/Rustody_S1_index/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 4 sec 948milli sec
 
 ```
 
-In version 1.2.2 quantify_rhapsody_multi found 8 more cells using the fasta data. So tere is more work needed until this index does do it's job! But on the positive side: 31 unspliced transcripts were recorded. A more detailed analysis has to follow.
+In version 1.2.2 quantify_rhapsody_multi found 5 more cells and 48 more genes using the fasta data. So there is more work needed until this index does do it's job! If we consider that the genomic index also identifies 74 unspliced transcripts is identifies 122 genes less than the fasta based index. A more detailed analysis has to follow. Does the index idex the correct data?
 
 The program by default creates transcipt specific indices. Which is kind of counter intuitive and could be changed later on if necessary.
 
@@ -370,196 +426,57 @@ And what about a genomic index combining Mus_musculus.GRCm39.dna.toplevel.fa.gz 
 target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1_index_genomic -s mouse  -i /mnt/data1/Rustody_Test_Files/indices/mouse/GRCm39 -e testData/addOn.fa -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
 
 Writing outfiles ...
-filtering cells and writing gene expression
-Dropping cell with too little counts (n=65)
-sparse Matrix: 49 cell(s), 217 gene(s) and 1422 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index_genomic/BD_Rhapsody_expression");
+filtering cells
+Dropping cell with too little counts (n=55)
+65 cells have passed the cutoff of 200 umi counts per cell
+writing gene expression
+sparse Matrix: 65 cell(s), 295 gene(s) and 3519 entries written to path Ok("testData/BD_results/Rustody_S1_index_genomic/BD_Rhapsody_expression"); 
 Writing Antibody counts
-sparse Matrix: 49 cell(s), 5 gene(s) and 185 entries written (0 cells too view umis) to path Ok("testData/BD_results/Rustody_S1_index_genomic/BD_Rhapsody_antibodies");
+sparse Matrix: 65 cell(s), 3 gene(s) and 137 entries written to path Ok("testData/BD_results/Rustody_S1_index_genomic/BD_Rhapsody_antibodies"); 
 Writing samples table
-dense matrix: 49 cell written
+dense matrix: 65 cell written
 
 Summary:
 total      reads  : 500000 reads
 no cell ID reads  : 17436 reads (3.49% of total)
-no gene ID reads  : 244108 reads (48.82% of total)
+no gene ID reads  : 149388 reads (29.88% of total)
 N's or too short  : 152 reads (0.03% of total)
 cellular reads    : 482412 reads (96.48% of total)
-expression reads  : 111234 reads (23.06% of cellular)
-antibody reads    : 4059 reads (0.84% of cellular)
-sample   reads    : 4385 reads (0.91% of cellular)
-unique reads      : 119678 reads (24.81% of cellular)
 
-pca duplicates or bad cells: 362734 reads (75.19% of cellular)
+collected read counts:
+expression reads  : 328562 reads (68.11% of cellular)
+antibody reads    : 3498 reads (0.73% of cellular)
+sample reads      : 964 reads (0.20% of cellular)
+
+reported umi counts:
+expression reads  : 143662 reads (29.78% of cellular)
+antibody reads    : 2864 reads (0.59% of cellular)
+sample reads      : 828 reads (0.17% of cellular)
+
+PCR duplicates or bad cells: 335058 reads (69.45% of cellular)
 
 timings:
-   overall run time 0 h 0 min 14 sec 237 millisec
-   file-io run time 0 h 0 min 0 sec 841 millisec
-single-cpu run time 0 h 0 min 0 sec 21 millisec
- multi-cpu run time 0 h 0 min 6 sec 240 millisec
+   overall run time 0 h 0 min 10 sec 816 millisec
+   file-io run time 0 h 0 min 0 sec 745 millisec
+single-cpu run time 0 h 0 min 0 sec 22 millisec
+ multi-cpu run time 0 h 0 min 4 sec 978 millisec
+
+
+Cell->Sample table written to "testData/BD_results/Rustody_S1_index_genomic/SampleCounts.tsv"
+
 ```
+
+That one only identified 16 unspliced transcripts and therefore only 26 genes less than the fasta based index. There is clearly something incorrect with the test index.
+
 
 I hope you found my little easter egg: you can combine --expression and --index options in the program call. This way you can have a global index and nevertheless add project specific transcriptions like dtTomato in this specific case.
 
 
 # Speed comparisons to local BD software installation
 
-The BD rhapsody software is available for Mac and Linux, not for Windows. Whereas this rust program here also compiles and runs on Windows.
+That is something one does not need to talk about. THis software is incredibly much faster than the BD pipeline.
+But Rustody does also not create a bam file.
 
-System used for the speed comparisons:
-
-```
-Operating System: Ubuntu 22.04.1 LTS
-          Kernel: Linux 5.15.0-58-generic
-model name      : AMD Ryzen 5 3600X 6-Core Processor
-total mem       : 64Gb
-storage         : Samsung SSD 970 EVO Plus 2TB
-```
-
-The test dataset consists of 500.000 reads with cell information.
-
-## time for a BD analysis 500k reads S2
-
-```
-# in the testData folder:
-cwl-runner --singularity 1.11.1.cwl S2_1.11.1.yml
-
-user    16m47,165s
-user    16m47,870s
-user    16m48,953s
-```
-
-OK I assume we get the point ~ 17min.
-
-## Rustody commands any version (up to now)
-
-```
-target/release/quantify_rhapsody -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
-
-target/release/quantify_rhapsody -r testData/cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o testData/BD_results/Rustody_S2 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
-```
-
-## time for a Rustody analysis 500k reads S2
-
-```
-target/release/quantify_rhapsody -r testData/cells.1.Rhapsody_SV_index2_S2_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index2_S2_R2_001.fastq.gz -o Rustody_S2 -s mouse  -e testData/2276_20220531_chang_to_rpl36a_amplicons.fasta -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96 --gene-kmers 16
-Analysis will stop after having processed 18446744073709551615 fastq entries containing a cell info
-
-init models
-the log file: Mapping_log.txt
-Changing the expression start gene id to 0
-After indexing all fastq files we have the following indices:
-the mRNA index:
-I have 7787 kmers and 462 genes and 0% duplicate entries
-the sample id index:
-I have 227 kmers and 12 genes and 0% duplicate entries
-and the antibodies index:
-I have 86 kmers and 5 genes and 0% duplicate entries
-Writing index version 5
-with kmer_len 16
-And a total of 7787 data entries
-
-   0.50 mio reads (95.93% with cell info, 94.71% with gene match)                                                                                                                                           
-
-Writing outfiles ...
-filtering cells and writing gene expression
-Dropping cell with too little counts (n=91)
-sparse Matrix: 33 cell(s), 360 gene(s) and 2955 entries written (0 cells too view umis) to path Ok("Rustody_S2/BD_Rhapsody_expression"); 
-Writing Antibody counts
-sparse Matrix: 33 cell(s), 5 gene(s) and 116 entries written (0 cells too view umis) to path Ok("Rustody_S2/BD_Rhapsody_antibodies"); 
-Writing samples table
-dense matrix: 33 cell written
-
-Summary:
-total      reads  : 500000 reads
-no cell ID reads  : 17109 reads (3.42% of total)
-no gene ID reads  : 6128 reads (1.23% of total)
-N's or too short  : 3228 reads (0.65% of total)
-cellular reads    : 479663 reads (95.93% of total)
-expression reads  : 469427 reads (97.87% of cellular)
-antibody reads    : 2527 reads (0.53% of cellular)
-sample   reads    : 2782 reads (0.58% of cellular)
-unique reads      : 474736 reads (98.97% of cellular)
-
-pca duplicates or bad cells: 4927 reads (1.03% of cellular)
-
-timings:
-   overall run time 0 h 0 min 18 sec 521 millisec
-   file-io run time 0 h 0 min 0 sec 0 millisec
-single-cpu run time 0 h 0 min 0 sec 0 millisec
- multi-cpu run time 0 h 0 min 0 sec 0 millisec
-
-
-Cell->Sample table written to "Rustody_S2/SampleCounts.tsv"
-
-quantify_rhapsody finished in 0h 0min 18 sec 529milli sec
-
-```
-
-
-## Rustody on S1
-
-The full fastq file for this data has in total 781.213.661 reads.
-
-```
-Writing outfiles ...
-sparse Matrix: 18925 cell(s) and 432 gene(s) and 1903979 entries written (460277 cells too view umis) to path Ok("Sample2_Rustody/BD_Rhapsody_expression");
-sparse Matrix: 18925 cell(s) and 4 gene(s) and 56573 entries written (460277 cells too view umis) to path Ok("Sample2_Rustody/BD_Rhapsody_antibodies");
-dense matrix: 18925 cell written - 460277 cells too view umis
-
-Summary:
-total      reads  : 781213661 reads
-no cell ID reads  : 227281056 reads
-bad quality       : 6436860 reads
-N's or too short  : 96963249 reads
-cellular reads    : 456969356 reads (58.49% of total)
-expression reads  : 334600069 reads (42.83% of total)
-antibody reads    : 100959465 reads (12.92% of total)
-sample tag reads  : 21599984 reads (2.76% of total)
-pcr duplicates    : 384288196 reads (84.09% of usable)
-
-Cell->Sample table written to "Sample2_Rustody/SampleCounts.tsv"
-
-quantify_rhapsody finished in 1h 36min 8 sec 767milli sec
-```
-
-### Outfiles
-
-```
-5,5M feb 10 12:12 ./Sample2_Rustody/BD_Rhapsody_expression/matrix.mtx.gz
-2,3K feb 10 12:12 ./Sample2_Rustody/BD_Rhapsody_expression/features.tsv.gz
- 55K feb 10 12:12 ./Sample2_Rustody/BD_Rhapsody_expression/barcodes.tsv.gz
-219K feb 10 12:12 ./Sample2_Rustody/BD_Rhapsody_antibodies/matrix.mtx.gz
-  85 feb 10 12:12 ./Sample2_Rustody/BD_Rhapsody_antibodies/features.tsv.gz
- 55K feb 10 12:12 ./Sample2_Rustody/BD_Rhapsody_antibodies/barcodes.tsv.gz
-1,1M feb 10 12:12 ./Sample2_Rustody/SampleCounts.tsv
-72K feb 10 12:13 ./Sample2_Rustody/Mapping_log.txt
-```
-
-Little less than 2h. Let's check how much time BD's version does need...
-
-
-
-## And BD software for the S2 sample
-
-
-Repeated runs on my desktop did fale after up to 38h runtime.
-Therefore I report the seven bridges run time here: 7 hours, 39 minutes.
-That is significantly faster than the 38h on my system, but it nevertheless is ~4x slower than my Rhapsody implementation on a single core.
-
-Why single core? The system IO does affect the Rust implementation. 
-The splitting of large gzipped fastq files can easiliy take more than halve an hour and  given the fast processing time
-the additional work to implement mutiprocessor capabilities for Rustody seams unnecessary.
-
-Actually single core is history - new multicore processing is working WAY faster now.
-
-## The last run on my desktop:
-
-```
-user    2283m4,866s
-```
-Maximum memory requirement over this time: ~ 22.03 Gb.
-
-More than 38 hours the BD system stopped with an error.
 
 # Additional Programs
 
@@ -618,24 +535,8 @@ target/release/split2samples -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testDat
 
  This is a small spin off that actually processes 10x single cell data and searches for a set fasta entries. (no test data included)
 
- ```
- target/release/demux10x  -h
-Rustody 0.1.0
-Stefan L. <stefan.lang@med.lu.se>
-Split a pair of BD rhapsody fastq files (R1 and R2) into sample specific fastq pairs
+ This package has gotten it's own reop: https://github.com/stela2502/demux10xHTO
 
-USAGE:
-    demux10x --reads <READS> --file <FILE> --bc <BC> --outpath <OUTPATH> --min-umi <MIN_UMI>
-
-OPTIONS:
-    -b, --bc <BC>              the barcodes table name<tab>bc
-    -f, --file <FILE>          the input R2 genes file
-    -h, --help                 Print help information
-    -m, --min-umi <MIN_UMI>    the minimum reads (sample + genes + antybody combined)
-    -o, --outpath <OUTPATH>    the outpath
-    -r, --reads <READS>        the input R1 reads file
-    -V, --version              Print version information
-```
 
  ## bd_cell_id_2_seq 
 
@@ -644,9 +545,7 @@ OPTIONS:
  ```
 target/release/bd_cell_id_2_seq -i 3857748 -v v1
 The sequence is:
-Ok("ACCAAGGAC")
-Ok("TTGGAGGTA")
-Ok("AATTCGGCG")
+ACCAAGGAC---TTGGAGGTA---CAACCTCCA
 ```
 
 
@@ -655,15 +554,15 @@ Ok("AATTCGGCG")
 This will select only one single cell from the fastq files.
 
 ```
-target/release/bd_get_single_cell -i 3857748 -v v1 -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_getCell
-writing all reads from the cell 3857748
-[100/?] ⠁                                                                                                                                                                                                  I found 14 reads for the cell 3857748
+target/release/bd_get_single_cell -i 3857747 -v v1 -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_getCell
+writing all reads from the cell 3857747
+[100/?] ⠁                                                                                                                                                 I found 14 reads for the cell 3857747
 ```
 
 # Limitations / differences
 
 TCR / BRC analyses are not supported at the moment.
-The multiprocessor tool breaks if very view cells are detected. Try using less prcessors is this problem occures. A minimum of num_theads +1 cell is required for the export process to work. 
+The multiprocessor tool breaks if very view cells are detected. Try using less prcessors if this problem occures. A minimum of num_theads +1 cells is required for the export process to work. 
 
 
 # specific test cases
@@ -678,82 +577,4 @@ target/release/quantify_rhapsody_multi -r  testData/OneSingleCell.66.R2.fastq.gz
 zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
 ```
 
-```
-init models
-the log file: Mapping_log.txt
-After indexing all fastq files we have the following index:
-I have 7855 kmers and 467 genes
-Writing index version 3
-with kmer_len 32
-And a total of 8063 data entries
-
-Parsing file pair 1
-
-I am using 12 cpus
-Starting with data collection
-   0.03 mio reads (99.98% with cell info, 89.64% with gene match
-
-Writing outfiles ...
-filtering cells
-Dropping cell with too little counts (n=0)
-sparse Matrix: 1 cell(s), 136 gene(s) and 136 entries written (0 cells too view umis) to path Ok("testData/output_one_cell/BD_Rhapsody_expression");
-Writing Antibody counts
-sparse Matrix: 1 cell(s), 3 gene(s) and 3 entries written (0 cells too view umis) to path Ok("testData/output_one_cell/BD_Rhapsody_antibodies");
-Writing GeneEXpression counts
-dense matrix: 1 cell written
-
-Summary:
-total      reads  : 32972 reads
-no cell ID reads  : 0 reads (0.00% of total)
-no gene ID reads  : 3411 reads (10.35% of total)
-N's or too short  : 6 reads (0.02% of total)
-cellular reads    : 32966 reads (99.98% of total)
-expression reads  : 24125 reads (73.18% of cellular)
-antibody reads    : 4275 reads (12.97% of cellular)
-sample   reads    : 1155 reads (3.50% of cellular)
-unique reads      : 29555 reads (89.65% of cellular)
-
-pca duplicates or bad cells: 3411 reads (10.35% of cellular)
-
-timings:
-   overall run time 0 h 0 min 0 sec 90 millisec
-   file-io run time 0 h 0 min 0 sec 47 millisec
-single-cpu run time 0 h 0 min 0 sec 4 millisec
- multi-cpu run time 0 h 0 min 0 sec 24 millisec
-
-
-Cell->Sample table written to "testData/output_one_cell/SampleCounts.tsv"
-
-quantify_rhapsody finished in 0h 0min 0 sec 91milli sec
-```
-
-This should not return a match. As actuall Cd3e is not detected in 1.0.0.
-
-But even in 1.0.01 there are a view cells where the expression of that gene is detected.
-
-```
-target/release/quantify_rhapsody -f  testData/OneSingleCell.11521.R1.fastq.gz -r testData/OneSingleCell.11521.R2.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
-
-zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
-```
-
-But this match can obviousely not be blamed on this software as the R1 read that causes this match is a 100% match using BLAST:
-```
-Query: None Query ID: lcl|Query_19287 Length: 71
-
-
->Mus musculus strain C57BL/6J chromosome 9, GRCm39
-Sequence ID: NC_000075.7 Length: 124359700
-Range 1: 44910123 to 44910193
-
-Score:132 bits(71), Expect:2e-29, 
-Identities:71/71(100%),  Gaps:0/71(0%), Strand: Plus/Minus
-
-Query  1         ACAGGTCCTGCCCCATTTATAGATCCTGGCCCAGCCCCTGCCACAGGTGCCTCTCCAGAT  60
-                 ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-Sbjct  44910193  ACAGGTCCTGCCCCATTTATAGATCCTGGCCCAGCCCCTGCCACAGGTGCCTCTCCAGAT  44910134
-
-Query  61        TTCCCCTTAGA  71
-                 |||||||||||
-Sbjct  44910133  TTCCCCTTAGA  44910123
-```
+This problem has been fixed. Cd3e is no longer "expressed" in this cell.

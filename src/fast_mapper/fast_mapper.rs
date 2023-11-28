@@ -514,8 +514,10 @@ impl FastMapper{
             let re = Regex::new(r"^G[mM]").unwrap();
             let gene_names = self.gene_names_for_ids( &good );
             let mut better = Vec::<String>::with_capacity( good.len());
+            let humt = Regex::new(r"^ENSG").unwrap();
+            let mouset = Regex::new(r"^ENSMUST").unwrap();
             for name in &gene_names{
-                if ! re.is_match( name ){
+                if ! re.is_match( name ) && ! humt.is_match( name)  && ! mouset.is_match( name) {
                     better.push( name.to_string() );
                 }
             }
@@ -741,7 +743,8 @@ impl FastMapper{
                 eprintln!("get_strict was a better choise here! {gene_id:?}");
                 return Some(gene_id)
             }else {
-                eprintln!("these genes seam to have the same mRNA end sequences: {:?}", self.gene_names_for_ids( &matching_geneids ) );
+                matching_geneids.sort();
+                eprintln!("read mapping to multiple genes: {:?}", self.gene_names_for_ids( &matching_geneids ) );
             }
         }
         None
