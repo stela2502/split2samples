@@ -531,7 +531,7 @@ impl IntToStr {
 			u8_4bp =u8_rep[id];
 			if i >= kmer_size {
 				//println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);
-				self.u8_to_str( kmer_size - i +4, &u8_4bp, data );
+				self.u8_to_str( kmer_size +4 -i, &u8_4bp, data );
 				break;
 			}else {
 				//println!("decoding 4 bits of this number: {:b}", u8_4bp);
