@@ -2,8 +2,8 @@ use clap::Parser;
 
 use regex::Regex;
 
-use this::fast_mapper::FastMapper;
-use this::gene::Gene;
+use rustody::fast_mapper::FastMapper;
+use rustody::gene::Gene;
 
 use needletail::parse_fastx_file;
 
@@ -24,8 +24,8 @@ use flate2::read::GzDecoder;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 
-use this::mapping_info::MappingInfo;
-use this::ofiles::Ofiles;
+use rustody::mapping_info::MappingInfo;
+use rustody::ofiles::Ofiles;
 
 use std::thread;
 use rayon::slice::ParallelSlice;

@@ -1,14 +1,11 @@
 #[cfg(test)]
 mod tests {
 
-    use this::fast_mapper::FastMapper;
+    use rustody::fast_mapper::FastMapper;
     //use std::path::Path;
     use kmers::naive_impl::Kmer;
-    use this::mapping_info::MappingInfo;
-    use this::ofiles::Ofiles;
-    use std::fs::File;
-    use std::path::PathBuf;
-    use this::int_to_str::IntToStr;
+    //use rustody::mapping_info::MappingInfo;
+    use rustody::int_to_str::IntToStr;
     static EMPTY_VEC: Vec<String> = Vec::new();
 
 
@@ -36,9 +33,10 @@ mod tests {
 
         //assert_eq!( mapper.with_data, 51 );
 
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(0) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(1) );
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(vec![0]) );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(vec![1]) );
 
+        //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
 
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), None );
@@ -80,8 +78,8 @@ mod tests {
 
         assert_eq!( mapper.with_data, 54);
 
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(0) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(1) );
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(vec![0]) );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(vec![1]) );
 
         let opath = "testData/output_index_test";
         mapper.write_index( opath.to_string() ).unwrap();
@@ -110,7 +108,7 @@ mod tests {
         let mut mapper = FastMapper::new( 16, 10 );
 
 
-        let mut geneid = 0;
+        let geneid = 0;
         
         mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
@@ -133,7 +131,7 @@ mod tests {
     fn check_samples() {
         let mut mapper = FastMapper::new( 16, 10 );
         let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
-        let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        //let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
         let sequences = [
         b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
@@ -151,12 +149,12 @@ mod tests {
         }
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
-        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(0) );
-        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(1) );
+        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![0]) );
+        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![1]) );
         assert_eq!( mapper.get_strict( sample2, &mut tool ), None );
-        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(0) );
-        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(11) );
-        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(0) );
+        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![0]) );
+        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(vec![11]) );
+        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(vec![0]) );
     }
 
 
@@ -167,7 +165,7 @@ mod tests {
         mapper.change_start_id( 10 );
 
         let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
-        let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        //let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
         let sequences = [
         b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
@@ -185,12 +183,12 @@ mod tests {
         }
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
-        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(10) );
-        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(11) );
+        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![10]) );
+        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![11]) );
         assert_eq!( mapper.get_strict( sample2, &mut tool ), None );
-        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(10) );
-        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(21) );
-        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(10) );
+        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![10]) );
+        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(vec![21]) );
+        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(vec![10]) );
     }
 
 }

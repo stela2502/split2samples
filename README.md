@@ -673,7 +673,7 @@ The multiprocessor tool breaks if very view cells are detected. Try using less p
 Version 0.1.0 and likely previouse version do detect Cd3e in this cell, but it should not be expressed.
 
 ```
-target/release/quantify_rhapsody_mulit -r  testData/OneSingleCell.66.R2.fastq.gz -f testData/OneSingleCell.66.R1.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
+target/release/quantify_rhapsody_multi -r  testData/OneSingleCell.66.R2.fastq.gz -f testData/OneSingleCell.66.R1.fastq.gz  -o testData/output_one_cell -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v2.96
 
 zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
 ```

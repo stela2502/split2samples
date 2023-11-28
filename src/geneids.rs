@@ -623,11 +623,11 @@ mod tests {
         geneid = genes.get_id( "Gene3".to_string() );
         assert_eq!( geneid,  2 ); 
 
-        genes.write_index( Path::new("../testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
+        genes.write_index( Path::new("testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
 
         let mut genes2 = GeneIds::new( 7 );
 
-        genes2.load_index( Path::new("../testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
+        genes2.load_index( Path::new("testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
 
         assert_eq!( Vec::from_iter( genes.kmers.keys().cloned() ),  Vec::from_iter( genes2.kmers.keys().cloned()) );
         assert_eq!( Vec::from_iter( genes.kmer_store.keys().cloned()),  Vec::from_iter( genes2.kmer_store.keys().cloned()) );

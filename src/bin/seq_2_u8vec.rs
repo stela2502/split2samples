@@ -1,5 +1,5 @@
 use clap::Parser;
-use this::int_to_str::IntToStr;
+use rustody::int_to_str::IntToStr;
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]

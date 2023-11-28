@@ -1,8 +1,8 @@
 use clap::Parser;
 
 //use this::sampleids::SampleIds;
-use this::mapping_info::MappingInfo;
-use this::analysis::Analysis;
+use rustody::mapping_info::MappingInfo;
+use rustody::analysis::Analysis;
 //use this::last5::Last5;
 
 use std::path::PathBuf;
@@ -12,7 +12,7 @@ use std::time::SystemTime;
 
 use std::fs::File;
 
-use this::ofiles::Ofiles;
+use rustody::ofiles::Ofiles;
 use num_cpus;
 
 
@@ -71,8 +71,6 @@ struct Opts {
     #[clap(default_value_t=1,short, long)]
     umi_count: u8,
 */
-
-
 
 
 

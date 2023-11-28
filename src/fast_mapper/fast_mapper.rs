@@ -13,7 +13,7 @@ use regex::Regex;
 
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
-use crate::mapper_entries::MapperEntry;
+use crate::fast_mapper::mapper_entries::MapperEntry;
 
 use std::path::Path;
 use std::io::Write;
@@ -460,7 +460,7 @@ impl FastMapper{
             if let Some((key, _)) = genes.iter().next() {
                ret.push(key.0.clone());
                // if report {
-               //  eprintln!("1 This was selected as good: {} or {}\n",key.0, self.names_store[key.0] )
+                 //eprintln!("1 This was selected as good: {} or {}\n",key.0, self.names_store[key.0] );
                // }
                return true
             }
@@ -486,7 +486,7 @@ impl FastMapper{
             if good.len() ==1 {
                 ret.push( good[0] );
                 // if report {
-                //     eprintln!("2 This was selected as good: {} or {}\n",good[0], self.names_store[good[0]] )
+                     //eprintln!("2 This was selected as good: {} or {}\n",good[0], self.names_store[good[0]] );
                 // }
                 return true
             }
@@ -505,7 +505,7 @@ impl FastMapper{
                 if remove_suffix_string_int( &self.names_store[good[0]] ) == remove_suffix_string_int( &self.names_store[good[1]] ){
                     ret.push( self.get_id(remove_suffix_string_int( &self.names_store[good[0]] ) ) );
                     // if report {
-                    //     eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1]  &self.names_store[ret[ret.len()-1]] )
+                         //eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1],  &self.names_store[ret[ret.len()-1]] );
                     // }
                     return true
                 }
@@ -528,7 +528,7 @@ impl FastMapper{
                 if remove_suffix_string_int( &better[0] ) == remove_suffix_string_int( &better[1] ){
                     ret.push( self.get_id(remove_suffix_string_int( &better[0] ) ) );
                     // if report {
-                    //     eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1]  &self.names_store[ret[ret.len()-1]] )
+                         //eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1] , &self.names_store[ret[ret.len()-1]] );
                     // }
                     return true
                 }
@@ -549,24 +549,26 @@ impl FastMapper{
                 0 => {
                     return false
                 },
+                1 => {
+                    ret.push( self.get_id( no_int[0].to_string() ) );
+                    return true
+                }
                 _ => {
                     for name in &no_int{
                         ret.push( self.get_id( name.to_string() ) );
-                        return true
                     }
+                    return false
                 }
             }
 
-            panic!("You should not be able to get here! {}  matches to the sequence:\n{:?}", most_matches, no_int);
-            
-            // eprintln!("genes: {:?}\ngood: {:?}\nnames: {:?}\nNo good gene identified!\n", genes, good, gene_names );
-            // for  gene_id in good {
-            //     eprint!(" {}", self.names_store[ gene_id ] );
-            // }
-            // eprint!("\n");
+             // eprintln!("genes: {:?}\ngood: {:?}\nnames: {:?}\nNo good gene identified!\n", genes, good, gene_names );
+             // for  gene_id in good {
+             //     eprint!(" {}", self.names_store[ gene_id ] );
+             // }
+             // eprint!("\n");
         }
         //if report {
-        //    eprintln!("! No good gene identified! {:?}\n", genes );
+            //eprintln!("! No good gene identified! {:?}\n", genes );
         //}
 
         return false
@@ -727,9 +729,10 @@ impl FastMapper{
             //     break 'main;
             // }
         }
-        //eprintln!("Here I have this gene counts: {:?}", genes );
+        //eprintln!("Here I have these gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
+            //eprintln!("And I return: {:?}",  matching_geneids);
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{

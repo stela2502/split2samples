@@ -7,7 +7,7 @@
 #[cfg(test)]
 mod tests {
 
-   use this::int_to_str::IntToStr;
+   use rustody::int_to_str::IntToStr;
    //use int_to_str::int_to_str::IntToStr;
 
     #[test]
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn check_conversion_oneA() {
+    fn check_conversion_one_a() {
 
      let seq = b"A";
      let tool = IntToStr::new(seq.to_vec(), 32);
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn check_mask_u64() {
        let seq1_u64 = 14104719131550637795_u64;
-       let mut tool = IntToStr::new(b"TAGTGTCCTGTGACTTCACCTCAAGTTGTAAT".to_vec(), 8);
+       let tool = IntToStr::new(b"TAGTGTCCTGTGACTTCACCTCAAGTTGTAAT".to_vec(), 8);
        assert_eq!( seq1_u64, tool.into_u64(), "correct u64" );
 
        let masked = tool.mask_u64( &seq1_u64 );

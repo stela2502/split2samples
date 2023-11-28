@@ -1,8 +1,8 @@
 use clap::Parser;
 use needletail::parse_fastx_file;
-use this::cellids::CellIds;
+use rustody::cellids::CellIds;
 
-use this::ofiles::Ofiles;
+use rustody::ofiles::Ofiles;
 use std::fs;
 
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};

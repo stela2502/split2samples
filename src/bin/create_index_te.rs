@@ -2,14 +2,14 @@ use clap::Parser;
 
 use regex::Regex;
 
-use this::fast_mapper::FastMapper;
-use this::gene_family::GeneFamily;
-use this::gene::Gene;
+use rustody::fast_mapper::FastMapper;
+use rustody::gene_family::GeneFamily;
+use rustody::gene::Gene;
 
 use needletail::parse_fastx_file;
 
-//use this::sampleids::SampleIds;
-//use this::analysis::
+//use rustody::sampleids::SampleIds;
+//use rustody::analysis::
 
 use std::path::PathBuf;
 use std::fs;
@@ -34,8 +34,8 @@ use indicatif::MultiProgress;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 
-use this::mapping_info::MappingInfo;
-use this::ofiles::Ofiles;
+use rustody::mapping_info::MappingInfo;
+use rustody::ofiles::Ofiles;
 
 /// Create a binary indes for the quantify_rhapsody program.
 /// In contrast to the not te version of this tool we here expect a lot of overlap between different genes.

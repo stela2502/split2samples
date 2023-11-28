@@ -9,10 +9,10 @@ use std::io::BufWriter;
 // use std::io::BufReader;
 // use std::str;
 
-use this::cellids::CellIds;
+use rustody::cellids::CellIds;
 use std::collections::BTreeMap;
 
-use this::sampleids::SampleIds;
+use rustody::sampleids::SampleIds;
 
 use std::path::PathBuf;
 use std::fs::File;
@@ -25,7 +25,7 @@ use std::time::SystemTime;
 use glob::glob; // to search for files
 use regex::Regex;
 
-use this::int_to_str::IntToStr;
+use rustody::int_to_str::IntToStr;
 
 // first, reproduce the appproach from
 // https://github.com/jeremymsimon/SPLITseq/blob/main/Preprocess_SPLITseq_collapse_bcSharing.pl
