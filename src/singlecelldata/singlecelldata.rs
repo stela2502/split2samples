@@ -223,7 +223,6 @@ impl SingleCellData{
         }
 
         let mut passed = 0;
-        let mut failed = 0; // complier warning is incorrect!
         if ! rs {
             match fs::create_dir ( file_path.clone() ){
                 Ok(_file) => (),
@@ -291,11 +290,12 @@ impl SingleCellData{
 
         let mut entries = 0;
         let mut passing_cells: Vec<&CellData> = Vec::with_capacity( self.passing );
+        //let mut bad = 0; // complier warning is incorrect!
 
         for cell_obj in self.cells.values() {
             if ! cell_obj.passing {
-                //println!("failed cell {}", cell_obj.name );
-                failed +=1;
+                //println!("bad cell {}", cell_obj.name );
+                //bad +=1;
                 continue;
             }
             passed += 1;
