@@ -1,4 +1,4 @@
-[![Rust](https://github.com/stela2502/Rustody/actions/workflows/rust.yml/badge.svg)](https://github.com/stela2502/Rustody/actions/workflows/rust.yml)
+[![Rust](https://github.com/stela2502/Rustody/actions/workflows/rust.yml/badge.svg?branch=main2)](https://github.com/stela2502/Rustody/actions/workflows/rust.yml)
 
 # Rustody - a tool to quickly analyze targeted BD-Rhapsody sequencings
 
