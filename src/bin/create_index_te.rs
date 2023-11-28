@@ -147,6 +147,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
                 }
             };
             // for this approach we need to use the family model?
+            eprintln!("I will add these gene names: {}, {}, {}, {}", transcript_id.to_string(), gene_name.to_string(), family_name.to_string(), class_name.to_string() );
             let mut gene = Gene::new(
                 parts[0].to_string(),
                 parts[3].to_string(),

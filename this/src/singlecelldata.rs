@@ -208,7 +208,7 @@ impl CellData{
         }
     }
 
-    pub fn n_umi( &self, gene_info:&FastMapper, gnames: &Vec<String> ) -> usize {
+    pub fn n_umi( &self, _gene_info:&FastMapper, _gnames: &Vec<String> ) -> usize {
         return self.total_umis;
 
         // let mut n = 0;
@@ -561,7 +561,7 @@ impl SingleCellData{
         }
 
         let mut passed = 0;
-        let mut failed = 0;
+        let mut failed = 0; // complier warning is incorrect!
         if ! rs {
             match fs::create_dir ( file_path.clone() ){
                 Ok(_file) => (),
@@ -786,8 +786,8 @@ impl SingleCellData{
             println!("Dropping cell with too little counts (n={bad_cells})");
             self.cells.retain( |&_key, cell_data| cell_data.passing );
 
-            for cellObj in self.cells.values_mut(){
-                cellObj.fix_multimappers();
+            for cell_obj in self.cells.values_mut(){
+                cell_obj.fix_multimappers();
             }
             // for cell_obj in self.cells.values_mut() {
             //     // total umi check

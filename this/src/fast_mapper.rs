@@ -23,7 +23,6 @@ use std::io::BufRead;
 use std::io::Read;
 //use std::error::Error;
 //use crate::geneids::GeneIds;
-use crate::mapping_info::MappingInfo;
 
 /// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
 /// but that can be different, too. 
@@ -478,7 +477,7 @@ impl FastMapper{
             if most_matches < &3_usize {
                 return false
             }
-            let mut best_gene = 0; //otherwise this throws an error later
+            //let mut best_gene = 0; //otherwise this throws an error later
             for ((gene_id, level ), matches) in genes{
                 if level == &prob_level && matches == most_matches {
                     good.push( *gene_id );
@@ -1100,7 +1099,6 @@ impl FastMapper{
     }
 
 }
-
 
 
 

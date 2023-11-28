@@ -26,19 +26,19 @@ const COMPLEMENT: [Option<u8>; 256] = {
     lookup
 };
 
-const CHECK: [Option<u8>; 256] = {
-    let mut lookup = [None; 256];
+// const CHECK: [Option<u8>; 256] = {
+//     let mut lookup = [None; 256];
 
-    lookup[b'A' as usize] = Some(b'A');
-    lookup[b'C' as usize] = Some(b'C');
-    lookup[b'G' as usize] = Some(b'G');
-    lookup[b'T' as usize] = Some(b'T');
-    lookup[b'a' as usize] = Some(b'A');
-    lookup[b'c' as usize] = Some(b'C');
-    lookup[b'g' as usize] = Some(b'G');
-    lookup[b't' as usize] = Some(b'T');
-    lookup
-};
+//     lookup[b'A' as usize] = Some(b'A');
+//     lookup[b'C' as usize] = Some(b'C');
+//     lookup[b'G' as usize] = Some(b'G');
+//     lookup[b'T' as usize] = Some(b'T');
+//     lookup[b'a' as usize] = Some(b'A');
+//     lookup[b'c' as usize] = Some(b'C');
+//     lookup[b'g' as usize] = Some(b'G');
+//     lookup[b't' as usize] = Some(b'T');
+//     lookup
+// };
 
 /// MappingInfo captures all mapping data and is a way to easily copy this data over multiple analysis runs.
 pub struct Gene{

@@ -186,32 +186,39 @@ impl Analysis{
 	    samples.change_start_id( antibodies.last_count );
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
-	        let sequences = [ b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG".to_vec(), b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG".to_vec(),
-	        b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT".to_vec(), b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT".to_vec(), 
-	        b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG".to_vec(), b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC".to_vec(),
-	        b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT".to_vec(), b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT".to_vec(),
-	        b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG".to_vec(), b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC".to_vec(),
-	        b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC".to_vec(), b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG".to_vec() ];
+	        // GTTGTCAAGATGCTACCGTTCAGAGATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG
+	        //                        b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG"
+	        // Seams they have introduced new sample ids, too....
+	        let sequences = [ b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG",
+	        b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 
+	        b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC",
+	        b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT",
+	        b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC",
+	        b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG" ];
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	samples.add_small( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	seq_ext.extend_from_slice( seq );
+	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 	    }
 	    else if specie.eq("mouse") {
 	        // and the mouse ones
-	        let sequences = [b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG".to_vec(), b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC".to_vec(), 
-	        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC".to_vec(), b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT".to_vec(),
-	        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT".to_vec(), b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC".to_vec(),
-	        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC".to_vec(), b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG".to_vec(),
-	        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC".to_vec(), b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC".to_vec(),
-	        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT".to_vec(), b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC".to_vec()];
+	        let sequences = [b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
+	        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
+	        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
+	        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
+	        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
+	        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	samples.add_small( &seq, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	seq_ext.extend_from_slice( seq );
+	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -311,6 +318,7 @@ impl Analysis{
 	            	ok = match &self.antibodies.get_strict( &data[i].1, &mut tool ){
 	                    Some(gene_id) =>{
 	                    	//eprintln!("I got an ab id {gene_id}");
+	                    	report.iter_read_type( "antibody reads" );
 	                    	if gene_id.len() == 1 {
 		                    	if ! gex.try_insert( 
 		                        	&(*cell_id as u64),
@@ -324,6 +332,7 @@ impl Analysis{
 		                    }else {
 		                    	false
 		                    }
+		                    
 	                    },
 	                    None => {
 							false
@@ -334,6 +343,7 @@ impl Analysis{
 	                	ok = match &self.samples.get_strict( &data[i].1,  &mut tool ){
 		                    Some(gene_id) =>{
 		                    	//eprintln!("I got a sample umi id {umi}");
+		                    	report.iter_read_type( "sample reads" );
 		                    	if gene_id.len() == 1 {
 			                        if ! gex.try_insert( 
 			                        	&(*cell_id as u64),
@@ -347,6 +357,7 @@ impl Analysis{
 			                    }else {
 			                    	false
 			                    }
+			                    
 		                    },
 		                    None => {
 								false
@@ -358,6 +369,7 @@ impl Analysis{
 	                	
 		                match &self.genes.get( &data[i].1,  &mut tool ){
 		                	Some(gene_id) =>{
+		                		report.iter_read_type( "expression reads" );
 			                    if gene_id.len() == 1 {
 			                        if ! gex.try_insert( 
 			                        	&(*cell_id as u64),
@@ -377,6 +389,7 @@ impl Analysis{
 			                    		report.pcr_duplicates += 1 
 			                    	}
 			                    }
+			                    
 		                    },
 		                    None => {
 		                    	// I want to be able to check why this did not work
@@ -680,6 +693,7 @@ impl Analysis{
 
 		            	ok = match &self.antibodies.get_strict( &seqrec.seq(),  &mut tool ){
 		            		Some(gene_id) =>{
+		            			report.iter_read_type( "antibody reads" );
 		                    	if gene_id.len() == 1 {
 			                    	self.gex.try_insert( 
 			                    		&(*cell_id as u64),
@@ -702,6 +716,7 @@ impl Analysis{
 		                if ! ok{
 		                	ok = match &self.samples.get_strict( &seqrec.seq(),  &mut tool ){
 		                		Some(gene_id) =>{
+		                			report.iter_read_type( "sample reads" );
 			                    	//eprintln!("Got a samples match! {gene_id}");
 			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );
 			                    	if gene_id.len() == 1 {
@@ -728,6 +743,7 @@ impl Analysis{
 			            	// if either sample ids or AB reads would have this it would be a library design fault!
 			            	match &self.genes.get( &seqrec.seq(),  &mut tool ){
 			            		Some(gene_id) =>{
+			            			report.iter_read_type( "expression reads" );
 			            			if gene_id.len() == 1 {
 				            			self.gex.try_insert( 
 				            				&(*cell_id as u64),

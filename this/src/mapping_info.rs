@@ -1,6 +1,7 @@
 use crate::ofiles::Ofiles;
 use std::fs::File;
 use indicatif::{ProgressBar};
+use std::collections::BTreeMap;
 
 use std::io::Write;
 use std::time::{Duration, SystemTime};
@@ -34,6 +35,7 @@ pub struct MappingInfo{
     pub single_processor_time: Duration,
     pub multi_processor_time: Duration,
     pub file_io_time: Duration,
+    pub reads_log: BTreeMap<String, usize >,
 
 }
 
@@ -54,6 +56,7 @@ impl MappingInfo{
 		let single_processor_time = Duration::new(0,0);
 		let multi_processor_time = Duration::new(0,0);
 		let file_io_time = Duration::new(0,0);
+		let reads_log = BTreeMap::new();
 		let mut this = Self{
 			unknown,
 			no_sample,
@@ -74,6 +77,7 @@ impl MappingInfo{
 			single_processor_time,
 			multi_processor_time,
 			file_io_time,
+			reads_log,
 		};
 		this.start_counter();
 		this
@@ -115,6 +119,21 @@ impl MappingInfo{
 
     }
 
+    pub fn iter_read_type(&mut self, name:&str ){
+    	*self.reads_log.entry(name.to_string()).or_insert(0) += 1; 
+    }
+
+    fn read_types_to_string(&self, names:Vec<&str> ) -> String {
+        let mut formatted_entries = String::new();
+
+        for name in &names {
+            let value = self.reads_log.get(*name).unwrap_or(&0);
+        	let formatted_name = format!("{:<18}:", name); 
+            formatted_entries.push_str(&format!("{} {} reads ({:.2}% of cellular)\n", formatted_name, value, *value as f32 / self.cellular_reads as f32 *100_f32 ));
+        }
+        formatted_entries
+    }
+
 
 	pub fn merge(&mut self, other:&MappingInfo ){
 		self.no_sample += other.no_sample;
@@ -123,6 +142,9 @@ impl MappingInfo{
 		self.ok_reads += other.ok_reads;
 		self.pcr_duplicates += other.pcr_duplicates;
 		self.cellular_reads += other.cellular_reads;
+		for (name, value) in &other.reads_log {
+			*self.reads_log.entry(name.to_string()).or_insert(0) += value;
+		}
 	}
 
 	pub fn write_to_log ( &mut self, text:String ){
@@ -133,6 +155,7 @@ impl MappingInfo{
             }
         };
 	}
+
 	pub fn log( &mut self, pb:&ProgressBar ){
 		if self.total % self.split == 0{
 			self.log_iter+=1;
@@ -149,7 +172,7 @@ impl MappingInfo{
 		}
 	}
 	pub fn log_str( &mut self ) -> String{
-		format!("{:.2} mio reads ({:.2}% with cell info, {:.2}% with gene match)",
+		format!("{:.2} mio reads ({:.2}% with cell_id, {:.2}% with gene_id)",
             self.total as f32 / self.split as f32,
             self.cellular_reads as f32 / (self.total) as f32 * 100.0 , 
             self.ok_reads as f32 / (self.total) as f32 * 100.0 
@@ -171,17 +194,21 @@ impl MappingInfo{
 	pub fn summary( &mut self, reads_genes:usize, reads_ab :usize, reads_samples:usize ) -> String{
 
 		let pcr_duplicates = self.cellular_reads - reads_genes - reads_ab - reads_samples;
+
 	    let mut result = "\nSummary:\n".to_owned()
 	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
 	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data, (self.no_data as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "N's or too short  : {} reads ({:.2}% of total)\n", self.unknown, (self.unknown as f32 / self.total as f32) * 100.0).as_str()
-	    	+format!(     "cellular reads    : {} reads ({:.2}% of total)\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
+	    	+format!(     "cellular reads    : {} reads ({:.2}% of total)\n\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
+	    	+"collected read counts:\n"
+	    	+self.read_types_to_string(vec!["expression reads", "antibody reads", "sample reads"]).as_str()
+	    	+format!(     "\nreported umi counts:\n" ).as_str()
 	    	+format!(     "expression reads  : {} reads ({:.2}% of cellular)\n", reads_genes, (reads_genes as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "antibody reads    : {} reads ({:.2}% of cellular)\n", reads_ab, (reads_ab as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
-	    	+format!(     "sample   reads    : {} reads ({:.2}% of cellular)\n", reads_samples, (reads_samples as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
-	    	+format!(     "unique reads      : {} reads ({:.2}% of cellular)\n\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
-	    	+format!(     "PCR duplicates or bad cells: {} reads ({:.2}% of cellular)\n\n", pcr_duplicates, ( pcr_duplicates as f32 / self.cellular_reads as f32 ) * 100.0 ).as_str()
+	    	+format!(     "sample reads      : {} reads ({:.2}% of cellular)\n", reads_samples, (reads_samples as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
+	    	//+format!(     "unique reads      : {} reads ({:.2}% of cellular)\n", reads_genes + reads_ab + reads_samples, ( (reads_genes + reads_ab + reads_samples) as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
+	    	+format!(     "\nPCR duplicates or bad cells: {} reads ({:.2}% of cellular)\n\n", pcr_duplicates, ( pcr_duplicates as f32 / self.cellular_reads as f32 ) * 100.0 ).as_str()
 	   		+"timings:\n";
 	   	result += &self.program_states_string();
 	   	match writeln!( self.log_writer, "{result}" ){
