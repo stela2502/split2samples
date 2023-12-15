@@ -22,7 +22,7 @@ impl CellIndex for CellIds10x{
         tool.drop_n(4); // drop the 4 u8 that defined the cellid
 
         let umi:u64  = tool.into_u64();
-        
+        //println!("We found a cellid {} and an umi {}", cell, umi);
         return Ok( (cell, umi) )
 
     }
@@ -31,7 +31,7 @@ impl CellIndex for CellIds10x{
 
 impl  CellIds10x{
     pub fn new(ver:&String )-> Self {
-        
+        //println!("Yes you initialized a cellIds10x object!");
         Self {
             ver: ver.to_string(),
         }

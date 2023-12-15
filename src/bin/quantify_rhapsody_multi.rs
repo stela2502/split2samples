@@ -122,13 +122,16 @@ fn main() {
     let min_sizes:&[usize;2];
     
 
-    if &opts.version == "v1"{
+    if &opts.exp =="10x" {
+        min_sizes = &[ 20, 20 ];
+        pos = &[0,1, 2,3, 4,5, 6,7 ];
+    }
+    else if &opts.version == "v1"{
         pos = &[0,9, 21,30, 43,52, 52,60 ];
         min_sizes = &[ 66, 60 ];
     }
     else {
         pos = &[0,9, 13,22, 26,35 , 36,42 ];
-        //pos = &[1,10, 14,22, 28,36 , 36,42 ];
         min_sizes = &[ 51, 51 ];
     }
 

@@ -120,8 +120,11 @@ fn main() {
     let pos:&[usize;8];
     let min_sizes:&[usize;2];
     
-
-    if &opts.version == "v1"{
+    if &opts.exp =="10x" {
+        min_sizes = &[ 20, 20 ];
+        pos = &[0,1, 2,3, 4,5, 6,7 ];
+    }
+    else if &opts.version == "v1"{
         pos = &[0,9, 21,30, 43,52, 52,60 ];
         min_sizes = &[ 66, 60 ];
     }
@@ -130,6 +133,8 @@ fn main() {
         min_sizes = &[ 51, 51 ];
     }
     
+
+
     let save= opts.index.is_none();
 
 

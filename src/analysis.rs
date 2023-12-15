@@ -270,11 +270,11 @@ impl Analysis{
         //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
 
         if mean_u8( read1.qual().unwrap() ) < min_quality {
-            //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec.seq()), mean_u8( seqrec.qual().unwrap()  ) );
+            //println!("filtered R1 by quality" );
             return false
         }
-        if mean_u8( read1.qual().unwrap() ) < min_quality {
-            //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec1.seq()), mean_u8( seqrec1.qual().unwrap() ) );
+        if mean_u8( read2.qual().unwrap() ) < min_quality {
+            //println!("filtered R2 by quality" );
             return false
         }
 
@@ -282,14 +282,17 @@ impl Analysis{
         // as described in the BD rhapsody Bioinformatic Handbook
         // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
         if read1.seq().len() < min_sizes[0] {
+        	//println!("R1 too short (< {}bp)\n", min_sizes[0] );
             return false
         }
         if read2.seq().len() < min_sizes[1] {
+        	//println!("R2 too short (< {}bp)\n",  min_sizes[1]);
             return false
         }
         //let seq = seqrec.seq().into_owned();
         for nuc in &read2.seq()[pos[6]..pos[7]] {  
             if *nuc ==b'N'{
+            	//println!("N nucs\n");
                 return false
             }
         }
