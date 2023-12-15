@@ -269,7 +269,7 @@ fn cell_ident( opts:&Opts ){
                 //let seq = seqrec.seq().into_owned();
 
                 // first match the cell id - if that does not work the read is unusable
-                match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+                match cells.to_cellid( &seqrec1.seq() ){
                     Ok(( val, _add )) => {
                         // OK the read is usable - check if it is a sample
                         match samples.get( &seqrec.seq(), 9, 10 ){
@@ -424,7 +424,7 @@ fn sample_split( opts: &Opts){
                 continue;
             }
 
-            match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
+            match cells.to_cellid( &seqrec1.seq() ){
                 Ok( (id, _add) ) => {
                     // check if the cell has been detected before or print error
                     match cells2sample.get( &id ){

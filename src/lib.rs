@@ -40,3 +40,5 @@ pub mod gene;
 pub mod int_to_str;
 pub mod mapping_info;
 pub mod gene_family;
+
+pub mod traits;

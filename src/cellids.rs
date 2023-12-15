@@ -17,6 +17,10 @@ use crate::int_to_str::IntToStr;
 /// and here the data
 pub struct CellIds{    
     //kmer_len: usize,
+    /// the c1-c3 tupels define the start and end positions of the respective sequence in a read
+    c1: (usize, usize),
+    c2: (usize, usize),
+    c3: (usize, usize),
     c1s: Vec<u64>,
     c2s: Vec<u64>,
     c3s: Vec<u64>,
@@ -42,6 +46,10 @@ impl CellIds{
             size = 9;
             println!( "CellIDs::new size set to 9");
         }*/
+        let c1: (usize, usize);
+        let c2: (usize, usize);
+        let c3: (usize, usize);
+
         let  c1s: Vec<u64>;
         let  c2s: Vec<u64>;
         let  c3s: Vec<u64>;
@@ -52,6 +60,15 @@ impl CellIds{
         let mut bad_entries = HashSet::<u64>::new();
 
         // TACAGAACA
+        if ver == "v1"{
+            c1 = (0, 9);
+            c2 = (21,30);
+            c3 = (43,52);
+        }else {
+            c1 = (0, 9);
+            c2 = (13,22);
+            c3 = (26,35);
+        }
 
 
         if ver == "v2.96" || ver == "v1"{
@@ -373,6 +390,9 @@ impl CellIds{
 
         Self {
             //kmer_len,
+            c1,
+            c2,
+            c3,
             c1s,
             c2s,
             c3s,
@@ -427,23 +447,24 @@ impl CellIds{
         None
     }
 
-    fn get_as_u64( r1: Vec<u8>, c1: &Vec<usize>, c2: &Vec<usize>, c3: &Vec<usize>, add:usize ) -> (u64, u64, u64) {
+    fn get_as_u64( &self, r1: Vec<u8>, add:usize ) -> (u64, u64, u64) {
 
         let mut tool: IntToStr;
         // println!( "creating a u64 for {} bp {} - {}",  c1[1]- c1[0], c1[0], c1[1]);
         // println!( "creating a u64 for {} bp {} - {}",  c2[1]- c2[0], c2[0], c2[1]);
         // println!( "creating a u64 for {} bp {} - {}\n",  c3[1]- c3[0], c3[0], c3[1]);
-        tool = IntToStr::new( r1[(c1[0]+add)..(c1[1]+add)].to_vec(), c1[1]- c1[0]);
+        tool = IntToStr::new( r1[(self.c1.0+add)..(self.c1.1+add)].to_vec(), self.c1.1- self.c1.0 );
         let km1 = tool.into_u64();
-        tool = IntToStr::new( r1[(c2[0]+add)..(c2[1]+add)].to_vec(), c2[1]- c2[0]);
+        tool = IntToStr::new( r1[(self.c2.0+add)..(self.c2.1+add)].to_vec(), self.c2.1- self.c2.0 );
         let km2 = tool.into_u64();
-        tool = IntToStr::new( r1[(c3[0]+add)..(c3[1]+add)].to_vec(), c3[1]- c3[0]);
+        tool = IntToStr::new( r1[(self.c3.0+add)..(self.c3.1+add)].to_vec(), self.c3.1- self.c3.0 );
         let km3 = tool.into_u64();
         (km1, km2, km3)
     }
     /// to_cellid checks up to 5 bp of shift in the read stucure.
-    /// It needs to be checked if the UMI has to also be shifted as it is read from the same read as the cell id!
-    pub fn to_cellid (&self, r1: &[u8], c1: Vec<usize>, c2: Vec<usize>, c3: Vec<usize>  )-> Result<( u32, usize), &str>{
+    /// It seams as if the UMI has to also been shifted as it is read from the same read as the cell id!
+    /// hence we need to report the shift back to the caller
+    pub fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, usize), &str>{
         
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
@@ -456,7 +477,7 @@ impl CellIds{
         //println!("to_cellid the c2 seq: {:?}", std::str::from_utf8( &r1[c2[0]..c2[1]] ) );
         //println!("to_cellid the c3 seq: {:?}", std::str::from_utf8( &r1[c3[0]..c3[1]] ) );
 
-        for km in [ &r1[c1[0]..c1[1]], &r1[c2[0]..c2[1]], &r1[c3[0]..c3[1]] ]{
+        for km in [ &r1[self.c1.0..self.c1.1], &r1[self.c2.0..self.c2.1], &r1[self.c3.0..self.c3.1 ] ]{
             for nuc in km{  
                 if *nuc ==b'N'{
                     //let tmp = std::str::from_utf8(km)?;
@@ -471,7 +492,7 @@ impl CellIds{
         for add in 0..5 {
             let mut cell_id:u32 = 0;
             ok = false;
-            let ( km1, km2, km3) = Self::get_as_u64 ( r1.to_vec(), &c1, &c2, &c3, add );
+            let ( km1, km2, km3) = self.get_as_u64 ( r1.to_vec(), add );
             cell_id += match self.csl1.get( &km1 ){
                 Some(c1) => {
                         //println!("to_cellid the c1 {}", c1 );

@@ -16,6 +16,7 @@ use std::fs;
 use std::io::BufRead;
 use std::io::Read;
 
+pub use crate::traits::Index;
 
 /// GeneIds harbors the antibody tags, the mRNA tags and whatever tags more you search the R2 for
 /// but that can be different, too. 
@@ -44,11 +45,11 @@ pub struct GeneIds{
     pub last_kmers: Vec<String>,
 }
 
-// here the functions
 
-impl GeneIds{
+impl Index for GeneIds {
+
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
-    pub fn new(kmer_size: usize )-> Self {
+    fn new(kmer_len: usize, _allocate:usize )-> Self {
         let kmers = BTreeMap::<u64, usize>::new();
         let names = BTreeMap::<std::string::String, usize>::new();
         let names_store = BTreeMap::< usize, std::string::String>::new();
@@ -56,29 +57,25 @@ impl GeneIds{
         let names4sparse = BTreeMap::<std::string::String, usize>::new();
         let bad_entries = HashSet::<u64>::new();
         let good_entries = HashSet::<u64>::new();
-        let seq_len = 0;
-        let max_id = 0;
-        let unchecked = false;
-        let last_count = 0;
         let last_kmers = Vec::with_capacity(60);
         Self {
             kmers,
-            seq_len,
-            kmer_size,
+            seq_len: 0, // Example initial value, change as needed
+            kmer_size: kmer_len, // Using the parameter to set the kmer_size field
             names_store,
             kmer_store,
             names,
             names4sparse,
             bad_entries,
             good_entries,
-            max_id,
-            unchecked,
-            last_count,
-            last_kmers
+            max_id: 0, // Example initial value, change as needed
+            unchecked: false, // Example initial value, change as needed
+            last_count: 0, // Example initial value, change as needed
+            last_kmers,
         }
     }
 
-    pub fn add(&mut self, seq: &[u8], name: std::string::String ){
+    fn add(&mut self, seq: &Vec<u8>, name: String, _class_ids: Vec<String>) -> usize {
         
         if seq.len() > self.seq_len{
             self.seq_len = seq.len() 
@@ -140,17 +137,219 @@ impl GeneIds{
         }
         if total < 3{
             eprintln!( "Sequence for gene {name} has too little OK kmers to match!");
+            return 0;
         }
+        total
         //println!( "{} kmers for gene {}", total, name );
 
     }
 
+    fn get(&self, seq: &[u8]) -> Option<usize> {        
+        // let min_value = 2;
+        // let min_z = 1;
+        // let mut max_value = 0;
+        // let mut ret:u32 = 0;
+        let kmers = needletail::kmer::Kmers::new(seq, self.kmer_size as u8 );
+        let mut kmer_vec = Vec::<u64>::with_capacity(60);
 
+        fill_kmer_vec(kmers, &mut kmer_vec);
 
-    pub fn print( &self ){
+        //let report = self.get_id("2810417H13Rik".to_string());
+
+        let mut ret:Option<usize> = None;
+
+        if kmer_vec.is_empty() {
+            //eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
+            return ret
+        }  
+        let mut sums = vec![0 ;self.names.len()];
+        let mut max = 0;
+        //self.last_kmers.clear();
+
+        for km in kmer_vec{
+            //println!( "searching for kmer {}", km);
+            if let Some(c1) = self.kmers.get(&km) {
+                sums[*c1] += 1;
+                if max < sums[*c1]{
+                    max =  sums[*c1];
+                }
+                //self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
+            }
+
+        }
+        //self.last_count = max;
+        if max >2 {
+            for (i, sum) in sums.iter().enumerate() {
+                if *sum == max{
+                    //println!("Now the ret hould have the value {} resp {:?}", i, Some(i));
+                    if ret.is_some() {
+                        //eprintln!("I have two genes matching with max value of {}: {:?} and {}", max, ret, i);
+                        ret =None;
+                        return ret
+                    }
+                    ret = Some(i);
+                }
+            }
+        }
+        //println!("return geneid {:?}", ret);
+        ret
+    }
+
+    fn get_id(&self, name: String) -> usize {
+        let id = match self.names.get( &name ) {
+            Some( id ) => id,
+            None => panic!("Gene {name} not defined in the GeneID object"),
+        };
+        *id
+    }
+
+    fn print(&self) {
         println!("I have {} kmers and {} genes", self.kmers.len(), self.names.len() );
     }
 
+    fn change_start_id(&mut self, new_start: usize) {
+        self.max_id = new_start;
+    }
+
+    fn names_len(&self) -> usize {
+        self.names.len()
+    }
+
+    fn names(&self) -> Vec<String> {
+        self.names.keys().cloned().collect()
+    }
+
+    fn to_header_n(&self, names: &Vec<String>) -> String {
+        let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
+        //println!( "I get try to push into a {} sized vector", self.names.len());
+        for name in names {
+            //println!( "Pushing {} -> {}", obj, *id-1);
+            ret.push( name.to_string() ) ;
+        }
+        ret.push("AsignedSampleName".to_string());
+        ret.push("FractionTotal".to_string());
+        "CellID\t".to_owned()+&ret.join("\t")
+    }
+
+    fn max_id(&self) -> usize {
+        self.max_id
+    }
+
+    fn write_index( &mut self, path: String ) -> Result< (), &str>{
+        let rs = Path::new( &path ).exists();
+
+        if ! rs {
+            match fs::create_dir ( path.clone() ){
+                Ok(_file) => (),
+                Err(err) => {
+                     eprintln!("Error?: {err:#?}");
+                 }
+            };
+        }
+
+        // remove the old files if they exist:
+        let fpath = Path::new(&path ) ;
+        if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
+        if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
+
+        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
+
+        let seq_len:u64 = self.kmer_size as u64;
+
+
+        match ofile.buff1.write( &seq_len.to_le_bytes() ){
+            Ok(_) => (),
+            Err(_err) => return Err::<(), &str>("seq_len could not be written"),
+        };
+
+        for ( kmer, gene_id) in &self.kmers {
+            match ofile.buff1.write( &kmer.to_le_bytes() ){
+                Ok(_) => println!("{} -> {:?} -> {:?}",kmer, &kmer.to_le_bytes(),  &u64::from_le_bytes(kmer.to_le_bytes())  ) ,
+                Err(_err) => return Err::<(), &str>("kmer could not be written"),
+            };
+
+            match self.names_store.get( &gene_id ){
+                Some(name) => {
+                    write!(ofile.buff2,"{name}\n" ).unwrap();
+                },
+                None => panic!("Gene id {gene_id} not found in this object!"),
+            };
+        }
+
+
+        ofile.close();
+        Ok(())
+    }
+
+    fn load_index( &mut self, path: String ) -> Result< (), &str>{
+
+        let f1 = Path::new( &path ).join("index.1.Index");
+        let f2 = Path::new( &path ).join("index.1.gene.txt");
+        if ! f1.exists() {
+            panic!("Index file {} does not exist", f1.to_str().unwrap() );
+        }
+        if ! f2.exists() {
+            panic!("kmer names file {} does not exist", f2.to_str().unwrap() );
+        }
+
+        let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  &path  );
+        let mut id = 0;
+
+        let mut buff = [0_u8 ;8 ];
+
+        ifile.buff1.read_exact(&mut buff).unwrap();
+        //println! ("I got the buff {buff:?}");
+        self.kmer_size = u64::from_le_bytes( buff ) as usize;
+
+        for name in ifile.buff2.lines() {
+            //println!("I read this name: {name:?}");
+            //let mut buff = [0_u8 ;8 ];
+            ifile.buff1.read_exact(&mut buff).unwrap();
+
+            let km = &u64::from_le_bytes( buff );
+            
+            //println!("I try to insert km {km} and gene name '{name}' ({len:?}) ");
+            id += 1;
+            let mut data:String = "".to_string() ; // needs to be a constant...
+            match name{
+                Ok(na) => {
+                    if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(*km) {
+                        //let info = Info::new(km, name.clone() );
+                        if ! self.names.contains_key( &na ){
+                            self.names.insert( na.clone(), self.max_id );
+                            self.names_store.insert( self.max_id, na.clone() );
+                            self.max_id += 1;
+                        }
+                        let gene_id = self.names.get( &na ).unwrap();
+                        //self.kmer_store.insert( *km , "not recovered".to_string() );
+                        //println!("These are the bytes I need to work on: {:?}",&km.to_le_bytes());
+                        Self::u64_to_str(self.kmer_size, km, &mut data );
+                        println!( "({})Can I get that {km} to string? {:?}", self.seq_len, data );
+                        
+                        self.kmer_store.insert( *km , data.to_string() );
+                        e.insert( *gene_id );
+                    } 
+                    else {
+                        self.bad_entries.insert( *km );
+                        self.kmers.remove( km );
+                    }
+                },
+                Err(err) => panic!("This is not working: {err:?}"),
+            };
+
+            //println!(" {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
+        }
+        if id == 0 {
+            panic!("No data read!");
+        }
+
+        //self.print();
+        Ok(())
+    }
+}
+// here the functions
+
+impl GeneIds{
 
     pub fn add_unchecked(&mut self, seq: &[u8], name: std::string::String ){
         
@@ -216,13 +415,8 @@ impl GeneIds{
         //println!( "{} kmers for gene {}", total, name );
 
     }
-    pub fn get_id( &mut self, name: String ) -> usize{
-        let id = match self.names.get( &name ) {
-            Some( id ) => id,
-            None => panic!("Gene {name} not defined in the GeneID object"),
-        };
-        *id
-    }
+
+    
 
     pub fn get_name( &self, id:usize) -> String{
         let name = match self.names_store.get( &id ){
@@ -232,60 +426,7 @@ impl GeneIds{
         name.to_string()
     }
 
-    pub fn get(&mut self, seq: &[u8] ) -> Option< usize >{
-        
-        // let min_value = 2;
-        // let min_z = 1;
-        // let mut max_value = 0;
-        // let mut ret:u32 = 0;
-        if self.unchecked{
-            return self.get_unchecked( seq );
-        }
-        let kmers = needletail::kmer::Kmers::new(seq, self.kmer_size as u8 );
-        let mut kmer_vec = Vec::<u64>::with_capacity(60);
-
-        fill_kmer_vec(kmers, &mut kmer_vec);
-
-        //let report = self.get_id("2810417H13Rik".to_string());
-
-        let mut ret:Option<usize> = None;
-
-        if kmer_vec.is_empty() {
-            //eprintln!( "bad sequence: {:?}", std::str::from_utf8( seq ) );
-            return ret
-        }  
-        let mut sums = vec![0 ;self.names.len()];
-        let mut max = 0;
-        self.last_kmers.clear();
-
-        for km in kmer_vec{
-            //println!( "searching for kmer {}", km);
-            if let Some(c1) = self.kmers.get(&km) {
-                sums[*c1] += 1;
-                if max < sums[*c1]{
-                    max =  sums[*c1];
-                }
-                self.last_kmers.push(  self.kmer_store.get( &km).unwrap().to_string() );
-            }
-
-        }
-        self.last_count = max;
-        if max >2 {
-            for (i, sum) in sums.iter().enumerate() {
-                if *sum == max{
-                    //println!("Now the ret hould have the value {} resp {:?}", i, Some(i));
-                    if ret.is_some() {
-                        //eprintln!("I have two genes matching with max value of {}: {:?} and {}", max, ret, i);
-                        ret =None;
-                        return ret
-                    }
-                    ret = Some(i);
-                }
-            }
-        }
-        //println!("return geneid {:?}", ret);
-        ret
-    }
+    
 
     pub fn get_unchecked(&mut self, seq: &[u8] ) -> Option< usize >{
         
@@ -358,129 +499,9 @@ impl GeneIds{
         "CellID\t".to_owned()+&ret.join("\t")
     }
 
-    pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
-        let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
-        //println!( "I get try to push into a {} sized vector", self.names.len());
-        for name in names {
-            //println!( "Pushing {} -> {}", obj, *id-1);
-            ret.push( name.to_string() ) ;
-        }
-        ret.push("AsignedSampleName".to_string());
-        ret.push("FractionTotal".to_string());
-        "CellID\t".to_owned()+&ret.join("\t")
-    }
+    
 
-    pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
-        let rs = Path::new( &path ).exists();
-
-        if ! rs {
-            match fs::create_dir ( path.clone() ){
-                Ok(_file) => (),
-                Err(err) => {
-                     eprintln!("Error?: {err:#?}");
-                 }
-            };
-        }
-
-        // remove the old files if they exist:
-        let fpath = Path::new(&path ) ;
-        if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
-        if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
-
-        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
-
-        let seq_len:u64 = self.kmer_size as u64;
-
-
-        match ofile.buff1.write( &seq_len.to_le_bytes() ){
-            Ok(_) => (),
-            Err(_err) => return Err::<(), &str>("seq_len could not be written"),
-        };
-
-        for ( kmer, gene_id) in &self.kmers {
-            match ofile.buff1.write( &kmer.to_le_bytes() ){
-                Ok(_) => println!("{} -> {:?} -> {:?}",kmer, &kmer.to_le_bytes(),  &u64::from_le_bytes(kmer.to_le_bytes())  ) ,
-                Err(_err) => return Err::<(), &str>("kmer could not be written"),
-            };
-
-            match self.names_store.get( &gene_id ){
-                Some(name) => {
-                    write!(ofile.buff2,"{name}\n" ).unwrap();
-                },
-                None => panic!("Gene id {gene_id} not found in this object!"),
-            };
-        }
-
-
-        ofile.close();
-        Ok(())
-    }
-
-    pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
-
-        let f1 = Path::new( &path ).join("index.1.Index");
-        let f2 = Path::new( &path ).join("index.1.gene.txt");
-        if ! f1.exists() {
-            panic!("Index file {} does not exist", f1.to_str().unwrap() );
-        }
-        if ! f2.exists() {
-            panic!("kmer names file {} does not exist", f2.to_str().unwrap() );
-        }
-
-        let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  &path  );
-        let mut id = 0;
-
-        let mut buff = [0_u8 ;8 ];
-
-        ifile.buff1.read_exact(&mut buff).unwrap();
-        //println! ("I got the buff {buff:?}");
-        self.kmer_size = u64::from_le_bytes( buff ) as usize;
-
-        for name in ifile.buff2.lines() {
-            //println!("I read this name: {name:?}");
-            //let mut buff = [0_u8 ;8 ];
-            ifile.buff1.read_exact(&mut buff).unwrap();
-
-            let km = &u64::from_le_bytes( buff );
-            
-            //println!("I try to insert km {km} and gene name '{name}' ({len:?}) ");
-            id += 1;
-            let mut data:String = "".to_string() ; // needs to be a constant...
-            match name{
-                Ok(na) => {
-                    if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(*km) {
-                        //let info = Info::new(km, name.clone() );
-                        if ! self.names.contains_key( &na ){
-                            self.names.insert( na.clone(), self.max_id );
-                            self.names_store.insert( self.max_id, na.clone() );
-                            self.max_id += 1;
-                        }
-                        let gene_id = self.names.get( &na ).unwrap();
-                        //self.kmer_store.insert( *km , "not recovered".to_string() );
-                        //println!("These are the bytes I need to work on: {:?}",&km.to_le_bytes());
-                        Self::u64_to_str(self.kmer_size, km, &mut data );
-                        println!( "({})Can I get that {km} to string? {:?}", self.seq_len, data );
-                        
-                        self.kmer_store.insert( *km , data.to_string() );
-                        e.insert( *gene_id );
-                    } 
-                    else {
-                        self.bad_entries.insert( *km );
-                        self.kmers.remove( km );
-                    }
-                },
-                Err(err) => panic!("This is not working: {err:?}"),
-            };
-
-            //println!(" {:?} -> {:?}", buff,  &u64::from_le_bytes(buff)  ) ;
-        }
-        if id == 0 {
-            panic!("No data read!");
-        }
-
-        //self.print();
-        Ok(())
-    }
+    
 
     /*
     if that works here is the CatGPG discussion  that taught me that:

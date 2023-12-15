@@ -301,7 +301,7 @@ impl Analysis{
 
         for i in 0..data.len() {
 
-        	match &self.cells.to_cellid( &data[i].0, vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
+        	match &self.cells.to_cellid( &data[i].0 ){
 	            Ok( (cell_id, add) ) => {
 	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
 	            	tool.from_vec_u8(data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec());
@@ -678,7 +678,7 @@ impl Analysis{
                 let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                	match &self.cells.to_cellid( &seqrec1.seq(), vec![pos[0],pos[1]], vec![pos[2],pos[3]], vec![pos[4],pos[5]]){
+                	match &self.cells.to_cellid( &seqrec1.seq() ){
                 		Ok( (cell_id, add) ) => {
 		            	//let mut tool = IntToStr::new( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
 		            	tool.from_vec_u8( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec() );
