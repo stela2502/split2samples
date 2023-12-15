@@ -48,33 +48,6 @@ pub struct GeneIds{
 
 impl Index for GeneIds {
 
-    /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
-    fn new(kmer_len: usize, _allocate:usize )-> Self {
-        let kmers = BTreeMap::<u64, usize>::new();
-        let names = BTreeMap::<std::string::String, usize>::new();
-        let names_store = BTreeMap::< usize, std::string::String>::new();
-        let kmer_store = BTreeMap::< u64, std::string::String>::new();
-        let names4sparse = BTreeMap::<std::string::String, usize>::new();
-        let bad_entries = HashSet::<u64>::new();
-        let good_entries = HashSet::<u64>::new();
-        let last_kmers = Vec::with_capacity(60);
-        Self {
-            kmers,
-            seq_len: 0, // Example initial value, change as needed
-            kmer_size: kmer_len, // Using the parameter to set the kmer_size field
-            names_store,
-            kmer_store,
-            names,
-            names4sparse,
-            bad_entries,
-            good_entries,
-            max_id: 0, // Example initial value, change as needed
-            unchecked: false, // Example initial value, change as needed
-            last_count: 0, // Example initial value, change as needed
-            last_kmers,
-        }
-    }
-
     fn add(&mut self, seq: &Vec<u8>, name: String, _class_ids: Vec<String>) -> usize {
         
         if seq.len() > self.seq_len{
@@ -350,6 +323,33 @@ impl Index for GeneIds {
 // here the functions
 
 impl GeneIds{
+
+    /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
+    pub fn new(kmer_len: usize, _allocate:usize )-> Self {
+        let kmers = BTreeMap::<u64, usize>::new();
+        let names = BTreeMap::<std::string::String, usize>::new();
+        let names_store = BTreeMap::< usize, std::string::String>::new();
+        let kmer_store = BTreeMap::< u64, std::string::String>::new();
+        let names4sparse = BTreeMap::<std::string::String, usize>::new();
+        let bad_entries = HashSet::<u64>::new();
+        let good_entries = HashSet::<u64>::new();
+        let last_kmers = Vec::with_capacity(60);
+        Self {
+            kmers,
+            seq_len: 0, // Example initial value, change as needed
+            kmer_size: kmer_len, // Using the parameter to set the kmer_size field
+            names_store,
+            kmer_store,
+            names,
+            names4sparse,
+            bad_entries,
+            good_entries,
+            max_id: 0, // Example initial value, change as needed
+            unchecked: false, // Example initial value, change as needed
+            last_count: 0, // Example initial value, change as needed
+            last_kmers,
+        }
+    }
 
     pub fn add_unchecked(&mut self, seq: &[u8], name: std::string::String ){
         

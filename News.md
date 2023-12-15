@@ -1,5 +1,10 @@
 # 1.2.3
 
+Analysis of 10x data should now also be possible.
+
+
+# 1.2.2
+
 It is now possible to create a genome wide index file.
 Matching to an genome wide index is horribly slow. I need to identify the problem.
 

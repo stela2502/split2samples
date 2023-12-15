@@ -25,7 +25,7 @@ mod tests {
     }
 }
 
-
+pub mod cellids10x;
 pub mod cellids;
 pub mod geneids;
 pub mod sampleids;

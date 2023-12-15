@@ -5,6 +5,7 @@ use rustody::mapping_info::MappingInfo;
 use rustody::analysis::Analysis;
 //use this::last5::Last5;
 
+
 use std::path::PathBuf;
 use std::fs;
 
@@ -22,7 +23,7 @@ use rustody::ofiles::Ofiles;
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
-#[clap(version = "1.2.1", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "1.2.3", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
@@ -60,6 +61,9 @@ struct Opts {
     /// minimal sequencing quality 
     #[clap(default_value_t=32, long)]
     gene_kmers: usize,
+    /// this is a BD rhapsody or a 10x expression experiment? 
+    #[clap(default_value="bd", long)]
+    exp: String,
 }
 
 /*
@@ -130,8 +134,24 @@ fn main() {
 
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
-    let mut worker = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie, opts.index, 1 );
+    let mut worker: Analysis = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
+                opts.antibody, opts.specie, opts.index, 1, &opts.exp );
+
+
+    // match opts.exp.as_str(){
+    //     "bd" => {
+    //         let mut idx =  Analysis::<CellIds>::new( opts.gene_kmers, opts.version, opts.expression,
+    //             opts.antibody, opts.specie, opts.index, 1 );
+    //          Box::new( idx )
+    //     },
+    //     "10x" => {
+    //         let mut idx = Analysis::<CellIds10x>::new( opts.gene_kmers, opts.version, opts.expression,
+    //             opts.antibody, opts.specie, opts.index, 1 );
+    //          Box::new( idx )
+    //     },
+    //     _ => panic!( "Only the options 'bp' and '10x' are supported for option exp"),
+    // };
+
 
     if save{
         worker.write_index( &opts.outpath );

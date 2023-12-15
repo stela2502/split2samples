@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod tests {
     use rustody::cellids::CellIds;
-
+    use rustody::traits::CellIndex;
 
 
     #[test]
@@ -10,7 +10,7 @@ mod tests {
     fn getcells_1(){
         let cells = CellIds::new(&"v1".to_string() );
 
-        let primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
+        let primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCTNNNNAAAAAAAAAAAA";
         let id:u32 = 1;
         let exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1)) as u32, 0 );
         match cells.to_cellid( primer){
@@ -29,7 +29,7 @@ mod tests {
     fn getcells_9(){
         let cells = CellIds::new(&"v1".to_string() );
 
-        let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
+        let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCTNNNNAAAAAAAAAAAA";
         let mut id:u32 = 1;
         let mut exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0 );
         match cells.to_cellid( primer){
@@ -40,7 +40,7 @@ mod tests {
         let mut exp2 = CellIds::into_u64(vec![b"GTCGCTATA", b"TACAGGATA", b"AAGCCTTCT"]);
         assert_eq!( cells.to_sequence( exp.0 ), exp2, "the expected sequence triplet #1" );
         // 3, 3, 3
-        primer = b"CTTCACATANNNNNNNNNNNNTGTGAAGAANNNNNNNNNNNNNCACAAGTAT";
+        primer = b"CTTCACATANNNNNNNNNNNNTGTGAAGAANNNNNNNNNNNNNCACAAGTATNNNNAAAAAAAAAAAA";
         id = 3;
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0);
         exp2 = CellIds::into_u64( vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"] );
@@ -52,7 +52,7 @@ mod tests {
         assert_eq!( cells.to_sequence( exp.0 ), exp2 );
 
         // and the last one
-        let primer2 = b"NTGCGATCTANNNNNNNNNNNNCAACAACGGNNNNNNNNNNNNNCATAGGTCA";
+        let primer2 = b"NTGCGATCTANNNNNNNNNNNNCAACAACGGNNNNNNNNNNNNNCATAGGTCANNNNAAAAAAAAAAAA";
         id = 96;
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 1);
         exp2 = CellIds::into_u64( vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"] );
@@ -69,7 +69,7 @@ mod tests {
     fn getcells_7() {
         let cells = CellIds::new(&"v1".to_string() );
 
-        let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
+        let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCTNNNNAAAAAAAAAAAA";
         let mut id:u32 = 1;
         let mut exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0);
         match cells.to_cellid( primer){
@@ -80,7 +80,7 @@ mod tests {
         let mut exp2 = CellIds::into_u64( vec![b"GTCGCTATA", b"TACAGGATA", b"AAGCCTTCT"] );
         assert_eq!( cells.to_sequence( exp.0 ), exp2 );
         // 3, 3, 3
-        primer = b"CTTCACATANNNNNNNNNNNNTGTGAAGAANNNNNNNNNNNNNCACAAGTAT";
+        primer = b"CTTCACATANNNNNNNNNNNNTGTGAAGAANNNNNNNNNNNNNCACAAGTATNNNNAAAAAAAAAAAA";
         id = 3;
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0 );
         exp2 = CellIds::into_u64( vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"] );
@@ -92,7 +92,7 @@ mod tests {
         assert_eq!( cells.to_sequence( exp.0 ), exp2 );
 
         // and the last one
-        primer = b"TGCGATCTANNNNNNNNNNNNCAACAACGGNNNNNNNNNNNNNCATAGGTCA";
+        primer = b"TGCGATCTANNNNNNNNNNNNCAACAACGGNNNNNNNNNNNNNCATAGGTCANNNNAAAAAAAAAAAA";
         id = 96;
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0);
         exp2 = CellIds::into_u64(vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"]);
@@ -108,7 +108,7 @@ mod tests {
     fn getcells_384_9() {
         let cells = CellIds::new(&"v2.384".to_string() );
 
-        let primer = b"TGTCTAGCGNNNNNNNNNNNNTTGTGCGGANNNNNNNNNNNNNTTGTGCGAC"; // totally artificial - primer design wrong... - lazy
+        let primer = b"TGTCTAGCGNNNNNNNNNNNNTTGTGCGGANNNNNNNNNNNNNTTGTGCGACNNNNAAAAAAAAAAAA"; // totally artificial - primer design wrong... - lazy
         let exp2 = CellIds::into_u64(vec![b"TGTCTAGCG", b"TTGTGCGGA", b"TTGTGCGAC"]);
         let id:u32 = 3;
         let exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32 ,0 );

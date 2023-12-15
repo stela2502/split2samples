@@ -100,7 +100,7 @@ impl SingleCellData{
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
     pub fn try_insert(&mut self, name: &u64, 
-        gene_id:&usize,umi:u64, report: &mut MappingInfo ) ->bool{
+        gene_id:&usize,umi:&u64, report: &mut MappingInfo ) ->bool{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
@@ -110,7 +110,7 @@ impl SingleCellData{
             Some(cell_info) =>  {
                 //println!("I got gene {} for cell {}", gene_id , cell_info.name);
                 report.ok_reads += 1;
-                if ! &cell_info.add( *gene_id, umi ) {
+                if ! &cell_info.add( *gene_id, *umi ) {
                     //println!("  -> pcr duplicate");
                     report.pcr_duplicates += 1;
                     report.local_dup += 1;
@@ -128,7 +128,7 @@ impl SingleCellData{
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
     pub fn try_insert_multimapper(&mut self, name: &u64, 
-        gene_id:&Vec<usize>,umi:u64, report: &mut MappingInfo ) ->bool{
+        gene_id:&Vec<usize>,umi:&u64, report: &mut MappingInfo ) ->bool{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
@@ -138,7 +138,7 @@ impl SingleCellData{
             Some(cell_info) =>  {
                 //println!("I got gene {} for cell {}", gene_id , cell_info.name);
                 report.ok_reads += 1;
-                if ! &cell_info.add_multimapper( gene_id.clone(), umi ) {
+                if ! &cell_info.add_multimapper( gene_id.clone(), *umi ) {
                     //println!("  -> pcr duplicate");
                     report.pcr_duplicates += 1;
                     report.local_dup += 1;

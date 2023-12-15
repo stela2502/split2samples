@@ -2,11 +2,15 @@ use needletail::parse_fastx_file;
 use needletail::parser::SequenceRecord;
 //use std::collections::HashSet;
 
-use crate::cellids::CellIds;
 use crate::singlecelldata::SingleCellData;
 //use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
 use crate::int_to_str::IntToStr;
+//use crate::traits::Index;
+
+use crate::cellids::CellIds;
+use crate::cellids10x::CellIds10x;
+use crate::traits::CellIndex;
 
 use crate::mapping_info::MappingInfo;
 //use std::io::BufReader;
@@ -59,7 +63,7 @@ pub struct Analysis{
 	genes: FastMapper,
 	samples: FastMapper,
 	antibodies: FastMapper,
-	cells: CellIds,
+	cells: Box<dyn CellIndex + Sync>,
 	gex: SingleCellData,
 	sample_names:Vec<String>,
 	gene_names:Vec<String>,
@@ -72,7 +76,7 @@ impl Analysis{
 
 
 	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 
-		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize  ) -> Self{
+		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -172,7 +176,11 @@ impl Analysis{
 
 
 	    //  now we need to get a CellIDs object, too
-	    let cells = CellIds::new( &version);
+	    let cells:  Box::<dyn CellIndex + Sync> = match exp {
+	    	"bd" => Box::new(CellIds::new( &version)),
+	    	"10x" => Box::new(CellIds10x::new( &version )),
+	    	_ => panic!("Only 'bd' or '10x' systems are supported in the exp option")
+	    };
 
 	    // that is a class to strore gene expression data.
 	    // sample ids are meant to be u64, gene ids usize (as in the GeneIds package)
@@ -302,10 +310,8 @@ impl Analysis{
         for i in 0..data.len() {
 
         	match &self.cells.to_cellid( &data[i].0 ){
-	            Ok( (cell_id, add) ) => {
+	            Ok( (cell_id, umi) ) => {
 	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
-	            	tool.from_vec_u8(data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec());
-        			let umi:u64 = tool.into_u64();
 	            	report.cellular_reads +=1;
 
 	            	// now I have three possibilites here:
@@ -679,10 +685,7 @@ impl Analysis{
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
                 	match &self.cells.to_cellid( &seqrec1.seq() ){
-                		Ok( (cell_id, add) ) => {
-		            	//let mut tool = IntToStr::new( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
-		            	tool.from_vec_u8( seqrec1.seq()[(pos[6]+add)..(pos[7]+add)].to_vec() );
-		            	let umi:u64 = tool.into_u64();
+                		Ok( (cell_id, umi) ) => {
 		            	report.cellular_reads +=1;
 
 		            	// now I have three possibilites here:

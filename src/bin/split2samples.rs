@@ -2,6 +2,7 @@ use clap::Parser;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 // use flate2::read::GzDecoder;
+use rustody::traits::CellIndex;
 
 use needletail::parse_fastx_file;
 use std::collections::HashSet;

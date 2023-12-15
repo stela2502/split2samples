@@ -1,9 +1,8 @@
 /// here I plann to define all my traits - or the one I have planned for now :-D
 
 
-pub trait Index{
+pub trait Index : Sync{
 
-	fn new( kmer_len:usize, allocate:usize )-> Self;
 	fn get(&self, seq: &[u8]) ->  Option< usize >;
 	fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize;
 	fn get_id( &self, name: String ) -> usize;
@@ -17,7 +16,6 @@ pub trait Index{
 	fn load_index( &mut self, path: String ) -> Result< (), &str>;
 }
 
-pub trait CellIndex{
-	fn new( ver:&String )-> Self;
-	fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, usize), &str>;
+pub trait CellIndex: Sync{
+	fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), &str>;
 }

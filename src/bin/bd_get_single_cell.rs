@@ -1,6 +1,7 @@
 use clap::Parser;
 use needletail::parse_fastx_file;
 use rustody::cellids::CellIds;
+use rustody::traits::CellIndex;
 
 use rustody::ofiles::Ofiles;
 use std::fs;

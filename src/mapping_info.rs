@@ -197,7 +197,7 @@ impl MappingInfo{
 
 	    let mut result = "\nSummary:\n".to_owned()
 	    	+format!(     "cellular   reads  : {} reads ({:.2}% of total)\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
-	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample- self.no_data, ((self.no_sample - self.no_data) as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data, (self.no_data as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "N's or too short  : {} reads ({:.2}% of total)\n", self.unknown, (self.unknown as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()

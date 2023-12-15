@@ -7,7 +7,7 @@ use std::collections::HashSet;
 //use kmers::naive_impl::Kmer;
 use crate::int_to_str::IntToStr;
 //use crate::sampleids::SampleIds;
-
+use crate::traits::CellIndex;
 //use std::thread;
 
 //mod cellIDsError;
@@ -21,6 +21,7 @@ pub struct CellIds{
     c1: (usize, usize),
     c2: (usize, usize),
     c3: (usize, usize),
+    umi: (usize, usize ),
     c1s: Vec<u64>,
     c2s: Vec<u64>,
     c3s: Vec<u64>,
@@ -31,6 +32,126 @@ pub struct CellIds{
     //csl2kmer: SampleIds,
     //csl3kmer: SampleIds,
     //size:u8
+}
+
+impl CellIndex for CellIds{
+
+    /// to_cellid checks up to 5 bp of shift in the read stucure.
+    /// It seams as if the UMI has to also been shifted as it is read from the same read as the cell id!
+    /// hence we need to report the shift back to the caller (id:u32, umi:u64)
+    fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), &str>{
+        
+        // This has to be a static 384 to reproduce what BD has...
+        // I would use that for v2.384 only...
+        let max:u32 = 384;
+        let fuzziness = 7;
+        //let max:u32 = self.c1s.len() as u32;
+        //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
+        
+        //println!("to_cellid the c1 seq: {:?}", std::str::from_utf8( &r1[c1[0]..c1[1]] ) );
+        //println!("to_cellid the c2 seq: {:?}", std::str::from_utf8( &r1[c2[0]..c2[1]] ) );
+        //println!("to_cellid the c3 seq: {:?}", std::str::from_utf8( &r1[c3[0]..c3[1]] ) );
+
+        for km in [ &r1[self.c1.0..self.c1.1], &r1[self.c2.0..self.c2.1], &r1[self.c3.0..self.c3.1 ] ]{
+            for nuc in km{  
+                if *nuc ==b'N'{
+                    //let tmp = std::str::from_utf8(km)?;
+                    return Err::<(u32, u64), &str>( "NnuclError");
+                    //Err::<i32, NnuclError<'_>>( NnuclError::new( &tmp ));
+                }
+            }
+        }
+
+        let mut ok:bool;
+        // the ids seam to be VERY unstable in the read! So lets try the same pattern with up to 5 bp shifts
+        for add in 0..5 {
+            let mut cell_id:u32 = 0;
+            ok = false;
+            let ( km1, km2, km3) = self.get_as_u64 ( r1.to_vec(), add );
+            cell_id += match self.csl1.get( &km1 ){
+                Some(c1) => {
+                        //println!("to_cellid the c1 {}", c1 );
+                        ok = true;
+                        *c1 * max * max
+                    },
+                None => {
+                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                    for i in 0..self.c1s.len(){
+                        if ( km1 ^ self.c1s[i]) < fuzziness {
+                            // could be as little as one bd change - max two
+                            good.push( (i, ( km1 ^ self.c1s[i])  as usize ) );
+                        }
+                    }
+                    if let Some(c1) = Self::best_entry( good ){
+                        ok = true;
+                        c1 * max * max
+                    }else {
+                        0
+                    }
+                }
+            };
+            if ! ok{
+                continue;
+            }
+            ok = false;
+            cell_id += match self.csl2.get( &km2 ){
+                Some(c2) => {
+                    //println!("to_cellid the c1 {}", c1 );
+                    ok = true;
+                    *c2 * max 
+                },
+                None => {
+                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                    for i in 0..self.c2s.len(){
+                        if ( km2 ^ self.c2s[i]) < fuzziness {
+                            // could be as little as one bd change - max two
+                            good.push( (i, ( km2 ^ self.c2s[i])  as usize)  );
+                        }
+                    }
+                    if let Some(c2) = Self::best_entry( good ){
+                        ok = true;
+                        c2 * max 
+                    }else {
+                        0
+                    }
+                }.try_into().unwrap(),
+            };
+            if ! ok{
+                continue;
+            }
+            ok = false; 
+            cell_id += match self.csl3.get( &km3 ){
+                Some(c3) => {
+                    //println!("to_cellid the c1 {}", c1 );
+                    ok = true;
+                    *c3 
+                },
+                None => {
+                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                    for i in 0..self.c3s.len(){
+                        if ( km3 ^ self.c3s[i]) < fuzziness {
+                            // could be as little as one bp change - max two
+                            good.push( (i, ( km3 ^ self.c3s[i])  as usize)  );
+                        }
+                    }
+                    if let Some(c3) = Self::best_entry( good ){
+                        ok = true;
+                        c3 
+                    }else {
+                        0
+                    }
+                }.try_into().unwrap(),
+            };
+            if ok {
+                let tool =IntToStr::new( r1[(self.umi.0+add)..(self.umi.1+add)].to_vec(), 31 );
+                let umi:u64 = tool.into_u64();
+                return Ok( (cell_id, umi) ); 
+            }
+            // ok no match for shift add == iteration of this loop
+        }
+        return  Err::<(u32, u64), &str>( "no match to any cell id in this read" )
+    }
+
 }
 
 // here the functions
@@ -49,6 +170,7 @@ impl CellIds{
         let c1: (usize, usize);
         let c2: (usize, usize);
         let c3: (usize, usize);
+        let umi: (usize, usize);
 
         let  c1s: Vec<u64>;
         let  c2s: Vec<u64>;
@@ -64,10 +186,12 @@ impl CellIds{
             c1 = (0, 9);
             c2 = (21,30);
             c3 = (43,52);
+            umi = (52,60);
         }else {
             c1 = (0, 9);
             c2 = (13,22);
             c3 = (26,35);
+            umi= (36,42);
         }
 
 
@@ -393,6 +517,7 @@ impl CellIds{
             c1,
             c2,
             c3,
+            umi,
             c1s,
             c2s,
             c3s,
@@ -461,119 +586,7 @@ impl CellIds{
         let km3 = tool.into_u64();
         (km1, km2, km3)
     }
-    /// to_cellid checks up to 5 bp of shift in the read stucure.
-    /// It seams as if the UMI has to also been shifted as it is read from the same read as the cell id!
-    /// hence we need to report the shift back to the caller
-    pub fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, usize), &str>{
-        
-        // This has to be a static 384 to reproduce what BD has...
-        // I would use that for v2.384 only...
-        let max:u32 = 384;
-        let fuzziness = 7;
-        //let max:u32 = self.c1s.len() as u32;
-        //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
-        
-        //println!("to_cellid the c1 seq: {:?}", std::str::from_utf8( &r1[c1[0]..c1[1]] ) );
-        //println!("to_cellid the c2 seq: {:?}", std::str::from_utf8( &r1[c2[0]..c2[1]] ) );
-        //println!("to_cellid the c3 seq: {:?}", std::str::from_utf8( &r1[c3[0]..c3[1]] ) );
-
-        for km in [ &r1[self.c1.0..self.c1.1], &r1[self.c2.0..self.c2.1], &r1[self.c3.0..self.c3.1 ] ]{
-            for nuc in km{  
-                if *nuc ==b'N'{
-                    //let tmp = std::str::from_utf8(km)?;
-                    return Err::<(u32, usize), &str>( "NnuclError");
-                    //Err::<i32, NnuclError<'_>>( NnuclError::new( &tmp ));
-                }
-            }
-        }
-
-        let mut ok:bool;
-        // the ids seam to be VERY unstable in the read! So lets try the same pattern with up to 5 bp shifts
-        for add in 0..5 {
-            let mut cell_id:u32 = 0;
-            ok = false;
-            let ( km1, km2, km3) = self.get_as_u64 ( r1.to_vec(), add );
-            cell_id += match self.csl1.get( &km1 ){
-                Some(c1) => {
-                        //println!("to_cellid the c1 {}", c1 );
-                        ok = true;
-                        *c1 * max * max
-                    },
-                None => {
-                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
-                    for i in 0..self.c1s.len(){
-                        if ( km1 ^ self.c1s[i]) < fuzziness {
-                            // could be as little as one bd change - max two
-                            good.push( (i, ( km1 ^ self.c1s[i])  as usize ) );
-                        }
-                    }
-                    if let Some(c1) = Self::best_entry( good ){
-                        ok = true;
-                        c1 * max * max
-                    }else {
-                        0
-                    }
-                }
-            };
-            if ! ok{
-                continue;
-            }
-            ok = false;
-            cell_id += match self.csl2.get( &km2 ){
-                Some(c2) => {
-                    //println!("to_cellid the c1 {}", c1 );
-                    ok = true;
-                    *c2 * max 
-                },
-                None => {
-                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
-                    for i in 0..self.c2s.len(){
-                        if ( km2 ^ self.c2s[i]) < fuzziness {
-                            // could be as little as one bd change - max two
-                            good.push( (i, ( km2 ^ self.c2s[i])  as usize)  );
-                        }
-                    }
-                    if let Some(c2) = Self::best_entry( good ){
-                        ok = true;
-                        c2 * max 
-                    }else {
-                        0
-                    }
-                }.try_into().unwrap(),
-            };
-            if ! ok{
-                continue;
-            }
-            ok = false; 
-            cell_id += match self.csl3.get( &km3 ){
-                Some(c3) => {
-                    //println!("to_cellid the c1 {}", c1 );
-                    ok = true;
-                    *c3 
-                },
-                None => {
-                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
-                    for i in 0..self.c3s.len(){
-                        if ( km3 ^ self.c3s[i]) < fuzziness {
-                            // could be as little as one bd change - max two
-                            good.push( (i, ( km3 ^ self.c3s[i])  as usize)  );
-                        }
-                    }
-                    if let Some(c3) = Self::best_entry( good ){
-                        ok = true;
-                        c3 
-                    }else {
-                        0
-                    }
-                }.try_into().unwrap(),
-            };
-            if ok {
-                return Ok( (cell_id, add) ); 
-            }
-            // ok no match for shift add == iteration of this loop
-        }
-        return  Err::<(u32, usize), &str>( "no match to any cell id in this read" )
-    }
+   
 
     pub fn to_sequence(&self, index:u32) -> Vec<u64>{
         let mut idx: u32 = index;
