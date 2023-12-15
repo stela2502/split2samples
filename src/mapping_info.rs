@@ -196,12 +196,12 @@ impl MappingInfo{
 		let pcr_duplicates = self.cellular_reads - reads_genes - reads_ab - reads_samples;
 
 	    let mut result = "\nSummary:\n".to_owned()
-	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
+	    	+format!(     "cellular   reads  : {} reads ({:.2}% of total)\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
 	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data, (self.no_data as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "N's or too short  : {} reads ({:.2}% of total)\n", self.unknown, (self.unknown as f32 / self.total as f32) * 100.0).as_str()
-	    	+format!(     "cellular reads    : {} reads ({:.2}% of total)\n\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
-	    	+"collected read counts:\n"
+	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
+	    	+"\ncollected read counts:\n"
 	    	+self.read_types_to_string(vec!["expression reads", "antibody reads", "sample reads"]).as_str()
 	    	+format!(     "\nreported umi counts:\n" ).as_str()
 	    	+format!(     "expression reads  : {} reads ({:.2}% of cellular)\n", reads_genes, (reads_genes as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
@@ -218,6 +218,6 @@ impl MappingInfo{
                 }
             };
         return result
-	    
 	}
+	
 }

@@ -13,7 +13,7 @@ mod tests {
         let primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
         let id:u32 = 1;
         let exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1)) as u32, 0 );
-        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer){
             Ok(val) => {
             assert_eq!( val , exp );
             eprintln!("WHAT we go an id here: {}", val.0 )}, // will never insert one element twice. Great!
@@ -32,7 +32,7 @@ mod tests {
         let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
         let mut id:u32 = 1;
         let mut exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0 );
-        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer){
             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
             Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
@@ -44,11 +44,11 @@ mod tests {
         id = 3;
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0);
         exp2 = CellIds::into_u64( vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"] );
-        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer){
             Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
             Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
-        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        //assert_eq!( cells.to_cellid( primer)? , exp );
         assert_eq!( cells.to_sequence( exp.0 ), exp2 );
 
         // and the last one
@@ -57,11 +57,11 @@ mod tests {
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 1);
         exp2 = CellIds::into_u64( vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"] );
         //assert_eq!( 884735+1 , exp);
-        match cells.to_cellid( primer2, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer2){
             Ok(val) => assert_eq!( val , exp, "the expected sequence triplet #2" ), // will never insert one element twice. Great!
             Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
-        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        //assert_eq!( cells.to_cellid( primer)? , exp );
         assert_eq!( cells.to_sequence( exp.0 ), exp2, "the expected sequence triplet #3" );
     }
     //
@@ -72,7 +72,7 @@ mod tests {
         let mut primer = b"GTCGCTATANNNNNNNNNNNNTACAGGATANNNNNNNNNNNNNAAGCCTTCT";
         let mut id:u32 = 1;
         let mut exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0);
-        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer){
             Ok(val) => assert_eq!( val , exp ),
             Err(_err) => (),
         };
@@ -84,11 +84,11 @@ mod tests {
         id = 3;
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0 );
         exp2 = CellIds::into_u64( vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"] );
-        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer){
             Ok(val) => assert_eq!( val , exp ), 
             Err(_err) => (), 
         };
-        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        //assert_eq!( cells.to_cellid( primer)? , exp );
         assert_eq!( cells.to_sequence( exp.0 ), exp2 );
 
         // and the last one
@@ -97,11 +97,11 @@ mod tests {
         exp = ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32, 0);
         exp2 = CellIds::into_u64(vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"]);
         //assert_eq!( 884735+1 , exp);
-        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer){
             Ok(val) => assert_eq!( val , exp ), 
             Err(_err) => (),
         };
-        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        //assert_eq!( cells.to_cellid( primer)? , exp );
         assert_eq!( cells.to_sequence( exp.0 ), exp2 );        
     }
     #[test]
@@ -112,12 +112,12 @@ mod tests {
         let exp2 = CellIds::into_u64(vec![b"TGTCTAGCG", b"TTGTGCGGA", b"TTGTGCGAC"]);
         let id:u32 = 3;
         let exp= ( ((id-1)* 384 * 384 + (id-1) * 384 + (id-1) ) as u32 ,0 );
-        match cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52]){
+        match cells.to_cellid( primer){
             Ok(val) => assert_eq!( val , exp ),
             Err(_err) => (),
         };
         
-        //assert_eq!( cells.to_cellid( primer, vec![0,9], vec![21,30], vec![43,52])? , exp );
+        //assert_eq!( cells.to_cellid( primer)? , exp );
         assert_eq!( cells.to_sequence( exp.0 ), exp2 );        
     }
 }

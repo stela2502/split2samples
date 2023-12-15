@@ -623,20 +623,21 @@ mod tests {
 
     use crate::geneids::GeneIds;
     use std::path::Path;
+    use crate::traits::Index;
 
      #[test]
     fn check_geneids() {
-        let mut genes = GeneIds::new( 7 );
+        let mut genes = GeneIds::new( 7, 1 );
 
         let mut geneid = 0;
         
-        genes.add( b"AGCTGCTAGCCGATATT", "Gene1".to_string() );
+        genes.add( &b"AGCTGCTAGCCGATATT".to_vec(), "Gene1".to_string(), Vec::<String>::new() );
         genes.names4sparse.insert( "Gene1".to_string(), geneid );
-        genes.add( b"CTGTGTAGATACTATAGATAA", "Gene2".to_string() );
+        genes.add( &b"CTGTGTAGATACTATAGATAA".to_vec(), "Gene2".to_string(), Vec::<String>::new() );
         genes.names4sparse.insert( "Gene1".to_string(), geneid );
         // the next two should not be in the output
-        genes.add( b"CGCGATCGGATAGCTAGATAGG", "Gene3".to_string() );
-        genes.add( b"CATACAACTACGATCGAATCG", "Gene4".to_string() );
+        genes.add( &b"CGCGATCGGATAGCTAGATAGG".to_vec(), "Gene3".to_string(), Vec::<String>::new() );
+        genes.add( &b"CATACAACTACGATCGAATCG".to_vec(), "Gene4".to_string(), Vec::<String>::new() );
 
         geneid = genes.get_id( "Gene1".to_string() );
         assert_eq!( geneid,  0 ); 
@@ -646,7 +647,7 @@ mod tests {
 
         genes.write_index( Path::new("testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
 
-        let mut genes2 = GeneIds::new( 7 );
+        let mut genes2 = GeneIds::new( 7, 1 );
 
         genes2.load_index( Path::new("testData/output_index_test").to_str().unwrap().to_string() ).unwrap();
 
