@@ -9,6 +9,8 @@ use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 
+use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
+
 use regex::Regex;
 
 use crate::ofiles::Ofilesr;
@@ -98,7 +100,7 @@ impl FastMapper{
             max_id,
             last_count,
             with_data,
-            version: 5,
+            version: 6,
             tool,
             mask,
             pos,
@@ -127,7 +129,7 @@ impl FastMapper{
                     let gene_name = other.gene_names_for_ids( &vec![ name_entry.data[idx].0 ]);
                     // And get my own ids for these names
                     //let gene_ids = self.ids_for_gene_names( &gene_names );
-                    let _ = self.incorporate_match_combo( primary_id, *secondary_match as usize, gene_name[0].clone(), gene_names );
+                    let _ = self.incorporate_match_combo( primary_id, *secondary_match , gene_name[0].clone(), gene_names );
                 }           
             }
         }
@@ -157,7 +159,7 @@ impl FastMapper{
         ret
     }
 
-    pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:usize, name:String, ids: Vec<String> )  ->Result<(), &str>{
+    pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:SecondSeq, name:String, ids: Vec<String> )  ->Result<(), &str>{
 
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.max_id );
@@ -230,7 +232,7 @@ impl FastMapper{
             //self.tool.u64_to_str( entries.2, &entries.1, &mut long);
             //println!("I got some entry [short {short}, long {long}, length {}", entries.2 );
 
-            if entries.2 < 5{
+            if entries.1.1 < 5_u8{
                 // too short second entry
                 break;
             }
@@ -241,7 +243,7 @@ impl FastMapper{
                 // will add in the next step so
                 self.with_data +=1;
             }
-            if entries.2  < self.kmer_len{
+            if entries.1.1  < self.kmer_len as u8 {
                 //eprintln!("Too small sequence");
                 continue;
             }
@@ -317,8 +319,8 @@ impl FastMapper{
             //self.tool.u64_to_str( entries.2, &entries.1, &mut long);
             //println!("I got some entry [short {short}, long {long}, length {}", entries.2 );
 
-            if entries.2 < 5{
-                // too short second entry
+            if entries.1.1  < 8{
+                //eprintln!("Too small sequence");
                 break;
             }
             if entries.0 > 65534{
@@ -328,10 +330,7 @@ impl FastMapper{
                 // will add in the next step so
                 self.with_data +=1;
             }
-            if entries.2  < self.kmer_len{
-                //eprintln!("Too small sequence");
-                continue;
-            }
+            
             if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
                 //eprintln!("I have added a sequence!");
                 self.pos += 1;
@@ -606,9 +605,8 @@ impl FastMapper{
                 // }
 
                 //eprintln!("Ill create a new tool here based on seq {}", entries.1);
-                let seq_u64 = tool.mask_u64( &entries.1 );
 
-                match &self.mapper[entries.0 as usize].get( &seq_u64 ){
+                match &self.mapper[entries.0 as usize].get( &entries.1 ){
                     Some( gene_id ) => {
                         for gid in &gene_id.data{
                             match genes.get_mut( gid) {
@@ -671,9 +669,8 @@ impl FastMapper{
                 // }
 
                 //eprintln!("Ill create a new tool here based on seq {}", entries.1);
-                let seq_u64 = tool.mask_u64( &entries.1 );
 
-                match &self.mapper[entries.0 as usize].get( &seq_u64 ){
+                match &self.mapper[entries.0 as usize].get( &entries.1 ){
                     Some( gene_id ) => {
                         //eprintln!("Got one: {:?}", gene_id);
                         //return ( gene_id );
@@ -695,7 +692,7 @@ impl FastMapper{
                     },
                     None => {
                         //eprintln!("Got one no  gene id in the first run:");
-                        match self.mapper[entries.0 as usize].find(&seq_u64 ){
+                        match self.mapper[entries.0 as usize].find(  &entries.1 ){
                             Some( gene_id ) => {
                                 //eprintln!("But in the second I got one: {gene_id:?}");
                                 //return ( gene_id );
@@ -841,6 +838,7 @@ impl FastMapper{
                     Err(_err) => return Err::<(), &str>("count could not be written"),
                 };
                 for tuple  in self.mapper[idx].map.iter(){
+                    // this will write the u64 and the u8 in one go.
                     match ofile.buff1.write( &tuple.0.to_le_bytes() ){
                         Ok(_) => (), 
                         //Ok(_) => println!("the u64 kmer: {} or {:b} binary -> {:?} bytes",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,
@@ -899,8 +897,9 @@ impl FastMapper{
 
         let mut buff_u64 = [0_u8 ;8 ];
         let mut buff_u16 = [0_u8 ;2 ];
+        let mut buff_SeqEntry = [0_u8 ;9 ];
 
-        let mut kmer:u64;
+        let mut kmer:SecondSeq;
         let mut gene_id:usize;
         let mut gene_level:usize;
         let mut len:usize;
@@ -960,8 +959,8 @@ impl FastMapper{
             let i = u64::from_le_bytes( buff_u64 ) as usize;
             for _i in 0..i{
                 // next 8 u64 kmer
-                ifile.buff1.read_exact(&mut buff_u64).unwrap();
-                kmer = u64::from_le_bytes( buff_u64 );
+                ifile.buff1.read_exact(&mut buff_SeqEntry).unwrap();
+                kmer = SecondSeq::from_le_bytes( buff_SeqEntry ).unwrap();
                 // next 8 u64 gene id
                 ifile.buff1.read_exact(&mut buff_u64).unwrap();
                 len = usize::from_le_bytes( buff_u64 );
@@ -1058,7 +1057,7 @@ impl FastMapper{
                 tuple_idx= 0;
                 for tuple  in self.mapper[idx].map.iter(){
                     nucl.clear();
-                    self.tool.u64_to_str( 32, &tuple.0, &mut nucl ); 
+                    self.tool.u64_to_str( 32, &tuple.0.0, &mut nucl ); 
                     match write!(ofile.buff1, "\n\t\t{tuple_idx}: {} resp. {} ",&tuple.0, nucl){
                         Ok(_) => (), 
                         //Ok(_) => println!("the u64 kmer: {} or {:b} binary -> {:?} bytes",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,

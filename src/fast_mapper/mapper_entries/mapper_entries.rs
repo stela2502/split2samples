@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
+use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 use crate::fast_mapper::mapper_entries::NameEntry;
 
 #[derive(Debug,PartialEq)]
 pub struct MapperEntry{
-	pub map:Vec::<(u64, NameEntry)>, // the data storage
+	pub map:Vec::<(SecondSeq, NameEntry)>, // the data storage
 	only:usize,
 	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
 }
@@ -15,7 +16,7 @@ impl MapperEntry{
 		if allocate < 4 {
 			all = 4
 		}
-		let map = Vec::<(u64, NameEntry)>::with_capacity(all);
+		let map = Vec::<(SecondSeq, NameEntry)>::with_capacity(all);
 		let only =0;
 		let hamming_cut = 4;
 		Self{
@@ -47,8 +48,9 @@ impl MapperEntry{
 		ids.into_iter().collect()
 	}
 
-	/// add a match pair 8bp + <sign> bp.
-	pub fn add( &mut self, seq:u64, id:(usize,usize), classes:Vec<usize>) -> bool{
+	/// add a u64 kmer_size fragment as second key.
+	/// here we also need the sign amount of bp that contain informative sequence
+	pub fn add( &mut self, seq:SecondSeq, id:(usize,usize), classes:Vec<usize>) -> bool{
 
 		for i in 0..self.map.len() {
 			if self.map[i].0 == seq {
@@ -70,14 +72,10 @@ impl MapperEntry{
 		true
 	}
 
-	/// calculate the bit flips between two u64 sequences
-	pub fn hamming_distance(x: u64, y: u64) -> u32 {
-    	(x ^ y).count_ones()
-	}
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
-	pub fn get( &self,seq:&u64 ) -> Option<&NameEntry> {
+	pub fn get( &self,seq:&SecondSeq ) -> Option<&NameEntry> {
 
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
@@ -91,7 +89,7 @@ impl MapperEntry{
 		None
 	}
 
-	pub fn get_mut( &mut self,seq:&u64 ) -> Option<&mut NameEntry> {
+	pub fn get_mut( &mut self,seq:&SecondSeq ) -> Option<&mut NameEntry> {
 
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
@@ -108,46 +106,10 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&self, seq:&u64 ) -> Option<&NameEntry> {
-		// for i in 0..self.map.len() {
-		// 	if &self.map[i].0 == seq {
-		// 		if self.map[i].1.data.len() > 1{
-		// 			eprintln!("Ooops - we have a find in more than one gene: {:?}", self.map[i].1.data);
-		// 		}
-		// 		return Some( &self.map[i].1 )
-		// 	}
-		// }
-		// now we have an initial match, but no secondary.
+	pub fn find (&self, seq:&SecondSeq ) -> Option<&NameEntry> {
 		for i in 0..self.map.len() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
-			if MapperEntry::hamming_distance( self.map[i].0, *seq ) < self.hamming_cut{
-				// let mut a:String = String::from("");
-				// let mut b:String = String::from("");
-				// tool.u64_to_str(32, seq, &mut a );
-				// tool.u64_to_str(32, &self.map[i].0, &mut b);
-				// eprintln!("I have a match between sequence \nA{:?}\nB{:?}\nhamming_dist: {}\nsignificant_bp: {significant_bp}\ngenes: {:?}",a, b,MapperEntry::hamming_distance( self.map[i].0, *seq ), self.map[i].1.data );
-			
-				return Some( &self.map[i].1 )
-			}
-			// else {
-			// 	let mut a:String = String::from("");
-			// 	let mut b:String = String::from("");
-			// 	tool.u64_to_str(32, seq, &mut a );
-			// 	tool.u64_to_str(32, &self.map[i].0, &mut b);
-			// 	eprintln!("I have no match between sequence \nA{:?}\nB{:?}\nhamming_dist: {}",a, b,MapperEntry::hamming_distance( self.map[i].0, *seq ) );
-			// }
-		}
-		// if this still has not worked - is the RNA fragments possibly shorter than our genomic sequence here?
-		for i in 0..self.map.len() {
-			let our = self.map[i].0.to_be_bytes();
-			let other = seq.to_be_bytes();
-			let mut sum = 0;
-			for id in 0..8{
-				if our[id] == other[id] {
-					sum += 1;
-				}
-			}
-			if sum > 2 { // at least 24 bp exact match + position
+			if  self.map[i].0.fuzzy_match( seq , self.hamming_cut) {
 				return Some( &self.map[i].1 )
 			}
 		}

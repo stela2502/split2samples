@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 
 
 
@@ -169,7 +170,7 @@ impl IntToStr {
     }
 
 
-	pub fn next_small(&mut self) -> Option<(u16, u64, usize)> {
+	pub fn next_small(&mut self) -> Option<(u16, SecondSeq)> {
 
     	//println!("Start with next");
 
@@ -210,20 +211,21 @@ impl IntToStr {
         	}
         };
         let long = self.into_u64_nbp( self.kmer_size ).clone();
-        let sign:usize;
+        let sign:u8;
         //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
-        if self.storage.len() - self.lost *4 >= self.kmer_size / 4{
-        	sign = self.kmer_size/4;
+        if self.storage.len() - self.lost  >= self.kmer_size {
+        	sign = self.kmer_size as u8;
         }else {
-        	sign = self.storage.len() - self.lost *4 ;
+        	sign = self.storage.len() as u8 - self.lost as u8 *4_u8;
         	//eprintln!("next reporting a SHORTER VALUE! {sign}" );
         }
   
         //eprintln!( "short {short}, long {long}, sign {sign}" );
-        Some(( short , long, sign *4 ))
+        let second = SecondSeq(long, sign  );
+        Some(( short , second  ))
     }
 
-    pub fn next(&mut self) -> Option<(u16, u64, usize)> {
+    pub fn next(&mut self) -> Option<(u16, SecondSeq)> {
 
     	//println!("Start with next");
 
@@ -264,17 +266,22 @@ impl IntToStr {
         	}
         };
         let long = self.into_u64_nbp( self.kmer_size ).clone();
-        let sign:usize;
-        //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
-        if self.storage.len() - self.lost *4 >= self.kmer_size / 4{
-        	sign = self.kmer_size/4;
+        let sign:u8;
+        println!( " self.lost {} *4  +8 +self.kmer_size {} > self.storage.len() {} -> {}", 
+        	 self.lost,self.kmer_size ,self.storage.len(),self.lost *4 +8 +self.kmer_size  <  self.storage.len() );
+
+        if self.lost *4  + 8 + self.kmer_size <= self.storage.len() {
+			sign = self.kmer_size.try_into().unwrap();
         }else {
-        	sign = self.storage.len() - self.lost *4 ;
-        	//eprintln!("next reporting a SHORTER VALUE! {sign}" );
+        	// self.lost 8 *4  +8 +self.kmer_size 8 > self.storage.len() 45 -> false
+			let missing = ( self.lost *4  + 8 + self.kmer_size )- self.storage.len() ;
+        	sign = (self.kmer_size - missing).try_into().unwrap();
+        	eprintln!("next reporting a SHORTER VALUE ({sign})! (self.storage.len() {} - (self.lost *4 + 8) {missing} )", self.storage.len() );
         }
   
         //eprintln!( "short {short}, long {long}, sign {sign}" );
-        Some(( short , long, sign *4 ))
+        let second = SecondSeq(long, sign );
+        Some(( short , second) )
     }
 
 	pub fn len(&self) -> usize{
@@ -540,11 +547,23 @@ impl IntToStr {
 		}
 	}
 
+	/// This will mask the providied u64 with the internal mask definitivels 'killing' the last bp.
+	/// This will convert the masked bp into 'A' or better to say #b00 entries.
 	pub fn mask_u64( &self, seq:&u64 ) ->u64{
 		//let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_size )));
 		//println!("I have the mask {:b}", self.mask);
         return seq & self.mask
 	}
+
+	/// This will mask the last bp by 'A' or #b00 and only return bp length usabel info.
+	pub fn mask_u64_to ( &self, seq:&u64, bp:usize) -> u64  {
+		if bp >= 32{
+			return *seq;
+		}
+		let mask = !0u64 >> ( (32 - bp )  * 2) as u32;
+		return seq & mask
+	}
+
 
 	pub fn print(&self) {
 		println!(">seq (n={} [{}*4 + {}])\n{}", self.storage.len(),  self.storage.len()/4,self.storage.len() %4, std::str::from_utf8( &self.storage.clone() ).expect("Invalid UTF-8"));
