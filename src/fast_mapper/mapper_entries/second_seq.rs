@@ -9,12 +9,16 @@ pub struct SecondSeq( pub u64, pub u8);
 impl PartialEq for SecondSeq {
     fn eq(&self, other: &Self) -> bool {
         let mask: u64;
-
+        let length:u8;
         if other.1 > self.1{
-            mask = (1 << (self.1 as u64) *2 ) - 1;
+            length =  self.1
         }else {
-            mask = (1 << (other.1 as u64) *2 ) - 1;
+            length = other.1;
         }
+        if length < 8 {
+            return false
+        }
+        mask = (1 << (length as u64) *2 ) - 1;
         //eprintln!("I'll compare {:b} to {:b}", (self.0 & mask) , (other.0 & mask));
         (self.0 & mask) == (other.0 & mask)
     }
