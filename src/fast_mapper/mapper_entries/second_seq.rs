@@ -15,7 +15,7 @@ impl PartialEq for SecondSeq {
         }else {
             mask = (1 << (other.1 as u64) *2 ) - 1;
         }
-
+        //eprintln!("I'll compare {:b} to {:b}", (self.0 & mask) , (other.0 & mask));
         (self.0 & mask) == (other.0 & mask)
     }
 }
@@ -91,11 +91,11 @@ mod tests {
         let seq1 = SecondSeq(0b10101010, 4);
         let seq2 = SecondSeq(0b10101010, 4);
         let seq3 = SecondSeq(0b11110000, 4);
-        let seq4 = SecondSeq(0b1010101011, 6);
+        let seq4 = SecondSeq(0b1110101010, 6);
 
         assert_eq!(seq1, seq2, "same sequences"); // Test equal sequences
         assert_ne!(seq1, seq3, "different sequences"); // Test unequal sequences
-        assert_eq!(seq1, seq4, "same, but one is longer");
+        assert_eq!(seq1, seq4,  "same, but one is longer");
     }
 
     #[test]

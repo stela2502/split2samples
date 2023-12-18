@@ -230,7 +230,30 @@ impl IntToStr {
     	//println!("Start with next");
 
     	match self.seq_ok(){
-    		Some(true) => {//eprintln!("Seq OK") 
+    		Some(true) => {
+    			let short = self.into_u16().clone();
+    			match self.drop_n(2){// shift 8 bp
+		        	Some(_) => {
+		        		let long = self.into_u64_nbp( self.kmer_size ).clone();
+		        		let sign:u8;
+		        		if self.lost *4 + self.kmer_size <= self.storage.len() {
+							sign = self.kmer_size.try_into().unwrap();
+				        }else {
+							let missing = ( self.lost *4 + self.kmer_size )- self.storage.len() ;
+							if missing >= self.kmer_size{
+								return None
+							}
+				        	sign = (self.kmer_size - missing).try_into().unwrap();
+				        }
+				        //eprintln!( "short {short}, long {long}, sign {sign}" );
+				        let second = SecondSeq(long, sign );
+				        return Some(( short , second) )
+		        	},
+		        	None => {
+		        		eprintln!("This should not have happened after the check!");
+		        		return None;
+		        	}
+		        };
     		},
     		Some(false) => {
     			//eprintln!("useless oligos!");
@@ -247,41 +270,13 @@ impl IntToStr {
     			if self.shifted < 5{
     				//println!("I am shifting on bp");
     				match self.shift(){
-    					Some(_) => {},
+    					Some(_) => { return self.next() },
     					None => { return None },
     				}
-    				//self.print();
-    				return self.next();
     			}
     			return None
     		},
-    	};
-
-    	//println!("Start with next - test finished");
-        let short = self.into_u16().clone();
-        match self.drop_n(2){// shift 8 bp
-        	Some(_) => {},
-        	None => {
-        		return None;
-        	}
-        };
-        let long = self.into_u64_nbp( self.kmer_size ).clone();
-        let sign:u8;
-        println!( " self.lost {} *4  +8 +self.kmer_size {} > self.storage.len() {} -> {}", 
-        	 self.lost,self.kmer_size ,self.storage.len(),self.lost *4 +8 +self.kmer_size  <  self.storage.len() );
-
-        if self.lost *4  + 8 + self.kmer_size <= self.storage.len() {
-			sign = self.kmer_size.try_into().unwrap();
-        }else {
-        	// self.lost 8 *4  +8 +self.kmer_size 8 > self.storage.len() 45 -> false
-			let missing = ( self.lost *4  + 8 + self.kmer_size )- self.storage.len() ;
-        	sign = (self.kmer_size - missing).try_into().unwrap();
-        	eprintln!("next reporting a SHORTER VALUE ({sign})! (self.storage.len() {} - (self.lost *4 + 8) {missing} )", self.storage.len() );
-        }
-  
-        //eprintln!( "short {short}, long {long}, sign {sign}" );
-        let second = SecondSeq(long, sign );
-        Some(( short , second) )
+    	}; 
     }
 
 	pub fn len(&self) -> usize{

@@ -76,7 +76,7 @@ mod tests {
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 54);
+        assert_eq!( mapper.with_data, 50);
 
         assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(vec![0]) );
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(vec![1]) );
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn check_samples() {
-        let mut mapper = FastMapper::new( 16, 10 );
+        let mut mapper = FastMapper::new( 32, 10 );
         let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         //let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
@@ -147,7 +147,7 @@ mod tests {
             mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
             id +=1;
         }
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
 
         assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![0]) );
         assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![1]) );
@@ -161,9 +161,9 @@ mod tests {
 
     #[test]
     fn check_samples_shifted() {
-        let mut mapper = FastMapper::new( 16, 10 );
+        let mut mapper = FastMapper::new( 32, 10 );
         mapper.change_start_id( 10 );
-
+        //             "AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC"
         let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         //let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
@@ -181,14 +181,20 @@ mod tests {
             mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
             id +=1;
         }
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
 
         assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![10]) );
+        println!("\n");
         assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![11]) );
+        println!("\n");
         assert_eq!( mapper.get_strict( sample2, &mut tool ), None );
+        println!("\n");
         assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![10]) );
+        println!("\n");
         assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(vec![21]) );
+        println!("\n");
         assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(vec![10]) );
+        println!("\n");
     }
 
 }

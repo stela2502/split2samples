@@ -288,24 +288,15 @@ impl FastMapper{
         let gene_id = self.get_id( name.to_string() );
         //eprintln!("fast_mapper: I have {} -> {}", name, gene_id);
 
-        //let mut long:u64;
-        //let mut short:u16;
-
         self.tool.from_vec_u8( seq.to_vec() );
         let mut tmp = "".to_string();
         self.tool.to_string( seq.len(), &mut tmp );
-        //self.tool.print();
-        //println!("Adding gene to the index: \n\t>{name}\n\t{tmp}");
 
-        // self.tool.shift(); // I will only add one set of kmers!
-        // self.tool.shift();
-        // self.tool.shift();
-
-        //let mut item = self.tool.next();
         let mut i =0;
-        //let mut short = String::from("");
-        //let mut long = String::from("");
-        let mut n = 50;
+        let mut n = 20;
+
+        // let mut short = String::from("");
+        // let mut long = String::from("");
 
         while let Some(entries) = self.tool.next(){
             n -=1;
@@ -313,15 +304,15 @@ impl FastMapper{
                 break;
             }
             // index_read, longer_read, longer length
-            //short.clear();
-            //long.clear();
-            //self.tool.u16_to_str( 8, &entries.0, &mut short);
-            //self.tool.u64_to_str( entries.2, &entries.1, &mut long);
-            //println!("I got some entry [short {short}, long {long}, length {}", entries.2 );
+            // short.clear();
+            // long.clear();
+            // self.tool.u16_to_str( 8, &entries.0, &mut short);
+            // self.tool.u64_to_str( entries.1.1.into(), &entries.1.0, &mut long);
+            // println!("I got some entry [short {short}, long {long}, length {}", entries.1.1 );
 
             if entries.1.1  < 8{
                 //eprintln!("Too small sequence");
-                break;
+                continue;
             }
             if entries.0 > 65534{
                 continue; // this would be TTTTTTTT and hence not use that!
@@ -596,18 +587,11 @@ impl FastMapper{
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
                 //i +=1;
-                //eprintln!("We are at iteration {i}");
-
-                // if matching_geneids.len() == 1 && i > 3 {
-                //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
-                //     return Some( matching_geneids[0] )
-                //     //break;
-                // }
-
-                //eprintln!("Ill create a new tool here based on seq {}", entries.1);
+                //println!("We are at iteration {i}");
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
                     Some( gene_id ) => {
+                        //println!("And we got a match! ({gene_id:?})");
                         for gid in &gene_id.data{
                             match genes.get_mut( gid) {
                                 Some(gene_count) => {
@@ -632,6 +616,7 @@ impl FastMapper{
         }
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
+            //println!("And I got a match! ({matching_geneids:?})");
             return Some( matching_geneids )
         }
         None
@@ -671,10 +656,12 @@ impl FastMapper{
                 //eprintln!("Ill create a new tool here based on seq {}", entries.1);
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
+                    
                     Some( gene_id ) => {
-                        //eprintln!("Got one: {:?}", gene_id);
+                       // eprintln!("Got one: {:?}", gene_id);
                         //return ( gene_id );
                         for gid in &gene_id.data{
+                            //println!("And we got a match! ({gid:?})");
                             match genes.get_mut( &gid) {
                                 Some(gene_count) => {
                                     *gene_count +=1;
@@ -741,7 +728,8 @@ impl FastMapper{
                 return Some(gene_id)
             }else {
                 matching_geneids.sort();
-                eprintln!("read mapping to multiple genes: {:?}", self.gene_names_for_ids( &matching_geneids ) );
+                eprintln!("read mapping to multiple genes: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),
+                String::from_utf8_lossy(seq) );
             }
         }
         None

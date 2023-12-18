@@ -8,6 +8,7 @@
 mod tests {
 
    use rustody::int_to_str::IntToStr;
+   use rustody::fast_mapper::mapper_entries::second_seq::SecondSeq;
    //use int_to_str::int_to_str::IntToStr;
 
     #[test]
@@ -202,19 +203,19 @@ mod tests {
      //     println!("{} {} {}", t.0, t.1, t.2);
      // }
      // tool.regenerate();
-     assert_eq!( tool.next(), Some( (173_u16,55990_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (55990_u16,46741_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (46741_u16,27377_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (27377_u16,58859_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (32811_u16,30381_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (173_u16, SecondSeq(55990_u64, 8_u8)) ) );
+     assert_eq!( tool.next(), Some( (55990_u16, SecondSeq(46741_u64, 8)) ) );
+     assert_eq!( tool.next(), Some( (46741_u16, SecondSeq(27377_u64, 8)) ) );
+     assert_eq!( tool.next(), Some( (27377_u16, SecondSeq(58859_u64, 8)) ) );
+     assert_eq!( tool.next(), Some( (32811_u16, SecondSeq(30381_u64, 8)) ) );
 
-     assert_eq!( tool.next(), Some( (30381_u16,28069_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (28069_u16,55996_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (55996_u16,47482_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (24586_u16,23979_u64, 8) ) );
-     assert_eq!( tool.next(), Some( (23979_u16,7017_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (30381_u16, SecondSeq(28069_u64, 8)) ) );
+     assert_eq!( tool.next(), Some( (28069_u16, SecondSeq(55996_u64, 8)) ) );
+     assert_eq!( tool.next(), Some( (55996_u16, SecondSeq(47482_u64, 8)) ) );
+     assert_eq!( tool.next(), Some( (24586_u16, SecondSeq(23979_u64, 8)) ) );
+     assert_eq!( tool.next(), Some( (23979_u16, SecondSeq(7017_u64, 8)) ) );
 
-     assert_eq!( tool.next(), Some( (7017_u16,46767_u64, 8) ) );
+     assert_eq!( tool.next(), Some( (7017_u16, SecondSeq(46767_u64, 8)) ) );
 
      tool.deep_refresh();
      tool.drop_n(1);
@@ -285,77 +286,114 @@ mod tests {
 
       let mut first = "".to_string();
       let mut second = "".to_string();
-
+      let mut i = 0;
       if let Some(entries) = tool.next(){
+         i+=1;
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0 , &mut first );
          assert_eq!( first, "ATGACTCT".to_string() );
-         tool.u64_to_str( 32, &entries.1, &mut second );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
          assert_eq!( second, "CAGCATGGAAGGACAGCAGAGACCAAGAGATC".to_string() );
       }else {
          assert_eq!( 1,2, "there should be a first entry in the tool!")
       }
 
       if let Some(entries) = tool.next(){
+         i+=1;
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0, &mut first );
          assert_eq!( first, "CAGCATGG".to_string() );
-         tool.u64_to_str( 32, &entries.1, &mut second );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
          assert_eq!( second, "AAGGACAGCAGAGACCAAGAGATCCTCCCACA".to_string() );
-         assert_eq!( entries.2, 32, "the expected max entry length" );
+         assert_eq!( entries.1.1, 32, "the expected max entry length" );
       }else {
          assert_eq!( 1,2, "there should be a second entry in the tool!")
       }
 
       if let Some(entries) = tool.next(){
+         i+=1;
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0, &mut first );
          assert_eq!( first, "AAGGACAG".to_string() );
-         tool.u64_to_str( 32, &entries.1, &mut second );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
          assert_eq!( second, "CAGAGACCAAGAGATCCTCCCACAGGGACACT".to_string() );
-         assert_eq!( entries.2, 32, "the expected max entry length" );
+         assert_eq!( entries.1.1, 32, "the expected max entry length" );
       }else {
          assert_eq!( 1,2, "there should be a second entry in the tool!")
       }
 
       if let Some(entries) = tool.next(){
+         i+=1;
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0, &mut first );
          assert_eq!( first, "CAGAGACC".to_string() );
-         tool.u64_to_str( 32, &entries.1, &mut second );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
          assert_eq!( second, "AAGAGATCCTCCCACAGGGACACTACCTCTGG".to_string() );
-         assert_eq!( entries.2, 32, "the expected max entry length" );
+         assert_eq!( entries.1.1, 32, "the expected max entry length" );
       }else {
          assert_eq!( 1,2, "there should be a third entry in the tool!")
       }
 
       if let Some(entries) = tool.next(){
+         i+=1;
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0, &mut first );
          assert_eq!( first, "AAGAGATC".to_string() );
-         tool.u64_to_str( 32, &entries.1, &mut second );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
          assert_eq!( second, "CTCCCACAGGGACACTACCTCTGGGCCTGGGA".to_string() );
-         assert_eq!( entries.2, 32, "the expected max entry length" );
+         assert_eq!( entries.1.1, 32, "the expected max entry length" );
       }else {
          assert_eq!( 1,2, "there should be a fourth entry in the tool!")
       }
 
       if let Some(entries) = tool.next(){
+         i+=1;
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0, &mut first );
          assert_eq!( first, "CTCCCACA".to_string() );
-         tool.u64_to_str( 32, &entries.1, &mut second );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
          assert_eq!( second, "GGGACACTACCTCTGGGCCTGGGATACAAAAA".to_string() );
-         assert_eq!( entries.2, 27, "the expected max entry length" );
+         assert_eq!( entries.1.1, 27, "the expected max entry length" );
       }else {
          assert_eq!( 1,2, "there should be a fifth entry in the tool!")
       }
+
+      if let Some(entries) = tool.next(){
+         i+=1;
+         first.clear();
+         second.clear();
+         tool.u16_to_str( 8, &entries.0, &mut first );
+         assert_eq!( first, "GGGACACT".to_string() );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
+         assert_eq!( second, "ACCTCTGGGCCTGGGATACAAAAAAAAAAAAA".to_string() );
+         assert_eq!( entries.1.1, 19, "the expected max entry length" );
+      }else {
+         assert_eq!( 1,2, "there should be a sixth entry in the tool!")
+      }
+
+      if let Some(entries) = tool.next(){
+         i+=1;
+         first.clear();
+         second.clear();
+         tool.u16_to_str( 8, &entries.0, &mut first );
+         assert_eq!( first, "ACCTCTGG".to_string() );
+         tool.u64_to_str( 32, &entries.1.0, &mut second );
+         assert_eq!( second, "GCCTGGGATACAAAAAAAAAAAAAAAAAAAAA".to_string() );
+         assert_eq!( entries.1.1, 11, "the expected max entry length" );
+      }else {
+         assert_eq!( 1,2, "there should be a sixth entry in the tool!")
+      }
+
+      while let Some(entries) = tool.next(){
+         i+=1;
+      }
+      assert_eq!( i,45, "A total of 54 fragments!")
    }
 
 }
