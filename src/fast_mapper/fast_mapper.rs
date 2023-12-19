@@ -730,6 +730,7 @@ impl FastMapper{
                 matching_geneids.sort();
                 eprintln!("read mapping to multiple genes: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),
                 String::from_utf8_lossy(seq) );
+                eprintln!("The total mapping: {genes:?}");
             }
         }
         None
