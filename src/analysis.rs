@@ -326,6 +326,7 @@ impl Analysis{
 
 	            	ok = match &self.antibodies.get_strict( &data[i].1, &mut tool ){
 	                    Some(gene_id) =>{
+	                    	eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
 	                    	report.iter_read_type( "antibody reads" );
 	                    	if gene_id.len() == 1 {
