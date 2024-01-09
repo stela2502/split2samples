@@ -275,6 +275,8 @@ impl FastMapper{
         gene_id
     }
 
+
+
     pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
 
         if ! self.names.contains_key( &name ){
@@ -310,13 +312,17 @@ impl FastMapper{
             // self.tool.u64_to_str( entries.1.1.into(), &entries.1.0, &mut long);
             // println!("I got some entry [short {short}, long {long}, length {}", entries.1.1 );
 
-            if entries.1.1  < 8{
-                //eprintln!("Too small sequence");
+            if entries.1.1  < 10{
+                //eprintln!("Too small sequence {}",entries.1.1 );
                 continue;
             }
             if entries.0 > 65534{
                 continue; // this would be TTTTTTTT and hence not use that!
             }
+
+            // And here check if the longer and shorter entry together are complex enough
+
+
             if ! self.mapper[entries.0 as usize].has_data() {
                 // will add in the next step so
                 self.with_data +=1;
@@ -718,7 +724,7 @@ impl FastMapper{
         //eprintln!("Here I have these gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
-            //eprintln!("And I return: {:?}",  matching_geneids);
+            println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{

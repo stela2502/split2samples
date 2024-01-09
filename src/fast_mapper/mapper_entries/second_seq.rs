@@ -15,7 +15,7 @@ impl PartialEq for SecondSeq {
         }else {
             length = other.1;
         }
-        if length < 8 {
+        if length < 20 {
             return false
         }
         mask = (1 << (length as u64) *2 ) - 1;
@@ -83,6 +83,32 @@ impl SecondSeq {
             None
         }
     }
+    pub fn table(&self) -> std::collections::HashMap<char, u32> {
+        let mut a_cnt = 0;
+        let mut c_cnt = 0;
+        let mut g_cnt = 0;
+        let mut t_cnt = 0;
+        let sequence = self.0;
+
+        for i in 0..self.1 {
+            let pair = (sequence >> (i * 2)) & 0b11;
+            match pair {
+                0b00 => a_cnt += 1,
+                0b01 => c_cnt += 1,
+                0b10 => g_cnt += 1,
+                0b11 => t_cnt += 1,
+                _ => {} // Handle invalid pairs if needed
+            }
+        }
+
+        let mut counts = std::collections::HashMap::new();
+        counts.insert('A', a_cnt);
+        counts.insert('C', c_cnt);
+        counts.insert('G', g_cnt);
+        counts.insert('T', t_cnt);
+
+        counts
+    }
 }
 
 
@@ -92,10 +118,10 @@ mod tests {
 
     #[test]
     fn test_second_seq_equality() {
-        let seq1 = SecondSeq(0b10101010, 4);
-        let seq2 = SecondSeq(0b10101010, 4);
-        let seq3 = SecondSeq(0b11110000, 4);
-        let seq4 = SecondSeq(0b1110101010, 6);
+        let seq1 = SecondSeq(0b1010101010101010101010101010101010101010, 20);
+        let seq2 = SecondSeq(0b1010101010101010101010101010101010101010, 20);
+        let seq3 = SecondSeq(0b1111000010101010101010101010101010101010, 20);
+        let seq4 = SecondSeq(0b101010101010101010101010101010101010101010101010, 24);
 
         assert_eq!(seq1, seq2, "same sequences"); // Test equal sequences
         assert_ne!(seq1, seq3, "different sequences"); // Test unequal sequences
@@ -103,10 +129,22 @@ mod tests {
     }
 
     #[test]
+    fn test_second_table() {
+        let seq1 = SecondSeq(0b1010101011010101, 32);
+        let mut exp = std::collections::HashMap::new();
+        exp.insert('A', 24);
+        exp.insert('C', 3);
+        exp.insert('G', 4);
+        exp.insert('T', 1);
+
+        assert_eq!(seq1.table() , exp,  "table did return the right counts");
+    }
+
+    #[test]
     fn test_second_seq_hashing() {
         let mut map = std::collections::HashMap::new();
-        let seq1 = SecondSeq(0b10101010, 4);
-        let seq2 = SecondSeq(0b11110000, 4);
+        let seq1 = SecondSeq(0b1010101010101010101010101010101010101010, 20);
+        let seq2 = SecondSeq(0b1111000010101010101010101010101010101010, 20);
 
         map.insert(seq1, "Value for seq1");
 

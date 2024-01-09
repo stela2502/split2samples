@@ -121,7 +121,6 @@ impl IntToStr {
         }
         
         for value in self.checker.values(){
-
             if *value as f32 / (to-start) as f32 > 0.7 {
                 //println!( "sequence from {start} to {to} is too simple/too many nucs same {value} {start} {to}" );
                 return Some(false);

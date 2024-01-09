@@ -11,14 +11,14 @@ mod tests {
 
     #[test]
     fn check_geneids() {
-        let mut mapper = FastMapper::new( 16, 10 );
+        let mut mapper = FastMapper::new( 32, 10 );
 
         let mut geneid = 0;
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
 
 
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(), EMPTY_VEC.clone() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGG".to_vec(), "Gene1".to_string(), EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
         //ATCCCATCCTTCATTGTTCGCCTGGA #0
@@ -39,7 +39,7 @@ mod tests {
         //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
 
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), None );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), None );
 
         let mut gnames = Vec::<String>::with_capacity(3);
         gnames.push( "Gene1".to_string() );
@@ -76,7 +76,7 @@ mod tests {
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        assert_eq!( mapper.with_data, 50);
+        assert_eq!( mapper.with_data, 26);
 
         assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(vec![0]) );
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(vec![1]) );

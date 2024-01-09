@@ -224,9 +224,10 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
-	        	seq_ext.extend_from_slice( seq );
-	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	//seq_ext.extend_from_slice( seq );
+	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -351,6 +352,7 @@ impl Analysis{
 	                if ! ok{
 	                	ok = match &self.samples.get_strict( &data[i].1,  &mut tool ){
 		                    Some(gene_id) =>{
+		                    	println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
 		                    	if gene_id.len() == 1 {
@@ -723,6 +725,8 @@ impl Analysis{
 		                	ok = match &self.samples.get_strict( &seqrec.seq(),  &mut tool ){
 		                		Some(gene_id) =>{
 		                			report.iter_read_type( "sample reads" );
+			                    	println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec.seq()) );
+
 			                    	//eprintln!("Got a samples match! {gene_id}");
 			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );
 			                    	if gene_id.len() == 1 {
