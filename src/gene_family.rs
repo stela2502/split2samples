@@ -55,7 +55,7 @@ impl GeneFamily{
 			}
 			match seq_records.get( &gene.chrom.to_string() ){
 	            Some(seq) => {
-	            	println!( "Trying to add a gene to the index with a total seq length of {} and name {}", seq.len(), gene.name );
+	            	//println!( "Trying to add a gene to the index with a total seq length of {} and name {}", seq.len(), gene.name );
 	            	//println!( "gene start {} and end {}", gene.start, gene.end );
 	                gene.add_to_index( seq, index, max_area_loc );
 	                //println!("The genes detected: {:?}", index.names_store );

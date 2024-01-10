@@ -55,7 +55,7 @@ impl MapperEntry{
 		for i in 0..self.map.len() {
 			if self.map[i].0 == seq {
 				self.only = 0;
-				return  self.map[i].1.add( id, classes.clone());
+				return self.map[i].1.add( id, classes.clone())
 			}
 		}
 		// now we have no match to the seq and therefore need to add one

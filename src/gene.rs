@@ -101,17 +101,17 @@ impl Gene{
 		    // But it will always be in sense orientation - now.
 		    
 		    // Stop this behaviour for now - not really necessary any more
-		    println!(">{}\n{}", self.name.to_string() + " total mRNA -> chr " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
+		    //println!(">{}\n{}", self.name.to_string() + " total mRNA -> chr " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
 
 		    if mrna.len() > covered_area{
 				//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna[ 0..100]).expect("Invalid UTF-8") );
 				index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string(), self.ids.clone() );
-				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
+				//println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 			}
 			else {
 				//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna).expect("Invalid UTF-8") );
 				index.add( &mrna , self.name.to_string(), self.ids.clone() );
-				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
+				//println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
 			}
 		} else {
 		    eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name.to_string(), self.ids );

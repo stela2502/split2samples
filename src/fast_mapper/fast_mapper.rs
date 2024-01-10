@@ -345,7 +345,7 @@ impl FastMapper{
         //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
             //eprint!(".");
-            eprintln!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short? {} bp", &name.as_str(), classes, seq.len() );
+            eprintln!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short or a duplicate? {} bp", &name.as_str(), classes, seq.len() );
         }
         /*else {
             println!("I added {i} mappper entries for gene {name}");
@@ -724,7 +724,7 @@ impl FastMapper{
         //eprintln!("Here I have these gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
-            println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
+            //println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{

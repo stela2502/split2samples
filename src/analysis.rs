@@ -327,7 +327,7 @@ impl Analysis{
 
 	            	ok = match &self.antibodies.get_strict( &data[i].1, &mut tool ){
 	                    Some(gene_id) =>{
-	                    	eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
+	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
 	                    	report.iter_read_type( "antibody reads" );
 	                    	if gene_id.len() == 1 {
@@ -353,7 +353,7 @@ impl Analysis{
 	                if ! ok{
 	                	ok = match &self.samples.get_strict( &data[i].1,  &mut tool ){
 		                    Some(gene_id) =>{
-		                    	println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
+		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
 		                    	if gene_id.len() == 1 {
@@ -726,7 +726,7 @@ impl Analysis{
 		                	ok = match &self.samples.get_strict( &seqrec.seq(),  &mut tool ){
 		                		Some(gene_id) =>{
 		                			report.iter_read_type( "sample reads" );
-			                    	println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec.seq()) );
+			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec.seq()) );
 
 			                    	//eprintln!("Got a samples match! {gene_id}");
 			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );

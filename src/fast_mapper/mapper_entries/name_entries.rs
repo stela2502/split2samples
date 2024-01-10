@@ -81,6 +81,7 @@ impl NameEntry{
 
 		if self.hashes.contains( &hash){
 			// the combo of gene id, mapping class, [gene tags] has already been added here.
+			// eprintln!("I alread had this data in my data storage: {:?}, {:?} -> {}: {:?}", tup, classes, hash, self.hashes.clone() );
 			return false
 		}
 		//eprintln!("Mapper_entries: I add {:?} and {:?} with hash {}", tup, classes, hash);

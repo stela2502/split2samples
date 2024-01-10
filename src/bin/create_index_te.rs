@@ -147,7 +147,7 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
                 }
             };
             // for this approach we need to use the family model?
-            eprintln!("I will add these gene names: {}, {}, {}, {}", transcript_id.to_string(), gene_name.to_string(), family_name.to_string(), class_name.to_string() );
+            //eprintln!("I will add these gene names: {}, {}, {}, {}", transcript_id.to_string(), gene_name.to_string(), family_name.to_string(), class_name.to_string() );
             let mut gene = Gene::new(
                 parts[0].to_string(),
                 parts[3].to_string(),
@@ -226,7 +226,7 @@ fn main() {
         let seqrec = e_record.expect("invalid record");
         id = seqrec.id().split(|&x| x == delimiter[0]).collect::<Vec<&[u8]>>()[0];
         //id = seqrec.id().split(|&x| x == delimiter[0]).collect()[0];
-        eprintln!("'{}'", std::str::from_utf8(id).unwrap() );
+        //eprintln!("'{}'", std::str::from_utf8(id).unwrap() );
         seq_records.insert( std::str::from_utf8( id ).unwrap().to_string() , seqrec.seq().to_vec());
     }
 
