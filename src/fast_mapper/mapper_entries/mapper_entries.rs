@@ -53,7 +53,7 @@ impl MapperEntry{
 	pub fn add( &mut self, seq:SecondSeq, id:(usize,usize), classes:Vec<usize>) -> bool{
 
 		for i in 0..self.map.len() {
-			if self.map[i].0 == seq {
+			if self.map[i].0.same(&seq) {
 				self.only = 0;
 				return self.map[i].1.add( id, classes.clone())
 			}
@@ -106,12 +106,16 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&self, seq:&SecondSeq ) -> Option<&NameEntry> {
+	pub fn find (&self, seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
+		let mut ret : Vec::<&NameEntry> = vec![];
 		for i in 0..self.map.len() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			if  self.map[i].0.fuzzy_match( seq , self.hamming_cut) {
-				return Some( &self.map[i].1 )
+				ret.push(&self.map[i].1 )
 			}
+		}
+		if ret.len() > 0{
+			return Some(ret);
 		}
 		// so now we could have a frameshift due to a long stretch of a single nucleotide
 		// if necessary implement that later on.
@@ -155,3 +159,49 @@ impl MapperEntry{
 
 }
 
+
+#[cfg(test)]
+mod tests {
+	use crate::fast_mapper::mapper_entries::NameEntry;
+	use crate::fast_mapper::mapper_entries::MapperEntry;
+	use crate::fast_mapper::mapper_entries::SecondSeq;
+
+    #[test]
+    fn check_add() {
+    	let mut this = MapperEntry::new(4);
+    	// say we Have a gene x with family Y and class Z
+    	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
+    	assert_eq!(this.map[0].1.classes.len(), 1);
+    	this.collapse_classes();
+    	assert_eq!( this.map.len(), 1);
+    	assert_eq!(this.map[0].1.data.len(), 1);
+    	assert_eq!(this.map[0].1.classes.len(), 0);
+
+    }
+    
+    #[test]
+    fn check_collapse_classes_1() {
+    	let mut this = MapperEntry::new(4);
+    	// say we Have a gene x with family Y and class Z
+    	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
+    	this.add( SecondSeq(32_u64, 20), (3_usize,0_usize), vec!(3_usize, 1_usize, 2_usize));
+    	assert_eq!(this.map[0].1.classes.len(), 2);
+    	this.collapse_classes();
+    	assert_eq!(this.map[0].1.classes.len(), 0);
+    	assert_eq!(this.map[0].1.data.len(), 1);
+    	assert_eq!(this.map[0].1.data[0], (1_usize, 1_usize));
+    }
+    #[test]
+    fn check_collapse_classes_2() {
+    	let mut this = MapperEntry::new(4);
+    	// say we Have a gene x with family Y and class Z
+    	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!( 0_usize, 1_usize, 2_usize));
+    	this.add( SecondSeq(32_u64, 20), (3_usize,0_usize), vec!( 3_usize, 4_usize, 2_usize));
+    	assert_eq!(this.map[0].1.classes.len(), 2);
+    	this.collapse_classes();
+    	assert_eq!(this.map[0].1.classes.len(), 0);
+    	assert_eq!(this.map[0].1.data.len(), 1);
+    	assert_eq!(this.map[0].1.data[0], (2_usize, 2_usize));
+    }
+    
+}

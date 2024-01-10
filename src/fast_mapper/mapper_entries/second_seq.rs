@@ -1,5 +1,4 @@
-use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+
 use std::hash::{Hash, Hasher};
 use core::fmt;
 
@@ -51,6 +50,13 @@ impl SecondSeq {
         }
         ((self.0 & mask) ^ (other.0 & mask)).count_ones()
     }
+
+    /// the == takes a mininmal matching region into a account
+    /// This same function soes not do that.
+    pub fn same(&self, other: &Self ) -> bool {
+        self.0 == other.0
+    }
+
     pub fn print_second_seq(seq: &SecondSeq) {
         println!("Contents of SecondSeq:");
         println!("u64: {:b}", seq.0);

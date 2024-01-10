@@ -147,3 +147,33 @@ impl NameEntry{
 
 
 }
+
+
+#[cfg(test)]
+mod tests {
+	use crate::fast_mapper::mapper_entries::NameEntry;
+
+    #[test]
+    fn check_add() {
+    	let mut this = NameEntry::new();
+    	// say we Have a gene x with family Y and class Z
+    	this.add( (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
+    	assert_eq!( this.best_name_4_entries(), Some((0_usize,0_usize)) ); 	
+    }
+    #[test]
+    fn check_best_name_4_entries_1() {
+    	let mut this = NameEntry::new();
+    	// say we Have a gene x with family Y and class Z
+    	this.add( (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
+    	this.add( (3_usize,0_usize), vec!(3_usize, 1_usize, 2_usize));
+    	assert_eq!( this.best_name_4_entries(), Some((1_usize,1_usize)) ); 	
+    }
+    #[test]
+    fn check_best_name_4_entries_2() {
+    	let mut this = NameEntry::new();
+    	// say we Have a gene x with family Y and class Z
+    	this.add( (0_usize,0_usize), vec!( 0_usize, 1_usize, 2_usize));
+    	this.add( (3_usize,0_usize), vec!( 3_usize, 4_usize, 2_usize));
+    	assert_eq!( this.best_name_4_entries(), Some((2_usize,2_usize)) ); 	
+    }
+}

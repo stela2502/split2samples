@@ -197,4 +197,24 @@ mod tests {
         println!("\n");
     }
 
+
+    #[test]
+    fn check_duplicate_seqs() {
+        let mut index = FastMapper::new( 32, 10 );
+
+        //             "AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC"
+        let seq = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACAT";
+        index.add( &seq.to_vec(), "Transcript0".to_string(),vec!("Transcript0".to_string(), "Gene0".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
+        index.add( &seq.to_vec(), "Transcript1".to_string(),vec!( "Transcript1".to_string(), "Gene1".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
+
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        assert_eq!( index.get( seq,  &mut tool ), None );
+
+        index.make_index_te_ready();
+
+        assert_eq!( index.get( seq,  &mut tool ), Some(vec![2_usize]) ); // family0
+
+
+    }
+
 }

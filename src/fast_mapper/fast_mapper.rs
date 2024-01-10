@@ -49,8 +49,8 @@ pub struct FastMapper{
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names_store: Vec<String>, // store gene names as vector
     pub names_count: Vec<usize>, // store the number of mappers for this gene
-    pub max_id: usize,// hope I get the ids right this way...
-    pub last_count: usize,
+    pub max_id: usize,// THIS IS THE ITERATOR FOR THE names_store
+    pub last_count: usize, // THIS IS THE ITERATOR FOR THE main names!
     pub with_data: usize,
     pub version: usize, //the version of this
     pub tool: IntToStr,
@@ -148,10 +148,10 @@ impl FastMapper{
         let mut ret = Vec::<usize>::with_capacity( ids.len() );
         for name in ids.iter(){
             if ! self.names.contains_key( name ){
-                self.names.insert( name.clone(), self.max_id );
+                self.names.insert( name.clone(), self.last_count );
                 self.names_store.push( name.clone() );
                 self.names_count.push( 0 );
-                self.max_id += 1;
+                self.last_count += 1;
             }
             let id = self.get_id( name.to_string() ).clone();
             ret.push( id);
@@ -162,10 +162,10 @@ impl FastMapper{
     pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:SecondSeq, name:String, ids: Vec<String> )  ->Result<(), &str>{
 
         if ! self.names.contains_key( &name ){
-            self.names.insert( name.clone(), self.max_id );
+            self.names.insert( name.clone(), self.last_count );
             self.names_store.push( name.clone() );
             self.names_count.push( 0 );
-            self.max_id += 1;
+            self.last_count += 1;
         }
         let gene_id = self.get_id( name.to_string() ).clone();
         let classes =  self.ids_for_gene_names( &ids );
@@ -288,7 +288,7 @@ impl FastMapper{
 
         let classes =  self.ids_for_gene_names( &class_ids );
         let gene_id = self.get_id( name.to_string() );
-        //eprintln!("fast_mapper: I have {} -> {}", name, gene_id);
+        eprintln!("fast_mapper: I have {} -> {}", name, gene_id);
 
         self.tool.from_vec_u8( seq.to_vec() );
         let mut tmp = "".to_string();
@@ -329,7 +329,7 @@ impl FastMapper{
             }
             
             if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
-                //eprintln!("I have added a sequence!");
+                //eprintln!("I have added a sequence! {:#b}+{:?} -> {gene_id} & {classes:?} ",entries.0, entries.1 );
                 self.pos += 1;
                 self.names_count[gene_id] +=1;
                 i+=1;
@@ -371,7 +371,9 @@ impl FastMapper{
         self.eprint();
         for mapper_entry in self.mapper.iter_mut() {
             if mapper_entry.has_data() {
+                //eprintln!("I collapse the data for the mapper entry {:?}", mapper_entry);
                 mapper_entry.collapse_classes();
+                //eprintln!("is it collapes now\n\n {:?}\n\n?", mapper_entry);
             }
         }
 
@@ -664,12 +666,13 @@ impl FastMapper{
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
                     
                     Some( gene_id ) => {
-                       // eprintln!("Got one: {:?}", gene_id);
-                        //return ( gene_id );
+                        //eprintln!("Got one: {:?}", gene_id);
+
                         for gid in &gene_id.data{
-                            //println!("And we got a match! ({gid:?})");
+                            //eprintln!("And we got a match! ({gid:?})");
                             match genes.get_mut( &gid) {
                                 Some(gene_count) => {
+                                    //eprintln!( "Adding to existsing {} with count {gene_count}+1", gid.0);
                                     *gene_count +=1;
                                     if *gene_count == 4 && genes.len() ==1 {
                                         break 'main;
@@ -684,31 +687,35 @@ impl FastMapper{
                         }
                     },
                     None => {
-                        //eprintln!("Got one no  gene id in the first run:");
+                        
+                        //eprintln!("Got one no gene id in the first run:");
                         match self.mapper[entries.0 as usize].find(  &entries.1 ){
-                            Some( gene_id ) => {
-                                //eprintln!("But in the second I got one: {gene_id:?}");
-                                //return ( gene_id );
-                                for gid in &gene_id.data{
-                                    match genes.get_mut(&gid) {
-                                        Some(gene_count) => {
-                                            *gene_count +=1;
-                                            if *gene_count == 4 && genes.len() ==1 {
-                                                break 'main;
-                                            }
-                                        },
-                                        None => {
-                                            //eprintln!("This is a new gene - I'll insert {} and {}",gid.0, gid.1 );
-                                            genes.insert( gid.clone(), 1);
-                                            //eprintln!("I have finished with the indert");
-                                        },
-                                    };
+                            Some( gene_ids ) => {
+                                //eprintln!("But in the second I got one: {gene_ids:?}");
+                                for name_entry in &gene_ids{
+                                    for gid in &name_entry.data{
+                                        match genes.get_mut(&gid) {
+                                            Some(gene_count) => {
+                                                //eprintln!( "Second Adding to existsing {} with count {gene_count}+1", gid.0);
+                                                *gene_count +=1;
+                                                if *gene_count == 4 && genes.len() ==1 {
+                                                    break 'main;
+                                                }
+                                            },
+                                            None => {
+                                                //eprintln!( "Second Adding a new gene {} with count 1 here!", gid.0);
+                                                genes.insert( gid.clone(), 1);
+                                                //eprintln!("I have finished with the indert");
+                                            },
+                                        };
+                                    }
                                 }
                             },
                             None => {        
                                 //no_32bp_match +=1;
                             },
                         }
+                        
                     },
                 }
             }
@@ -721,10 +728,13 @@ impl FastMapper{
             //     break 'main;
             // }
         }
-        //eprintln!("Here I have these gene counts: {:?}", genes );
+        if genes.len() == 0 {
+            return None
+        }
+        eprintln!("Here I have these gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
-            //println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
+            println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{
@@ -892,7 +902,7 @@ impl FastMapper{
 
         let mut buff_u64 = [0_u8 ;8 ];
         let mut buff_u16 = [0_u8 ;2 ];
-        let mut buff_SeqEntry = [0_u8 ;9 ];
+        let mut buff_seq_entry = [0_u8 ;9 ];
 
         let mut kmer:SecondSeq;
         let mut gene_id:usize;
@@ -954,8 +964,8 @@ impl FastMapper{
             let i = u64::from_le_bytes( buff_u64 ) as usize;
             for _i in 0..i{
                 // next 8 u64 kmer
-                ifile.buff1.read_exact(&mut buff_SeqEntry).unwrap();
-                kmer = SecondSeq::from_le_bytes( buff_SeqEntry ).unwrap();
+                ifile.buff1.read_exact(&mut buff_seq_entry).unwrap();
+                kmer = SecondSeq::from_le_bytes( buff_seq_entry ).unwrap();
                 // next 8 u64 gene id
                 ifile.buff1.read_exact(&mut buff_u64).unwrap();
                 len = usize::from_le_bytes( buff_u64 );
