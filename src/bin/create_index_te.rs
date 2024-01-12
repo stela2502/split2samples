@@ -187,7 +187,25 @@ fn main() {
     
     let opts: Opts = Opts::parse();
 
+    if fs::metadata(&opts.outpath).is_ok() {
+        if let Err(err) = fs::remove_dir_all(&opts.outpath) {
+            eprintln!("Error old index directory: {}", err);
+        } else {
+            println!("Old index directory removed successfully!");
+        }
 
+        if let Err(err) = fs::create_dir_all(&opts.outpath) {
+            eprintln!("Error creating directory: {}", err);
+        } else {
+            println!("New index directory created successfully!");
+        }
+    }else {
+        if let Err(err) = fs::create_dir_all(&opts.outpath) {
+            eprintln!("Error creating directory: {}", err);
+        } else {
+            println!("New index directory created successfully!");
+        }
+    }
 
     let mut kmer_size = opts.gene_kmers;
     if opts.gene_kmers > 32{

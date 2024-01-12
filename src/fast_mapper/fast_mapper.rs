@@ -54,7 +54,7 @@ pub struct FastMapper{
     pub with_data: usize,
     pub version: usize, //the version of this
     pub tool: IntToStr,
-    mask:u64, //a mask to fill matching sequences to match the index's kmer_len
+    mask:u64, // a mask to fill matching sequences to match the index's kmer_len
     pub pos: usize, // when creating the index - this is the amount of times we added a new matching sequence
     pub neg: usize, // when creating the index - this is the amount of times we failed to add a new matching sequence (as we already had this connection)
 }
@@ -89,6 +89,7 @@ impl FastMapper{
         let mask: u64 = (1 << (2 * size)) - 1;
         let neg = 0;
         let pos = 0;
+
         Self {
             kmer_len,
             spacer,
@@ -111,7 +112,7 @@ impl FastMapper{
     pub fn change_start_id ( &mut self, new_start :usize ){
         self.last_count = new_start;
         for _i in 0..new_start{
-            self.names_store.push("na".to_string());
+            self.names_store.push("PLACEHOLDER".to_string());
             self.names_count.push(0);
         }
     }
@@ -166,9 +167,13 @@ impl FastMapper{
             self.names_store.push( name.clone() );
             self.names_count.push( 0 );
             self.last_count += 1;
+
+            //println!("fast_mapper: I have {} -> {}",  name, self.names.len()-1);
+
         }
         let gene_id = self.get_id( name.to_string() ).clone();
         let classes =  self.ids_for_gene_names( &ids );
+
         if ! self.mapper[initial_match].has_data() {
             // will add in the next step so
             self.with_data +=1;
@@ -178,6 +183,7 @@ impl FastMapper{
         }else{
             self.neg +=1
         }
+
 
         Ok( () )
     }
@@ -288,7 +294,6 @@ impl FastMapper{
 
         let classes =  self.ids_for_gene_names( &class_ids );
         let gene_id = self.get_id( name.to_string() );
-        eprintln!("fast_mapper: I have {} -> {}", name, gene_id);
 
         self.tool.from_vec_u8( seq.to_vec() );
         let mut tmp = "".to_string();
@@ -454,13 +459,18 @@ impl FastMapper{
         //     }
         //     eprint!("\n");
         // }
+        let most_matches = genes.values().max().unwrap_or(&0);
+        //eprintln!("I got this as most matches {most_matches}");
+        
+        if most_matches < &2_usize {
+            return false
+        }
+        
+        //eprintln!("    -> progressing");
         if genes.len() == 1 {
-            if let Some((key, _)) = genes.iter().next() {
-               ret.push(key.0.clone());
-               // if report {
-                 //eprintln!("1 This was selected as good: {} or {}\n",key.0, self.names_store[key.0] );
-               // }
-               return true
+            if let Some((key, _value)) = genes.iter().next() {
+                ret.push(key.0.clone());
+                return true
             }
         }
         if genes.len() > 0{
@@ -471,16 +481,13 @@ impl FastMapper{
                 }
             }
             let mut good = Vec::<usize>::with_capacity( genes.len() );
-            let most_matches = genes.values().max().unwrap_or(&0);
-            if most_matches < &3_usize {
-                return false
-            }
             //let mut best_gene = 0; //otherwise this throws an error later
             for ((gene_id, level ), matches) in genes{
                 if level == &prob_level && matches == most_matches {
                     good.push( *gene_id );
                 }
             }
+
             if good.len() ==1 {
                 ret.push( good[0] );
                 // if report {
@@ -731,23 +738,29 @@ impl FastMapper{
         if genes.len() == 0 {
             return None
         }
-        eprintln!("Here I have these gene counts: {:?}", genes );
+        let bad = self.get_id( "Cd3e".to_string()) ;
+        //eprintln!("Here I have these gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
-            println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
+            //println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
+            if matching_geneids[0] == bad {
+                eprintln!("read mapping to Cd3e - should not happen here!: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
+                eprintln!("This is our total matching set: {:?}", genes);
+            }
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{
             // ohoh - we might have found too manny as we did not be specific enough!
             if let Some(gene_id) = self.get_strict( seq, tool ){
-                eprintln!("get_strict was a better choise here! {gene_id:?}");
+                //eprintln!("get_strict was a better choise here! {gene_id:?}");
                 return Some(gene_id)
-            }else {
-                matching_geneids.sort();
-                eprintln!("read mapping to multiple genes: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),
-                String::from_utf8_lossy(seq) );
-                eprintln!("The total mapping: {genes:?}");
             }
+            /*else {
+                matching_geneids.sort();
+                //eprintln!("read mapping to multiple genes: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),
+                //String::from_utf8_lossy(seq) );
+                //eprintln!("The total mapping: {genes:?}");
+            }*/
         }
         None
     }
@@ -934,7 +947,7 @@ impl FastMapper{
                 Ok(n) => {
                     //eprintln!("the name of the gene: {n}\n");
                     if ! self.names.contains_key( &n ){
-                        self.names.insert( n.clone(), self.max_id );
+                        self.names.insert( n.clone(), self.last_count );
                         self.names_store.push( n.clone() );
                         self.names_count.push(0); // will be populated later.
                         self.max_id += 1;

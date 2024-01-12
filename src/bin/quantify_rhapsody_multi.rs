@@ -85,7 +85,13 @@ fn main() {
     
     let opts: Opts = Opts::parse();
 
-
+    if ! fs::metadata(&opts.outpath).is_ok() {
+        if let Err(err) = fs::create_dir_all(&opts.outpath) {
+            eprintln!("Error creating directory {}: {}", &opts.outpath, err);
+        } else {
+            println!("New output directory created successfully!");
+        }
+    }
 
     // let max_reads = match &opts.max_reads {
     //     Some(val) => val,
@@ -96,9 +102,6 @@ fn main() {
 
 
     println!("init models");    
-
-    fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
-
     let log_file_str = PathBuf::from(&opts.outpath).join(
         "Mapping_log.txt"
     );

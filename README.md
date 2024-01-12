@@ -423,7 +423,7 @@ And what about a genomic index combining Mus_musculus.GRCm39.dna.toplevel.fa.gz 
 
 ```
 
-target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1_index_genomic -s mouse  -i /mnt/data1/Rustody_Test_Files/indices/mouse/GRCm39 -e testData/addOn.fa -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
+target/release/quantify_rhapsody_multi -r testData/cells.1.Rhapsody_SV_index1_S1_R1_001.fastq.gz -f testData/cells.1.Rhapsody_SV_index1_S1_R2_001.fastq.gz -o testData/BD_results/Rustody_S1_index_genomic -s mouse mouse/GRCm39 -e testData/addOn.fa -a testData/MyAbSeqPanel.fasta -m 200 -v v2.96
 
 Writing outfiles ...
 filtering cells
@@ -578,3 +578,5 @@ zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
 ```
 
 This problem has been fixed. Cd3e is no longer "expressed" in this cell.
+
+And this problem re-surfaced later on after I spent so much time making the mapping more sensitive :-D - good I have a negative control here!
