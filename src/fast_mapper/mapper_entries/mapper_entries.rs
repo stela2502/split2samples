@@ -18,7 +18,7 @@ impl MapperEntry{
 		}
 		let map = Vec::<(SecondSeq, NameEntry)>::with_capacity(all);
 		let only =0;
-		let hamming_cut = 4;
+		let hamming_cut = 2;
 		Self{
 			map,
 			only,
@@ -116,6 +116,7 @@ impl MapperEntry{
 		for i in 0..self.map.len() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			if  self.map[i].0.fuzzy_match( seq , self.hamming_cut) {
+				eprintln!( "{seq:?} did match to {:?} should that be right?", self.map[i].0);
 				ret.push(&self.map[i].1 )
 			}
 		}

@@ -40,7 +40,7 @@ impl fmt::Display for SecondSeq {
 
 
 impl SecondSeq {
-    /// calculate the bit flips between two u64 sequences
+    /// calculate the base flips between two u64 sequences
     pub fn hamming_distance(self, other: &SecondSeq) -> u32 {
         let mask:u64;
         if other.1 > self.1{
@@ -48,7 +48,12 @@ impl SecondSeq {
         }else {
             mask = (1 << (other.1 as u64) *2 ) - 1;
         }
-        ((self.0 & mask) ^ (other.0 & mask)).count_ones()
+        let a = self.0 & mask;
+        let b = other.0 & mask;
+
+        let mask2 = 0xAAAAAAAAAAAAAAAA;
+
+        ( (a ^ b) &mask2).count_ones()
     }
 
     /// the == takes a mininmal matching region into a account
@@ -156,5 +161,20 @@ mod tests {
 
         assert_eq!(map.get(&seq1), Some(&"Value for seq1")); // Test retrieval by equal key
         assert_eq!(map.get(&seq2), None); // Test retrieval by different key
+    }
+
+    #[test]
+    fn test_humming2() {
+        let seq1 = SecondSeq(0b101010, 20);
+        let seq2 = SecondSeq(0b101010, 20);
+        assert_eq!( seq1.hamming_distance( &seq2 ), 0 );
+        let seq3 = SecondSeq(0b011010, 20);
+        assert_eq!( seq1.hamming_distance( &seq3 ), 1 );
+        let seq4 = SecondSeq(0b001010, 20);
+        assert_eq!( seq1.hamming_distance( &seq4 ), 1 );
+        let seq5 = SecondSeq(0b011001, 20);
+        assert_eq!( seq1.hamming_distance( &seq5 ), 2 );
+        let seq6 = SecondSeq(0b0, 20);
+        assert_eq!( seq1.hamming_distance( &seq6 ), 3 );
     }
 }

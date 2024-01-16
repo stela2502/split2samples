@@ -300,17 +300,18 @@ impl FastMapper{
         self.tool.to_string( seq.len(), &mut tmp );
 
         let mut i =0;
-        let mut n = 20;
+        //let mut n = 20;
 
         // let mut short = String::from("");
         // let mut long = String::from("");
 
         while let Some(entries) = self.tool.next(){
-            n -=1;
-            if n == 0{
-                break;
-            }
-            self.tool.print_second_seq( entries.0, entries.1 );
+
+            //n -=1;
+            //if n == 0{
+            //    break;
+            //}
+            //self.tool.print_second_seq( entries.0, entries.1 );
 
             // index_read, longer_read, longer length
             // short.clear();
@@ -327,7 +328,7 @@ impl FastMapper{
                 continue; // this would be TTTTTTTT and hence not use that!
             }
 
-            println!("Added?!");
+            //println!("Added?!");
 
             // And here check if the longer and shorter entry together are complex enough
 
@@ -341,7 +342,9 @@ impl FastMapper{
                 //eprintln!("I have added a sequence! {:#b}+{:?} -> {gene_id} & {classes:?} ",entries.0, entries.1 );
                 self.pos += 1;
                 self.names_count[gene_id] +=1;
-                i+=1;
+                if i < self.names_count[gene_id]{
+                    i = self.names_count[gene_id];
+                }
             }else {
                 //eprintln!("NOT - I have added a sequence!");
                 self.neg +=1
@@ -651,7 +654,6 @@ impl FastMapper{
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
-        let mut tool_debug = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
         tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
@@ -659,24 +661,23 @@ impl FastMapper{
         let mut matching_geneids = Vec::< usize>::with_capacity(10);
 
         // entries is a Option<(u16, u64, usize)
-        let mut i = 0;
+        /*let mut i = 0;
         let mut small_seq :String = Default::default();
-        let mut large_seq: String = Default::default();
+        let mut large_seq: String = Default::default();*/
 
         'main :while let Some(entries) = tool.next(){
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
-                i +=1;
 
                 //eprintln!("We are at iteration {i}");
 
-                small_seq.clear();
+                /*small_seq.clear();
                 large_seq.clear();
                 tool.u16_to_str( 8, &entries.0, &mut small_seq);
                 tool.u64_to_str( entries.1.1.into(), &entries.1.0, &mut large_seq);
                 eprintln!("We are on iteration {i} with seq {:?}-{:?})", small_seq, large_seq);
-                
+                */
 
                 // if matching_geneids.len() == 1 && i > 3 {
                 //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
@@ -688,7 +689,6 @@ impl FastMapper{
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
 
-                    
                     Some( gene_ids ) => {
                         eprintln!("Got some gene ids (one?): {:?}", gene_ids);
                         for name_entry in gene_ids {
@@ -755,15 +755,15 @@ impl FastMapper{
         if genes.len() == 0 {
             return None
         }
-        let bad = self.get_id( "Cd3e".to_string()) ;
+        //let bad = self.get_id( "Cd3e".to_string()) ;
         //eprintln!("Here I have these gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
             //println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
-            if matching_geneids[0] == bad {
+            /*if matching_geneids[0] == bad {
                 eprintln!("read mapping to Cd3e - should not happen here!: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
                 eprintln!("This is our total matching set: {:?}", genes);
-            }
+            }*/
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{

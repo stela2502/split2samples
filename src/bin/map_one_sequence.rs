@@ -4,7 +4,7 @@ use rustody::fast_mapper::FastMapper;
 use rustody::int_to_str::IntToStr;
 
 use std::path::Path;
-use std::time::SystemTime;
+use std::collections::HashMap;
 
 use needletail::parse_fastx_file;
 
@@ -40,7 +40,6 @@ struct Opts {
 fn main() {
     // parse the options
 
-    let now = SystemTime::now();
     
     let opts: Opts = Opts::parse();
 
@@ -138,62 +137,95 @@ fn main() {
 	}
 
 
-	/// to understand the mapping a little better I now need the index written to a file
-	genes.write_index_txt(  format!("{}/genes.index.txt", &opts.outpath) );
-	antibodies.write_index_txt(  format!("{}/antibodies.index.txt", &opts.outpath) );
-	samples.write_index_txt(  format!("{}/samples.index.txt", &opts.outpath) );
+	// to understand the mapping a little better I now need the index written to a file
+	let _ = genes.write_index_txt(  format!("{}/genes.index.txt", &opts.outpath) );
+	let _ = antibodies.write_index_txt(  format!("{}/antibodies.index.txt", &opts.outpath) );
+	let _ = samples.write_index_txt(  format!("{}/samples.index.txt", &opts.outpath) );
 
 	eprintln!("Ill check this sequence: '{}'", &opts.sequence );
-	let mut ok = match antibodies.get_strict( &opts.sequence.as_bytes(), &mut tool ){
-		Some(gene_id) =>{
+
+	let mut collected:HashMap::<usize, usize>= HashMap::new();
+
+	let mut ok = match antibodies.get( &opts.sequence.as_bytes(), &mut tool ){
+		Some(gene_ids) =>{
         	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
         	//eprintln!("I got an ab id {gene_id}");
-        	if gene_id.len() == 1 {
-        		println!("I found an antibody match: {:?}", gene_id );
-        		true
-        	}else {
-        		false
-        	}
+        	
+        	//println!("I found an antibody match: {:?}", gene_ids );
+        	for gid in gene_ids {
+        			match collected.get_mut( &gid) {
+        				Some(gene_count) => {
+        					*gene_count +=1;
 
-        },
-        None => {
-        	false
-        }
-    };
-    if ! ok{
-    	ok = match samples.get_strict( &opts.sequence.as_bytes(),  &mut tool ){
-            Some(gene_id) =>{
-            	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
-            	//eprintln!("I got a sample umi id {umi}");
-            	if gene_id.len() == 1 {
-            		println!("I found a sample id match: {:?}", gene_id );
-                    true
-                }else {
-                	false
-                }
-                
-            },
-            None => {
+        				},
+        				None => {
+		                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+		                    collected.insert( gid.clone(), 1);
+		                },
+		            };
+		    }
+		    true
+		},
+		None => {
+			false
+		}
+	};
+	if ! ok{
+		ok = match samples.get( &opts.sequence.as_bytes(),  &mut tool ){
+			Some(gene_ids) =>{
+	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
+	        	//eprintln!("I got an ab id {gene_id}");
+	        	
+	        	//println!("I found an sample match: {:?}", gene_ids );
+	        	for gid in gene_ids {
+	        			match collected.get_mut( &gid) {
+	        				Some(gene_count) => {
+	        					*gene_count +=1;
+
+	        				},
+	        				None => {
+			                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+			                    collected.insert( gid.clone(), 1);
+			                },
+			            };
+			    }
+			    true
+			},
+			None => {
 				false
-            }
-        };
-    }
+			}
+		};
+	}
 
-    if ! ok{
-    	
-        match genes.get( &opts.sequence.as_bytes(),  &mut tool ){
-        	Some(gene_id) =>{
-                if gene_id.len() == 1 {
-                    println!("I found a gene id match: {:?}", gene_id );
-                }else {
-                	println!("I found multiple genes ids match: {:?}", gene_id );
-                }
-                
-            },
-            None => {
-            }
-        };
-    }
+	if ! ok{
+		let _ = match genes.get( &opts.sequence.as_bytes(),  &mut tool ){
+			Some(gene_ids) =>{
+	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
+	        	//eprintln!("I got an ab id {gene_id}");
+	        	
+	        	//println!("I found an gene match: {:?}", gene_ids );
+	        	for gid in gene_ids {
+	        			match collected.get_mut( &gid) {
+	        				Some(gene_count) => {
+	        					*gene_count +=1;
+
+	        				},
+	        				None => {
+			                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+			                    collected.insert( gid.clone(), 1);
+			                },
+			            };
+			    }
+			    true
+			},
+			None => {
+				false
+			}
+		};
+	}
+
+
+    println!("I have collected these genes: {collected:?}" );
 
 
 

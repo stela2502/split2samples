@@ -252,7 +252,7 @@ impl IntToStr {
 				        }
 				        let second = SecondSeq(long, sign );
 
-				        self.print_second_seq( short,  second );
+				        //self.print_second_seq( short,  second );
 
 				        return Some(( short , second) )
 		        	},
@@ -263,7 +263,7 @@ impl IntToStr {
 		        };
     		},
     		Some(false) => {
-    			eprintln!("useless oligos!");
+    			//eprintln!("useless oligos!");
     			match self.drop_n(1){// shift 4 bp
     				Some(_) => {
     					return self.next()
@@ -275,7 +275,7 @@ impl IntToStr {
     		},
     		None => {
     			if self.shifted < 5{
-    				println!("I am shifting on bp");
+    				//println!("I am shifting on bp");
     				match self.shift(){
     					Some(_) => { return self.next() },
     					None => { return None },
