@@ -75,21 +75,25 @@ impl MapperEntry{
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
-	pub fn get( &self,seq:&SecondSeq ) -> Option<&NameEntry> {
-
+	pub fn get( &self,seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
+		let mut ret : Vec::<&NameEntry> = vec![];
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
 				// if self.map[i].1.data.len() > 1{
 				// 	eprintln!("Ooops - we have a get in more than one gene: {:?}", self.map[i].1.data);
 				// }
-				return Some( &self.map[i].1 )
+				ret.push(&self.map[i].1 )
 			}
+		}
+		if ret.len() > 0{
+			return Some(ret);
 		}
 		// now we have an initial match, but no secondary.
 		None
 	}
 
-	pub fn get_mut( &mut self,seq:&SecondSeq ) -> Option<&mut NameEntry> {
+	/*
+	pub fn get_mut( &mut self,seq:&SecondSeq ) -> Option<Vec<&mut NameEntry>> {
 
 		for i in 0..self.map.len() {
 			if &self.map[i].0 == seq {
@@ -102,6 +106,7 @@ impl MapperEntry{
 		// now we have an initial match, but no secondary.
 		None
 	}
+	*/
 	/// finds the most likely matching entry in our set of sequences.
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.

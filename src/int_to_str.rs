@@ -224,9 +224,15 @@ impl IntToStr {
         Some(( short , second  ))
     }
 
-    pub fn next(&mut self) -> Option<(u16, SecondSeq)> {
+    pub fn print_second_seq (&self, first:u16, second_seq: SecondSeq ){
+    	let mut small_seq :String = Default::default();
+        let mut large_seq: String = Default::default();
+        self.u16_to_str( 8, &first, &mut small_seq);
+        self.u64_to_str( second_seq.1.into(), &second_seq.0, &mut large_seq);
+        eprintln!("seq  {}-{}[{}] or {:?}-{:?}", &first, &second_seq.0, &second_seq.1, small_seq, large_seq);
+    }
 
-    	//println!("Start with next");
+    pub fn next(&mut self) -> Option<(u16, SecondSeq)> {
 
     	match self.seq_ok(){
     		Some(true) => {
@@ -244,8 +250,10 @@ impl IntToStr {
 							}
 				        	sign = (self.kmer_size - missing).try_into().unwrap();
 				        }
-				        //eprintln!( "short {short}, long {long}, sign {sign}" );
 				        let second = SecondSeq(long, sign );
+
+				        self.print_second_seq( short,  second );
+
 				        return Some(( short , second) )
 		        	},
 		        	None => {
@@ -255,7 +263,7 @@ impl IntToStr {
 		        };
     		},
     		Some(false) => {
-    			//eprintln!("useless oligos!");
+    			eprintln!("useless oligos!");
     			match self.drop_n(1){// shift 4 bp
     				Some(_) => {
     					return self.next()
@@ -267,7 +275,7 @@ impl IntToStr {
     		},
     		None => {
     			if self.shifted < 5{
-    				//println!("I am shifting on bp");
+    				println!("I am shifting on bp");
     				match self.shift(){
     					Some(_) => { return self.next() },
     					None => { return None },
@@ -385,15 +393,19 @@ impl IntToStr {
 	/// drop the last n u8 2 bit encoded sequences (n=1 => 4bp dropped from encoded)
 	/// this can be reset using the self.reset() function.
 	pub fn drop_n (&mut self, n:usize ) -> Option<()>{
+		//let mut  removed:String = "".to_string();
+		//self.print();
 		if self.u8_encoded.len() < 2{
 			return None;
 		}
 		for _i in 0..n{
 			let _a =self.u8_encoded.remove(0);
-			//println!("drop_n {i} has dropped {a:b}");
-			//self.print();
+			//removed.clear();
+			//self.u8_to_str( 4, &a, &mut removed);
+			//eprintln!("drop_n {i} has dropped {:?}",removed);
 		}
 		self.lost +=n;
+		//self.print();
 		Some ( () )
 	}
 

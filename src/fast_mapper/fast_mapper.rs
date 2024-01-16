@@ -310,6 +310,8 @@ impl FastMapper{
             if n == 0{
                 break;
             }
+            self.tool.print_second_seq( entries.0, entries.1 );
+
             // index_read, longer_read, longer length
             // short.clear();
             // long.clear();
@@ -324,6 +326,8 @@ impl FastMapper{
             if entries.0 > 65534{
                 continue; // this would be TTTTTTTT and hence not use that!
             }
+
+            println!("Added?!");
 
             // And here check if the longer and shorter entry together are complex enough
 
@@ -605,22 +609,24 @@ impl FastMapper{
                 //println!("We are at iteration {i}");
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
-                    Some( gene_id ) => {
+                    Some( gene_ids ) => {
                         //println!("And we got a match! ({gene_id:?})");
-                        for gid in &gene_id.data{
-                            match genes.get_mut( gid) {
-                                Some(gene_count) => {
-                                    *gene_count +=1;
-                                    if *gene_count == 4 && genes.len() == 1 {
-                                        break 'main;
-                                    }
-                                },
-                                None => {
-                                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-                                    genes.insert( gid.clone(), 1);
-                                },
-                            };
+                        for name_entry in gene_ids {
+                            for gid in &name_entry.data{
+                                match genes.get_mut( gid) {
+                                    Some(gene_count) => {
+                                        *gene_count +=1;
+                                        if *gene_count == 4 && genes.len() == 1 {
+                                            break 'main;
+                                        }
+                                    },
+                                    None => {
+                                        //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+                                        genes.insert( gid.clone(), 1);
+                                    },
+                                };
 
+                            }
                         }
                     },
                     None => {
@@ -645,7 +651,7 @@ impl FastMapper{
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
-        //let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
+        let mut tool_debug = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
         tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
@@ -653,14 +659,24 @@ impl FastMapper{
         let mut matching_geneids = Vec::< usize>::with_capacity(10);
 
         // entries is a Option<(u16, u64, usize)
-        //let mut i = 0;
+        let mut i = 0;
+        let mut small_seq :String = Default::default();
+        let mut large_seq: String = Default::default();
+
         'main :while let Some(entries) = tool.next(){
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
-                //i +=1;
+                i +=1;
 
                 //eprintln!("We are at iteration {i}");
+
+                small_seq.clear();
+                large_seq.clear();
+                tool.u16_to_str( 8, &entries.0, &mut small_seq);
+                tool.u64_to_str( entries.1.1.into(), &entries.1.0, &mut large_seq);
+                eprintln!("We are on iteration {i} with seq {:?}-{:?})", small_seq, large_seq);
+                
 
                 // if matching_geneids.len() == 1 && i > 3 {
                 //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
@@ -671,27 +687,28 @@ impl FastMapper{
                 //eprintln!("Ill create a new tool here based on seq {}", entries.1);
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
+
                     
-                    Some( gene_id ) => {
-                        //eprintln!("Got one: {:?}", gene_id);
-
-                        for gid in &gene_id.data{
-                            //eprintln!("And we got a match! ({gid:?})");
-                            match genes.get_mut( &gid) {
-                                Some(gene_count) => {
-                                    //eprintln!( "Adding to existsing {} with count {gene_count}+1", gid.0);
-                                    *gene_count +=1;
-                                    if *gene_count == 4 && genes.len() ==1 {
-                                        break 'main;
-                                    }
-                                },
-                                None => {
-                                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-                                    genes.insert( gid.clone(), 1);
-                                },
-                            };
-
+                    Some( gene_ids ) => {
+                        eprintln!("Got some gene ids (one?): {:?}", gene_ids);
+                        for name_entry in gene_ids {
+                            for gid in &name_entry.data{
+                                match genes.get_mut( &gid) {
+                                    Some(gene_count) => {
+                                        eprintln!( "Adding to existsing {} with count {gene_count}+1", gid.0);
+                                        *gene_count +=1;
+                                        if *gene_count == 4 && genes.len() ==1 {
+                                            break 'main;
+                                        }
+                                    },
+                                    None => {
+                                        eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+                                        genes.insert( gid.clone(), 1);
+                                    },
+                                };
+                            }
                         }
+                        
                     },
                     None => {
                         
