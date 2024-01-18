@@ -145,7 +145,7 @@ impl CellIndex for CellIds{
             if ok {
                 let tool =IntToStr::new( r1[(self.umi.0+add)..(self.umi.1+add)].to_vec(), 31 );
                 let umi:u64 = tool.into_u64();
-                return Ok( (cell_id, umi) ); 
+                return Ok( (cell_id +1, umi) ); 
             }
             // ok no match for shift add == iteration of this loop
         }
@@ -589,7 +589,7 @@ impl CellIds{
    
 
     pub fn to_sequence(&self, index:u32) -> Vec<u64>{
-        let mut idx: u32 = index;
+        let mut idx: u32 = index -1;
         let max:u32 = 384;
         //let max:u32 = self.c1s.len() as u32;
         let code1 = ((idx / (max * max)) as f64).floor() as u32;
