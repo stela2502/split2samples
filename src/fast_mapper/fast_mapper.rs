@@ -690,19 +690,19 @@ impl FastMapper{
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
 
                     Some( gene_ids ) => {
-                        eprintln!("Got some gene ids (one?): {:?}", gene_ids);
+                        //eprintln!("Got some gene ids (one?): {:?}", gene_ids);
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
                                 match genes.get_mut( &gid) {
                                     Some(gene_count) => {
-                                        eprintln!( "Adding to existsing {} with count {gene_count}+1", gid.0);
+                                        //eprintln!( "Adding to existsing {} with count {gene_count}+1", gid.0);
                                         *gene_count +=1;
                                         if *gene_count == 4 && genes.len() ==1 {
                                             break 'main;
                                         }
                                     },
                                     None => {
-                                        eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+                                        //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
                                         genes.insert( gid.clone(), 1);
                                     },
                                 };

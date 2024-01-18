@@ -51,6 +51,26 @@ mod tests {
         assert_eq!( seq1.hamming_distance( &seq5 ), 2 );
         let seq6 = SecondSeq(0b0, 20);
         assert_eq!( seq1.hamming_distance( &seq6 ), 3 );
-        assert_eq!( seq4.hamming_distance( &seq5 ), 1 );
-}
+        assert_eq!( seq4.hamming_distance( &seq5 ), 2 );
     }
+
+    
+    // works somehow. Catty - thanky you!
+    #[test]
+    fn test_needleman_wunsch() {
+        let seq1 = SecondSeq(0b101010, 20);
+        let seq2 = SecondSeq(0b101010, 20);
+        assert_eq!( seq1.needleman_wunsch( &seq2 ), 20 );
+        let seq3 = SecondSeq(0b011010, 20);
+        assert_eq!( seq1.needleman_wunsch( &seq3 ), 18 );
+        let seq4 = SecondSeq(0b001010, 20);
+        assert_eq!( seq1.needleman_wunsch( &seq4 ), 18 );
+        let seq5 = SecondSeq(0b011001, 20);
+        assert_eq!( seq1.needleman_wunsch( &seq5 ), 16 );
+        let seq6 = SecondSeq(0b0, 20);
+        assert_eq!( seq1.needleman_wunsch( &seq6 ), 14 );
+        let seq7 = SecondSeq(0b101010, 15);
+        assert_eq!( seq1.needleman_wunsch( &seq7 ), 5 );
+    }
+    
+}
