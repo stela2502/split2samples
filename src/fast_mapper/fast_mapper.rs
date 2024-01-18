@@ -755,15 +755,16 @@ impl FastMapper{
         if genes.len() == 0 {
             return None
         }
-        //let bad = self.get_id( "Cd3e".to_string()) ;
+        let bad_gene = "Lin28b";
+        let bad = self.get_id( bad_gene.to_string()) ;
         //eprintln!("Here I have these gene counts: {:?}", genes );
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
             //println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
-            /*if matching_geneids[0] == bad {
-                eprintln!("read mapping to Cd3e - should not happen here!: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
+            if matching_geneids[0] == bad {
+                eprintln!("read mapping to {} - should not happen here!: {:?}\n{:?}", bad_gene, self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
                 eprintln!("This is our total matching set: {:?}", genes);
-            }*/
+            }
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{

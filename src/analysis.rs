@@ -297,6 +297,20 @@ impl Analysis{
                 return false
             }
         }
+        // I have huge problems with reds that contain a lot of ploy A in the end
+        // None of them match using blast - so I think we can savely just dump them.
+        let mut bad = 0;
+
+        for nuc in &read2.seq()[ (read2.seq().len()-30).. ] {  
+        	if *nuc ==b'A'{
+        		bad += 1;
+        	}
+        }
+        if bad >20 {
+        	//eprintln!("Sequence rejected due to high polyA content \n{:?}", String::from_utf8_lossy(&read2.seq()) );
+        	return false
+        }
+
         true
     }
 
@@ -654,38 +668,10 @@ impl Analysis{
 
                 // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
                 //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
-
-                if mean_u8( seqrec.qual().unwrap() ) < report.min_quality {
-                	report.unknown +=1;
-                    //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec.seq()), mean_u8( seqrec.qual().unwrap()  ) );
-                    continue 'main;
-                }
-                if mean_u8( seqrec1.qual().unwrap() ) < report.min_quality {
-                	report.unknown +=1;
-                    //println!("filtered a read: {:?} ({})",std::str::from_utf8(&seqrec1.seq()), mean_u8( seqrec1.qual().unwrap() ) );
-                    continue 'main;
-                }
-
-                // totally unusable sequence
-                // as described in the BD rhapsody Bioinformatic Handbook
-                // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
-                if seqrec1.seq().len() < min_sizes[0] {
-                	report.unknown +=1;
-                	continue 'main;
-                }
-                if seqrec.seq().len() < min_sizes[1] {
-                	report.unknown +=1;
-                	continue 'main;
-                }
-                //let seq = seqrec.seq().into_owned();
-                for nuc in &seqrec1.seq()[pos[6]..pos[7]] {  
-                	if *nuc ==b'N'{
-                		report.unknown +=1;
-                		continue 'main;
-                	}
-                }
-
-                //let umi = Kmer::from( &seqrec1.seq()[52..60]).into_u64();
+                if ! Self::quality_control( &seqrec1, &seqrec, report.min_quality, pos, min_sizes){
+        			report.unknown +=1;
+        			continue 'main;
+        		}
                 
                 let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
