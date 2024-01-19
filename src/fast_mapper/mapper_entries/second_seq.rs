@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use core::fmt;
 
 
-use std::cmp::{max, Ord, Ordering, PartialOrd};
+use std::cmp::{max, Ord};
 
 const MATCH_SCORE: i32 = 1;
 const MISMATCH_SCORE: i32 = -1;

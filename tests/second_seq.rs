@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rustody::fast_mapper::mapper_entries::SecondSeq;
     #[test]
     fn test_second_seq_equality() {

@@ -397,7 +397,7 @@ mod tests {
          assert_eq!( 1,2, "there should be a sixth entry in the tool!")
       }
 
-      while let Some(entries) = tool.next(){
+      while let Some(_entries) = tool.next(){
          i+=1;
       }
       assert_eq!( i,45, "A total of 54 fragments!")
