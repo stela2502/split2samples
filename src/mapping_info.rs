@@ -6,10 +6,15 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::time::{Duration, SystemTime};
 
+
+
 /// MappingInfo captures all mapping data and is a way to easily copy this data over multiple analysis runs.
 pub struct MappingInfo{
 	/// reads that did not pass the filters
-	pub unknown:usize,
+	pub quality:usize,
+	pub length:usize,
+	pub n_s:usize,
+	pub poly_a:usize,
 	/// reads that had no cell id
     pub no_sample:usize,
     /// reads that have no match in the geneIds object
@@ -41,16 +46,6 @@ pub struct MappingInfo{
 
 impl MappingInfo{
 	pub fn new(log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles, ) -> Self{
-		let unknown = 0;
-		let no_sample = 0;
-		let no_data = 0;
-		let ok_reads = 0;
-		let cellular_reads = 0;
-		let pcr_duplicates = 0;
-		let split = 1_000_000;
-		let log_iter = 0;
-		let local_dup = 0;
-		let total = 0;
 		let absolute_start = SystemTime::now();
 		let realtive_start = None;
 		let single_processor_time = Duration::new(0,0);
@@ -58,20 +53,23 @@ impl MappingInfo{
 		let file_io_time = Duration::new(0,0);
 		let reads_log = BTreeMap::new();
 		let mut this = Self{
-			unknown,
-			no_sample,
-			no_data,
-			ok_reads,
-			cellular_reads,
-			pcr_duplicates,
-			split,
-			log_iter,
+			quality: 0,
+		    length: 0,
+		    n_s: 0,
+		    poly_a: 0,
+			no_sample: 0,
+			no_data: 0,
+			ok_reads: 0,
+			cellular_reads: 0,
+			pcr_duplicates: 0,
+			split: 1_000_000,
+			log_iter: 0,
 			log_writer,
 			min_quality,
 			max_reads,
 			ofile,
-			local_dup,
-			total,
+			local_dup: 0,
+			total: 0,
 			absolute_start,
 			realtive_start,
 			single_processor_time,
@@ -195,11 +193,17 @@ impl MappingInfo{
 
 		let pcr_duplicates = self.cellular_reads - reads_genes - reads_ab - reads_samples;
 
+		let unknown = self.quality + self.length + self.n_s + self.poly_a;
 	    let mut result = "\nSummary:\n".to_owned()
 	    	+format!(     "cellular   reads  : {} reads ({:.2}% of total)\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
 	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample.saturating_sub(self.no_data), (self.no_sample.saturating_sub(self.no_data) as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data, (self.no_data as f32 / self.total as f32) * 100.0).as_str()
-	    	+format!(     "N's or too short  : {} reads ({:.2}% of total)\n", self.unknown, (self.unknown as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     "filtered   reads  : {} reads ({:.2}% of total)\n", unknown, (unknown as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     " ->        polyA  : {} reads ({:.2}% of total)\n", self.poly_a, ( self.poly_a as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     " -> bad qualiity  : {} reads ({:.2}% of total)\n", self.quality, ( self.quality as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     " ->    too short  : {} reads ({:.2}% of total)\n", self.length, ( self.length as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     " ->          N's  : {} reads ({:.2}% of total)\n", self.n_s, ( self.n_s as f32 / self.total as f32) * 100.0).as_str()
+	    	+"\n"
 	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
 	    	+"\ncollected read counts:\n"
 	    	+self.read_types_to_string(vec!["expression reads", "antibody reads", "sample reads"]).as_str()

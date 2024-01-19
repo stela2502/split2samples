@@ -38,6 +38,13 @@ use crate::ofiles::Ofiles;
 
 static EMPTY_VEC: Vec<String> = Vec::new();
 
+#[derive(Debug)]
+enum FilterError {
+    Length,
+    PolyA,
+    Ns,
+    Quality,
+}
 
 fn mean_u8( data:&[u8] ) -> f32 {
     let this = b"!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
@@ -265,18 +272,18 @@ impl Analysis{
 	}
 
 
-    fn quality_control(   read1:&SequenceRecord, read2:&SequenceRecord, min_quality:f32, pos: &[usize;8], min_sizes: &[usize;2]  ) -> bool {
+    fn quality_control(   read1:&SequenceRecord, read2:&SequenceRecord, min_quality:f32, pos: &[usize;8], min_sizes: &[usize;2]  ) -> Result<(), FilterError> {
         
         // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
         //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
 
         if mean_u8( read1.qual().unwrap() ) < min_quality {
             //println!("filtered R1 by quality" );
-            return false
+            return Err(FilterError::Quality);
         }
         if mean_u8( read2.qual().unwrap() ) < min_quality {
             //println!("filtered R2 by quality" );
-            return false
+            return Err(FilterError::Quality);
         }
 
         // totally unusable sequence
@@ -284,34 +291,41 @@ impl Analysis{
         // GMX_BD-Rhapsody-genomics-informatics_UG_EN.pdf (google should find this)
         if read1.seq().len() < min_sizes[0] {
         	//println!("R1 too short (< {}bp)\n", min_sizes[0] );
-            return false
+            return Err(FilterError::Length);
         }
         if read2.seq().len() < min_sizes[1] {
         	//println!("R2 too short (< {}bp)\n",  min_sizes[1]);
-            return false
+            return Err(FilterError::Length);
         }
         //let seq = seqrec.seq().into_owned();
         for nuc in &read2.seq()[pos[6]..pos[7]] {  
             if *nuc ==b'N'{
             	//println!("N nucs\n");
-                return false
+                return Err(FilterError::Ns);
             }
         }
         // I have huge problems with reds that contain a lot of ploy A in the end
         // None of them match using blast - so I think we can savely just dump them.
         let mut bad = 0;
 
-        for nuc in &read2.seq()[ (read2.seq().len()-30).. ] {  
+        let mut last_a = false;
+
+        for nuc in &read2.seq()[ (read2.seq().len()-30).. ] {
         	if *nuc ==b'A'{
-        		bad += 1;
+        		if last_a{
+        			bad += 1;
+        		}
+        		last_a = true;
+        	}else {
+        		last_a = false;
         	}
         }
-        if bad >20 {
+        if bad >15 {
         	//eprintln!("Sequence rejected due to high polyA content \n{:?}", String::from_utf8_lossy(&read2.seq()) );
-        	return false
+        	return Err(FilterError::PolyA)
         }
 
-        true
+        Ok(())
     }
 
     fn analyze_paralel( &self, data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
@@ -515,12 +529,29 @@ impl Analysis{
 	                    continue 'main;
 	                }
 	            };
-        		if Self::quality_control( &read1, &read2, report.min_quality, pos, min_sizes){
-        			good_read_count +=1;
-        			good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
-        		}else {
-        			report.unknown +=1;
-        		}
+
+        		match Self::quality_control( &read1, &read2, report.min_quality, pos, min_sizes){
+        			Ok(()) => {
+        				good_read_count +=1;
+        				good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
+        			},
+        			Err(FilterError::PolyA)=> {
+        				report.poly_a +=1;
+        				continue 'main;
+        			},
+        			Err(FilterError::Quality) => {
+        				report.quality +=1;
+        				continue 'main;
+        			},
+        			Err(FilterError::Length) => {
+        				report.length +=1;
+        				continue 'main;
+        			},
+        			Err(FilterError::Ns) => {
+        				report.n_s +=1;
+        				continue 'main;
+        			}
+        		};
     		}
     		else {
     			report.stop_file_io_time();
@@ -646,7 +677,7 @@ impl Analysis{
         	if let Some(record1) = readereads.next() {
         		report.total += 1;
 
-        		let seqrec = match record2{
+        		let seqrec2 = match record2{
         			Ok( res ) => res,
         			Err(err) => {
         				eprintln!("could not read from R2:\n{err}");
@@ -668,10 +699,27 @@ impl Analysis{
 
                 // the quality measurements I get here do not make sense. I assume I would need to add lots of more work here.
                 //println!("The read1 mean quality == {}", mean_u8( seqrec.qual().unwrap() ));
-                if ! Self::quality_control( &seqrec1, &seqrec, report.min_quality, pos, min_sizes){
-        			report.unknown +=1;
-        			continue 'main;
-        		}
+                match Self::quality_control( &seqrec1, &seqrec2, report.min_quality, pos, min_sizes){
+        			Ok(()) => {
+        				//good_read_count +=1;
+        			},
+        			Err(FilterError::PolyA)=> {
+        				report.poly_a +=1;
+        				continue 'main;
+        			},
+        			Err(FilterError::Quality) => {
+        				report.quality +=1;
+        				continue 'main;
+        			},
+        			Err(FilterError::Length) => {
+        				report.length +=1;
+        				continue 'main;
+        			},
+        			Err(FilterError::Ns) => {
+        				report.n_s +=1;
+        				continue 'main;
+        			}
+        		};
                 
                 let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
@@ -686,7 +734,7 @@ impl Analysis{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec.seq(),  &mut tool ){
+		            	ok = match &self.antibodies.get_strict( &seqrec2.seq(),  &mut tool ){
 		            		Some(gene_id) =>{
 		            			report.iter_read_type( "antibody reads" );
 		                    	if gene_id.len() == 1 {
@@ -709,7 +757,7 @@ impl Analysis{
 		                };
 
 		                if ! ok{
-		                	ok = match &self.samples.get_strict( &seqrec.seq(),  &mut tool ){
+		                	ok = match &self.samples.get_strict( &seqrec2.seq(),  &mut tool ){
 		                		Some(gene_id) =>{
 		                			report.iter_read_type( "sample reads" );
 			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec.seq()) );
@@ -738,7 +786,7 @@ impl Analysis{
 			            if ! ok{
 			            	// multimapper are only allowed for expression reads - 
 			            	// if either sample ids or AB reads would have this it would be a library design fault!
-			            	match &self.genes.get( &seqrec.seq(),  &mut tool ){
+			            	match &self.genes.get( &seqrec2.seq(),  &mut tool ){
 			            		Some(gene_id) =>{
 			            			report.iter_read_type( "expression reads" );
 			            			if gene_id.len() == 1 {

@@ -1,3 +1,7 @@
+# 1.2.4
+
+PolyA containing R2 reads are now filtered out if a PolyA streatch of at least 15 A's is detected in the last 30 bp of a R2 read. 
+
 # 1.2.3
 
 Analysis of 10x data should now also be possible.

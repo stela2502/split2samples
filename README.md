@@ -580,3 +580,12 @@ zcat testData/output_one_cell/BD_Rhapsody_expression/features.tsv.gz | grep Cd3e
 This problem has been fixed. Cd3e is no longer "expressed" in this cell.
 
 And this problem re-surfaced later on after I spent so much time making the mapping more sensitive :-D - good I have a negative control here!
+
+
+## Zbtb16 expression
+
+Comparing my results to the results from the DB pipeline showed Zbtb16 as the gene with the lowest correlation between the tools.
+To debug this I selected two cells from the whole data which one had detected expression in both tools and one was only detected in Rustody.
+I had hoped my mapping was more sensitive, but it turned out it was these stragne PolA containing R2 reads (again).
+
+I have updated the PolyA detection in the newest version and also updated the report to be more phony of why a read was filtered out.

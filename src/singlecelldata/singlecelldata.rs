@@ -381,7 +381,11 @@ impl SingleCellData{
         }
 
         if genes.max_id  ==0 && ! names.is_empty() {
-            eprintln!( "None of the genes have data:\n{} ...", names[0..10].join( ", " ) );
+            let mut to = 10;
+            if names.len() < 10{
+                to = names.len() -1;
+            }
+            eprintln!( "None of the genes have data:\n{} ...", names[0..to].join( ", " ) );
         }
         //else { println!("{} genes requested and {} with data found", names.len(), genes.max_id); }
         if names.len() != genes.max_id{
