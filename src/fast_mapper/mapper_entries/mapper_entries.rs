@@ -22,7 +22,7 @@ impl MapperEntry{
 			map,
 			only :0,
 			hamming_cut :2,
-			needleman_wunsch_cut: 20
+			needleman_wunsch_cut: 25
 		}
 	}
 
@@ -108,7 +108,7 @@ impl MapperEntry{
 			//eprintln!("Distance is {dist}");
 			//if dist <= self.hamming_cut {
 			if dist <= self.needleman_wunsch_cut {
-				println!( "{seq} did match to \n{} ({}) should that be right?", self.map[i].0, dist);
+				//println!( "{seq} did match to \n{} ({}) should that be right?", self.map[i].0, dist);
 				ret.push( &self.map[i].1 );
 				dists.push( dist );
 				if dist < min_dist{
