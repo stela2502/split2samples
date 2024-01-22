@@ -14,9 +14,9 @@ static EMPTY_VEC: Vec<String> = Vec::new();
 #[derive(Parser)]
 #[clap(version = "0.0.3", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
-    /// the input R1 reads file
+    /// the dna to seach for
     #[clap(short, long)]
-    sequence: String,
+    dna: String,
     /// the fasta database containing the genes
     #[clap(short, long)]
     expression: Option<String>,
@@ -135,18 +135,63 @@ fn main() {
 	    }
 
 	}
+	let mut id = 0;
+	samples.change_start_id( antibodies.last_count );
+	    if  opts.specie.eq("human") {
+	        // get all the human sample IDs into this.
+	        // GTTGTCAAGATGCTACCGTTCAGAGATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG
+	        //                        b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG"
+	        // Seams they have introduced new sample ids, too....
+	        let sequences = [ b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG",
+	        b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 
+	        b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC",
+	        b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT",
+	        b"GTGATCCGCGCAGGCACACATACCGACTCAGATGGGTTGTCCAGG", b"GCAGCCGGCGTCGTACGAGGCACAGCGGAGACTAGATGAGGCCCC",
+	        b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG" ];
 
+	        for seq in sequences{
+	        	//seq.reverse();
+	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	seq_ext.extend_from_slice( seq );
+	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	//sample_names.push( format!("Sample{id}") );
+	        	id +=1;
+	        }
+	    }
+	    else if opts.specie.eq("mouse") {
+	        // and the mouse ones
+	        let sequences = [b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
+	        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
+	        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
+	        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
+	        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
+	        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
+
+	        for seq in sequences{
+	        	//seq.reverse();
+	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	//seq_ext.extend_from_slice( seq );
+	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	//sample_names.push( format!("Sample{id}") );
+	        	id +=1;
+	        }
+
+	    } else {
+	        println!("Sorry, but I have no primers for species {}", &opts.specie);
+	        std::process::exit(1)
+	    }
 
 	// to understand the mapping a little better I now need the index written to a file
-	let _ = genes.write_index_txt(  format!("{}/genes.index.txt", &opts.outpath) );
-	let _ = antibodies.write_index_txt(  format!("{}/antibodies.index.txt", &opts.outpath) );
-	let _ = samples.write_index_txt(  format!("{}/samples.index.txt", &opts.outpath) );
+	let _ = genes.write_index_txt(  format!("{}/genes_index", &opts.outpath) );
+	let _ = antibodies.write_index_txt(  format!("{}/antibodies_index", &opts.outpath) );
+	let _ = samples.write_index_txt(  format!("{}/samples_index", &opts.outpath) );
 
-	eprintln!("Ill check this sequence: '{}'", &opts.sequence );
+	eprintln!("Ill check this dna: '{}'", &opts.dna );
 
 	let mut collected:HashMap::<usize, usize>= HashMap::new();
 
-	let mut ok = match antibodies.get( &opts.sequence.as_bytes(), &mut tool ){
+	let mut ok = match antibodies.get( &opts.dna.as_bytes(), &mut tool ){
 		Some(gene_ids) =>{
         	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
         	//eprintln!("I got an ab id {gene_id}");
@@ -171,7 +216,7 @@ fn main() {
 		}
 	};
 	if ! ok{
-		ok = match samples.get( &opts.sequence.as_bytes(),  &mut tool ){
+		ok = match samples.get( &opts.dna.as_bytes(),  &mut tool ){
 			Some(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");
@@ -198,7 +243,7 @@ fn main() {
 	}
 
 	if ! ok{
-		let _ = match genes.get( &opts.sequence.as_bytes(),  &mut tool ){
+		let _ = match genes.get( &opts.dna.as_bytes(),  &mut tool ){
 			Some(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");

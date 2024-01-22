@@ -304,6 +304,8 @@ impl Analysis{
                 return Err(FilterError::Ns);
             }
         }
+
+        /*
         // I have huge problems with reds that contain a lot of ploy A in the end
         // None of them match using blast - so I think we can savely just dump them.
         let mut bad = 0;
@@ -324,6 +326,7 @@ impl Analysis{
         	//eprintln!("Sequence rejected due to high polyA content \n{:?}", String::from_utf8_lossy(&read2.seq()) );
         	return Err(FilterError::PolyA)
         }
+        */
 
         Ok(())
     }

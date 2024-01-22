@@ -8,6 +8,7 @@ pub struct MapperEntry{
 	pub map:Vec::<(SecondSeq, NameEntry)>, // the data storage
 	only:usize,
 	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
+	needleman_wunsch_cut: u32,
 }
 
 impl MapperEntry{
@@ -17,12 +18,11 @@ impl MapperEntry{
 			all = 4
 		}
 		let map = Vec::<(SecondSeq, NameEntry)>::with_capacity(all);
-		let only =0;
-		let hamming_cut = 2;
 		Self{
 			map,
-			only,
-			hamming_cut,
+			only :0,
+			hamming_cut :2,
+			needleman_wunsch_cut: 25
 		}
 	}
 
@@ -55,6 +55,7 @@ impl MapperEntry{
 		for i in 0..self.map.len() {
 			if self.map[i].0.same(&seq) {
 				self.only = 0;
+				//println!("Here I have a duplicate second seq! {seq:?}");
 				return self.map[i].1.add( id, classes.clone())
 			}
 		}
@@ -92,41 +93,51 @@ impl MapperEntry{
 		None
 	}
 
-	/*
-	pub fn get_mut( &mut self,seq:&SecondSeq ) -> Option<Vec<&mut NameEntry>> {
-
-		for i in 0..self.map.len() {
-			if &self.map[i].0 == seq {
-				// if self.map[i].1.data.len() > 1{
-				// 	eprintln!("Ooops - we have a get in more than one gene: {:?}", self.map[i].1.data);
-				// }
-				return Some( &mut self.map[i].1 )
-			}
-		}
-		// now we have an initial match, but no secondary.
-		None
-	}
-	*/
 	/// finds the most likely matching entry in our set of sequences.
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
 	pub fn find (&self, seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
 		let mut ret : Vec::<&NameEntry> = vec![];
+		let mut dists : Vec::<u32> = vec![];
+		let mut min_dist: u32 = u32::MAX;
 		for i in 0..self.map.len() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
-			if  self.map[i].0.fuzzy_match( seq , self.hamming_cut) {
+			//let dist = self.map[i].0.hamming_distance( seq );
+			let dist = self.map[i].0.needleman_wunsch( seq );
+			//eprintln!("Distance is {dist}");
+			//if dist <= self.hamming_cut {
+			if dist <= self.needleman_wunsch_cut {
 				//eprintln!( "{seq:?} did match to {:?} should that be right?", self.map[i].0);
-				ret.push(&self.map[i].1 )
+				ret.push( &self.map[i].1 );
+				dists.push( dist );
+				if dist < min_dist{
+					min_dist = dist
+				}
 			}
 		}
-		if ret.len() > 0{
-			return Some(ret);
+		return match ret.len() {
+			0 =>{
+				//eprintln!("I find nothing here!");
+				None
+			}
+			1 =>{
+				//eprintln!("I find exactly one!");
+				Some(ret)
+			},
+			len =>{
+				let mut ret2: Vec::<&NameEntry> = vec![];
+				for i in 0..len{
+					if dists[i] == min_dist{
+						ret2.push( ret[i] )
+					}
+					
+				}
+				//eprintln!("I found multiple and {:?} with the lowest difference {}",ret2, min_dist );
+				Some(ret2)
+			}
 		}
-		// so now we could have a frameshift due to a long stretch of a single nucleotide
-		// if necessary implement that later on.
-		// For now I think we should just stop here.
-		return None
+
 	}
 
 	pub fn print(&self) {

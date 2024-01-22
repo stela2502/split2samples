@@ -270,7 +270,7 @@ impl FastMapper{
         //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
             //eprint!(".");
-            eprintln!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short? {} bp", &name.as_str(), classes, seq.len() );
+            println!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short? {} bp", &name.as_str(), classes, seq.len() );
         }
         /*else {
             println!("I added {i} mappper entries for gene {name}");
@@ -339,14 +339,14 @@ impl FastMapper{
             }
             
             if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
-                //eprintln!("I have added a sequence! {:#b}+{:?} -> {gene_id} & {classes:?} ",entries.0, entries.1 );
+                //println!("I have added a sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1 );
                 self.pos += 1;
                 self.names_count[gene_id] +=1;
                 if i < self.names_count[gene_id]{
                     i = self.names_count[gene_id];
                 }
             }else {
-                //eprintln!("NOT - I have added a sequence!");
+                //println!("NOT added this sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1);
                 self.neg +=1
             }
             
@@ -357,7 +357,7 @@ impl FastMapper{
         //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
             //eprint!(".");
-            eprintln!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short or a duplicate? {} bp", &name.as_str(), classes, seq.len() );
+            println!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short or a duplicate? {} bp", &name.as_str(), classes, seq.len() );
         }
         /*else {
             println!("I added {i} mappper entries for gene {name}");
@@ -457,15 +457,16 @@ impl FastMapper{
             return false
         }
 
-        // let mut report = false;
-        // if genes.len() > 2{
-        //     report = true;
-        //     eprintln!("Lots of genes matched here?: {genes:?}");
-        //     for  (gene_id, _level) in genes.keys(){
-        //         eprint!(" {}", self.names_store[*gene_id] );
-        //     }
-        //     eprint!("\n");
-        // }
+        /*let mut report = false;
+        if genes.len() > 2{
+            report = true;
+            eprintln!("Lots of genes matched here?: {genes:?}");
+            for  (gene_id, _level) in genes.keys(){
+                eprint!(" {}", self.names_store[*gene_id] );
+            }
+            eprint!("\n");
+        }*/
+
         let most_matches = genes.values().max().unwrap_or(&0);
         //eprintln!("I got this as most matches {most_matches}");
         
@@ -661,6 +662,7 @@ impl FastMapper{
         let mut matching_geneids = Vec::< usize>::with_capacity(10);
 
         // entries is a Option<(u16, u64, usize)
+
         /*let mut i = 0;
         let mut small_seq :String = Default::default();
         let mut large_seq: String = Default::default();*/
@@ -671,13 +673,18 @@ impl FastMapper{
                 // the 8bp bit is a match
 
                 //eprintln!("We are at iteration {i}");
+                if &entries.1.1 < &20_u8{
+                    //will never map as the mapper fails every sequence below 20 bp - too many false positives!
+                    continue
+                }
 
                 /*small_seq.clear();
                 large_seq.clear();
                 tool.u16_to_str( 8, &entries.0, &mut small_seq);
                 tool.u64_to_str( entries.1.1.into(), &entries.1.0, &mut large_seq);
-                eprintln!("We are on iteration {i} with seq {:?}-{:?})", small_seq, large_seq);
-                */
+                println!("We are on iteration {i} with seq {}-{} ( {}-{})", small_seq, large_seq, &entries.0, &entries.1);
+                i +=1;*/
+                
 
                 // if matching_geneids.len() == 1 && i > 3 {
                 //     //eprintln!("we have one best gene identified! {}",matching_geneids[0]);
@@ -690,19 +697,19 @@ impl FastMapper{
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
 
                     Some( gene_ids ) => {
-                        //eprintln!("Got some gene ids (one?): {:?}", gene_ids);
+                        //println!("Got some gene ids (one?): {:?}", gene_ids);
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
                                 match genes.get_mut( &gid) {
                                     Some(gene_count) => {
-                                        //eprintln!( "Adding to existsing {} with count {gene_count}+1", gid.0);
+                                        //println!( "Adding to existsing {} with count {gene_count}+1", gid.0);
                                         *gene_count +=1;
                                         if *gene_count == 4 && genes.len() ==1 {
                                             break 'main;
                                         }
                                     },
                                     None => {
-                                        //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
+                                        //println!( "Adding a new gene {} with count 1 here!", gid.0);
                                         genes.insert( gid.clone(), 1);
                                     },
                                 };
@@ -712,7 +719,7 @@ impl FastMapper{
                     },
                     None => {
                         
-                        //eprintln!("Got one no gene id in the first run:");
+                        //eprintln!("Got no gene id in the first run get() run -> find() instead:");
                         match self.mapper[entries.0 as usize].find(  &entries.1 ){
                             Some( gene_ids ) => {
                                 //eprintln!("But in the second I got one: {gene_ids:?}");
@@ -735,7 +742,8 @@ impl FastMapper{
                                     }
                                 }
                             },
-                            None => {        
+                            None => {  
+                                //eprintln!("And none in the find() either.");
                                 //no_32bp_match +=1;
                             },
                         }
@@ -756,17 +764,17 @@ impl FastMapper{
             return None
         }
         
-        let bad_gene = "Zbtb16";
-        let bad = self.get_id( bad_gene.to_string()) ;
+        /*let bad_gene = "Ighm";
+        let bad = self.get_id( bad_gene.to_string()) ;*/
         
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
             // Cd3e <- keep that to fiond this place back
             //println!("I have these genes: {genes:?} And am returning: {:?}",  matching_geneids);
-            if matching_geneids[0] == bad {
+            /*if matching_geneids[0] == bad {
                 println!("read mapping to {} - should not happen here!: {:?}\n{:?}", bad_gene, self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
                 println!("This is our total matching set: {:?}", genes);
-            }
+            }*/
             return Some( matching_geneids )
         }
         if matching_geneids.len() > 2{
@@ -1080,7 +1088,7 @@ impl FastMapper{
             nucl.clear();
             self.tool.u64_to_str( 8, &(i as u64), &mut nucl ); 
             if self.mapper[idx].has_data(){
-                match write!(ofile.buff1, "\ni: {} {} ", i, nucl ){
+                match write!(ofile.buff1, "\ni: {} ({:016b}) {} ", i, i,nucl ){
                     Ok(_) => (), 
                     //Ok(_) => println!("8bp mapper: {:b} binary -> {:?} bytes",i, &i.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("i could not be written"),

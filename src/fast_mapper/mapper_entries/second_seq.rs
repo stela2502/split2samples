@@ -41,7 +41,13 @@ impl PartialEq for SecondSeq {
         if length < 20 {
             return false
         }
-        mask = (1 << (length as u64) *2 ) - 1;
+
+        if length >= 32 {
+            mask = u64::MAX;
+            // Rest of your code using the mask
+        } else {
+            mask = (1 << (length as u64) *2 ) - 1;
+        }
         //eprintln!("I'll compare {:b} to {:b}", (self.0 & mask) , (other.0 & mask));
         (self.0 & mask) == (other.0 & mask)
     }
@@ -58,7 +64,7 @@ impl Hash for SecondSeq {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for SecondSeq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(u64: {:b}, u8: {})", self.0, self.1)
+        write!(f, "SecondSeq (u64: {:b} or {}, u8: {})", self.0, self.to_string().as_str(), self.1)
     }
 }
 
@@ -66,13 +72,39 @@ impl fmt::Display for SecondSeq {
 
 impl SecondSeq {
 
+    pub fn to_string(&self) -> String {
+        let mut data = String::new();
+        //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
+        for i in 0..self.1 {
+            // Use a mask (0b11) to extract the least significant 2 bits
+            let ch = match (self.0 >> (i * 2)) & 0b11 {
+                0b00 => "A",
+                0b01 => "C",
+                0b10 => "G",
+                0b11 => "T",
+                _ => "N",
+            };
+            data += ch;
+            
+            //println!("{ch} and loc {loc:b}");
+        }
+
+        //println!("\nMakes sense? {:?}", data);
+        data
+    }
+
     fn max3<T: Ord>(a: T, b: T, c: T) -> T {
         max(a, max(b, c))
     }
-    pub fn needleman_wunsch(&self, other: &SecondSeq ) -> i32 {
 
-        let rows: usize = (self.1 + 1) as usize;
-        let cols: usize = (other.1 + 1) as usize;
+    /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
+    /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
+    pub fn needleman_wunsch(&self, other: &SecondSeq ) -> u32 {
+
+        let size = self.min_length(other);
+
+        let rows: usize = size;
+        let cols: usize = size;
 
         let mut matrix = vec![vec![Cell { score: 0, direction: Direction::Diagonal }; cols]; rows];
 
@@ -115,21 +147,19 @@ impl SecondSeq {
         }
 
         // Uncomment the following lines to print the alignment matrix
-        for i in 0..rows {
+        /*for i in 0..rows {
             for j in 0..cols {
                 print!("{:4} ", matrix[i][j].score);
             }
             println!();
-        }
+        }*/
 
-        matrix[rows - 1][cols - 1].score
+        (size as i32 - matrix[rows - 1][cols - 1].score).abs() as u32
     }
 
-    /// calculate the base flips between two u64 sequences
-    /// stops after having detected 4 different bases.
-    pub fn hamming_distance(self, other: &SecondSeq) -> u32 {
-        
-        //let mask:u64;
+    /// returns the minimal size the two SecondSeq obejcts are defined for
+    /// Something between 32 and 0 bp.
+    pub fn min_length( &self, other: &SecondSeq) -> usize {
         let size:usize;
         if other.1 > self.1{
             size = self.1 as usize;
@@ -138,6 +168,15 @@ impl SecondSeq {
             size = other.1 as usize;
             //mask = (1 << (other.1 as u64) *2 ) - 1;
         }
+        return size
+    }
+
+    /// calculate the base flips between two u64 sequences
+    /// stops after having detected 4 different bases.
+    pub fn hamming_distance(self, other: &SecondSeq) -> u32 {
+        
+        //let mask:u64;
+        let size = self.min_length(other);
 
         let mut a: u64;
         let mut b: u64;
@@ -153,6 +192,7 @@ impl SecondSeq {
                  break;
             }
         }
+        //println!("hamming dist was {ret}");
         return ret
         
         /*
@@ -184,15 +224,16 @@ impl SecondSeq {
         self.0 == other.0
     }
 
-    pub fn print_second_seq(seq: &SecondSeq) {
+    pub fn print_second_seq(&self) {
         println!("Contents of SecondSeq:");
-        println!("u64: {:b}", seq.0);
-        println!("{} sig bp", seq.1);
+        println!("u64: {:b} or {:?}", self.0, self.to_string() );
+        println!("{} sig bp", self.1);
     }
 
     pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:u32 ) -> bool {
 
-        return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
+        //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
+        return self.needleman_wunsch( other ) <= max_dist.try_into().unwrap()
     }
     pub fn to_le_bytes(&self) -> [u8; std::mem::size_of::<u64>() + std::mem::size_of::<u8>()] {
         let mut bytes = [0; std::mem::size_of::<u64>() + std::mem::size_of::<u8>()];

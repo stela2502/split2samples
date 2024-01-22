@@ -18,23 +18,23 @@ mod tests {
 
 
 
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGG".to_vec(), "Gene1".to_string(), EMPTY_VEC.clone() );
-        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
+        mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), "Ulk2".to_string(), EMPTY_VEC.clone() );
+        mapper.names4sparse.insert( "Ulk2".to_string(), geneid );
 
         //ATCCCATCCTTCATTGTTCGCCTGGA #0
         //CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC #1
         //CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC #2
         //...........................................................................
 
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
-            "Gene2".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"CGAGGCTGTGTATTACTGTGCCGTGGGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagtgggaaggaGAAAAGTCGTATACAGATTTGGGATCTTAGGCTCTGGAGACATTCAG".to_vec(), 
+            "Vpreb1".to_string(),EMPTY_VEC.clone() );
         geneid +=1;
-        mapper.names4sparse.insert( "Gene1".to_string(), geneid );
+        mapper.names4sparse.insert( "Vpreb1".to_string(), geneid );
 
         //assert_eq!( mapper.with_data, 51 );
 
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(vec![0]) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(vec![1]) );
+        assert_eq!(  mapper.get( b"ATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTC", &mut tool ), Some(vec![0]) );
+        assert_eq!(  mapper.get( b"AAAAGAAGAGGAtggagagggagtgggaaggaGAAAAGTCG", &mut tool ), Some(vec![1]) );
 
         //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
@@ -130,8 +130,8 @@ mod tests {
     #[test]
     fn check_samples() {
         let mut mapper = FastMapper::new( 32, 10 );
-        let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
-        //let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        let sample2 =  b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        //let sample_0 =                           b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG";
         let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
         let sequences = [
         b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
@@ -187,7 +187,7 @@ mod tests {
         println!("\n");
         assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![11]) );
         println!("\n");
-        assert_eq!( mapper.get_strict( sample2, &mut tool ), None );
+        assert_eq!( mapper.get( sample2, &mut tool ), None );
         println!("\n");
         assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![10]) );
         println!("\n");

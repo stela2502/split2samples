@@ -115,13 +115,13 @@ impl IntToStr {
                 return Some(false);
             }
         }
-        if self.checker.len() < 2{
-            //println!( "kmer is too simple/not enough diff nucs" );
-            return Some(false);
-        }
+        // if self.checker.len() < 2{
+        //     //println!( "kmer is too simple/not enough diff nucs" );
+        //     return Some(false);
+        // }
         
         for value in self.checker.values(){
-            if *value as f32 / (to-start) as f32 > 0.7 {
+            if *value as f32 / (to-start) as f32 == 1.0 {
                 //println!( "sequence from {start} to {to} is too simple/too many nucs same {value} {start} {to}" );
                 return Some(false);
             } 
@@ -274,7 +274,7 @@ impl IntToStr {
     			}; // shift 4 bp
     		},
     		None => {
-    			if self.shifted < 5{
+    			if self.shifted < 8{
     				//println!("I am shifting on bp");
     				match self.shift(){
     					Some(_) => { return self.next() },

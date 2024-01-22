@@ -71,5 +71,16 @@ mod tests {
         let seq7 = SecondSeq(0b101010, 15);
         assert_eq!( seq1.needleman_wunsch( &seq7 ), 5 );
     }
+
+    #[test]
+    fn test_to_string() {
+
+        let seq = "TGGTATCTTTTACTTACCTGCTTGAATACTTG".to_string();
+        let seq_u64 = 13632604658164817131_u64;
+        let obj = SecondSeq(seq_u64, 32);
+
+        assert_eq!( obj.to_string(), seq );
+        
+    }
     
 }
