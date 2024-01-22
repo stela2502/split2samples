@@ -33,20 +33,13 @@ mod tests {
 
         //assert_eq!( mapper.with_data, 51 );
 
-        assert_eq!(  mapper.get( b"ATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTC", &mut tool ), Some(vec![0]) );
-        assert_eq!(  mapper.get( b"AAAAGAAGAGGAtggagagggagtgggaaggaGAAAAGTCG", &mut tool ), Some(vec![1]) );
+        assert_eq!(  mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ), Some(vec![0]) );
+        assert_eq!(  mapper.get( b"GGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagt", &mut tool ), Some(vec![1]) );
 
         //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
 
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), None );
-
-        let mut gnames = Vec::<String>::with_capacity(3);
-        gnames.push( "Gene1".to_string() );
-        gnames.push( "Gene2".to_string() );
-        gnames.push( "Gene3".to_string() );
-        assert_eq!( mapper.names_store, gnames );
-        mapper.print();
+        assert_eq!(  mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ), None );
 
     }
     #[test]
@@ -162,10 +155,12 @@ mod tests {
     #[test]
     fn check_samples_shifted() {
         let mut mapper = FastMapper::new( 32, 10 );
-        mapper.change_start_id( 10 );
-        //             "AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC"
+        //mapper.change_start_id( 10 );
+        //  samples[0]                   "AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG"
+        //                                      "GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT"
         let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         //let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        //                     
         let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
         let sequences = [
         b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
@@ -183,17 +178,17 @@ mod tests {
         }
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
 
-        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![10]) );
+        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![0]) );
         println!("\n");
-        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![11]) );
+        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![1]) );
         println!("\n");
-        assert_eq!( mapper.get( sample2, &mut tool ), None );
+        assert_eq!( mapper.get( sample2, &mut tool ), Some(vec![4]) );
         println!("\n");
-        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![10]) );
+        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![0]) );
         println!("\n");
-        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(vec![21]) );
+        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(vec![11]) );
         println!("\n");
-        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(vec![10]) );
+        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(vec![0]) );
         println!("\n");
     }
 

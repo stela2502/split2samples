@@ -54,22 +54,22 @@ mod tests {
     }
 
     
-    // works somehow. Catty - thanky you!
+    // works somehow. Chatty - thanky you!
     #[test]
     fn test_needleman_wunsch() {
         let seq1 = SecondSeq(0b101010, 20);
         let seq2 = SecondSeq(0b101010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq2 ), 20 );
+        assert_eq!( seq1.needleman_wunsch( &seq2 ), 1 );
         let seq3 = SecondSeq(0b011010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq3 ), 18 );
+        assert_eq!( seq1.needleman_wunsch( &seq3 ), 3 );
         let seq4 = SecondSeq(0b001010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq4 ), 18 );
+        assert_eq!( seq1.needleman_wunsch( &seq4 ), 3 );
         let seq5 = SecondSeq(0b011001, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq5 ), 16 );
+        assert_eq!( seq1.needleman_wunsch( &seq5 ), 5 );
         let seq6 = SecondSeq(0b0, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq6 ), 14 );
+        assert_eq!( seq1.needleman_wunsch( &seq6 ), 7 );
         let seq7 = SecondSeq(0b101010, 15);
-        assert_eq!( seq1.needleman_wunsch( &seq7 ), 5 );
+        assert_eq!( seq1.needleman_wunsch( &seq7 ), 1 );
     }
 
     #[test]

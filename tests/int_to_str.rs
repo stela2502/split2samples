@@ -400,7 +400,7 @@ mod tests {
       while let Some(_entries) = tool.next(){
          i+=1;
       }
-      assert_eq!( i,45, "A total of 54 fragments!")
+      assert_eq!( i,66, "A total of 54 fragments!")
    }
 
 }

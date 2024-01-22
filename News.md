@@ -1,3 +1,17 @@
+# 1.2.5
+
+Mapper has significantly improved: both the false positive as well as false negative rate had improved.
+The improvement was possible by using a needleman-wunsch inspired algorithm.
+The 32 bp matches are now tolerant to not only bp mismatches, but also insertions and deletions.
+
+There is no longer a need to exclude polyA containing reads.
+
+Compared to the mere bp replacement matching we e.g. find almost 10x more reads from the Ighm locus in the test data.
+And none of the reads I have seen so far looked like a not Ighm transcript. All I checked were also mapped to the Ighm transcripts using NCBI BLAST (I only checked the strange looking ones).
+
+I have added the Ighm reads that were detected with both settings to this repository.
+
+
 # 1.2.4
 
 PolyA containing R2 reads are now filtered out if a PolyA streatch of at least 15 A's is detected in the last 30 bp of a R2 read. 

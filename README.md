@@ -14,6 +14,16 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
+Mapper has significantly improved: both the false positive as well as false negative rate had improved.
+The improvement was possible by using a needleman-wunsch inspired algorithm.
+The 32 bp matches are now tolerant to not only bp mismatches, but also insertions and deletions.
+
+Compared to the mere bp replacement matching we e.g. find almost 10x more reads from the Ighm locus in the test data.
+And none of the reads I have seen so far looked like a not Ighm transcript. All I checked were also mapped to the Ighm transcripts using NCBI BLAST (I only checked the strange looking ones).
+
+I have added the Ighm reads that were detected with both settings to this repository.
+
+
 quantify_rhapsody has finally gotten a muti processor upgrade: quantify_rhapsody_multi.
 I have not tested it out completetly now, but am confident it works correctly. (Final last words - I know). Just the PCR duplicates are not collected correctly as they can now only be measured in each chunk of the data. But the UMIs is all this tool does measure.
 So even if the PCR duplicates are not counted correctly they will nevertheless be excluded from the final data.

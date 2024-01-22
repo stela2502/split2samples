@@ -147,12 +147,12 @@ impl SecondSeq {
         }
 
         // Uncomment the following lines to print the alignment matrix
-        /*for i in 0..rows {
+        for i in 0..rows {
             for j in 0..cols {
                 print!("{:4} ", matrix[i][j].score);
             }
             println!();
-        }*/
+        }
 
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as u32
     }
