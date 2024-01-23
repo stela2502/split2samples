@@ -44,7 +44,7 @@ impl CellIndex for CellIds{
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
         let max:u32 = 384;
-        let fuzziness = 7;
+        let fuzziness = 2;
         //let max:u32 = self.c1s.len() as u32;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
         
@@ -75,11 +75,12 @@ impl CellIndex for CellIds{
                         *c1 * max * max
                     },
                 None => {
-                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
-                    for i in 0..self.c1s.len(){
-                        if ( km1 ^ self.c1s[i]) < fuzziness {
-                            // could be as little as one bd change - max two
-                            good.push( (i, ( km1 ^ self.c1s[i])  as usize ) );
+                    let mut good = Vec::<(usize, u32)>::with_capacity(3);
+                    for i in 0..self.c1s.len(){ 
+                        let dist = self.hamming_distance( &km1, &self.c1s[i].clone() );
+                        if dist < fuzziness {
+                            // only one bd substitution is allowed
+                            good.push( (i, dist ) );
                         }
                     }
                     if let Some(c1) = Self::best_entry( good ){
@@ -101,11 +102,12 @@ impl CellIndex for CellIds{
                     *c2 * max 
                 },
                 None => {
-                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                    let mut good = Vec::<(usize,u32)>::with_capacity(3);
                     for i in 0..self.c2s.len(){
-                        if ( km2 ^ self.c2s[i]) < fuzziness {
+                        let dist = self.hamming_distance( &km2, &self.c2s[i].clone() );
+                        if dist  < fuzziness {
                             // could be as little as one bd change - max two
-                            good.push( (i, ( km2 ^ self.c2s[i])  as usize)  );
+                            good.push( (i, dist)  );
                         }
                     }
                     if let Some(c2) = Self::best_entry( good ){
@@ -127,11 +129,12 @@ impl CellIndex for CellIds{
                     *c3 
                 },
                 None => {
-                    let mut good = Vec::<(usize,usize)>::with_capacity(3);
+                    let mut good = Vec::<(usize,u32)>::with_capacity(3);
                     for i in 0..self.c3s.len(){
-                        if ( km3 ^ self.c3s[i]) < fuzziness {
+                        let dist = self.hamming_distance( &km3, &self.c3s[i].clone() );
+                        if dist < fuzziness {
                             // could be as little as one bp change - max two
-                            good.push( (i, ( km3 ^ self.c3s[i])  as usize)  );
+                            good.push( (i, dist ) );
                         }
                     }
                     if let Some(c3) = Self::best_entry( good ){
@@ -156,6 +159,53 @@ impl CellIndex for CellIds{
 
 // here the functions
 impl CellIds{
+
+    /// calculate the base flips between two u64 sequences
+    /// stops after having detected 4 different bases.
+    pub fn hamming_distance(&self, this:&u64, other: &u64) -> u32 {
+        
+        //let mask:u64;
+        let size = 9;
+
+        let mut a: u64;
+        let mut b: u64;
+        let mut ret: u32 = 0;
+        for i in 0..size{
+            a = (this >> (i * 2)) & 0b11;
+            b = (other >> (i * 2)) & 0b11;
+            if a != b {
+                ret +=1;
+            }
+            //ret += HAMMING_LOOKUP[(a ^ b) as usize];
+            if ret == 4{
+                 break;
+            }
+        }
+        //println!("hamming dist was {ret}");
+        return ret
+        
+        /*
+        // quite much slower!
+        let size = usize::min(self.1 as usize, other.1 as usize);
+
+        let mut a_shifted = self.0;
+        let mut b_shifted = other.0;
+        
+        let mut ret: u32 = 0;
+
+        for _ in 0..size {
+            let a_value = a_shifted & 0b11;
+            let b_value = b_shifted & 0b11;
+            if a_value != b_value {
+                ret +=1;
+            }
+            a_shifted >>= 2;
+            b_shifted >>= 2;
+        }
+
+        ret
+        */
+    }
 
     pub fn new( ver:&String )-> Self {
 
@@ -544,7 +594,7 @@ impl CellIds{
 
     /// returns the first entry in the tuple that has the lowest second entry
     /// and only if there is only one tuple with the lowest second entry 
-    fn best_entry( data:Vec<(usize, usize)> ) -> Option<u32>{
+    fn best_entry( data:Vec<(usize, u32)> ) -> Option<u32>{
         if data.len() == 0 {
             return None
         }
@@ -552,15 +602,15 @@ impl CellIds{
             return Some(data[0].0 as u32)
         }
         else {
-            let mut counter = vec![0,0,0];
-            let mut min = usize::MAX;
+            let mut counter = vec![0_u32,0_u32,0_u32];
+            let mut min = u32::MAX;
             for ( _i, mismatch ) in &data{
                 if min > *mismatch{
                     min = *mismatch;
                 }
-                counter[*mismatch] +=1;
+                counter[*mismatch as usize] +=1;
             }
-            if counter[min] == 1{
+            if counter[min as usize] == 1{
                 // this is great - we have a minimum overlap and that has exactly one match!
                 for ( i, mismatch ) in &data{
                     if *mismatch == min{
