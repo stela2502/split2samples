@@ -764,7 +764,7 @@ impl FastMapper{
             return None
         }
         
-        /*let bad_gene = "Ighm";
+        /*let bad_gene = "Adgrg3";
         let bad = self.get_id( bad_gene.to_string()) ;*/
         
         // check if there is only one gene //

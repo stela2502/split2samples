@@ -8,7 +8,7 @@ pub struct MapperEntry{
 	pub map:Vec::<(SecondSeq, NameEntry)>, // the data storage
 	only:usize,
 	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
-	needleman_wunsch_cut: u32,
+	needleman_wunsch_cut: f32,
 }
 
 impl MapperEntry{
@@ -22,7 +22,7 @@ impl MapperEntry{
 			map,
 			only :0,
 			hamming_cut :2,
-			needleman_wunsch_cut: 25
+			needleman_wunsch_cut: 0.7
 		}
 	}
 
@@ -99,8 +99,8 @@ impl MapperEntry{
 	/// If this becomes necessary it can be added later.
 	pub fn find (&self, seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
 		let mut ret : Vec::<&NameEntry> = vec![];
-		let mut dists : Vec::<u32> = vec![];
-		let mut min_dist: u32 = u32::MAX;
+		let mut dists : Vec::<f32> = vec![];
+		let mut min_dist: f32 = f32::MAX;
 		for i in 0..self.map.len() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			//let dist = self.map[i].0.hamming_distance( seq );

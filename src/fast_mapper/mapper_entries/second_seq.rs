@@ -99,7 +99,7 @@ impl SecondSeq {
 
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
-    pub fn needleman_wunsch(&self, other: &SecondSeq ) -> u32 {
+    pub fn needleman_wunsch(&self, other: &SecondSeq ) -> f32 {
 
         let size = self.min_length(other);
 
@@ -154,7 +154,7 @@ impl SecondSeq {
             println!();
         }*/
 
-        (size as i32 - matrix[rows - 1][cols - 1].score).abs() as u32
+        (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
 
     /// returns the minimal size the two SecondSeq obejcts are defined for
@@ -230,7 +230,7 @@ impl SecondSeq {
         println!("{} sig bp", self.1);
     }
 
-    pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:u32 ) -> bool {
+    pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
 
         //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
         return self.needleman_wunsch( other ) <= max_dist.try_into().unwrap()
