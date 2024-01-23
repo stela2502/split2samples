@@ -59,17 +59,17 @@ mod tests {
     fn test_needleman_wunsch() {
         let seq1 = SecondSeq(0b101010, 20);
         let seq2 = SecondSeq(0b101010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq2 ), 1 );
+        assert_eq!( seq1.needleman_wunsch( &seq2 ), 1.0/20.0 );
         let seq3 = SecondSeq(0b011010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq3 ), 3 );
+        assert_eq!( seq1.needleman_wunsch( &seq3 ), 3.0/20.0 );
         let seq4 = SecondSeq(0b001010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq4 ), 3 );
+        assert_eq!( seq1.needleman_wunsch( &seq4 ), 3.0/20.0 );
         let seq5 = SecondSeq(0b011001, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq5 ), 5 );
+        assert_eq!( seq1.needleman_wunsch( &seq5 ), 5.0/20.0 );
         let seq6 = SecondSeq(0b0, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq6 ), 7 );
+        assert_eq!( seq1.needleman_wunsch( &seq6 ), 7.0/20.0 );
         let seq7 = SecondSeq(0b101010, 15);
-        assert_eq!( seq1.needleman_wunsch( &seq7 ), 1 );
+        assert_eq!( seq1.needleman_wunsch( &seq7 ), 1.0/15.0 );
     }
 
     #[test]
