@@ -3,6 +3,7 @@ use needletail::parser::SequenceRecord;
 //use std::collections::HashSet;
 
 use crate::singlecelldata::SingleCellData;
+use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
 use crate::int_to_str::IntToStr;
@@ -362,10 +363,10 @@ impl Analysis{
 	                    	//eprintln!("I got an ab id {gene_id}");
 	                    	report.iter_read_type( "antibody reads" );
 	                    	if gene_id.len() == 1 {
+	                    		let data = GeneUmiHash( gene_id[0], *umi);
 		                    	if ! gex.try_insert( 
 		                        	&(*cell_id as u64),
-		                        	&gene_id[0],
-		                        	umi,
+		                        	data,
 		                        	report
 		                        ){
 		                        	report.pcr_duplicates += 1 
@@ -388,10 +389,10 @@ impl Analysis{
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
 		                    	if gene_id.len() == 1 {
+		                    		let data = GeneUmiHash( gene_id[0], *umi);
 			                        if ! gex.try_insert( 
 			                        	&(*cell_id as u64),
-			                        	&gene_id[0],
-			                        	umi,
+			                        	data,
 			                        	report
 			                        ) { 
 			                        	report.pcr_duplicates += 1 
@@ -414,10 +415,10 @@ impl Analysis{
 		                	Some(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
 			                    if gene_id.len() == 1 {
+			                    	let data = GeneUmiHash( gene_id[0], *umi);
 			                        if ! gex.try_insert( 
 			                        	&(*cell_id as u64),
-			                        	&gene_id[0],
-			                        	umi,
+			                        	data,
 			                        	report
 			                        ){
 			                        	report.pcr_duplicates += 1 
@@ -728,8 +729,8 @@ impl Analysis{
                 let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                	match &self.cells.to_cellid( &seqrec1.seq() ){
-                		Ok( (cell_id, umi) ) => {
+                match &self.cells.to_cellid( &seqrec1.seq() ){
+                	Ok( (cell_id, umi) ) => {
 		            	report.cellular_reads +=1;
 
 		            	// now I have three possibilites here:
@@ -742,10 +743,10 @@ impl Analysis{
 		            		Some(gene_id) =>{
 		            			report.iter_read_type( "antibody reads" );
 		                    	if gene_id.len() == 1 {
+		                    		let data = GeneUmiHash( gene_id[0], *umi);
 			                    	self.gex.try_insert( 
 			                    		&(*cell_id as u64),
-			                    		&gene_id[0],
-			                    		umi,
+			                    		data,
 			                    		report
 			                    		);
 			                    	true
@@ -769,10 +770,10 @@ impl Analysis{
 			                    	//eprintln!("Got a samples match! {gene_id}");
 			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );
 			                    	if gene_id.len() == 1 {
+			                    		let data = GeneUmiHash( gene_id[0], *umi);
 				                    	self.gex.try_insert( 
 				                    		&(*cell_id as u64),
-				                    		&gene_id[0],
-				                    		umi,
+				                    		data,
 				                    		report
 				                    		);
 				                    	true
@@ -794,10 +795,10 @@ impl Analysis{
 			            		Some(gene_id) =>{
 			            			report.iter_read_type( "expression reads" );
 			            			if gene_id.len() == 1 {
+			            				let data = GeneUmiHash( gene_id[0], *umi);
 				            			self.gex.try_insert( 
 				            				&(*cell_id as u64),
-				            				&gene_id[0],
-				            				umi,
+				            				data,
 				            				report
 				            			);
 				            		}
@@ -820,8 +821,11 @@ impl Analysis{
 			            }
 			        },
 			        Err(_err) => {
+			        	/*println!("R1 di not match to any cell: {} {} {}",
+			        		String::from_utf8_lossy(&seqrec1.seq()[0..9]).to_owned(),
+			        		String::from_utf8_lossy(&seqrec1.seq()[21..31]).to_owned(),
+			        		String::from_utf8_lossy(&seqrec1.seq()[43..51]).to_owned() );*/
 			        	report.no_sample +=1;
-			        	continue
                     }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
                 };
                 if report.ok_reads == report.max_reads{
@@ -839,6 +843,12 @@ impl Analysis{
         pb.finish_with_message( log_str );
 
     }
+
+    /*
+    c1 = (0, 9);
+    c2 = (21,30);
+    c3 = (43,52);
+    */
 
     pub fn write_data( &mut self, outpath:String, results:&mut MappingInfo, min_umi : usize ) {
 		    // calculating a little bit wrong - why? no idea...

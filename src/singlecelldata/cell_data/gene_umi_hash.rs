@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 use core::fmt;
-use std::cmp::{max, Ord};
+use std::cmp::Ord;
 
 #[derive(Debug, Copy, Clone)]
 pub struct GeneUmiHash( pub usize, pub u64);

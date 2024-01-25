@@ -3,6 +3,8 @@ use std::collections::HashSet;
 
 use std::collections::hash_map::DefaultHasher;
 use crate::singlecelldata::cell_data::GeneUmiHash;
+use crate::singlecelldata::ambient_rna_detect::AmbientRnaDetect;
+
 use std::hash::Hash;
 use std::hash::Hasher;
 
@@ -59,6 +61,22 @@ impl CellData{
             total_umis,
             multimapper,
         }
+    }
+
+    pub fn split_ambient( &self, ambient:&AmbientRnaDetect ) -> (Self, Self){
+        let mut non_ambient_data = Self::new(self.name.clone());
+        let mut ambient_data = Self::new(self.name.clone());
+
+        for (gene_hash, count) in &self.genes {
+            if ambient.is_ambient(gene_hash) {
+                ambient_data.add_count(*gene_hash, *count);
+            } else {
+                non_ambient_data.add_count(*gene_hash, *count);
+            }
+        }
+        non_ambient_data.passing = true;
+        ambient_data.passing = true;
+        (non_ambient_data, ambient_data)
     }
 
     fn hash_classes(vals: &Vec<usize> ) -> u64 {
@@ -134,9 +152,8 @@ impl CellData{
     }
 
     // returns false if the gene/umi combo has already been recorded!
-    pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
+    pub fn add(&mut self, gh: GeneUmiHash ) -> bool{
         //println!("adding gene id {}", geneid );
-        let gh = GeneUmiHash( geneid, umi);
         return match self.genes.get_mut( &gh ) {
             Some( gene ) => {
                 *gene +=1;
@@ -144,12 +161,26 @@ impl CellData{
             }, 
             None => {
                 self.genes.insert(gh, 1);
-                match self.total_reads.get_mut( &geneid ){
-                    Some( count ) => *count += 1,
-                    None => {
-                        self.total_reads.insert( geneid, 1 );
-                    }
-                };
+                let counts = self.total_reads.entry( gh.0 ).or_insert_with(|| 0);
+                *counts +=1;
+                self.total_umis += 1;
+                true
+            }
+        }
+    }
+
+    // returns false if the gene/umi combo has already been recorded!
+    pub fn add_count(&mut self, gh: GeneUmiHash, count:usize ) -> bool{
+        //println!("adding gene id {}", geneid );
+        return match self.genes.get_mut( &gh ) {
+            Some( gene ) => {
+                *gene += count;
+                false
+            }, 
+            None => {
+                self.genes.insert(gh, count);
+                let counts = self.total_reads.entry( gh.0 ).or_insert_with(|| 0);
+                *counts +=1;
                 self.total_umis += 1;
                 true
             }

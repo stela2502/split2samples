@@ -196,8 +196,8 @@ impl MappingInfo{
 		let unknown = self.quality + self.length + self.n_s + self.poly_a;
 	    let mut result = "\nSummary:\n".to_owned()
 	    	+format!(     "cellular   reads  : {} reads ({:.2}% of total)\n", self.cellular_reads, (self.cellular_reads as f32 / self.total as f32) * 100.0 ).as_str()
-	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample.saturating_sub(self.no_data), (self.no_sample.saturating_sub(self.no_data) as f32 / self.total as f32) * 100.0).as_str()
-	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data, (self.no_data as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data - self.no_sample, ( (self.no_data - self.no_sample) as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "filtered   reads  : {} reads ({:.2}% of total)\n", unknown, (unknown as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " ->        polyA  : {} reads ({:.2}% of total)\n", self.poly_a, ( self.poly_a as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " -> bad qualiity  : {} reads ({:.2}% of total)\n", self.quality, ( self.quality as f32 / self.total as f32) * 100.0).as_str()

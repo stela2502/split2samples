@@ -10,8 +10,9 @@ use std::collections::HashSet;
 use crate::fast_mapper::FastMapper;
 use crate::mapping_info::MappingInfo;
 use crate::singlecelldata::cell_data::GeneUmiHash;
+use crate::singlecelldata::ambient_rna_detect::AmbientRnaDetect;
 use crate::singlecelldata::CellData;
-use crate::cellids::CellIds;
+//use crate::cellids::CellIds;
 
 use std::io::BufWriter;
 use std::fs::File;
@@ -34,10 +35,12 @@ pub struct SingleCellData{
     //kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
     cells: BTreeMap< u64, CellData>,
+    ambient_cell_content: BTreeMap< u64, CellData>,
     checked: bool,
     passing: usize,
     pub genes_with_data: HashSet<usize>,
     pub num_threads:usize,
+    ambient_store:AmbientRnaDetect,
 }
 
 impl Default for SingleCellData {
@@ -59,10 +62,12 @@ impl SingleCellData{
         Self {
             //kmer_size,
             cells,
+            ambient_cell_content: BTreeMap::new(),
             checked,
             passing,
             genes_with_data,
             num_threads,
+            ambient_store:AmbientRnaDetect::new(),
         }
     }
 
@@ -108,27 +113,29 @@ impl SingleCellData{
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
     pub fn try_insert(&mut self, name: &u64, 
-        gene_id:&usize,umi:&u64, report: &mut MappingInfo ) ->bool{
+        data:GeneUmiHash, report: &mut MappingInfo ) ->bool{
         
         //println!("CellIDs::get cell_id: {}", cell_id );
         self.checked= false;
-        self.genes_with_data.insert( *gene_id );
+        self.genes_with_data.insert( data.0 );
         self.cells.entry(*name).or_insert_with( || { CellData::new( *name ) });
         match self.cells.get_mut(&name){
             Some(cell_info) =>  {
                 //println!("I got gene {} for cell {}", gene_id , cell_info.name);
                 report.ok_reads += 1;
-                if ! &cell_info.add( *gene_id, *umi ) {
+                if ! &cell_info.add( data ) {
                     //println!("  -> pcr duplicate");
                     report.pcr_duplicates += 1;
                     report.local_dup += 1;
                     false
                 }else {
+                    // this Cell+Gene+UMI was new -> Add it to the ambient test object
+                    self.ambient_store.add( data );
                     true
                 }
                 //println!("I got gene {} for cell {} and managed to add this data? {}", gene_id , cell_info.name, ret);
             },
-            None => panic!("Could not add a gene expression: gene_id = {gene_id}, umi = {umi}" ),
+            None => panic!("Could not add a gene expression: {data}" ),
         }
     }
 
@@ -422,12 +429,73 @@ impl SingleCellData{
             // do we have overlapping gene_id umi connections?
             // should be VERY rare - let's check that!
 
-
+            
 
 
             // Split keys into chunks and process them in parallel
             let keys: Vec<u64> = self.cells.keys().cloned().collect();
             let chunk_size = keys.len() / num_threads +1; // You need to implement num_threads() based on your requirement
+
+            // get me all ambient Gene_ID*UMI elements where more than  100 cell contain the same info!
+            let more_than = 10;
+            self.ambient_store.finalize( more_than );
+            let entries :Vec<&GeneUmiHash> = self.ambient_store.entries();
+            if entries.len() < 10 {
+                println!("Ambient RNA Filter: {} gene_id-UMI combinations that are detected in more than {more_than} cells removing them: {:?}", self.ambient_store.size(), entries);
+
+            }else {
+                let first_five = &entries[0..5];
+                let last_five = entries.iter().rev().take(5).collect::<Vec<_>>();
+                println!("Ambient RNA Filter: {} gene_id-UMI combinations that are detected in more than {more_than} cells removing them: {:?}...{:?}", self.ambient_store.size(), first_five, last_five );
+            }
+            
+
+            let ambient_slices: Vec<(BTreeMap<u64, CellData>, BTreeMap<u64, CellData>, usize)> = keys
+                .par_chunks(chunk_size)
+                .map(|chunk| {
+                    let genes = &genes;
+                    let ambient = self.ambient_store.clone();
+                    let (mut ret_non_ambient, mut ret_ambient) = (BTreeMap::new(), BTreeMap::new());
+                    let mut bad_cells = 0;
+
+                    chunk.iter().for_each(|key| {
+                        if let Some(cell_obj) = self.cells.get(key) {
+                            if cell_obj.n_umi(genes, names) > min_count {
+                                let (non_ambient_data, ambient_data) = cell_obj.split_ambient(&ambient.clone());
+                                if non_ambient_data.n_umi(genes, names) > min_count {
+                                    ret_non_ambient.insert(non_ambient_data.name, non_ambient_data);
+                                    ret_ambient.insert(ambient_data.name, ambient_data);
+                                } else {
+                                    bad_cells += 1;
+                                }
+                            }else {
+                                bad_cells += 1;
+                            }
+                        }
+                    });
+
+                    (ret_non_ambient, ret_ambient, bad_cells)
+                })
+                .collect();
+
+            // so now my cells are invalid and I need to reconstruct myself.
+            self.cells.clear();
+            self.ambient_cell_content.clear(); // should already be empty - but who knows?
+
+            let mut bad_cells = 0;
+
+            for (real_slice, ambient_slice, bad_cells_in_slice ) in ambient_slices{
+                for (name, cell) in real_slice {
+                    self.cells.insert( name, cell );
+                }
+                for (name, cell) in ambient_slice {
+                    self.ambient_cell_content.insert( name, cell );
+                }
+                bad_cells += bad_cells_in_slice;
+            }
+
+            self.checked = true;
+            println!("Dropped cells with too little counts (n={bad_cells})");
 
             /*
             for &cell_id_a in self.cells.keys() {
@@ -476,7 +544,7 @@ impl SingleCellData{
                 }
                 
             }
-            */
+            
 
 
             let results: Vec<(u64, bool)>  = keys
@@ -495,7 +563,7 @@ impl SingleCellData{
                     return ret
                 })
                 .collect();
-
+            
             // let mut results = Vec::new();
             // for handle in handles {
             //     let result = handle.join().expect("Thread panicked");
@@ -527,7 +595,8 @@ impl SingleCellData{
             //     }
             // }
             self.checked = true;
-            println!("{} cells have passed the cutoff of {} umi counts per cell",self.cells.len(), min_count ); 
+            */
+            println!("{} cells have passed the cutoff of {} umi counts per cell.\n\n",self.cells.len(), min_count ); 
         }
         
         let ncell_and_entries = self.update_names_4_sparse( genes, names );
