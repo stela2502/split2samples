@@ -440,63 +440,108 @@ impl SingleCellData{
             let more_than = 10;
             self.ambient_store.finalize( more_than );
             let entries :Vec<&GeneUmiHash> = self.ambient_store.entries();
-            if entries.len() < 10 {
-                println!("Ambient RNA Filter: {} gene_id-UMI combinations that are detected in more than {more_than} cells removing them: {:?}", self.ambient_store.size(), entries);
-
-            }else {
-                let first_five = &entries[0..5];
-                let last_five = entries.iter().rev().take(5).collect::<Vec<_>>();
-                println!("Ambient RNA Filter: {} gene_id-UMI combinations that are detected in more than {more_than} cells removing them: {:?}...{:?}", self.ambient_store.size(), first_five, last_five );
+            match entries.len(){
+                0 => {
+                    println!("Ambient RNA Filter did not find free floating RNA")
+                },
+                val => {
+                    if val < 10 {
+                         println!("Ambient RNA Filter: {} gene_id-UMI combinations that are detected in more than {more_than} cells removing them: {:?}", 
+                            self.ambient_store.size(), entries)
+                    }
+                    else {
+                        let first_five = &entries[0..5];
+                        let last_five = entries.iter().rev().take(5).collect::<Vec<_>>();
+                        println!("Ambient RNA Filter: {} gene_id-UMI combinations that are detected in more than {more_than} cells removing them: {:?}...{:?}", 
+                            self.ambient_store.size(), first_five, last_five );
+                    }
+                }
             }
             
+            // if we detected no duplicates this function takes far too long
+            if entries.len() > 0 {
+                let ambient_slices: Vec<(BTreeMap<u64, CellData>, BTreeMap<u64, CellData>, usize)> = keys
+                    .par_chunks(chunk_size)
+                    .map(|chunk| {
+                        let genes = &genes;
+                        let ambient = self.ambient_store.clone();
+                        let (mut ret_non_ambient, mut ret_ambient) = (BTreeMap::new(), BTreeMap::new());
+                        let mut bad_cells = 0;
 
-            let ambient_slices: Vec<(BTreeMap<u64, CellData>, BTreeMap<u64, CellData>, usize)> = keys
-                .par_chunks(chunk_size)
-                .map(|chunk| {
-                    let genes = &genes;
-                    let ambient = self.ambient_store.clone();
-                    let (mut ret_non_ambient, mut ret_ambient) = (BTreeMap::new(), BTreeMap::new());
-                    let mut bad_cells = 0;
-
-                    chunk.iter().for_each(|key| {
-                        if let Some(cell_obj) = self.cells.get(key) {
-                            if cell_obj.n_umi(genes, names) > min_count {
-                                let (non_ambient_data, ambient_data) = cell_obj.split_ambient(&ambient.clone());
-                                if non_ambient_data.n_umi(genes, names) > min_count {
-                                    ret_non_ambient.insert(non_ambient_data.name, non_ambient_data);
-                                    ret_ambient.insert(ambient_data.name, ambient_data);
-                                } else {
+                        chunk.iter().for_each(|key| {
+                            if let Some(cell_obj) = self.cells.get(key) {
+                                if cell_obj.n_umi(genes, names) > min_count {
+                                    let (non_ambient_data, ambient_data) = cell_obj.split_ambient(&ambient.clone());
+                                    if non_ambient_data.n_umi(genes, names) > min_count {
+                                        ret_non_ambient.insert(non_ambient_data.name, non_ambient_data);
+                                        ret_ambient.insert(ambient_data.name, ambient_data);
+                                    } else {
+                                        bad_cells += 1;
+                                    }
+                                }else {
                                     bad_cells += 1;
                                 }
-                            }else {
-                                bad_cells += 1;
                             }
-                        }
-                    });
+                        });
 
-                    (ret_non_ambient, ret_ambient, bad_cells)
+                        (ret_non_ambient, ret_ambient, bad_cells)
+                    })
+                    .collect();
+
+                // so now my cells are invalid and I need to reconstruct myself.
+                self.cells.clear();
+                self.ambient_cell_content.clear(); // should already be empty - but who knows?
+
+                let mut bad_cells = 0;
+
+                for (real_slice, ambient_slice, bad_cells_in_slice ) in ambient_slices{
+                    for (name, cell) in real_slice {
+                        self.cells.insert( name, cell );
+                    }
+                    for (name, cell) in ambient_slice {
+                        self.ambient_cell_content.insert( name, cell );
+                    }
+                    bad_cells += bad_cells_in_slice;
+                }
+
+                self.checked = true;
+                println!("Dropped cells with too little counts (n={bad_cells})");
+            }
+            else { // no ambient RNA's detected
+                let results: Vec<(u64, bool)>  = keys
+                .par_chunks(chunk_size) 
+                .flat_map(|chunk| {
+                    let genes = &genes;
+                    let min_count = min_count;
+
+                    let mut ret= Vec::<(u64, bool)>::with_capacity(chunk_size);
+                    for key in chunk {
+                        if let Some(cell_obj) = &self.cells.get(key) {
+                            let n = cell_obj.n_umi( genes, names );
+                            ret.push( (key.clone(), n >= min_count) );
+                        }
+                    }
+                    return ret
                 })
                 .collect();
 
-            // so now my cells are invalid and I need to reconstruct myself.
-            self.cells.clear();
-            self.ambient_cell_content.clear(); // should already be empty - but who knows?
-
-            let mut bad_cells = 0;
-
-            for (real_slice, ambient_slice, bad_cells_in_slice ) in ambient_slices{
-                for (name, cell) in real_slice {
-                    self.cells.insert( name, cell );
+                let mut bad_cells = 0;
+                for ( key, passing ) in results{
+                    if passing{
+                        if let Some(cell_obj) = self.cells.get_mut(&key) {
+                            cell_obj.passing = passing;
+                        }
+                    }else {
+                        bad_cells +=1;
+                    }
                 }
-                for (name, cell) in ambient_slice {
-                    self.ambient_cell_content.insert( name, cell );
-                }
-                bad_cells += bad_cells_in_slice;
+
+                println!("Dropping cell with too little counts (n={bad_cells})");
+                self.cells.retain( |&_key, cell_data| cell_data.passing );
+
+                println!("{} cells have passed the cutoff of {} umi counts per cell.\n\n",self.cells.len(), min_count ); 
+                self.checked = true;
             }
-
-            self.checked = true;
-            println!("Dropped cells with too little counts (n={bad_cells})");
-
             /*
             for &cell_id_a in self.cells.keys() {
                 let mine = match self.cells.get(&cell_id_a) {
