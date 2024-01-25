@@ -8,6 +8,8 @@ use std::collections::HashSet;
 use crate::int_to_str::IntToStr;
 //use crate::sampleids::SampleIds;
 use crate::traits::CellIndex;
+use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
+
 //use std::thread;
 
 //mod cellIDsError;
@@ -83,7 +85,7 @@ impl CellIndex for CellIds{
                             good.push( (i, dist ) );
                         }
                     }
-                    if let Some(c1) = Self::best_entry( good ){
+                    if let Some(c1) = Self::best_entry( good, fuzziness as usize ){
                         ok = true;
                         c1 * max * max
                     }else {
@@ -110,7 +112,7 @@ impl CellIndex for CellIds{
                             good.push( (i, dist)  );
                         }
                     }
-                    if let Some(c2) = Self::best_entry( good ){
+                    if let Some(c2) = Self::best_entry( good, fuzziness as usize ){
                         ok = true;
                         c2 * max 
                     }else {
@@ -137,7 +139,7 @@ impl CellIndex for CellIds{
                             good.push( (i, dist ) );
                         }
                     }
-                    if let Some(c3) = Self::best_entry( good ){
+                    if let Some(c3) = Self::best_entry( good, fuzziness as usize ){
                         ok = true;
                         c3 
                     }else {
@@ -148,6 +150,14 @@ impl CellIndex for CellIds{
             if ok {
                 let tool =IntToStr::new( r1[(self.umi.0+add)..(self.umi.1+add)].to_vec(), 31 );
                 let umi:u64 = tool.into_u64();
+                fn in_list( this:u64 )-> bool{
+                    ((this == 52638_u64) | ( this == 29170_u64))| (this == 156688_u64)
+                }
+                if cell_id +1 == 7243072{
+                    //if !( (in_list(km1) | in_list(km2)) | in_list(km3) ) {
+                        println!("Cell_id 7243072 from this seq: {}/{} {}/{} {}/{}",&km1, tool.u64_to_string( 9, &km1 ), &km2, tool.u64_to_string( 9, &km2 ), &km3, tool.u64_to_string( 9, &km3 ) )
+                    //}
+                }
                 return Ok( (cell_id +1, umi) ); 
             }
             // ok no match for shift add == iteration of this loop
@@ -159,6 +169,16 @@ impl CellIndex for CellIds{
 
 // here the functions
 impl CellIds{
+
+    /// convert the cellid's sequences into one SecondSeq sequence of length 27 to
+    /// be able to later on compare them rather quickly.
+    pub fn as_second_seq( &self, id:u32 ) -> Option<SecondSeq> {
+        let seqs:Vec::<u64> = self.to_sequence( id );
+        let larger_seq:u64 = (seqs[0] << 18) | (seqs[1] << 9) | seqs[2];
+        let ret = SecondSeq( larger_seq, 27 );
+        println!("I created a seq {ret}");
+        return Some(ret)
+    }
 
     /// calculate the base flips between two u64 sequences
     /// stops after having detected 4 different bases.
@@ -594,7 +614,7 @@ impl CellIds{
 
     /// returns the first entry in the tuple that has the lowest second entry
     /// and only if there is only one tuple with the lowest second entry 
-    fn best_entry( data:Vec<(usize, u32)> ) -> Option<u32>{
+    fn best_entry( data:Vec<(usize, u32)> , max_val:usize) -> Option<u32>{
         if data.len() == 0 {
             return None
         }
@@ -602,7 +622,7 @@ impl CellIds{
             return Some(data[0].0 as u32)
         }
         else {
-            let mut counter = vec![0_u32,0_u32,0_u32];
+            let mut counter = vec![0_u32; max_val];
             let mut min = u32::MAX;
             for ( _i, mismatch ) in &data{
                 if min > *mismatch{
@@ -614,6 +634,9 @@ impl CellIds{
                 // this is great - we have a minimum overlap and that has exactly one match!
                 for ( i, mismatch ) in &data{
                     if *mismatch == min{
+                        if ( (data[*i].0 == 122688) | (data[*i].0 == 69584)  ) | (data[*i].0 == 3600) {
+                            println!("Sample ID search I have a mismatch of {min} and am returning id {}", data[*i].0);
+                        }
                         return Some( data[*i].0 as u32 )
                     }
                 }

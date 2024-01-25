@@ -477,6 +477,17 @@ impl IntToStr {
 		self.shifted = 0;
 	}
 
+	/// <unsigned_int>_to_str functions do exactly that.
+	/// they regenerate the initial utf8 encoded String from a IntToStr encoded integer.
+	/// u64_to_str - convert a IntToStr encoded u64 to utf8 Vec::<u8> with a length of up to 32bp
+	pub fn u64_to_string ( &self, kmer_size:usize, km:&u64) ->String {
+
+	    let array = km.to_le_bytes();
+	    let mut data: String = "".to_string();
+
+	    self.u8_array_to_str( kmer_size, (&array).to_vec(), &mut data);
+	    return data
+	}
 
 	/// <unsigned_int>_to_str functions do exactly that.
 	/// they regenerate the initial utf8 encoded String from a IntToStr encoded integer.

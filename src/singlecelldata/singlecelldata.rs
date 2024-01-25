@@ -9,7 +9,9 @@ use std::collections::HashSet;
 //use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
 use crate::mapping_info::MappingInfo;
+use crate::singlecelldata::cell_data::GeneUmiHash;
 use crate::singlecelldata::CellData;
+use crate::cellids::CellIds;
 
 use std::io::BufWriter;
 use std::fs::File;
@@ -81,6 +83,12 @@ impl SingleCellData{
         }
     }
 
+    /// checks if there are cells that seam to contain data from another cell.
+    /// Meaning there are the same gene/umi combinations in both cells
+    pub fn find_cell_cell_obverlaps( &mut self ) {
+
+    }
+
     /// the old get funtion. Does not work in the new Analysis package. So only to make the tests work again.
     pub fn get(&mut self, name: &u64 ) -> Result< &mut CellData, &str>{
         
@@ -125,6 +133,7 @@ impl SingleCellData{
     }
 
 
+    /*
     /// here the get checks for a complete match of the cell ID
     /// and if that fails we need to add
     pub fn try_insert_multimapper(&mut self, name: &u64, 
@@ -150,7 +159,7 @@ impl SingleCellData{
             },
             None => panic!("Could not add a gene expression: gene_id = {gene_id:?}, umi = {umi}" ),
         }
-    }
+    }*/
 
     pub fn write (&mut self, file_path: PathBuf, genes: &mut FastMapper, min_count:usize) -> Result< (), &str>{
 
@@ -161,7 +170,7 @@ impl SingleCellData{
         return self.write_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sub (&mut self, file_path: PathBuf, genes: &mut FastMapper, names: &Vec<String>, min_count:usize ) -> Result< (), &str>{
+    pub fn write_sub (&mut self, file_path: PathBuf, genes: &mut FastMapper, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
     
         let rs:bool = Path::new( &file_path ).exists();
         if rs && fs::remove_file(  &file_path ).is_ok(){};
@@ -409,10 +418,65 @@ impl SingleCellData{
 
             //println!("Checking cell for min umi count!");
 
+            // here we should firt check if there is some strange similarity over the cells.
+            // do we have overlapping gene_id umi connections?
+            // should be VERY rare - let's check that!
+
+
+
 
             // Split keys into chunks and process them in parallel
             let keys: Vec<u64> = self.cells.keys().cloned().collect();
             let chunk_size = keys.len() / num_threads +1; // You need to implement num_threads() based on your requirement
+
+            /*
+            for &cell_id_a in self.cells.keys() {
+                let mine = match self.cells.get(&cell_id_a) {
+                    Some(cell_id_a) => {
+                        if cell_id_a.total_umis < 2000{
+                            continue;
+                        }
+                        &cell_id_a.genes
+                    },
+                    None => {
+                        eprintln!("Warning: Cell {} not found in self.cells", cell_id_a);
+                        continue;
+                    }
+                };
+
+                //let cmp_a = cellsids.as_second_seq( cell_id_a.try_into().unwrap() ).unwrap();
+
+                let max_overlap = keys
+                    .iter()
+                    .filter(|&&cell_id_b| cell_id_b != cell_id_a )
+                    .filter(|&&cell_id_b| {
+                        if let Some(other_cell) = self.cells.get(&cell_id_b) {
+                            other_cell.total_umis < 2000
+                        } else {
+                            false
+                        }
+                    })
+                    .map(|&cell_id_b| {
+                        let overlap = self.cells
+                            .get(&cell_id_b)
+                            .and_then(|other_cell| {
+                                Some(
+                                    mine.keys()
+                                        .filter(|gene_umi_combo| other_cell.genes.contains_key(gene_umi_combo))
+                                        .count(),
+                                )
+                            })
+                            .unwrap_or(0);
+                        (overlap, cell_id_b)
+                    })
+                    .max_by_key(|&(overlap, _)| overlap)
+                    .unwrap_or((0,0));
+                if max_overlap.0 > 50 {
+                    println!("Cell {} has a max overlap of {:?} gene-umi pairs!", cell_id_a, max_overlap);
+                }
+                
+            }
+            */
 
 
             let results: Vec<(u64, bool)>  = keys
@@ -452,9 +516,9 @@ impl SingleCellData{
             println!("Dropping cell with too little counts (n={bad_cells})");
             self.cells.retain( |&_key, cell_data| cell_data.passing );
 
-            for cell_obj in self.cells.values_mut(){
+            /*for cell_obj in self.cells.values_mut(){
                 cell_obj.fix_multimappers();
-            }
+            }*/
             // for cell_obj in self.cells.values_mut() {
             //     // total umi check
             //     let n = cell_obj.n_umi( genes, names );

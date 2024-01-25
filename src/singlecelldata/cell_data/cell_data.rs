@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::collections::HashSet;
 
 use std::collections::hash_map::DefaultHasher;
+use crate::singlecelldata::cell_data::GeneUmiHash;
 use std::hash::Hash;
 use std::hash::Hasher;
 
@@ -14,7 +15,7 @@ use crate::fast_mapper::FastMapper;
 pub struct CellData{
     //pub kmer_size: usize,
     pub name: u64,
-    pub genes: BTreeMap<usize, HashSet<u64>>, // I want to know how many times I got the same UMI
+    pub genes: BTreeMap<GeneUmiHash, usize>, // I want to know how many times I got the same UMI
     pub genes_with_data: HashSet<String>, // when exporting genes it is helpfule to know which of the possible genomic genes actually have an expression reported...
     pub total_reads: BTreeMap<usize, usize>, // instead of the per umi counting
     //pub cell_counts: BTreeMap<usize, usize>,
@@ -70,7 +71,7 @@ impl CellData{
     }
 
     pub fn deep_clone(&self) -> CellData {
-        let cloned_genes: BTreeMap<usize, HashSet<u64>> = self
+        let cloned_genes: BTreeMap<GeneUmiHash , usize> = self
             .genes
             .iter()
             .map(|(k, v)| (*k, v.clone())) // Clone each HashSet within the BTreeMap
@@ -95,67 +96,67 @@ impl CellData{
 
     /// adds the other values into this object
     pub fn merge(&mut self, other:&CellData ){
-        let mut too_much:usize;
+
         self.total_umis += other.total_umis;
-        for (gene_id, umis) in &other.genes {
-            too_much = 0;
-            for umi in umis {
-                self.add( *gene_id, *umi );
-                too_much += 1;
-            }
-            match self.total_reads.get_mut( &gene_id ){
-                Some( val ) => {
-                    let add = other.total_reads.get( &gene_id ).unwrap_or(&too_much) - too_much;
-                    *val += add
+        let mut too_much = BTreeMap::<usize, usize>::new();
+
+        for (gene_umi_combo, counts) in &other.genes {
+            match self.genes.get_mut( gene_umi_combo ) {
+                Some(count) => {
+                    *count += counts;
+                    let counter = too_much.entry(gene_umi_combo.0).or_insert(0);
+                    *counter += 1;
                 },
-                None => panic!("merge could not copy the total gene values for gene {gene_id}",  ),
-            };
+                None => {
+                    self.genes.insert( *gene_umi_combo, 1);
+                }
+            }
         }
-        for (hash, (umis, ids) ) in &other.multimapper {
-            too_much = 0;
+        for (gene_id, count) in &other.total_reads {
+            let double_counts = *too_much.entry(*gene_id).or_insert_with(|| 0);
+            let mine = self.total_reads.entry(*gene_id).or_insert(0);
+            *mine += count - double_counts;
+        }
+        /*for (hash, (umis, ids) ) in &other.multimapper {
+            let double_counts = 0;
             for umi in umis {
                 self.add_multimapper( ids.clone(), *umi );
-                too_much += 1;
+                double_counts += 1;
             }
             match self.total_reads.get_mut( &(*hash as usize) ){
                 Some( val ) => {
-                    let add = other.total_reads.get( &(*hash as usize) ).unwrap_or(&too_much) - too_much;
+                    let add = other.total_reads.get( &(*hash as usize) ).unwrap_or(&double_counts) - double_counts;
                     *val += add
                 },
                 None => panic!("merge could not copy the total gene values for multimapper hash {hash}",  ),
             };
-        }
+        }*/
     }
 
     // returns false if the gene/umi combo has already been recorded!
     pub fn add(&mut self, geneid: usize, umi:u64 ) -> bool{
         //println!("adding gene id {}", geneid );
-        return match self.genes.get_mut( &geneid ) {
+        let gh = GeneUmiHash( geneid, umi);
+        return match self.genes.get_mut( &gh ) {
             Some( gene ) => {
-                if gene.insert( umi ){
-                    match self.total_reads.get_mut( &geneid ){
-                        Some( count ) => *count += 1,
-                        None => panic!("This must not happen - libraray error"),
-                    }
-                    //eprintln!("Good data");
-                    self.total_umis += 1;
-                    return true
-                }
-                //eprintln!("UMI already known {umi}");
+                *gene +=1;
                 false
             }, 
             None => {
-                let mut gc:HashSet<u64> = HashSet::new(); //to store the umis
-                gc.insert( umi );
-                self.total_reads.insert( geneid, 1 );
-                self.genes.insert( geneid, gc );
-                //eprintln!("Good data2");
+                self.genes.insert(gh, 1);
+                match self.total_reads.get_mut( &geneid ){
+                    Some( count ) => *count += 1,
+                    None => {
+                        self.total_reads.insert( geneid, 1 );
+                    }
+                };
                 self.total_umis += 1;
                 true
             }
         }
     }
 
+    /*
     // returns false if the gene/umi combo has already been recorded!
     pub fn add_multimapper(&mut self, geneids: Vec::<usize>, umi:u64 ) -> bool{
         //println!("adding gene id {}", geneid );
@@ -187,7 +188,7 @@ impl CellData{
                 true
             }
         }
-    }
+    }*/
 
     pub fn n_umi( &self, _gene_info:&FastMapper, _gnames: &Vec<String> ) -> usize {
         return self.total_umis;
@@ -222,6 +223,7 @@ impl CellData{
         n
     }
 
+    /*
     pub fn fix_multimappers( &mut self ){
         for (umis, geneids ) in self.multimapper.values(){
             eprintln!("I have a multimapper group: {:?}", geneids);
@@ -293,23 +295,14 @@ impl CellData{
             };
         }
         self.multimapper.clear();
-    }
+    }*/
 
     pub fn n_umi_4_gene( &self, gene_info:&FastMapper, gname:&String) -> usize {
-        let mut n = 0;
-
         let id = match gene_info.names.get( gname ){
             Some(g_id) => g_id,
-            None => panic!("I could not resolve the gene name {gname}" ),
+            None => panic!("Programming error: I could not resolve the gene name {gname}" ),
         };
-        n += match self.genes.get( id  ){
-            Some( map ) => {
-                map.len()
-            }
-            None => 0
-        };
-        //if n > 0 { println!("I got {} umis for gene {}", n, gname ); }
-        n
+        *self.total_reads.get( id  ).unwrap_or(&0)
     }
 
     

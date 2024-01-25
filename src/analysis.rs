@@ -423,14 +423,15 @@ impl Analysis{
 			                        	report.pcr_duplicates += 1 
 			                        }
 			                    }else {
-			                    	if ! gex.try_insert_multimapper(
+			                    	panic!("Multimapper have been deactivated!");
+			                    	/*if ! gex.try_insert_multimapper(
 				                    		&(*cell_id as u64),
 				                    		gene_id,
 				                    		umi,
 				                    		report
 				                    	) {
 			                    		report.pcr_duplicates += 1 
-			                    	}
+			                    	}*/
 			                    }
 			                    
 		                    },
@@ -801,12 +802,13 @@ impl Analysis{
 				            			);
 				            		}
 				            		else {
-			            				self.gex.try_insert_multimapper(
+				            			panic!("Multimapper? - I have removed this option!");
+			            				/*self.gex.try_insert_multimapper(
 				                    		&(*cell_id as u64),
 				                    		gene_id,
 				                    		umi,
 				                    		report
-				                    	);
+				                    	);*/
 				            		}
 			                        //println!("R2 {}",String::from_utf8_lossy(&seqrec.id()).to_owned() );
 			                        //println!("R1 {}",String::from_utf8_lossy(&seqrec1.id()).to_owned() );
