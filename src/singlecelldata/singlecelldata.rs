@@ -130,7 +130,7 @@ impl SingleCellData{
                     false
                 }else {
                     // this Cell+Gene+UMI was new -> Add it to the ambient test object
-                    self.ambient_store.add( data );
+                    // self.ambient_store.add( data );
                     true
                 }
                 //println!("I got gene {} for cell {} and managed to add this data? {}", gene_id , cell_info.name, ret);
@@ -437,6 +437,8 @@ impl SingleCellData{
             let chunk_size = keys.len() / num_threads +1; // You need to implement num_threads() based on your requirement
 
             // get me all ambient Gene_ID*UMI elements where more than  100 cell contain the same info!
+            /*
+            // This was an artifact in the example data I have. I'll drop that here as it slows down the data analysis - like a lot!
             let more_than = 10;
             self.ambient_store.finalize( more_than );
             let entries :Vec<&GeneUmiHash> = self.ambient_store.entries();
@@ -507,41 +509,41 @@ impl SingleCellData{
                 self.checked = true;
                 println!("Dropped cells with too little counts (n={bad_cells})");
             }
-            else { // no ambient RNA's detected
-                let results: Vec<(u64, bool)>  = keys
-                .par_chunks(chunk_size) 
-                .flat_map(|chunk| {
-                    let genes = &genes;
-                    let min_count = min_count;
+            else { // no ambient RNA's detected */
+            let results: Vec<(u64, bool)>  = keys
+            .par_chunks(chunk_size) 
+            .flat_map(|chunk| {
+                let genes = &genes;
+                let min_count = min_count;
 
-                    let mut ret= Vec::<(u64, bool)>::with_capacity(chunk_size);
-                    for key in chunk {
-                        if let Some(cell_obj) = &self.cells.get(key) {
-                            let n = cell_obj.n_umi( genes, names );
-                            ret.push( (key.clone(), n >= min_count) );
-                        }
-                    }
-                    return ret
-                })
-                .collect();
-
-                let mut bad_cells = 0;
-                for ( key, passing ) in results{
-                    if passing{
-                        if let Some(cell_obj) = self.cells.get_mut(&key) {
-                            cell_obj.passing = passing;
-                        }
-                    }else {
-                        bad_cells +=1;
+                let mut ret= Vec::<(u64, bool)>::with_capacity(chunk_size);
+                for key in chunk {
+                    if let Some(cell_obj) = &self.cells.get(key) {
+                        let n = cell_obj.n_umi( genes, names );
+                        ret.push( (key.clone(), n >= min_count) );
                     }
                 }
+                return ret
+            })
+            .collect();
 
-                println!("Dropping cell with too little counts (n={bad_cells})");
-                self.cells.retain( |&_key, cell_data| cell_data.passing );
-
-                println!("{} cells have passed the cutoff of {} umi counts per cell.\n\n",self.cells.len(), min_count ); 
-                self.checked = true;
+            let mut bad_cells = 0;
+            for ( key, passing ) in results{
+                if passing{
+                    if let Some(cell_obj) = self.cells.get_mut(&key) {
+                        cell_obj.passing = passing;
+                    }
+                }else {
+                    bad_cells +=1;
+                }
             }
+
+            println!("Dropping cell with too little counts (n={bad_cells})");
+            self.cells.retain( |&_key, cell_data| cell_data.passing );
+
+            println!("{} cells have passed the cutoff of {} umi counts per cell.\n\n",self.cells.len(), min_count ); 
+            self.checked = true;
+            //}
             /*
             for &cell_id_a in self.cells.keys() {
                 let mine = match self.cells.get(&cell_id_a) {
@@ -641,7 +643,7 @@ impl SingleCellData{
             // }
             self.checked = true;
             */
-            println!("{} cells have passed the cutoff of {} umi counts per cell.\n\n",self.cells.len(), min_count ); 
+            //println!("{} cells have passed the cutoff of {} umi counts per cell.\n\n",self.cells.len(), min_count ); 
         }
         
         let ncell_and_entries = self.update_names_4_sparse( genes, names );

@@ -10,7 +10,7 @@ use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 
 
 #[derive(Parser)]
-#[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "0.1.1", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
@@ -53,7 +53,7 @@ fn main() {
         min_sizes = vec![ 66, 60 ];
     }
     else {
-        pos = vec![0,9, 12,22, 26,35 , 36,42 ];
+        pos = vec![0,9, 13,22, 26,35 , 36,42 ];
         min_sizes = vec![ 51, 51 ];
     }
 
@@ -70,7 +70,7 @@ fn main() {
     pb.set_style(spinner_style);
     pb.set_prefix(format!("[{}/?]", 100));
 
-    let split = 1000 * 1000;
+    let split = 1000 * 100;
     //let split = 1000 ;
     let mut total = 0;
 
@@ -113,12 +113,12 @@ fn main() {
             
         
             if let Ok((cell_id, _add)) = cells.to_cellid( &seqrec1.seq() ) {
-                total += 1;
                 if total % split == 0{
                     let log_str = format!("cell read (any/{}) {total}/{count} here I have cell {cell_id}", opts.id );
                     pb.set_message( log_str.clone() );
                     pb.inc(1);
                 }
+                total += 1;
                 if cell_id == opts.id{
                     count += 1;
                     //let mut id = seqrec1.id();

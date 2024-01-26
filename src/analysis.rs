@@ -42,7 +42,7 @@ static EMPTY_VEC: Vec<String> = Vec::new();
 #[derive(Debug)]
 enum FilterError {
     Length,
-    PolyA,
+    //PolyA,
     Ns,
     Quality,
 }
@@ -343,6 +343,9 @@ impl Analysis{
 
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
+        // lets tag this with the first gene I was interested in: Cd3e
+        //let goi_id = self.genes.get_id("ADA".to_string());
+
         for i in 0..data.len() {
 
         	match &self.cells.to_cellid( &data[i].0 ){
@@ -423,6 +426,9 @@ impl Analysis{
 			                        ){
 			                        	report.pcr_duplicates += 1 
 			                        }
+			                        /*if gene_id[0] == goi_id{
+			                        	println!( "UMI for gene id {goi_id} and cell {cell_id} is {umi}" );
+			                        }*/
 			                    }else {
 			                    	panic!("Multimapper have been deactivated!");
 			                    	/*if ! gex.try_insert_multimapper(
@@ -540,10 +546,10 @@ impl Analysis{
         				good_read_count +=1;
         				good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
         			},
-        			Err(FilterError::PolyA)=> {
+        			/*Err(FilterError::PolyA)=> {
         				report.poly_a +=1;
         				continue 'main;
-        			},
+        			},*/
         			Err(FilterError::Quality) => {
         				report.quality +=1;
         				continue 'main;
@@ -708,10 +714,10 @@ impl Analysis{
         			Ok(()) => {
         				//good_read_count +=1;
         			},
-        			Err(FilterError::PolyA)=> {
+        			/*Err(FilterError::PolyA)=> {
         				report.poly_a +=1;
         				continue 'main;
-        			},
+        			},*/
         			Err(FilterError::Quality) => {
         				report.quality +=1;
         				continue 'main;

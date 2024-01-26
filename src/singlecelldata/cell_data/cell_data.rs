@@ -79,7 +79,7 @@ impl CellData{
         (non_ambient_data, ambient_data)
     }
 
-    fn hash_classes(vals: &Vec<usize> ) -> u64 {
+    fn _hash_classes(vals: &Vec<usize> ) -> u64 {
         let mut hasher = DefaultHasher::new();
         for val in vals {
             val.hash(&mut hasher);

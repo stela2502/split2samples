@@ -50,7 +50,7 @@ impl CellIndex for CellIds{
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
         let max:usize = 384;
-        let fuzziness = 1.0;
+        let fuzziness = 0.2;
         //let max:u32 = self.c1s.len() as u32;
         //println!("to_cellid should print something! {:?}", &r1[c1[0]..c1[1]]);
         
@@ -82,7 +82,7 @@ impl CellIndex for CellIds{
             //matches.clear();
             let mut cell_id:usize = 0;
             ok = false;
-            let ( km1, km2, km3) = self.get_as_SecondSeq ( r1.to_vec(), add );
+            let ( km1, km2, km3) = self.get_as_second_seq ( r1.to_vec(), add );
             cell_id += match self.csl1.get( &km1.0 ){
                 Some(c1) => {
                         //println!("to_cellid the c1 {}", c1 );
@@ -94,20 +94,22 @@ impl CellIndex for CellIds{
                     let mut good = Vec::<(usize, f32)>::with_capacity(self.c1s.len());
                     for i in 0..self.c1s.len(){ 
                         let dist = self.c1s[i].needleman_wunsch( &km1 );
-                        good.push( (i, dist ) );
+                        good.push( (i, dist as f32 ) );
                     }
                     if let Some(c1) = Self::best_entry( good ){
                         ok = c1.1 < fuzziness;
+
                         //matches.push( c1.clone() );
                         c1.0 * max * max
                     }else {
                         //matches.push( (0,-3.0) );
+                        ok = false;
                         0
                     }
                 }
             };
             if ! ok{
-                //continue;
+                continue;
             }
             ok = false;
             cell_id += match self.csl2.get( &km2.0 ){
@@ -121,7 +123,7 @@ impl CellIndex for CellIds{
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c2s.len());
                     for i in 0..self.c2s.len(){
                         let dist = self.c2s[i].needleman_wunsch( &km2 );
-                        good.push( (i, dist)  );
+                        good.push( (i, dist as f32)  );
                     }
                     if let Some(c2) = Self::best_entry( good ){
                         ok =  c2.1 < fuzziness;
@@ -129,12 +131,13 @@ impl CellIndex for CellIds{
                         c2.0 * max 
                     }else {
                         //matches.push( (0,-3.0) );
+                        ok = false;
                         0
                     }
                 }.try_into().unwrap(),
             };
             if ! ok{
-                //continue;
+                continue;
             }
             ok = false; 
             cell_id += match self.csl3.get( &km3.0 ){
@@ -148,7 +151,7 @@ impl CellIndex for CellIds{
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c3s.len());
                     for i in 0..self.c3s.len(){
                         let dist = self.c3s[i].needleman_wunsch( &km3 );
-                        good.push( (i, dist ) );
+                        good.push( (i, dist as f32) );
                     }
                     if let Some(c3) = Self::best_entry( good ){
                         ok = c3.1 < fuzziness;
@@ -156,6 +159,7 @@ impl CellIndex for CellIds{
                         c3.0 
                     }else {
                         //matches.push( (0,-3.0) );
+                        ok = false;
                         0
                     }
                 }.try_into().unwrap(),
@@ -266,7 +270,7 @@ impl CellIds{
 
 
         if ver == "v2.96" || ver == "v1"{
-            c1s = Self::into_SecondSeq(vec![ 
+            c1s = Self::into_second_seq(vec![ 
             b"GTCGCTATA", b"CTTGTACTA", b"CTTCACATA",
             b"ACACGCCGG", b"CGGTCCAGG", b"AATCGAATG", b"CCTAGTATA", b"ATTGGCTAA", b"AAGACATGC",
             b"AAGGCGATC", b"GTGTCCTTA", b"GGATTAGGA", b"ATGGATCCA", b"ACATAAGCG", b"AACTGTATT",
@@ -284,7 +288,7 @@ impl CellIds{
             b"CAGAATCGT", b"ATCTCCACA", b"ACGAAAGGT", b"TAGCTTGTA", b"ACACGAGAT", b"AACCGCCTC",
             b"ATTTAGATG", b"CAAGCAAGC", b"CAAAGTGTG", b"GGCAAGCAA", b"GAGCCAATA", b"ATGTAATGG",
             b"CCTGAGCAA", b"GAGTACATT", b"TGCGATCTA" ]);
-            c2s = Self::into_SecondSeq( vec![ 
+            c2s = Self::into_second_seq( vec![ 
             b"TACAGGATA", b"CACCAGGTA", b"TGTGAAGAA", b"GATTCATCA", b"CACCCAAAG",
             b"CACAAAGGC", b"GTGTGTCGA", b"CTAGGTCCT", b"ACAGTGGTA", b"TCGTTAGCA", b"AGCGACACC",
             b"AAGCTACTT", b"TGTTCTCCA", b"ACGCGAAGC", b"CAGAAATCG", b"ACCAAAATG", b"AGTGTTGTC",
@@ -302,7 +306,7 @@ impl CellIds{
             b"AGAGGACCA", b"ACAATATGG", b"CAGCACTTC", b"CACTTATGT", b"AGTGAAAGG", b"AACCCTCGG",
             b"AGGCAGCTA", b"AACCAAAGT", b"GAGTGCGAA", b"CGCTAAGCA", b"AATTATAAC", b"TACTAGTCA",
             b"CAACAACGG" ] );
-            c3s = Self::into_SecondSeq( vec![
+            c3s = Self::into_second_seq( vec![
             b"AAGCCTTCT", b"ATCATTCTG",
             b"CACAAGTAT", b"ACACCTTAG", b"GAACGACAA", b"AGTCTGTAC", b"AAATTACAG", b"GGCTACAGA",
             b"AATGTATCG", b"CAAGTAGAA", b"GATCTCTTA", b"AACAACGCG", b"GGTGAGTTA", b"CAGGGAGGG",
@@ -322,7 +326,7 @@ impl CellIds{
             b"ACTAGACCG", b"ACTCATACG", b"ATCGAGTCT", b"CATAGGTCA" ] );
         }
         else if ver == "v2.384" {
-            c1s = Self::into_SecondSeq( vec![
+            c1s = Self::into_second_seq( vec![
             b"TGTGTTCGC", b"TGTGGCGCC", b"TGTCTAGCG", b"TGGTTGTCC", b"TGGTTCCTC",
             b"TGGTGTGCT", b"TGGCGACCG", b"TGCTGTGGC", b"TGCTGGCAC", b"TGCTCTTCC", b"TGCCTCACC",
             b"TGCCATTAT", b"TGATGTCTC", b"TGATGGCCT", b"TGATGCTTG", b"TGAAGGACC", b"TCTGTCTCC",
@@ -389,7 +393,7 @@ impl CellIds{
             b"ACTCGACCT", b"ACGTACACC", b"ACGGATGGT", b"ACCAGTCTG", b"ACATTCGGC", b"ACATGAGGT",
             b"ACACTAATT" ] );
 
-            c2s = Self::into_SecondSeq( vec![
+            c2s = Self::into_second_seq( vec![
             b"TTGTGTTGT", b"TTGTGGTAG",
             b"TTGTGCGGA", b"TTGTCTGTT", b"TTGTCTAAG", b"TTGTCATAT", b"TTGTCACGA", b"TTGTATGAA",
             b"TTGTACAGT", b"TTGGTTAAT", b"TTGGTGCAA", b"TTGGTCGAG", b"TTGGTATTA", b"TTGGCACAG",
@@ -456,7 +460,7 @@ impl CellIds{
             b"ACGGACTCT", b"ACGCCTAAT", b"ACGCCGTTA", b"ACGACGTGT", b"ACCTCGCAT", b"ACCATCATA",
             b"ACATATATT", b"ACAGGCACA", b"ACACCTGAG", b"ACACATTCT" ] );
 
-            c3s = Self::into_SecondSeq( vec![
+            c3s = Self::into_second_seq( vec![
             b"TTGTGGCTG", b"TTGTGGAGT", b"TTGTGCGAC", b"TTGTCTTCA", b"TTGTAAGAT",
             b"TTGGTTCTG", b"TTGGTGCGT", b"TTGGTCTAC", b"TTGGTAACT", b"TTGGCGTGC", b"TTGGATTAG",
             b"TTGGAGACG", b"TTGGAATCA", b"TTGCGGCGA", b"TTGCGCTCG", b"TTGCCTTAC", b"TTGCCGGAT",
@@ -602,7 +606,7 @@ impl CellIds{
     }
 
     /// convert the hard coded cell identifiers to u64 instead of &[u8;9]
-    pub fn into_SecondSeq( seq_a:Vec<&[u8;9]> ) -> Vec<SecondSeq>{
+    pub fn into_second_seq( seq_a:Vec<&[u8;9]> ) -> Vec<SecondSeq>{
         let mut ret = Vec::<SecondSeq>::with_capacity( seq_a.len() );
         let mut tool: IntToStr;
         for seq in seq_a {
@@ -683,7 +687,7 @@ impl CellIds{
         None
     }*/
 
-    fn get_as_u64( &self, r1: Vec<u8>, add:usize ) -> (u64, u64, u64) {
+    fn _get_as_u64( &self, r1: Vec<u8>, add:usize ) -> (u64, u64, u64) {
 
         let mut tool: IntToStr;
         // println!( "creating a u64 for {} bp {} - {}",  c1[1]- c1[0], c1[0], c1[1]);
@@ -698,7 +702,7 @@ impl CellIds{
         (km1, km2, km3)
     }
 
-    fn get_as_SecondSeq( &self, r1: Vec<u8>, add:usize ) -> (SecondSeq, SecondSeq, SecondSeq) {
+    fn get_as_second_seq( &self, r1: Vec<u8>, add:usize ) -> (SecondSeq, SecondSeq, SecondSeq) {
 
         let mut tool: IntToStr;
         // println!( "creating a u64 for {} bp {} - {}",  c1[1]- c1[0], c1[0], c1[1]);

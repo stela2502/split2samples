@@ -13,6 +13,7 @@ pub struct MappingInfo{
 	/// reads that did not pass the filters
 	pub quality:usize,
 	pub length:usize,
+	analyzed:usize,
 	pub n_s:usize,
 	pub poly_a:usize,
 	/// reads that had no cell id
@@ -55,6 +56,7 @@ impl MappingInfo{
 		let mut this = Self{
 			quality: 0,
 		    length: 0,
+		    analyzed: 1,
 		    n_s: 0,
 		    poly_a: 0,
 			no_sample: 0,
@@ -143,6 +145,7 @@ impl MappingInfo{
 		for (name, value) in &other.reads_log {
 			*self.reads_log.entry(name.to_string()).or_insert(0) += value;
 		}
+		self.analyzed = self.total;
 	}
 
 	pub fn write_to_log ( &mut self, text:String ){
@@ -172,8 +175,8 @@ impl MappingInfo{
 	pub fn log_str( &mut self ) -> String{
 		format!("{:.2} mio reads ({:.2}% with cell_id, {:.2}% with gene_id)",
             self.total as f32 / self.split as f32,
-            self.cellular_reads as f32 / (self.total) as f32 * 100.0 , 
-            self.ok_reads as f32 / (self.total) as f32 * 100.0 
+            self.cellular_reads as f32 / (self.analyzed) as f32 * 100.0 , 
+            self.ok_reads as f32 / (self.analyzed) as f32 * 100.0 
          )
 	}
 	pub fn program_states_string( &self ) -> String{
