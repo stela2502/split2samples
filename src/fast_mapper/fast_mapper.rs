@@ -9,6 +9,8 @@ use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 
+use rayon::prelude::*; // for the make_index_te_ready
+
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 
 use regex::Regex;
@@ -377,7 +379,7 @@ impl FastMapper{
     /// The class object is mean to have the same kind of entry in the same position of the vector - say
     /// [NameEntry.name, "gene_name", "family_name", "class_name"] - each position will be summed for 40bp mapping elements
     /// and only the contents of the least class will be used. The original gene name will also be used - that does not need to be part of the ids.
-    pub fn make_index_te_ready( &mut self ) {
+    pub fn make_index_te_ready_single( &mut self ) {
 
         eprintln!("Before make_index_te_ready:");
         self.eprint();
@@ -399,6 +401,25 @@ impl FastMapper{
         eprintln!("\nAfter:");
         self.eprint();
     }
+
+
+    pub fn make_index_te_ready(&mut self) {
+        eprintln!("Before make_index_te_ready:");
+        self.eprint();
+
+        self.mapper.par_iter_mut().for_each(|mapper_entry| {
+            if mapper_entry.has_data() {
+                mapper_entry.collapse_classes();
+            }
+        });
+
+        // Recalculate self.with_data
+        self.with_data = self.mapper.par_iter().filter(|entry| entry.has_data()).count();
+
+        eprintln!("\nAfter:");
+        self.eprint();
+    }
+
     /// [entries with values, total second level entries, total single gene first/second pairs, total >1 first/second level pairs]
     pub fn info( &self ) -> [usize;4]{
         let mut ret: [usize;4] = [0,0,0,0];

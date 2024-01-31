@@ -33,6 +33,7 @@ pub mod singlecelldata;
 pub mod ofiles;
 pub mod ifiles;
 pub mod analysis;
+pub mod analysis_te;
 pub mod last5;
 pub mod fast_mapper;
 //pub mod fast_mapper::mapper_entries;

@@ -52,6 +52,7 @@ cp target/release/get_n_cell_reads /usr/bin
 cp target/release/int_2_seq /usr/bin
 cp target/release/create_index /usr/bin
 cp target/release/create_index_te /usr/bin
+cp target/release/te_analysis /usr/bin
 ``` 
 
 Do not forget the --release while building the tool. 
