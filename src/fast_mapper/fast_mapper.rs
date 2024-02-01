@@ -340,15 +340,15 @@ impl FastMapper{
             }
             
             if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
-                println!("I have added a sequence! {:#b}+{} -> geneid ({gene_id}, 0) + classes {classes:?} names_ ({:?})",entries.0, entries.1, 
-                    self.gene_names_for_ids(&vec![gene_id, classes[0] as usize, classes[1] as usize] ) );
+                //println!("I have added a sequence! {:#b}+{} -> geneid ({gene_id}, 0) + classes {classes:?} names_ ({:?})",entries.0, entries.1, 
+                //    self.gene_names_for_ids(&vec![gene_id, classes[0] as usize, classes[1] as usize] ) );
                 self.pos += 1;
                 self.names_count[gene_id] +=1;
                 if i < self.names_count[gene_id]{
                     i = self.names_count[gene_id];
                 }
             }else {
-                println!("NOT added this sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1);
+                //println!("NOT added this sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1);
                 self.neg +=1
             }
             

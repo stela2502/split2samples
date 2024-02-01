@@ -202,7 +202,7 @@ impl MappingInfo{
 	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data.saturating_sub(self.no_sample), ( self.no_data.saturating_sub( self.no_sample) as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "filtered   reads  : {} reads ({:.2}% of total)\n", unknown, (unknown as f32 / self.total as f32) * 100.0).as_str()
-	    	+format!(     " ->        polyA  : {} reads ({:.2}% of total)\n", self.poly_a, ( self.poly_a as f32 / self.total as f32) * 100.0).as_str()
+	    	//+format!(     " ->        polyA  : {} reads ({:.2}% of total)\n", self.poly_a, ( self.poly_a as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " -> bad qualiity  : {} reads ({:.2}% of total)\n", self.quality, ( self.quality as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " ->    too short  : {} reads ({:.2}% of total)\n", self.length, ( self.length as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " ->          N's  : {} reads ({:.2}% of total)\n", self.n_s, ( self.n_s as f32 / self.total as f32) * 100.0).as_str()
