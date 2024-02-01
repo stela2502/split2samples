@@ -291,7 +291,8 @@ fn main() {
     let mut expr_file = parse_fastx_file(&opts.file).expect("valid path/file");
     let mut id: &[u8];
     let delimiter: &[u8] = b"  ";  // The byte sequence you want to split by
-    eprint!("sequence names: ");
+    eprint!("sequence names like: ");
+
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
         id = seqrec.id().split(|&x| x == delimiter[0]).collect::<Vec<&[u8]>>()[0];

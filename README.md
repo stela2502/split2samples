@@ -498,9 +498,11 @@ There are several other programs in this package:
 Instead of creating the index each time from the fasta files this program can generate the index from a fasta.gz file paired up with a gtf.gz or gff.gz file.
 This way intron/exon boundaries can be addressed.
 
+At the moment this tool would create a transcript specific index, but report only gene names likely creating a broken index. Use the ``--transcript gene_name`` to prevent the tool from miss-behaving.
+
 ```
 
-./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index > testData/mapperTest/index/mRNA.fa
+./target/release/create_index -f testData/mapperTest/Juan_genes.fa.gz -g testData/mapperTest/Juan_genes.fixed.gtf.gz -o testData/mapperTest/index > testData/mapperTest/index/mRNA.fa --transcript gene_name
 
 ```
 
