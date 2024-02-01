@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use crate::fast_mapper::FastMapper;
 use crate::mapping_info::MappingInfo;
 use crate::singlecelldata::cell_data::GeneUmiHash;
-use crate::singlecelldata::ambient_rna_detect::AmbientRnaDetect;
+//use crate::singlecelldata::ambient_rna_detect::AmbientRnaDetect;
 use crate::singlecelldata::CellData;
 //use crate::cellids::CellIds;
 
@@ -35,12 +35,12 @@ pub struct SingleCellData{
     //kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
     cells: BTreeMap< u64, CellData>,
-    ambient_cell_content: BTreeMap< u64, CellData>,
+    //ambient_cell_content: BTreeMap< u64, CellData>,
     checked: bool,
     passing: usize,
     pub genes_with_data: HashSet<usize>,
     pub num_threads:usize,
-    ambient_store:AmbientRnaDetect,
+    //ambient_store:AmbientRnaDetect,
 }
 
 impl Default for SingleCellData {
@@ -62,12 +62,12 @@ impl SingleCellData{
         Self {
             //kmer_size,
             cells,
-            ambient_cell_content: BTreeMap::new(),
+            //ambient_cell_content: BTreeMap::new(),
             checked,
             passing,
             genes_with_data,
             num_threads,
-            ambient_store:AmbientRnaDetect::new(),
+            //ambient_store:AmbientRnaDetect::new(),
         }
     }
 

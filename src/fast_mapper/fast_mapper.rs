@@ -70,7 +70,7 @@ impl FastMapper{
         let mut mapper: Vec<MapperEntry> = Vec::with_capacity(u16::MAX as usize);
         
         for _i in 0..u16::MAX{
-            let b = MapperEntry::new( 10 );
+            let b = MapperEntry::new();
             mapper.push( b );
         }
         let names = BTreeMap::<std::string::String, usize>::new();
@@ -125,14 +125,14 @@ impl FastMapper{
     pub fn merge( &mut self, other: FastMapper ) {
 
         for (primary_id, mapper_object) in other.mapper.iter().enumerate(){
-            for ( secondary_match, name_entry) in mapper_object.map.iter(){
+            for name_entry in mapper_object.map.iter(){
                 for idx in 0..name_entry.classes.len(){
                     // Now I need to copy the gene names from the other object to my own.
                     let gene_names = other.gene_names_for_ids( &name_entry.classes[idx] );
                     let gene_name = other.gene_names_for_ids( &vec![ name_entry.data[idx].0 ]);
                     // And get my own ids for these names
                     //let gene_ids = self.ids_for_gene_names( &gene_names );
-                    let _ = self.incorporate_match_combo( primary_id, *secondary_match , gene_name[0].clone(), gene_names );
+                    let _ = self.incorporate_match_combo( primary_id, name_entry.key , gene_name[0].clone(), gene_names );
                 }           
             }
         }
@@ -180,10 +180,9 @@ impl FastMapper{
             // will add in the next step so
             self.with_data +=1;
         }
-        if self.mapper[initial_match].add( secondary_match.try_into().unwrap(), ( gene_id, 0), classes ){
+        if self.mapper[initial_match].add( secondary_match, ( gene_id, 0), classes ){
             self.pos += 1
         }else{
-            self.neg +=1
         }
 
 
@@ -341,14 +340,15 @@ impl FastMapper{
             }
             
             if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
-                //println!("I have added a sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1 );
+                println!("I have added a sequence! {:#b}+{} -> geneid ({gene_id}, 0) + classes {classes:?} names_ ({:?})",entries.0, entries.1, 
+                    self.gene_names_for_ids(&vec![gene_id, classes[0] as usize, classes[1] as usize] ) );
                 self.pos += 1;
                 self.names_count[gene_id] +=1;
                 if i < self.names_count[gene_id]{
                     i = self.names_count[gene_id];
                 }
             }else {
-                //println!("NOT added this sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1);
+                println!("NOT added this sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1);
                 self.neg +=1
             }
             
@@ -905,24 +905,24 @@ impl FastMapper{
                 };
                 for tuple  in self.mapper[idx].map.iter(){
                     // this will write the u64 and the u8 in one go.
-                    match ofile.buff1.write( &tuple.0.to_le_bytes() ){
+                    match ofile.buff1.write( &tuple.key.to_le_bytes() ){
                         Ok(_) => (), 
                         //Ok(_) => println!("the u64 kmer: {} or {:b} binary -> {:?} bytes",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
                     };
                     // now we need the NameEntry.len() to to_le_bytes()
-                    match ofile.buff1.write( &tuple.1.data.len().to_le_bytes() ){
+                    match ofile.buff1.write( &tuple.data.len().to_le_bytes() ){
                         Ok(_) => (),
                         //Ok( len ) => println!("length of gene list attached to that 32bp kmer: {:?}",len   ) ,
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
-                    for id in 0..tuple.1.data.len(){
-                        match ofile.buff1.write( &tuple.1.data[id].0.to_le_bytes() ){
+                    for id in 0..tuple.data.len(){
+                        match ofile.buff1.write( &tuple.data[id].0.to_le_bytes() ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
                         };
-                        match ofile.buff1.write( &tuple.1.data[id].1.to_le_bytes() ){
+                        match ofile.buff1.write( &tuple.data[id].1.to_le_bytes() ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
@@ -1122,26 +1122,26 @@ impl FastMapper{
                 };
                 tuple_idx= 0;
                 for tuple  in self.mapper[idx].map.iter(){
-                    nucl.clear();
-                    self.tool.u64_to_str( 32, &tuple.0.0, &mut nucl ); 
-                    match write!(ofile.buff1, "\n\t\t{tuple_idx}: {} resp. {} ",&tuple.0, nucl){
+                    //nucl.clear();
+                    //self.tool.u64_to_str( 32, &tuple.key.0, &mut nucl ); 
+                    match write!(ofile.buff1, "\n\t\t{tuple_idx}: {} ",&tuple.key){
                         Ok(_) => (), 
                         //Ok(_) => println!("the u64 kmer: {} or {:b} binary -> {:?} bytes",tuple.0, tuple.0, &tuple.0.to_le_bytes()  ) ,
                         Err(_err) => return Err::<(), &str>("key could not be written"),
                     };
                     // now we need the NameEntry.len() to to_le_bytes()
-                    match write!(ofile.buff1, "n genes: {} ", tuple.1.data.len() ){
+                    match write!(ofile.buff1, "n genes: {} ", tuple.data.len() ){
                         Ok(_) => (),
                         //Ok( len ) => println!("length of gene list attached to that 32bp kmer: {:?}",len   ) ,
                         Err(_err) => return Err::<(), &str>("value could not be written"),
                     };
-                    for id in 0..tuple.1.data.len(){
-                        match write!(ofile.buff1, "gene id: {} resp {} ", tuple.1.data[id].0, self.names_store[tuple.1.data[id].0] ){
+                    for id in 0..tuple.data.len(){
+                        match write!(ofile.buff1, "gene id: {} resp {} ", tuple.data[id].0, self.names_store[tuple.data[id].0] ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),
                         };
-                        match write!(ofile.buff1, "gene level: {}  ", tuple.1.data[id].1 ){
+                        match write!(ofile.buff1, "gene level: {}  ", tuple.data[id].1 ){
                             Ok(_) => (),
                             //Ok(_) => println!("\tgene_id: {} -> {:?} bytes",id, &id.to_le_bytes()  ) ,
                             Err(_err) => return Err::<(), &str>("value could not be written"),

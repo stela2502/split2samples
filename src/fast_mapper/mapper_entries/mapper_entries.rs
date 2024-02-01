@@ -5,19 +5,20 @@ use crate::fast_mapper::mapper_entries::NameEntry;
 
 #[derive(Debug,PartialEq)]
 pub struct MapperEntry{
-	pub map:Vec::<(SecondSeq, NameEntry)>, // the data storage
+	//pub map:Vec::<(SecondSeq, NameEntry)>, // the old data storage 
+	pub map: HashSet<NameEntry>, // to speed up the fast_mapper merge function
 	only:usize,
 	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
 	needleman_wunsch_cut: f32,
 }
 
 impl MapperEntry{
-	pub fn new( allocate: usize) -> Self{
-		let mut all = allocate;
+	pub fn new( ) -> Self{
+		/*let mut all = allocate;
 		if allocate < 4 {
 			all = 4
-		}
-		let map = Vec::<(SecondSeq, NameEntry)>::with_capacity(all);
+		}*/
+		let map = HashSet::new();
 		Self{
 			map,
 			only :0,
@@ -28,20 +29,30 @@ impl MapperEntry{
 
 	pub fn collapse_classes (&mut self ){
 		// afterwards we should only have the mapper entries left that actually contained unique information.
-		self.map.retain_mut( |(_second_seq, name_entry)|  match name_entry.best_name_4_entries(){
-			Some(gene_id) => {
-				name_entry.data = vec![gene_id];
-				name_entry.classes = Vec::<Vec<usize>>::with_capacity(0);
-				true
-			},
-			None => false,
-		} );
+		let mut new_map = HashSet::new();
+
+	    for name_entry in &self.map {
+	        match name_entry.best_name_4_entries() {
+	        	// gene_id is a (usize, usize)
+	            Some(gene_id) => {
+	            	let mut new_entry = NameEntry::new( name_entry.key );
+	                new_entry.add( gene_id, vec![0]);
+	                new_map.insert(new_entry);
+	            }
+	            None => {
+	            }
+	        }
+	    }
+
+	    // Remove entries marked for removal
+	    self.map = new_map;
+	    
 	}
 
 	pub fn possible_ids(&self) -> Vec<(usize, usize)>{
 		let mut ids = HashSet::<(usize, usize)>::with_capacity(5);
 		for entry in &self.map {
-			for gid in &entry.1.data{
+			for gid in &entry.data{
 				ids.insert( *gid);
 			}
 		}
@@ -52,45 +63,43 @@ impl MapperEntry{
 	/// here we also need the sign amount of bp that contain informative sequence
 	pub fn add( &mut self, seq:SecondSeq, id:(usize,usize), classes:Vec<usize>) -> bool{
 
-		for i in 0..self.map.len() {
-			if self.map[i].0.same(&seq) {
-				self.only = 0;
-				//println!("Here I have a duplicate second seq! {seq:?}");
-				return self.map[i].1.add( id, classes.clone())
-			}
-		}
-		// now we have no match to the seq and therefore need to add one
-		let mut name_entry = NameEntry::new();
-		if name_entry.add( id , classes.clone() ){
-			self.map.push( ( seq, name_entry ) );
-			if self.map.len() == 1{
-				self.only = id.0;
-			}else {
-				self.only = 0;
-			}
-		}
-		
-		true
+		let mut new_entry = NameEntry::new( seq );
+
+	    for entry in &self.map {
+	        if entry.key.same(&new_entry.key) {
+	        	for i in 0..entry.data.len(){
+	        		_= new_entry.add( entry.data[i], entry.classes[i].clone() );
+	        	}
+	            break;
+	        }
+	    }
+
+	    let ret = new_entry.add(id, classes.clone());
+	    self.map.remove( &new_entry );
+	    self.map.insert( new_entry );
+	    
+	    ret
 	}
 
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
 	pub fn get( &self,seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
+
 		let mut ret : Vec::<&NameEntry> = vec![];
-		for i in 0..self.map.len() {
-			if &self.map[i].0 == seq {
-				// if self.map[i].1.data.len() > 1{
-				// 	eprintln!("Ooops - we have a get in more than one gene: {:?}", self.map[i].1.data);
-				// }
-				ret.push(&self.map[i].1 )
+		
+		let new_entry = NameEntry::new( *seq );
+
+		match &self.map.get( &new_entry ){
+			Some(entry) => {
+				ret.push(entry);
+				Some(ret)
+			},
+			None => {
+				None
 			}
 		}
-		if ret.len() > 0{
-			return Some(ret);
-		}
-		// now we have an initial match, but no secondary.
-		None
+
 	}
 
 	/// finds the most likely matching entry in our set of sequences.
@@ -99,12 +108,13 @@ impl MapperEntry{
 	/// If this becomes necessary it can be added later.
 	pub fn find (&self, seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
 		let mut ret : Vec::<&NameEntry> = vec![];
+
 		let mut dists : Vec::<f32> = vec![];
 		let mut min_dist: f32 = f32::MAX;
-		for i in 0..self.map.len() {
+		for name_entry in self.map.iter() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			//let dist = self.map[i].0.hamming_distance( seq );
-			let dist = self.map[i].0.needleman_wunsch( seq );
+			let dist = name_entry.key.needleman_wunsch( seq );
 			//eprintln!("Distance is {dist}");
 			//if dist <= self.hamming_cut {
 			if dist <= self.needleman_wunsch_cut {
@@ -113,7 +123,7 @@ impl MapperEntry{
 					println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", self.map[i].0, dist);
 				}*/
 				
-				ret.push( &self.map[i].1 );
+				ret.push( name_entry );
 				dists.push( dist );
 				if dist < min_dist{
 					min_dist = dist
@@ -148,7 +158,7 @@ impl MapperEntry{
 		if  self.has_data() {
 			println!("I have {} u64 matching sequences:", self.map.len() );
 			for entry in &self.map{
-				println!( "\tThe sequence {} links to the {}", entry.0, entry.1.to_string() );
+				println!( "\tThe sequence {} links to the {}", entry.key, entry.to_string() );
 			}
 		}
 	}
@@ -163,17 +173,9 @@ impl MapperEntry{
 	/// third how many entries with more than one gene
 	pub fn info (&self) -> [usize;3] {
 		let mut ret: [usize;3] = [0,0,0];
-		for i in 0..self.map.len(){
+		for entry in &self.map{
 			ret[0] +=1;
-			ret[1+ (self.map[i].1.data.len() > 1) as usize] += 1;
-			// match entry.map.len() > 1{
-			// 	true => {
-			// 		ret[2] += 1;
-			// 	},
-			// 	false => {
-			// 		ret[1] += 1;
-			// 	}
-			// }
+			ret[1+ (entry.data.len() > 1) as usize] += 1;
 		}
 		ret
 	}
@@ -189,40 +191,72 @@ mod tests {
 
     #[test]
     fn check_add() {
-    	let mut this = MapperEntry::new(4);
+    	let mut this = MapperEntry::new();
     	// say we Have a gene x with family Y and class Z
-    	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
-    	assert_eq!(this.map[0].1.classes.len(), 1);
+    	this.add(SecondSeq(32_u64, 20) , (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
+
+    	let name_entry = NameEntry::new( SecondSeq(32_u64, 20) );
+    	let result = match this.map.get(&name_entry){
+    		Some(entry) => entry,
+    		None => &name_entry,
+    	};
+
+    	assert_eq!(result.classes.len(), 1);
     	this.collapse_classes();
+
+    	let result = match this.map.get(&name_entry){
+    		Some(entry) => entry,
+    		None => &name_entry,
+    	};
     	assert_eq!( this.map.len(), 1);
-    	assert_eq!(this.map[0].1.data.len(), 1);
-    	assert_eq!(this.map[0].1.classes.len(), 0);
+    	assert_eq!(result.data.len(), 1);
+    	assert_eq!(result.classes.len(), 1);
 
     }
     
     #[test]
     fn check_collapse_classes_1() {
-    	let mut this = MapperEntry::new(4);
+    	let mut this = MapperEntry::new();
     	// say we Have a gene x with family Y and class Z
     	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
     	this.add( SecondSeq(32_u64, 20), (3_usize,0_usize), vec!(3_usize, 1_usize, 2_usize));
-    	assert_eq!(this.map[0].1.classes.len(), 2);
-    	this.collapse_classes();
-    	assert_eq!(this.map[0].1.classes.len(), 0);
-    	assert_eq!(this.map[0].1.data.len(), 1);
-    	assert_eq!(this.map[0].1.data[0], (1_usize, 1_usize));
+    	let name_entry = NameEntry::new( SecondSeq(32_u64, 20) );
+    	let result = match this.map.get(&name_entry){
+    		Some(entry) => entry,
+    		None => &name_entry,
+    	};
+    	assert_eq!(result.classes.len(), 2);
+		this.collapse_classes();
+		let result = match this.map.get(&name_entry){
+    		Some(entry) => entry,
+    		None => &name_entry,
+    	};
+    	assert_eq!(result.classes.len(), 1);
+    	assert_eq!(result.data.len(), 1);
+    	assert_eq!(result.data[0], (1_usize, 1_usize));
     }
     #[test]
     fn check_collapse_classes_2() {
-    	let mut this = MapperEntry::new(4);
+    	let mut this = MapperEntry::new();
     	// say we Have a gene x with family Y and class Z
     	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!( 0_usize, 1_usize, 2_usize));
     	this.add( SecondSeq(32_u64, 20), (3_usize,0_usize), vec!( 3_usize, 4_usize, 2_usize));
-    	assert_eq!(this.map[0].1.classes.len(), 2);
+    	let name_entry = NameEntry::new( SecondSeq(32_u64, 25) );
+    	let result = match this.map.get(&name_entry){
+    		Some(entry) => entry,
+    		None => &name_entry,
+    	};
+
+    	assert_eq!(result.classes.len(), 2);
     	this.collapse_classes();
-    	assert_eq!(this.map[0].1.classes.len(), 0);
-    	assert_eq!(this.map[0].1.data.len(), 1);
-    	assert_eq!(this.map[0].1.data[0], (2_usize, 2_usize));
+
+    	let result = match this.map.get(&name_entry){
+    		Some(entry) => entry,
+    		None => &name_entry,
+    	};
+    	assert_eq!(result.classes.len(), 1);
+    	assert_eq!(result.data.len(), 1);
+    	assert_eq!(result.data[0], (2_usize, 2_usize));
     }
     
 }

@@ -81,7 +81,7 @@ impl CellIndex for CellIds{
         for add in hops {
             //matches.clear();
             let mut cell_id:usize = 0;
-            ok = false;
+            //ok = false;
             let ( km1, km2, km3) = self.get_as_second_seq ( r1.to_vec(), add );
             cell_id += match self.csl1.get( &km1.0 ){
                 Some(c1) => {
@@ -111,7 +111,7 @@ impl CellIndex for CellIds{
             if ! ok{
                 continue;
             }
-            ok = false;
+            //ok = false;
             cell_id += match self.csl2.get( &km2.0 ){
                 Some(c2) => {
                     //println!("to_cellid the c1 {}", c1 );
@@ -139,7 +139,7 @@ impl CellIndex for CellIds{
             if ! ok{
                 continue;
             }
-            ok = false; 
+            //ok = false; 
             cell_id += match self.csl3.get( &km3.0 ){
                 Some(c3) => {
                     //println!("to_cellid the c1 {}", c1 );

@@ -29,6 +29,7 @@ enum Direction {
 
 #[derive(Debug, Copy, Clone)]
 pub struct SecondSeq( pub u64, pub u8);
+
 impl PartialEq for SecondSeq {
     fn eq(&self, other: &Self) -> bool {
         let mask: u64;

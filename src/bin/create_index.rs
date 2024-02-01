@@ -71,7 +71,7 @@ struct Opts {
     #[clap(default_value="gene_id", long)]
     geneid: String,
     /// the string to check for transcript levels names (transcript_id)
-    #[clap(default_value="transcript_id", long)]
+    #[clap(default_value="gene_name", long)]
     transcript: String,
 }
 
