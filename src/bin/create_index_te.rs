@@ -385,6 +385,7 @@ fn main() {
                     let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
                     // Clone or create a new thread-specific report for each task      
                     let _res = process_lines(&data_split, &mut idx, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
+                    idx.make_index_te_ready_single( ); // get rid of a ton of unneccessary balast.
                     idx
 
                 }) // Analyze each chunk in parallel
@@ -458,6 +459,8 @@ fn main() {
     //eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
     
     eprintln!("{}", report.program_states_string() );
+
+    eprintln!("Index stored in folder {}\n", opts.outpath );
 
     // match now.elapsed() {
     //     Ok(elapsed) => {

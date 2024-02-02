@@ -36,7 +36,7 @@ impl MapperEntry{
 	        	// gene_id is a (usize, usize)
 	            Some(gene_id) => {
 	            	let mut new_entry = NameEntry::new( name_entry.key );
-	                new_entry.add( gene_id, vec![0]);
+	                new_entry.add( gene_id.0, gene_id.1);
 	                new_map.insert(new_entry);
 	            }
 	            None => {

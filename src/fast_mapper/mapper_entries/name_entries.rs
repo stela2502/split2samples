@@ -24,6 +24,7 @@ pub struct NameEntry{
 	// I want to quickly find if a dataset has alreadxy been added.
 	hashes: HashSet<u64>, 
 	pos:usize,// the position to return with next
+	min_level: usize, // where to start with checking for unique names? 
 	pub keep:bool, // used in the filtering process
 }
 
@@ -37,6 +38,7 @@ impl Clone for NameEntry {
             classes: self.classes.clone(),
             hashes: self.hashes.clone(),
             pos: self.pos,
+            min_level : self.min_level,
             keep: self.keep, //when clearing out unneccessary ones.
         }
     }
@@ -79,6 +81,7 @@ impl NameEntry{
 			classes,
 			hashes,
 			pos,
+			min_level:0,
 			keep,
 		}
 	}
@@ -142,23 +145,37 @@ impl NameEntry{
 	/// like family or class names.
 	/// If the classes vector is not populated and we have more than one gene matching here it will break.
 	/// The classes vector should be filled with incresingly common entries line [ transcript_id, gene_id, family_id, class_id ]
-	pub fn best_name_4_entries( &self ) -> Option<(usize, usize)> {
+	/// This basically returns a new "self.data" entry.
+	pub fn best_name_4_entries( &self ) -> Option<((usize, usize), Vec<usize>)> {
+
+		if self.classes[0].is_empty(){
+			panic!("This function can only be used while creating an index - I am missing the gene classes info here!")
+		}
 
 		// if this 40bp mapper links to only one gene the most likely return value is this gene_id
 		if self.data.len() == 1{
 			//println!("best_name_4_entries - I only have one! {}", self.data[0]);
-			return Some(self.data[0]);
+			if self.min_level == 0{
+				return Some((self.data[0], self.classes[0].clone()) )
+			}
 		}
 
 		let mut counter: HashMap<usize, usize> = HashMap::new();
-		if self.classes[0].is_empty(){
-			panic!("This function can only be used while creating an index - I am missing the gene classes info here!")
-		}
+		
 		// for every position in the classes vectors (should be sorted by expected rarity many ... view)
+
 		for yid in 0..self.classes[0].len(){
+			if yid < self.data[0].1 {
+				// never even look at something that had been too variable before
+				continue
+			}
 			counter.clear();
 			// check every classes vector and collect the id of the same rarity class
 			for xid in 0..self.data.len(){
+
+				if self.data[xid].1 == xid{
+					// add this
+				}
 				if ! xid < self.classes.len() {
 					panic!("We do never reach this - right!");
 					//self.classes.push(vec![0;self.classes[0].len()]);
@@ -169,7 +186,7 @@ impl NameEntry{
 				// we only got one ID in one rarity class - that is what is the best match!
 				let best = *counter.keys().next().unwrap();
 				//println!("best_name_4_entries - aaand the best one is {}",best);
-				return Some( ( best, yid) )
+				return Some( ( ( best, yid), self.classes[0].clone() ) )
 			}
 		}
 		// so here we have not obtained any unique hit - best approach is possibly to return a None then - or?!
