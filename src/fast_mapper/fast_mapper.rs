@@ -18,6 +18,7 @@ use regex::Regex;
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
 use crate::fast_mapper::mapper_entries::MapperEntry;
+use crate::fast_mapper::mapper_entries::NameEntry;
 
 use std::path::Path;
 use std::io::Write;
@@ -125,8 +126,19 @@ impl FastMapper{
     pub fn merge( &mut self, other: FastMapper ) {
 
         for (primary_id, mapper_object) in other.mapper.iter().enumerate(){
-            for name_entry in mapper_object.map.iter(){
+            for (key, name_entry) in mapper_object.map.iter(){
+                if let Some(entry) = self.mapper[primary_id].map.get_mut( key ){
+                    if (! entry.keep) || (! name_entry.keep){
+                        entry.keep = false; // nothing more needed
+                        continue
+                    }
+                } else if ! name_entry.keep {
+                    let mut this = NameEntry::new( *key );
+                    this.keep=false;
+                    self.mapper[primary_id].map.insert(*key, this ); // that one is already a faliure ;-)
+                }
                 for idx in 0..name_entry.classes.len(){
+                    
                     // Now I need to copy the gene names from the other object to my own.
                     let gene_names = other.gene_names_for_ids( &name_entry.classes[idx] );
                     let gene_name = other.gene_names_for_ids( &vec![ name_entry.data[idx].0 ]);
@@ -163,7 +175,14 @@ impl FastMapper{
     }
 
     pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:SecondSeq, name:String, ids: Vec<String> )  ->Result<(), &str>{
-
+        // this is cheked beforehand in the merge function
+        /*let tmp = NameEntry::new( secondary_match.clone() );
+        if let Some(entry) = self.mapper[initial_match].get( &tmp ){
+            if ! entry.pass {
+                // useless to add something else here
+                return Ok ( () )
+            }
+        }*/
         if ! self.names.contains_key( &name ){
             self.names.insert( name.clone(), self.last_count );
             self.names_store.push( name.clone() );
@@ -897,13 +916,16 @@ impl FastMapper{
                     Err(_err) => return Err::<(), &str>("i could not be written"),
                 };
                 //write the amount of downstream entries
-                count = self.mapper[idx].map.len();
+                count = self.mapper[idx].with_data();
                 match ofile.buff1.write( &count.to_le_bytes() ){
                     Ok(_) => (), 
                     //Ok(_) => println!("amount of 32 bp second kmers to the first 8bp: {} -> {:?} bytes",count, &count.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("count could not be written"),
                 };
-                for tuple  in self.mapper[idx].map.iter(){
+                for (_, tuple) in self.mapper[idx].map.iter(){
+                    if ! tuple.keep {
+                        continue;
+                    }
                     // this will write the u64 and the u8 in one go.
                     match ofile.buff1.write( &tuple.key.to_le_bytes() ){
                         Ok(_) => (), 
@@ -1114,14 +1136,17 @@ impl FastMapper{
                     Err(_err) => return Err::<(), &str>("i could not be written"),
                 };
                 //write the amount of downstream entries
-                count = self.mapper[idx].map.len();
+                count = self.mapper[idx].with_data();
                 match write!(ofile.buff1, "count {} ", count ){
                     Ok(_) => (), 
                     //Ok(_) => println!("amount of 32 bp second kmers to the first 8bp: {} -> {:?} bytes",count, &count.to_le_bytes()  ) ,
                     Err(_err) => return Err::<(), &str>("count could not be written"),
                 };
                 tuple_idx= 0;
-                for tuple  in self.mapper[idx].map.iter(){
+                for (_, tuple)  in self.mapper[idx].map.iter(){
+                    if ! tuple.keep {
+                        continue;
+                    }
                     //nucl.clear();
                     //self.tool.u64_to_str( 32, &tuple.key.0, &mut nucl ); 
                     match write!(ofile.buff1, "\n\t\t{tuple_idx}: {} ",&tuple.key){

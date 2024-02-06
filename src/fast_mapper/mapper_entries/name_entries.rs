@@ -148,6 +148,9 @@ impl NameEntry{
 	/// This basically returns a new "self.data" entry.
 	pub fn best_name_4_entries( &self ) -> Option<((usize, usize), Vec<usize>)> {
 
+		if ! self.keep {
+			return None
+		}
 		if self.classes[0].is_empty(){
 			panic!("This function can only be used while creating an index - I am missing the gene classes info here!")
 		}
@@ -161,25 +164,15 @@ impl NameEntry{
 		}
 
 		let mut counter: HashMap<usize, usize> = HashMap::new();
+
+		let min_y = self.data.iter().map(|&(_, second)| second).max().unwrap_or(0);
 		
 		// for every position in the classes vectors (should be sorted by expected rarity many ... view)
 
-		for yid in 0..self.classes[0].len(){
-			if yid < self.data[0].1 {
-				// never even look at something that had been too variable before
-				continue
-			}
+		for yid in min_y..self.classes[0].len(){
 			counter.clear();
 			// check every classes vector and collect the id of the same rarity class
 			for xid in 0..self.data.len(){
-
-				if self.data[xid].1 == xid{
-					// add this
-				}
-				if ! xid < self.classes.len() {
-					panic!("We do never reach this - right!");
-					//self.classes.push(vec![0;self.classes[0].len()]);
-				}
 				*counter.entry(self.classes[xid][yid]).or_insert(0) += 1;
 			}
 			if counter.len() == 1{

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
@@ -6,7 +7,7 @@ use crate::fast_mapper::mapper_entries::NameEntry;
 #[derive(Debug,PartialEq)]
 pub struct MapperEntry{
 	//pub map:Vec::<(SecondSeq, NameEntry)>, // the old data storage 
-	pub map: HashSet<NameEntry>, // to speed up the fast_mapper merge function
+	pub map: HashMap<SecondSeq, NameEntry>, // to speed up the fast_mapper merge function
 	only:usize,
 	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
 	needleman_wunsch_cut: f32,
@@ -18,7 +19,7 @@ impl MapperEntry{
 		if allocate < 4 {
 			all = 4
 		}*/
-		let map = HashSet::new();
+		let map = HashMap::new();
 		Self{
 			map,
 			only :0,
@@ -29,29 +30,31 @@ impl MapperEntry{
 
 	pub fn collapse_classes (&mut self ){
 		// afterwards we should only have the mapper entries left that actually contained unique information.
-		let mut new_map = HashSet::new();
 
-	    for name_entry in &self.map {
-	        match name_entry.best_name_4_entries() {
-	        	// gene_id is a (usize, usize)
-	            Some(gene_id) => {
-	            	let mut new_entry = NameEntry::new( name_entry.key );
-	                new_entry.add( gene_id.0, gene_id.1);
-	                new_map.insert(new_entry);
-	            }
-	            None => {
-	            }
-	        }
-	    }
+		for key in self.map.keys().cloned().collect::<Vec<_>>(){
+	    //for (key, name_entry) in &self.map {
+	    	if let Some(name_entry) = self.map.get_mut(&key) {
+		    	match name_entry.best_name_4_entries() {
+		        	// gene_id is a (usize, usize)
+		            Some(gene_id) => {
+		            	*name_entry = NameEntry::new( name_entry.key );
+		            	name_entry.add( gene_id.0, gene_id.1);
+		            }
+		            None => {
+		            	let mut new_entry = NameEntry::new( name_entry.key );
+		            	//new_entry.add( (gene_id.0.0, 20), gene_id.1 ); // I assume I will never get 20 classes of a gene - This will always FAIL!
+		            	new_entry.keep = false;
+		            	self.map.insert( key, new_entry);
+		            }
+		        }
+		    }
+		}
 
-	    // Remove entries marked for removal
-	    self.map = new_map;
-	    
 	}
 
 	pub fn possible_ids(&self) -> Vec<(usize, usize)>{
 		let mut ids = HashSet::<(usize, usize)>::with_capacity(5);
-		for entry in &self.map {
+		for (_, entry) in &self.map {
 			for gid in &entry.data{
 				ids.insert( *gid);
 			}
@@ -63,22 +66,17 @@ impl MapperEntry{
 	/// here we also need the sign amount of bp that contain informative sequence
 	pub fn add( &mut self, seq:SecondSeq, id:(usize,usize), classes:Vec<usize>) -> bool{
 
-		let mut new_entry = NameEntry::new( seq );
-
-	    for entry in &self.map {
-	        if entry.key.same(&new_entry.key) {
-	        	for i in 0..entry.data.len(){
-	        		_= new_entry.add( entry.data[i], entry.classes[i].clone() );
-	        	}
-	            break;
+	    for (_, entry) in self.map.iter_mut() {
+	        if entry.key.same(&seq) {
+	        	return entry.add( id, classes );
 	        }
 	    }
 
-	    let ret = new_entry.add(id, classes.clone());
-	    self.map.remove( &new_entry );
-	    self.map.insert( new_entry );
-	    
-	    ret
+	    // we did not have the same entry here!
+	    let mut new_entry = NameEntry::new( seq );
+	    _ = new_entry.add(id, classes.clone());
+	    self.map.insert( seq, new_entry );
+	    true
 	}
 
 
@@ -90,7 +88,7 @@ impl MapperEntry{
 		
 		let new_entry = NameEntry::new( *seq );
 
-		match &self.map.get( &new_entry ){
+		match &self.map.get( &new_entry.key ){
 			Some(entry) => {
 				ret.push(entry);
 				Some(ret)
@@ -111,7 +109,7 @@ impl MapperEntry{
 
 		let mut dists : Vec::<f32> = vec![];
 		let mut min_dist: f32 = f32::MAX;
-		for name_entry in self.map.iter() {
+		for (_, name_entry) in self.map.iter() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			//let dist = self.map[i].0.hamming_distance( seq );
 			let dist = name_entry.key.needleman_wunsch( seq );
@@ -157,7 +155,7 @@ impl MapperEntry{
 	pub fn print(&self) {
 		if  self.has_data() {
 			println!("I have {} u64 matching sequences:", self.map.len() );
-			for entry in &self.map{
+			for (_, entry) in &self.map{
 				println!( "\tThe sequence {} links to the {}", entry.key, entry.to_string() );
 			}
 		}
@@ -166,14 +164,31 @@ impl MapperEntry{
 	
 
 	pub fn has_data(&self) -> bool{
-		! self.map.is_empty()
+		let mut ok = false;
+		for (_, name_entry) in &self.map {
+			if name_entry.keep {
+				ok = true;
+				break
+			}
+		}
+		ok
+	}
+
+	pub fn with_data( &self) -> usize{
+		let mut with_data = 0;
+		for (_ , name_entry ) in &self.map{
+			if name_entry.keep {
+				with_data +=1 
+			}
+		}
+		return with_data
 	}
 	/// first - how many entries
 	/// second how many entries with one gene
 	/// third how many entries with more than one gene
 	pub fn info (&self) -> [usize;3] {
 		let mut ret: [usize;3] = [0,0,0];
-		for entry in &self.map{
+		for (_, entry) in &self.map{
 			ret[0] +=1;
 			ret[1+ (entry.data.len() > 1) as usize] += 1;
 		}

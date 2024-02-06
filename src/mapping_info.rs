@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::time::{Duration, SystemTime};
 
+use chrono::{DateTime, Utc};
 
 
 /// MappingInfo captures all mapping data and is a way to easily copy this data over multiple analysis runs.
@@ -100,6 +101,18 @@ impl MappingInfo{
 	pub fn stop_file_io_time ( &mut self ) {
 		self.file_io_time += self.realtive_start.unwrap().elapsed().unwrap();
 		self.start_counter();
+	}
+
+	pub fn elapsed_time_split ( &self ) -> ( u128, u128, u128, u128 ){
+		let elapsed = self.absolute_start.elapsed().unwrap();
+		return MappingInfo::split_duration( elapsed )
+	}
+
+	pub fn now (&self) -> String{
+
+		let now: DateTime<Utc> = Utc::now();
+		format!("{}", now)
+	    
 	}
 
 	pub fn split_duration( elapsed:Duration ) -> ( u128, u128, u128, u128 ){

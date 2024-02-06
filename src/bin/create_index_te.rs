@@ -77,6 +77,9 @@ struct Opts {
     /// the maximum area of the transcript tend to be indexed (useful for single cell transcriptomes like 10x or Rhapsody)
     #[clap(default_value_t=200, long)]
     max_length: usize,
+    /// the per processor chunk size (default 100_000)
+    #[clap(default_value_t=100, long)]
+    chunk_size: usize,
 }
 
 
@@ -240,6 +243,7 @@ fn main() {
     let mut id: &[u8];
     let delimiter: &[u8] = b"  ";  // The byte sequence you want to split by
 
+
     while let Some(e_record) = expr_file.next() {
         let seqrec = e_record.expect("invalid record");
         id = seqrec.id().split(|&x| x == delimiter[0]).collect::<Vec<&[u8]>>()[0];
@@ -247,7 +251,6 @@ fn main() {
         //eprintln!("'{}'", std::str::from_utf8(id).unwrap() );
         seq_records.insert( std::str::from_utf8( id ).unwrap().to_string() , seqrec.seq().to_vec());
     }
-
 
     /*
     The TE transcrip gtf I have looks like that:
@@ -283,6 +286,9 @@ fn main() {
     let re_gene_id: Regex;
     let re_transcript_id : Regex;
     let re_class_id : Regex;
+
+    println!("Starting to collect the data {}", report.now() );
+
 
     // gene_id "AluSp"; transcript_id "AluSp_dup53774"; family_id "Alu"; class_id "SINE";
     match gtf.is_match( &opts.gtf ){
@@ -346,13 +352,13 @@ fn main() {
             .tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
     pb.set_style(spinner_style);
 
-    let reads_per_chunk = 100_000;
-    eprintln!("Starting with data collection");
+    let reads_per_chunk = opts.chunk_size;
     let mut good_read_count = 0;
     let max_dim = reads_per_chunk * num_threads;
     let mut lines = Vec::<String>::with_capacity( max_dim );
-    eprintln!("In one batch I will analyze {} elemets {} cores x {} elements per batche", max_dim, num_threads, reads_per_chunk);
+    eprintln!("In one batch I will analyze {} elemets {} cores x {} elements per batch", max_dim, num_threads, reads_per_chunk);
     let mut batch = 0;
+
     for line in reader.lines() {
         if good_read_count < max_dim{
             let rec = line.ok().expect("Error reading record.");
@@ -367,73 +373,60 @@ fn main() {
             let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
                 .map(|data_split| {
                     // Get the unique identifier for the current thread
-                    let _thread_id = thread::current().id();
-                
-                    // Convert the thread ID to a string for use in filenames or identifiers
-                    //let thread_id_str = format!("{:?}",thread_id );
-                    //let ofile = Ofiles::new( 1, &("Umapped_with_cellID".to_owned()+&thread_id_str), "R2.fastq.gz", "R1.fastq.gz",  outpath );
-                    //let log_file_str = PathBuf::from(outpath).join(
-                    //    format!("Mapping_log_{}.txt",thread_id_str )
-                    //);
-            
-                    //let log_file = match File::create( log_file_str ){
-                    //        Ok(file) => file,
-                    //        Err(err) => {
-                    //        panic!("thread {thread_id_str} Error: {err:#?}" );
-                    //    }
-                    //};
+                    let thread_id = thread::current().id();
+                    let ( mut h, mut min, mut sec, mut _msec ) = report.elapsed_time_split();
+                    //println!("Thread {thread_id:?} starting to collect the data {h}h {min}min {sec}sec after start");
                     let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
                     // Clone or create a new thread-specific report for each task      
                     let _res = process_lines(&data_split, &mut idx, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
+                    ( h, min, sec, _msec ) = report.elapsed_time_split();
+                    //println!("Thread {thread_id:?} collapsing the thread index {h}h {min}min {sec}sec after start");
                     idx.make_index_te_ready_single( ); // get rid of a ton of unneccessary balast.
+                    ( h, min, sec, _msec ) = report.elapsed_time_split();
+                    //println!("Thread {thread_id:?} thread finished {h}h {min}min {sec}sec after start");
                     idx
 
                 }) // Analyze each chunk in parallel
             .collect(); // Collect the results into a Vec
             report.stop_multi_processor_time();
-            eprintln!("Integrating multicore results");
+            //println!("batch {batch}: Integrating multicore results");
             for idx in results{
                 index.merge(idx);
                 //report.merge( &gex.1 );
             }
+            lines.clear();
             report.stop_single_processor_time();
             let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
 
-            eprintln!("For {} sequence regions (x {} steps) we needed {} h {} min and {} sec to process.",max_dim, batch, h, m, s );
+            println!("batch {batch}: For {} sequence regions (x {} steps) we needed {} h {} min and {} sec to process.",max_dim, batch, h, m, s );
             
             //eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
-            eprintln!("{}", report.program_states_string() );
+            //println!("{}", report.program_states_string() );
 
-            eprintln!("We created this fast_mapper object:");
-            index.eprint();
-            eprintln!("Reading up to {} more regions", max_dim);
+            //println!("We created this fast_mapper object:");
+            //index.print();
+            //println!("Reading up to {} more regions", max_dim);
         }
     }
 
     if good_read_count > 0{
         //good_read_count = 0;
+        println!("Rounding up the last {good_read_count} values");
         let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
             .map(|data_split| {
                 // Get the unique identifier for the current thread
-                let _thread_id = thread::current().id();
-            
-                // Convert the thread ID to a string for use in filenames or identifiers
-                //let thread_id_str = format!("{:?}",thread_id );
-                //let ofile = Ofiles::new( 1, &("Umapped_with_cellID".to_owned()+&thread_id_str), "R2.fastq.gz", "R1.fastq.gz",  outpath );
-                //let log_file_str = PathBuf::from(outpath).join(
-                //    format!("Mapping_log_{}.txt",thread_id_str )
-                //);
-        
-                //let log_file = match File::create( log_file_str ){
-                //        Ok(file) => file,
-                //        Err(err) => {
-                //        panic!("thread {thread_id_str} Error: {err:#?}" );
-                //    }
-                //};
-                let mut index = FastMapper::new( kmer_size, reads_per_chunk );
-                // Clone or create a new thread-specific report for each task
-                let _res = process_lines(&data_split, &mut index, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
-                index
+                let thread_id = thread::current().id();
+                let ( mut h, mut min, mut sec, mut _msec ) = report.elapsed_time_split();
+                println!("Thread {thread_id:?} starting to collect the data {h}h {min}min {sec}sec after start");
+                let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
+                // Clone or create a new thread-specific report for each task      
+                let _res = process_lines(&data_split, &mut idx, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
+                ( h, min, sec, _msec ) = report.elapsed_time_split();
+                println!("Thread {thread_id:?} collapsing the thread index {h}h {min}min {sec}sec after start");
+                idx.make_index_te_ready_single( ); // get rid of a ton of unneccessary balast.
+                ( h, min, sec, _msec ) = report.elapsed_time_split();
+                println!("Thread {thread_id:?} thread finished {h}h {min}min {sec}sec after start");
+                idx
 
             }) // Analyze each chunk in parallel
         .collect(); // Collect the results into a Vec
@@ -443,6 +436,10 @@ fn main() {
             //report.merge( &gex.1 );
         }
     }
+
+    let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
+
+    println!("Collapsing the index down to a usable size? at {h}h {m}min and {s}sec.");
 
     index.make_index_te_ready();
 
@@ -460,8 +457,9 @@ fn main() {
     
     eprintln!("{}", report.program_states_string() );
 
-    eprintln!("Index stored in folder {}\n", opts.outpath );
+    eprintln!("Index stored in folder {}", opts.outpath );
 
+    println!("finished at {}\n", report.now() );
     // match now.elapsed() {
     //     Ok(elapsed) => {
     //         let mut milli = elapsed.as_millis();

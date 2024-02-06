@@ -14,6 +14,7 @@ anyhow = "1.0.66"
 needletail = "0.5.1"
 clap = { version = "3.0.14", features = ["derive"] }
 csv = "1.1"
+chrono = "0.4.33"
 serde = { version="1.0.103", features = ["derive"] }
 flate2 = "1.0.24"
 kmers = { git="https://github.com/COMBINE-lab/kmers" }

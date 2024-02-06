@@ -306,7 +306,7 @@ fn main() {
 
     // and init the Index:
 
-    let mut index = FastMapper::new( kmer_size, 100_000 ); // how many genes do we expect?
+    let mut index = FastMapper::new( kmer_size, 1000 ); // how many genes do we expect?
 
     // in short I need to get an internal model of a gene to work.
     // I want to know where the gene starts ans ends (likely transcripts)
