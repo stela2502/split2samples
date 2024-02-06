@@ -1098,7 +1098,7 @@ impl FastMapper{
         if fs::remove_file(fpath.join("index.1.Index.txt.gz") ).is_ok(){};
         if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-        let mut ofile = Ofiles::new( 1, "index", "Index.txt", "gene.txt",  &path );
+        let mut ofile = Ofiles::new( 1, "index.gz", "Index.txt.gz", "gene.txt.gz",  &path );
 
         
         let mut count:usize;
