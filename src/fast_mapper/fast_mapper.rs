@@ -15,7 +15,7 @@ use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 
 use regex::Regex;
 
-use crate::ofiles::Ofiles;
+use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
 use crate::fast_mapper::mapper_entries::MapperEntry;
 use crate::fast_mapper::mapper_entries::NameEntry;
@@ -879,7 +879,7 @@ impl FastMapper{
         if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
         if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-        let mut ofile = Ofiles::new( 1, "index", "Index", "gene.txt",  &path );
+        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
 
         
         let mut count:usize;
@@ -1098,7 +1098,7 @@ impl FastMapper{
         if fs::remove_file(fpath.join("index.1.Index.txt.gz") ).is_ok(){};
         if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-        let mut ofile = Ofiles::new( 1, "index.gz", "Index.txt.gz", "gene.txt.gz",  &path );
+        let mut ofile = Ofilesr::new( 1, "index", "Index.txt", "gene.txt.gz",  &path );
 
         
         let mut count:usize;
