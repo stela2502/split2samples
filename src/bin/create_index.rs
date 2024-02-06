@@ -258,7 +258,7 @@ fn main() {
     };
     let ofile = Ofiles::new( 1, "NOT_USED", "A.gz", "B.gz",  opts.outpath.as_str() );
 
-    let mut report = MappingInfo::new(log_file, 32.0 , 0, ofile );
+    let mut report = MappingInfo::new( Some(log_file), 32.0 , 0, Some(ofile) );
     report.start_counter();
 
     //// created the report object /////////////////////////////////////

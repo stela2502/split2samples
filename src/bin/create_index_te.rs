@@ -233,7 +233,7 @@ fn main() {
     };
     let ofile = Ofiles::new( 1, "NOT_USED", "A.gz", "B.gz",  opts.outpath.as_str() );
 
-    let mut report = MappingInfo::new(log_file, 32.0 , 0, ofile );
+    let mut report = MappingInfo::new( Some(log_file), 32.0 , 0, Some(ofile) );
 
     report.start_counter();
     // read the fasta data in!
@@ -373,16 +373,16 @@ fn main() {
             let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
                 .map(|data_split| {
                     // Get the unique identifier for the current thread
-                    let thread_id = thread::current().id();
-                    let ( mut h, mut min, mut sec, mut _msec ) = report.elapsed_time_split();
+                    //let thread_id = thread::current().id();
+                    //let ( mut h, mut min, mut sec, mut _msec ) = report.elapsed_time_split();
                     //println!("Thread {thread_id:?} starting to collect the data {h}h {min}min {sec}sec after start");
                     let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
                     // Clone or create a new thread-specific report for each task      
                     let _res = process_lines(&data_split, &mut idx, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
-                    ( h, min, sec, _msec ) = report.elapsed_time_split();
+                    //( h, min, sec, _msec ) = report.elapsed_time_split();
                     //println!("Thread {thread_id:?} collapsing the thread index {h}h {min}min {sec}sec after start");
                     idx.make_index_te_ready_single( ); // get rid of a ton of unneccessary balast.
-                    ( h, min, sec, _msec ) = report.elapsed_time_split();
+                    //( h, min, sec, _msec ) = report.elapsed_time_split();
                     //println!("Thread {thread_id:?} thread finished {h}h {min}min {sec}sec after start");
                     idx
 

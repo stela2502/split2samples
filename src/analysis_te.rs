@@ -33,7 +33,7 @@ use std::thread;
 use rayon::prelude::*;
 use rayon::slice::ParallelSlice;
 
-use crate::ofiles::Ofiles;
+use crate::ofiles::{Ofiles, Fspot};
 //use std::fs::write;
 
 
@@ -444,13 +444,13 @@ impl AnalysisTE{
 		                    },
 		                    None => {
 		                    	// I want to be able to check why this did not work
-		                    	let _ =report.ofile.buff1.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
-		                    	let _ =report.ofile.buff1.write( &data[i].1 ).unwrap();
-		                    	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
-
-		                    	let _ =report.ofile.buff2.write( format!(">Cell{cell_id} no gene detected\n").as_bytes() );
-		                    	let _ =report.ofile.buff2.write( &data[i].0 ).unwrap();
-		                    	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+		                    	report.write_to_ofile( Fspot::Buff1, 
+		                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].1) 
+		                    	);
+								
+								report.write_to_ofile( Fspot::Buff2, 
+									format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].0 ) 
+								);
 
 		                    	report.no_data +=1;
 		                    }
@@ -459,22 +459,18 @@ impl AnalysisTE{
 	            },
 	            Err(_err) => {
 	            	// this is fucked up - the ids are changed!
-	            	let _ =report.ofile.buff1.write( b">No Cell detected\n" );
-                	let _ =report.ofile.buff1.write( &data[i].0 ).unwrap();
-                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
+	            	let _ =report.write_to_ofile( Fspot::Buff1, 
+	            		format!(">No Cell detected\n{:?}\n{:?}\n{:?}\n{:?}\n", 
+	            			&data[i].0, 
+	            			&data[i].0[pos[0]..pos[1]],
+	            			&data[i].0[pos[2]..pos[3]],
+	            			&data[i].0[pos[4]..pos[5]],
+	            		)
+	            	);
 
-                	let _ =report.ofile.buff1.write( &data[i].0[pos[0]..pos[1]] ).unwrap();
-                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
-
-                	let _ =report.ofile.buff1.write( &data[i].0[pos[2]..pos[3]] ).unwrap();
-                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
-
-                	let _ =report.ofile.buff1.write( &data[i].0[pos[4]..pos[5]] ).unwrap();
-                	let _ =report.ofile.buff1.write( b"\n" ).unwrap();
-
-                	let _ =report.ofile.buff2.write( b">No Cell detected\n" );
-                	let _ =report.ofile.buff2.write( &data[i].1 ).unwrap();
-                	let _ =report.ofile.buff2.write( b"\n" ).unwrap();
+                	report.write_to_ofile( Fspot::Buff2, 
+                		format!(">No Cell detected\n{:?}\n", &data[i].1 )
+                	);
 
 	                report.no_sample +=1;
 	                continue
@@ -592,7 +588,7 @@ impl AnalysisTE{
 			        		}
 			    		};
 
-			    		let mut rep = MappingInfo::new( log_file, report.min_quality, report.max_reads, ofile );
+			    		let mut rep = MappingInfo::new( Some(log_file), report.min_quality, report.max_reads, Some(ofile) );
 			    		rep.write_to_log( format!("I am processing {} lines of data", data_split.len() ));
 			            // Clone or create a new thread-specific report for each task
 			    	    let res = self.analyze_paralel(&data_split, &mut rep, pos );
@@ -640,7 +636,7 @@ impl AnalysisTE{
 		           			panic!("thread {thread_id_str} Error: {err:#?}" );
 		        		}
 		    		};
-		    		let mut rep = MappingInfo::new( log_file, report.min_quality, report.max_reads, ofile );
+		    		let mut rep = MappingInfo::new( Some(log_file), report.min_quality, report.max_reads, Some(ofile) );
 		            // Clone or create a new thread-specific report for each task
 		    	    let res = self.analyze_paralel(data_split, &mut rep, pos );
 		    	    (res, rep)

@@ -1,4 +1,4 @@
-use crate::ofiles::Ofiles;
+use crate::ofiles::{Ofiles, Fspot};
 use std::fs::File;
 use indicatif::{ProgressBar};
 use std::collections::BTreeMap;
@@ -31,10 +31,10 @@ pub struct MappingInfo{
    	pub split:usize,
    	/// the others are explained in the quantify_rhapsody.rs file.
     log_iter:usize,
-    pub log_writer:File,
+    pub log_writer: Option<File>,
     pub min_quality:f32, 
     pub max_reads:usize, 
-    pub ofile:Ofiles,
+    pub ofile: Option<Ofiles>,
     pub local_dup:usize,
     pub total:usize,
     pub absolute_start: SystemTime,
@@ -47,7 +47,7 @@ pub struct MappingInfo{
 }
 
 impl MappingInfo{
-	pub fn new(log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles, ) -> Self{
+	pub fn new(log_writer:Option<File>, min_quality:f32, max_reads:usize, ofile:Option<Ofiles>, ) -> Self{
 		let absolute_start = SystemTime::now();
 		let realtive_start = None;
 		let single_processor_time = Duration::new(0,0);
@@ -162,12 +162,30 @@ impl MappingInfo{
 	}
 
 	pub fn write_to_log ( &mut self, text:String ){
-		match writeln!( self.log_writer, "{text}" ){
-            Ok(_) => (),
-            Err(err) => {
-                eprintln!("write error: {err}" );
-            }
-        };
+
+		match &mut self.log_writer{
+			Some(file) => {
+				match writeln!( file , "{text}" ){
+		            Ok(_) => (),
+		            Err(err) => {
+		                eprintln!("write error: {err}" );
+		            }
+		        };
+			},
+			None => {},
+		}
+		
+	}
+
+	pub fn write_to_ofile ( &mut self, which: Fspot, text:String ){
+
+		match &mut self.ofile{
+			Some(file) => {
+				file.write_to_oufile( which, text );
+			},
+			None => {},
+		}
+		
 	}
 
 	pub fn log( &mut self, pb:&ProgressBar ){
@@ -176,15 +194,11 @@ impl MappingInfo{
             let log_str = self.log_str();
             pb.set_message( log_str.clone() );
             pb.inc(1);
-            match writeln!( self.log_writer, "{log_str}" ){
-                Ok(_) => (),
-                Err(err) => {
-                    eprintln!("write error: {err}" );
-                }
-            };
+            self.write_to_log( log_str );
             self.local_dup = 0;
 		}
 	}
+
 	pub fn log_str( &mut self ) -> String{
 		format!("{:.2} mio reads ({:.2}% with cell_id, {:.2}% with gene_id)",
             self.total as f32 / self.split as f32,
@@ -231,12 +245,7 @@ impl MappingInfo{
 	    	+format!(     "\nPCR duplicates or bad cells: {} reads ({:.2}% of cellular)\n\n", pcr_duplicates, ( pcr_duplicates as f32 / self.cellular_reads as f32 ) * 100.0 ).as_str()
 	   		+"timings:\n";
 	   	result += &self.program_states_string();
-	   	match writeln!( self.log_writer, "{result}" ){
-                Ok(_) => (),
-                Err(err) => {
-                    eprintln!("write error: {err}" );
-                }
-            };
+	   	self.write_to_log( result.clone() );
         return result
 	}
 	

@@ -6,7 +6,7 @@ use std::collections::HashSet;
 
 use kmers::naive_impl::Kmer;
 
-use crate::ofiles::Ofilesr;
+use crate::ofiles::Ofiles;
 use crate::ifiles::Ifilesr;
 
 use std::path::Path;
@@ -225,7 +225,7 @@ impl Index for GeneIds {
         if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
         if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
+        let mut ofile = Ofiles::new( 1, "index", "Index", "gene.txt",  &path );
 
         let seq_len:u64 = self.kmer_size as u64;
 

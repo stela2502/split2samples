@@ -7,6 +7,14 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::io::Write;
 
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum Fspot {
+    Buff1,
+    Buff2,
+}
+
+
 pub struct Ofiles {
     pub count: u32,
     //pub file1: GzEncoder<File>,
@@ -60,6 +68,24 @@ impl Ofiles{
             Ok(_) => (),
             Err(e) => eprintln!("Could not flush R2: {e}"),
         };
+    }
+
+    pub fn write_to_oufile( &mut self, which: Fspot, text:String ){
+        match which{
+            Fspot::Buff1 =>{
+                match self.buff1.write( text.as_bytes() ){
+                    Ok(_) => {},
+                    Err(e) => panic!("ofiles::write_to_ofile Buff1 hit an eror: {e:?}")
+                }
+            },
+            Fspot::Buff2 =>{
+                match self.buff2.write( text.as_bytes() ){
+                    Ok(_) => {},
+                    Err(e) => panic!("ofiles::write_to_ofile Buff2 hit an eror: {e:?}")
+                }
+            }
+        }
+
     }
 }
 
