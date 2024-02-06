@@ -135,10 +135,11 @@ impl FastMapper{
                 } else if ! name_entry.keep {
                     let mut this = NameEntry::new( *key );
                     this.keep=false;
-                    self.mapper[primary_id].map.insert(*key, this ); // that one is already a faliure ;-)
+                    self.mapper[primary_id].map.insert(*key, this );
+                    continue
                 }
-                for idx in 0..name_entry.classes.len(){
-                    
+
+                for idx in 0..name_entry.classes.len(){   
                     // Now I need to copy the gene names from the other object to my own.
                     let gene_names = other.gene_names_for_ids( &name_entry.classes[idx] );
                     let gene_name = other.gene_names_for_ids( &vec![ name_entry.data[idx].0 ]);
@@ -1129,7 +1130,7 @@ impl FastMapper{
             idx = i as usize;
             nucl.clear();
             self.tool.u64_to_str( 8, &(i as u64), &mut nucl ); 
-            if self.mapper[idx].has_data(){
+            if self.mapper[idx].has_data(){                
                 match write!(ofile.buff1, "\ni: {} ({:016b}) {} ", i, i,nucl ){
                     Ok(_) => (), 
                     //Ok(_) => println!("8bp mapper: {:b} binary -> {:?} bytes",i, &i.to_le_bytes()  ) ,
