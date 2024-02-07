@@ -8,6 +8,100 @@ mod tests {
     use rustody::int_to_str::IntToStr;
     static EMPTY_VEC: Vec<String> = Vec::new();
 
+    #[test]
+    fn check_integrate_repeats1() {
+        let mut mapper = FastMapper::new( 32, 10 );
+        let classes1 = vec![ "Ulk2".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
+
+        let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
+        mapper.add( &seq.to_vec(), "Ulk2".to_string(), classes1 );
+        let classes2 = vec![ "Ulk1".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
+        mapper.add( &seq.to_vec(), "Ulk1".to_string(), classes2 );
+        
+        let mut tool = IntToStr::new(seq.to_vec(), 32);
+        if let Some((first, second)) = tool.next(){
+            let mapper_entry = &mapper.mapper[ first as usize ];
+            let name_entry = match mapper_entry.get( &second ) {
+                Some(obj) => {
+                     assert_eq!( 1,1, "found the object");
+                     obj
+                },
+                None => {
+                    panic!("mapper_entry.get( second ) failed!");
+                }
+            };
+            assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
+            assert_eq!( name_entry[0].get().len(), 2, "I have two gene names in one name_entry" );
+
+
+        }else {
+            panic!("IntToStr did not give me a single (first, second) touple!");
+        }
+
+        mapper.make_index_te_ready();
+
+        if let Some((first, second)) = tool.next(){
+            let mapper_entry = &mapper.mapper[ first as usize ];
+            let name_entry = match mapper_entry.get( &second ) {
+                Some(obj) => {
+                     assert_eq!( 1,1, "found the object");
+                     obj
+                },
+                None => {
+                    panic!("mapper_entry.get( second ) failed!");
+                }
+            };
+            assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
+            assert_eq!( name_entry[0].get().len(), 1, "I have two gene names in one name_entry" );
+            assert_eq!( name_entry[0].get(), vec![(1,1)], "The famA is the tag for the collapsed name entry" );
+
+
+        }else {
+            panic!("IntToStr did not give me a single (first, second) touple!");
+        }
+    }
+
+    #[test]
+    fn check_integrate_repeats2() {
+        let mut mapper = FastMapper::new( 32, 10 );
+        let classes1 = vec![ "Ulk2".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
+
+        let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
+        mapper.add( &seq.to_vec(), "Ulk2".to_string(), classes1 );
+        let classes2 = vec![ "Ulk1".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
+        mapper.add( &seq.to_vec(), "Ulk1".to_string(), classes2 );
+
+        let mut mapper2 = FastMapper::new( 32, 10 );
+        let classes3 = vec![ "Ulk2".to_string(), "famB".to_string(), "clusterA".to_string(), "regionA".to_string()];
+
+        let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
+        mapper2.add( &seq.to_vec(), "Ulk2".to_string(), classes3 );
+        let classes4 = vec![ "Ulk1".to_string(), "famB".to_string(), "clusterA".to_string(), "regionA".to_string()];
+        mapper2.add( &seq.to_vec(), "Ulk1".to_string(), classes4 );
+
+        mapper.merge( mapper2 );
+
+        let mut tool = IntToStr::new(seq.to_vec(), 32);
+        if let Some((first, second)) = tool.next(){
+            let mapper_entry = &mapper.mapper[ first as usize ];
+            let name_entry = match mapper_entry.get( &second ) {
+                Some(obj) => {
+                     assert_eq!( 1,1, "found the object");
+                     obj
+                },
+                None => {
+                    panic!("mapper_entry.get( second ) failed!");
+                }
+            };
+            assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
+            assert_eq!( name_entry[0].get().len(), 4, "I have four gene names in one name_entry" );
+        }else {
+            panic!("IntToStr did not give me a single (first, second) touple!");
+        }
+
+        mapper.make_index_te_ready();
+    }
+
 
     #[test]
     fn check_geneids() {

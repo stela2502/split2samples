@@ -217,7 +217,7 @@ mod tests {
     	let mut this = NameEntry::new( seq );
     	// say we Have a gene x with family Y and class Z
     	this.add( (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
-    	assert_eq!( this.best_name_4_entries(), Some((0_usize,0_usize)) ); 	
+    	assert_eq!( this.best_name_4_entries(), Some(((0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize)) ) ); 	
     }
     #[test]
     fn check_best_name_4_entries_1() {
@@ -226,7 +226,7 @@ mod tests {
     	// say we Have a gene x with family Y and class Z
     	this.add( (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
     	this.add( (3_usize,0_usize), vec!(3_usize, 1_usize, 2_usize));
-    	assert_eq!( this.best_name_4_entries(), Some((1_usize,1_usize)) ); 	
+    	assert_eq!( this.best_name_4_entries(), Some(((1_usize,1_usize), vec!(0_usize, 1_usize, 2_usize)) ) ); 	
     }
     #[test]
     fn check_best_name_4_entries_2() {
@@ -235,7 +235,7 @@ mod tests {
     	// say we Have a gene x with family Y and class Z
     	this.add( (0_usize,0_usize), vec!( 0_usize, 1_usize, 2_usize));
     	this.add( (3_usize,0_usize), vec!( 3_usize, 4_usize, 2_usize));
-    	assert_eq!( this.best_name_4_entries(), Some((2_usize,2_usize)) ); 	
+    	assert_eq!( this.best_name_4_entries(), Some(((2_usize,2_usize), vec!(0_usize, 1_usize, 2_usize))) ); 	
     }
     #[test]
     fn check_same_not_entered_twice() {
@@ -246,6 +246,6 @@ mod tests {
     	assert_eq!( this.add( (0_usize,0_usize), vec!( 0_usize, 1_usize, 2_usize)), false);
 
     	assert_eq!( this.data.len(), 1);
-    	assert_eq!( this.best_name_4_entries(), Some((0_usize,0_usize)) ); 	
+    	assert_eq!( this.best_name_4_entries(), Some(((0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize))) ); 	
     }
 }

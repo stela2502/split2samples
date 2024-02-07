@@ -211,7 +211,7 @@ mod tests {
     	this.add(SecondSeq(32_u64, 20) , (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
 
     	let name_entry = NameEntry::new( SecondSeq(32_u64, 20) );
-    	let result = match this.map.get(&name_entry){
+    	let result = match this.map.get(&name_entry.key){
     		Some(entry) => entry,
     		None => &name_entry,
     	};
@@ -219,7 +219,7 @@ mod tests {
     	assert_eq!(result.classes.len(), 1);
     	this.collapse_classes();
 
-    	let result = match this.map.get(&name_entry){
+    	let result = match this.map.get(&name_entry.key){
     		Some(entry) => entry,
     		None => &name_entry,
     	};
@@ -236,13 +236,13 @@ mod tests {
     	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!(0_usize, 1_usize, 2_usize));
     	this.add( SecondSeq(32_u64, 20), (3_usize,0_usize), vec!(3_usize, 1_usize, 2_usize));
     	let name_entry = NameEntry::new( SecondSeq(32_u64, 20) );
-    	let result = match this.map.get(&name_entry){
+    	let result = match this.map.get(&name_entry.key){
     		Some(entry) => entry,
     		None => &name_entry,
     	};
     	assert_eq!(result.classes.len(), 2);
 		this.collapse_classes();
-		let result = match this.map.get(&name_entry){
+		let result = match this.map.get(&name_entry.key){
     		Some(entry) => entry,
     		None => &name_entry,
     	};
@@ -257,7 +257,7 @@ mod tests {
     	this.add( SecondSeq(32_u64, 20), (0_usize,0_usize), vec!( 0_usize, 1_usize, 2_usize));
     	this.add( SecondSeq(32_u64, 20), (3_usize,0_usize), vec!( 3_usize, 4_usize, 2_usize));
     	let name_entry = NameEntry::new( SecondSeq(32_u64, 25) );
-    	let result = match this.map.get(&name_entry){
+    	let result = match this.map.get(&name_entry.key){
     		Some(entry) => entry,
     		None => &name_entry,
     	};
@@ -265,7 +265,7 @@ mod tests {
     	assert_eq!(result.classes.len(), 2);
     	this.collapse_classes();
 
-    	let result = match this.map.get(&name_entry){
+    	let result = match this.map.get(&name_entry.key){
     		Some(entry) => entry,
     		None => &name_entry,
     	};

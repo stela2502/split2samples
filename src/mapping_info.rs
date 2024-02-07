@@ -39,6 +39,7 @@ pub struct MappingInfo{
     pub total:usize,
     pub absolute_start: SystemTime,
     realtive_start: Option<SystemTime>,
+    tmp_counter: Option<SystemTime>,
     pub single_processor_time: Duration,
     pub multi_processor_time: Duration,
     pub file_io_time: Duration,
@@ -49,7 +50,6 @@ pub struct MappingInfo{
 impl MappingInfo{
 	pub fn new(log_writer:Option<File>, min_quality:f32, max_reads:usize, ofile:Option<Ofiles>, ) -> Self{
 		let absolute_start = SystemTime::now();
-		let realtive_start = None;
 		let single_processor_time = Duration::new(0,0);
 		let multi_processor_time = Duration::new(0,0);
 		let file_io_time = Duration::new(0,0);
@@ -74,7 +74,8 @@ impl MappingInfo{
 			local_dup: 0,
 			total: 0,
 			absolute_start,
-			realtive_start,
+			realtive_start: None,
+			tmp_counter: None,
 			single_processor_time,
 			multi_processor_time,
 			file_io_time,
@@ -86,6 +87,15 @@ impl MappingInfo{
 
 	pub fn start_counter ( &mut self ){
 		self.realtive_start = Some( SystemTime::now() );
+	}
+
+	pub fn start_ticker ( &mut self )  {
+		self.tmp_counter = Some( SystemTime::now() );
+	}
+	pub fn stop_ticker ( &mut self ) -> ( u128, u128, u128, u128 ) {
+		let ret = MappingInfo::split_duration( self.tmp_counter.unwrap_or( SystemTime::now() ).elapsed().unwrap() );
+		self.tmp_counter = Some( SystemTime::now() );
+		return ret
 	}
 
 	pub fn stop_single_processor_time ( &mut self ) {

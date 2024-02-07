@@ -27,7 +27,7 @@ use std::collections::HashMap;
 
 // use std::convert::TryInto;
 
-use std::thread;
+//use std::thread;
 use rayon::prelude::*;
 use rayon::slice::ParallelSlice;
 use indicatif::MultiProgress;
@@ -179,6 +179,52 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
         family.index( index, max_length , &seq_records );
     }
 
+}
+
+/// One batch consists of several lines from the gtf or gff file.
+/// They will be used to select sequences from the seq_records and
+/// add the mapping indexes for these sequences to the index.
+fn process_batch(
+    lines: &Vec<String>, // No longer mutable
+    seq_records: &HashMap< String, Vec<u8>>, // Assuming SeqRecords is a custom type    
+    index: &mut FastMapper, // Assuming PartialIndex is a custom type
+    report: &mut MappingInfo, // Assuming Report is a custom type
+    num_threads: usize,
+    opts: &Opts, // Assuming Opts is a custom type
+    re_class_id: &Regex, // Assuming Regex is a custom type for regular expressions
+    re_family_name: &Regex,
+    re_gene_id: &Regex,
+    re_transcript_id: &Regex,
+) {
+    report.stop_file_io_time();
+    eprintln!("creating mapper");
+
+    let results: Vec<FastMapper> = lines
+        .par_chunks(lines.len() / num_threads + 1)
+        .map(|data_split| {
+            let mut idx = FastMapper::new(32, 10 );
+            let _res = process_lines(
+                &data_split,
+                &mut idx,
+                &seq_records,
+                opts.max_length,
+                &re_class_id,
+                &re_family_name,
+                &re_gene_id,
+                &re_transcript_id,
+            );
+            idx.make_index_te_ready_single();
+            idx
+        })
+        .collect();
+
+    report.stop_multi_processor_time();
+
+    for idx in results {
+        index.merge(idx);
+    }
+
+    report.stop_single_processor_time();
 }
 
 
@@ -359,87 +405,96 @@ fn main() {
     eprintln!("In one batch I will analyze {} elemets {} cores x {} elements per batch", max_dim, num_threads, reads_per_chunk);
     let mut batch = 0;
 
+    let mut last_chr = "".to_string();
+
+    let mut partial_index = FastMapper::new( kmer_size, 900_000 );
+    report.start_ticker();
     for line in reader.lines() {
+        let rec = line.ok().expect("Error reading record.");
+        let parts: Vec<&str> = rec.split('\t').collect();
+
+        if last_chr != parts[0].to_string() {
+            if good_read_count > 1 {
+                
+                process_batch(
+                    &lines, &seq_records, &mut partial_index, &mut report, num_threads, &opts, 
+                    &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id,
+                );
+                
+                batch +=1;
+                let (_h, m, s, ms) = report.stop_ticker();
+                println!(
+                    "batch {}: For {} sequence regions we needed {m}min {s}sec {ms}msec",
+                    batch, lines.len()
+                );
+                report.start_ticker();
+                lines.clear();
+                good_read_count = 0;
+            }
+            println!("Chromosome {last_chr} is finished - integrating it");
+
+            partial_index.make_index_te_ready();
+            partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
+
+            index.merge( partial_index );
+            partial_index = FastMapper::new( kmer_size, 900_000 );
+
+            let (_h, m, s, ms) = report.stop_ticker();
+            println!(
+                "batch {}: For {} sequence regions we needed {m}min {s}sec {ms}msec",
+                batch, lines.len()
+            );
+            report.start_ticker();
+            last_chr = parts[0].to_string();
+        }
         if good_read_count < max_dim{
-            let rec = line.ok().expect("Error reading record.");
             lines.push(rec);
             good_read_count+=1;
         }
         else {
-            batch +=1;
-            report.stop_file_io_time();
-            eprintln!("creating mapper");
-            good_read_count = 0;
-            let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
-                .map(|data_split| {
-                    // Get the unique identifier for the current thread
-                    //let thread_id = thread::current().id();
-                    //let ( mut h, mut min, mut sec, mut _msec ) = report.elapsed_time_split();
-                    //println!("Thread {thread_id:?} starting to collect the data {h}h {min}min {sec}sec after start");
-                    let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
-                    // Clone or create a new thread-specific report for each task      
-                    let _res = process_lines(&data_split, &mut idx, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
-                    //( h, min, sec, _msec ) = report.elapsed_time_split();
-                    //println!("Thread {thread_id:?} collapsing the thread index {h}h {min}min {sec}sec after start");
-                    idx.make_index_te_ready_single( ); // get rid of a ton of unneccessary balast.
-                    //( h, min, sec, _msec ) = report.elapsed_time_split();
-                    //println!("Thread {thread_id:?} thread finished {h}h {min}min {sec}sec after start");
-                    idx
 
-                }) // Analyze each chunk in parallel
-            .collect(); // Collect the results into a Vec
-            report.stop_multi_processor_time();
-            //println!("batch {batch}: Integrating multicore results");
-            for idx in results{
-                index.merge(idx);
-                //report.merge( &gex.1 );
-            }
-            lines.clear();
-            report.stop_single_processor_time();
-            let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
-
-            println!("batch {batch}: For {} sequence regions (x {} steps) we needed {} h {} min and {} sec to process.",max_dim, batch, h, m, s );
+            process_batch(
+                &lines, &seq_records, &mut partial_index, &mut report, num_threads, &opts, 
+                &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id,
+            );
             
-            //eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
-            //println!("{}", report.program_states_string() );
-
-            //println!("We created this fast_mapper object:");
-            //index.print();
-            //println!("Reading up to {} more regions", max_dim);
+            batch +=1;
+            let (_h, m, s, ms) = report.stop_ticker();
+            println!(
+                "batch {}: For {} sequence regions we needed {m}min {s}sec {ms}msec",
+                batch, lines.len()
+            );
+            report.start_ticker();
+            lines.clear();
+            good_read_count = 0;
         }
     }
 
     if good_read_count > 0{
         //good_read_count = 0;
         println!("Rounding up the last {good_read_count} values");
-        let results:Vec<FastMapper> = lines.par_chunks(lines.len() / num_threads + 1) // Split the data into chunks for parallel processing
-            .map(|data_split| {
-                // Get the unique identifier for the current thread
-                let thread_id = thread::current().id();
-                let ( mut h, mut min, mut sec, mut _msec ) = report.elapsed_time_split();
-                println!("Thread {thread_id:?} starting to collect the data {h}h {min}min {sec}sec after start");
-                let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
-                // Clone or create a new thread-specific report for each task      
-                let _res = process_lines(&data_split, &mut idx, &seq_records, opts.max_length, &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id );
-                ( h, min, sec, _msec ) = report.elapsed_time_split();
-                println!("Thread {thread_id:?} collapsing the thread index {h}h {min}min {sec}sec after start");
-                idx.make_index_te_ready_single( ); // get rid of a ton of unneccessary balast.
-                ( h, min, sec, _msec ) = report.elapsed_time_split();
-                println!("Thread {thread_id:?} thread finished {h}h {min}min {sec}sec after start");
-                idx
 
-            }) // Analyze each chunk in parallel
-        .collect(); // Collect the results into a Vec
-
-        for idx in results{
-            index.merge(idx);
-            //report.merge( &gex.1 );
-        }
+        process_batch(
+            &lines, &seq_records, &mut partial_index, &mut report, num_threads, &opts, 
+            &re_class_id, &re_family_name, &re_gene_id, &re_transcript_id,
+        );
+        
+        batch +=1;
+        let (_h,m, s, ms) = report.stop_ticker();
+        println!(
+            "batch {}: For {} sequence regions we needed {m}min {s}sec {ms}msec",
+            batch, lines.len()
+        );
+        report.start_ticker();
+        lines.clear();
+        //good_read_count = 0;
     }
 
+    partial_index.make_index_te_ready();
+    index.merge( partial_index );
     let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
 
-    println!("Collapsing the index down to a usable size? at {h}h {m}min and {s}sec.");
+    println!("Collapsing the index down to a usable size? at {h}h {m}min {s}sec.");
 
     index.make_index_te_ready();
 
