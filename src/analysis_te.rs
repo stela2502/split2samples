@@ -7,7 +7,7 @@ use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::fast_mapper::FastMapper;
 use crate::int_to_str::IntToStr;
-//use crate::traits::Index;
+//use crate::traits::te_index;
 
 use crate::cellids::CellIds;
 use crate::cellids10x::CellIds10x;
@@ -68,14 +68,14 @@ fn mean_u8( data:&[u8] ) -> f32 {
 /// the analysis calss is a wrapper around my 'old' quantify_rhapsody main funtion.
 /// I started it to easily process multiple fastq files in a row.
 pub struct AnalysisTE{
-	genes: FastMapper,
+	expr_index_obj: FastMapper,
 	samples: FastMapper,
-	antibodies: FastMapper,
+	te_index_obj: FastMapper,
 	cells: Box<dyn CellIndex + Sync>,
 	gex: SingleCellData,
 	sample_names:Vec<String>,
 	gene_names:Vec<String>,
-	ab_names:Vec<String>,
+	te_names:Vec<String>,
 	num_threads:usize,
 }
 
@@ -83,105 +83,61 @@ pub struct AnalysisTE{
 impl AnalysisTE{
 
 
-	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 
-		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
+	pub fn new(gene_kmers:usize, version:String, te_index:Option<String>, 
+		expression_index:Option<String>, specie:String, num_threads:usize, exp:&str  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
 
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
-	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
-	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000 ); // split them into 9 bp kmers
+	    //let mut expr_index_obj :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
+	    let mut expr_index_obj :FastMapper = FastMapper::new( gene_kmers, 100_000 ); // split them into 9 bp kmers
 	    let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000  );
-	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000  );
+	    let mut te_index_obj :FastMapper = FastMapper::new( gene_kmers, 10_000  );
 
 	    let mut gene_count = 600;
 	    
-	    if let Some(i) = index {
-	    	println!("Loading index from path {i}");
-	    	match genes.load_index( i ){
+	    if let Some(i) = te_index {
+	    	println!("Loading te_index from path {i}");
+	    	match te_index_obj.load_index( i ){
 	    		Ok(_r) => (),
-	    		Err(e) => panic!("Failed to load the index {e:?}")
+	    		Err(e) => panic!("Failed to load the te_index {e:?}")
 	    	}
-	    	genes.print();
-	    	gene_count = genes.names.len();
+	    	te_index_obj.print();
+	    	gene_count = te_index_obj.names.len();
 	    	
 	    }
 
 	    let mut gene_names = Vec::new();
-	    for gname in &genes.names_store {
+	    for gname in &expr_index_obj.names_store {
 	    	gene_names.push( gname.to_string());
 	    }
 
 	    let mut gene_names:Vec<String> = Vec::with_capacity(gene_count);
 
-	    for gene in genes.names.keys() {
+	    for gene in expr_index_obj.names.keys() {
 	    	gene_names.push(gene.to_string());
 	    }
-	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
+	    let te_names:Vec<String> = Vec::with_capacity(30);
 
-	    let mut seq_temp:Vec::<u8>;
+	    eprintln!("Changing the expression start gene id to {}", expr_index_obj.last_count );
+		te_index_obj.change_start_id( expr_index_obj.last_count);
 
-	    if let Some(ex) = expression {
-	    	if Path::new(&ex).exists(){
-
-		    	let mut expr_file = parse_fastx_file(ex).expect("valid path/file");
-
-		    	while let Some(e_record) = expr_file.next() {
-			        let seqrec = e_record.expect("invalid record");
-		        	match std::str::from_utf8(seqrec.id()){
-			            Ok(st) => {
-		                	if let Some(id) = st.to_string().split('|').next(){
-		                		if ! genes.names.contains_key(  id ){
-		                			seq_temp = seqrec.seq().to_vec();
-		                			//seq_temp.reverse();
-			                    	genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
-		                    		gene_names.push( id.to_string() );
-		                    	}
-		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
-		                	}
-		            	},
-		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
-		        	}
-		        }
-		    }else {
-		    	eprintln!("Expression file could not be read - ignoring")
-		    }
-	    }
-
-	    eprintln!("Changing the expression start gene id to {}", genes.last_count );
-		antibodies.change_start_id( genes.last_count);
-
-	    if let Some(ab) = antibody {
+	    if let Some(ab) = expression_index {
 
 		    if Path::new(&ab).exists(){
-
-
-		   		let mut ab_file = parse_fastx_file(ab).expect("valid path/file");
-		    	while let Some(ab_record) = ab_file.next() {
-			        let seqrec = ab_record.expect("invalid record");
-		        	match std::str::from_utf8(seqrec.id()){
-			            Ok(st) => {
-		                	if let Some(id) = st.to_string().split('|').next(){
-		                		seq_temp = seqrec.seq().to_vec();
-		                		//seq_temp.reverse();
-			                    antibodies.add_small( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
-		                    	ab_names.push( id.to_string() );
-		                    	//gene_names.push( id.to_string() );
-		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
-		                	};
-		            	},
-		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
-		        	}
-		        }
+		    	println!("Loading expression index from path {ab}");
+		    	match expr_index_obj.load_index( ab ){
+		    		Ok(_r) => (),
+		    		Err(e) => panic!("Failed to load the te_index {e:?}")
+		    	}
+		    	expr_index_obj.print();
+		    	//gene_count = expr_index_obj.names.len();
 		    }else {
-		    	eprintln!("Antibody file could not be read - ignoring")
+		    	eprintln!("expression_index file could not be read - ignoring")
 		    }
 
 		}
-
-
-
 
 	    //  now we need to get a CellIDs object, too
 	    let cells:  Box::<dyn CellIndex + Sync> = match exp {
@@ -199,7 +155,7 @@ impl AnalysisTE{
 	    let mut sample_names:Vec<String> = Vec::with_capacity(12);
 
 	    let mut id = 1;
-	    samples.change_start_id( antibodies.last_count );
+	    samples.change_start_id( te_index_obj.last_count );
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
 	        // GTTGTCAAGATGCTACCGTTCAGAGATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG
@@ -246,30 +202,30 @@ impl AnalysisTE{
 	    }
 
 	    println!("After indexing all fastq files we have the following indices:");
-		println!("the mRNA index:");
-		genes.print();
+		println!("the exspression index:");
+		expr_index_obj.print();
 		println!("the sample id index:");
 		samples.print();
-		println!("and the antibodies index:");
-		antibodies.print();
+		println!("and the TE index:");
+		te_index_obj.print();
 	    
 		Self{
-			genes,
+			expr_index_obj,
 			samples,
-			antibodies,
-	//		genes2,
+			te_index_obj,
+	//		expr_index_obj2,
 			cells,
 			gex,
 			sample_names,
 			gene_names,
-			ab_names,
+			te_names,
 			num_threads,
 		}
 	}
 
 	pub fn write_index(&mut self, path:&String ){
-		self.genes.write_index( path.to_string() ).unwrap();
-		self.genes.write_index_txt( path.to_string() ).unwrap();
+		self.expr_index_obj.write_index( path.to_string() ).unwrap();
+		self.expr_index_obj.write_index_txt( path.to_string() ).unwrap();
 	}
 
 
@@ -344,7 +300,7 @@ impl AnalysisTE{
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
         // lets tag this with the first gene I was interested in: Cd3e
-        //let goi_id = self.genes.get_id("ADA".to_string());
+        //let goi_id = self.expr_index_obj.get_id("ADA".to_string());
 
         for i in 0..data.len() {
 
@@ -354,17 +310,17 @@ impl AnalysisTE{
 	            	report.cellular_reads +=1;
 
 	            	// now I have three possibilites here:
-	            	// an antibody tag match
+	            	// an expression_index tag match
 	            	// a sample id match
 	            	// or a mRNA match
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get_strict( &data[i].1, &mut tool ){
+	            	ok = match &self.expr_index_obj.get( &data[i].1, &mut tool ){
 	                    Some(gene_id) =>{
 	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
-	                    	report.iter_read_type( "antibody reads" );
+	                    	report.iter_read_type( "expression_index reads" );
 	                    	if gene_id.len() == 1 {
 	                    		let data = GeneUmiHash( gene_id[0], *umi);
 		                    	if ! gex.try_insert( 
@@ -414,7 +370,7 @@ impl AnalysisTE{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get_strict( &data[i].1,  &mut tool ){
+		                match &self.te_index_obj.get_strict( &data[i].1,  &mut tool ){
 		                	Some(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
 			                    if gene_id.len() == 1 {
@@ -679,7 +635,7 @@ impl AnalysisTE{
         pb.set_style(spinner_style);
         //pb.set_prefix(format!("[{}/?]", i + 1));
 
-        //let report_gid = self.genes.get_id( "Sample1".to_string() );
+        //let report_gid = self.expr_index_obj.get_id( "Sample1".to_string() );
         'main: while let Some(record2) = readefile.next() {
         	if let Some(record1) = readereads.next() {
         		report.total += 1;
@@ -736,14 +692,14 @@ impl AnalysisTE{
 		            	report.cellular_reads +=1;
 
 		            	// now I have three possibilites here:
-		            	// an antibody tag match
+		            	// an expression_index tag match
 		            	// a sample id match
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec2.seq(),  &mut tool ){
+		            	ok = match &self.te_index_obj.get_strict( &seqrec2.seq(),  &mut tool ){
 		            		Some(gene_id) =>{
-		            			report.iter_read_type( "antibody reads" );
+		            			report.iter_read_type( "expression_index reads" );
 		                    	if gene_id.len() == 1 {
 		                    		let data = GeneUmiHash( gene_id[0], *umi);
 			                    	self.gex.try_insert( 
@@ -793,7 +749,7 @@ impl AnalysisTE{
 			            if ! ok{
 			            	// multimapper are only allowed for expression reads - 
 			            	// if either sample ids or AB reads would have this it would be a library design fault!
-			            	match &self.genes.get_strict( &seqrec2.seq(),  &mut tool ){
+			            	match &self.expr_index_obj.get_strict( &seqrec2.seq(),  &mut tool ){
 			            		Some(gene_id) =>{
 			            			report.iter_read_type( "expression reads" );
 			            			if gene_id.len() == 1 {
@@ -854,7 +810,7 @@ impl AnalysisTE{
 
     pub fn write_data( &mut self, outpath:String, results:&mut MappingInfo, min_umi : usize ) {
 		    // calculating a little bit wrong - why? no idea...
-	    //println!( "collected sample info:i {}", gex.mtx_counts( &mut genes, &gene_names, opts.min_umi ) );
+	    //println!( "collected sample info:i {}", gex.mtx_counts( &mut expr_index_obj, &gene_names, opts.min_umi ) );
 
 	    //let fp1 = PathBuf::from(opts.reads.clone());
 	    //println!( "this is a the filename of the fastq file I'll use {}", fp1.file_name().unwrap().to_str().unwrap() );
@@ -870,22 +826,22 @@ impl AnalysisTE{
 	    results.stop_file_io_time();
 	    
 	    println!("filtering cells");
-	    self.gex.mtx_counts( &mut self.genes, &self.gene_names, min_umi, self.gex.num_threads ) ;
+	    self.gex.mtx_counts( &mut self.expr_index_obj, &self.gene_names, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
 	    println!("writing gene expression");
 
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.expr_index_obj , &self.gene_names, min_umi ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
 
 	    let file_path_sp = PathBuf::from(&outpath).join(
-	    	"BD_Rhapsody_antibodies"
+	    	"BD_Rhapsody_te_index_obj"
 	    	);
 
-	    println!("Writing Antibody counts");
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.antibodies, &self.ab_names, 0 ) {
+	    println!("Writing expression_index counts");
+	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.te_index_obj, &self.te_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
@@ -898,11 +854,11 @@ impl AnalysisTE{
 	    };
 
 	    
-	    let reads_genes = self.gex.n_reads( &mut self.genes , &self.gene_names );
-	    let reads_ab = self.gex.n_reads( &mut self.antibodies , &self.ab_names );
+	    let reads_expr_index_obj = self.gex.n_reads( &mut self.expr_index_obj , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( &mut self.te_index_obj , &self.te_names );
 	    let reads_samples = self.gex.n_reads( &mut self.samples , &self.sample_names );
 
-	    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
+	    println!( "{}",results.summary( reads_expr_index_obj, reads_ab, reads_samples) );
 
 	    let file_path2 = format!("{}/SampleCounts.tsv", outpath );
 	    println!( "\nCell->Sample table written to {file_path2:?}\n" );

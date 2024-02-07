@@ -31,22 +31,19 @@ struct Opts {
     /// the input R2 samples file
     #[clap(short, long)]
     file: String,
-    /// a pre-defined index folder produced by the cerateIndex scipt
-    #[clap(short, long)]
-    index: Option<String>,
     /// the specie of the library [mouse, human]
     #[clap(short, long)]
     specie: String,
     /// the outpath
     #[clap(short, long)]
     outpath: String,
-    /// the fasta database containing the genes
+    /// the index build from the TE transcripts
+    #[clap(short, long)]
+    tfs: Option<String>,
+    /// the index containing the 'normal' transcripts
     #[clap(short, long)]
     expression: Option<String>,
-    /// the fasta database containing the antibody tags
-    #[clap(short, long)]
-    antibody: Option<String>,
-    /// the minimum (UMI) reads per cell (sample + genes + antibody combined)
+    /// the minimum (UMI) reads per cell (sample + genes + expression combined)
     #[clap(short, long)]
     min_umi: usize,
     /// the version of beads you used v1, v2.96 or v2.384
@@ -151,16 +148,12 @@ fn main() {
         None => num_cpus::get(),
     };
     
-    let save= opts.index.is_none();
 
 
-    // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
-    let mut worker = AnalysisTE::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie, opts.index, num_threads, &opts.exp);
+    // wants gene_kmers:usize, version:String, tfs:String, expression:String, specie:String
+    let mut worker = AnalysisTE::new( opts.gene_kmers, opts.version, opts.tfs,
+        opts.expression, opts.specie, num_threads, &opts.exp);
 
-    if save{
-        worker.write_index( &opts.outpath );
-    }
 
     let mut split1 = opts.reads.split(',');
     let mut split2 = opts.file.split(',');
