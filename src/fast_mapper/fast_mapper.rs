@@ -640,7 +640,7 @@ impl FastMapper{
         //let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
         //let mut i = 0;
         tool.from_vec_u8( seq.to_vec() );
-
+        let mut na = 0;
         //let mut item = self.tool.next();
 
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
@@ -648,7 +648,10 @@ impl FastMapper{
         // entries is a Option<(u16, u64, usize)
         'main :while let Some(entries) = tool.next(){
 
-            if self.mapper[entries.0 as usize].has_data() {
+            if na == 10 && matching_geneids.len() == 0{
+                //return None
+            }
+            if self. mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
                 //i +=1;
                 //println!("We are at iteration {i}");
@@ -675,6 +678,7 @@ impl FastMapper{
                         }
                     },
                     None => {
+                        na +=1;
                     },
                 }
             }
@@ -701,7 +705,7 @@ impl FastMapper{
         //let mut item = self.tool.next();
 
         let mut matching_geneids = Vec::< usize>::with_capacity(10);
-
+        let mut na = 0;
         // entries is a Option<(u16, u64, usize)
 
         /*let mut i = 0;
@@ -709,6 +713,11 @@ impl FastMapper{
         let mut large_seq: String = Default::default();*/
 
         'main :while let Some(entries) = tool.next(){
+
+            if na == 10 && matching_geneids.len() == 0 {
+                // This is obviousely not exisitingn in the index.
+                return None
+            }
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
@@ -784,6 +793,7 @@ impl FastMapper{
                                 }
                             },
                             None => {  
+                                na +=1;
                                 //eprintln!("And none in the find() either.");
                                 //no_32bp_match +=1;
                             },

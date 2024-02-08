@@ -126,7 +126,7 @@ impl SecondSeq {
 
         let size = self.min_length(other);
 
-        if size < 15 || self.di_nuc_abs_diff(other) > 0.25{
+        if size < 15  || self.di_nuc_abs_diff(other) > 0.3{
             return 100.0
         }
 

@@ -108,26 +108,13 @@ impl AnalysisTE{
 	    	
 	    }
 
-	    let mut gene_names = Vec::new();
-	    for gname in &expr_index_obj.names_store {
-	    	gene_names.push( gname.to_string());
-	    }
+	    
 
-	    let mut gene_names:Vec<String> = Vec::with_capacity(gene_count);
+	    if let Some(expr_path) = expression_index {
 
-	    for gene in expr_index_obj.names.keys() {
-	    	gene_names.push(gene.to_string());
-	    }
-	    let te_names:Vec<String> = Vec::with_capacity(30);
-
-	    eprintln!("Changing the expression start gene id to {}", expr_index_obj.last_count );
-		te_index_obj.change_start_id( expr_index_obj.last_count);
-
-	    if let Some(ab) = expression_index {
-
-		    if Path::new(&ab).exists(){
-		    	println!("Loading expression index from path {ab}");
-		    	match expr_index_obj.load_index( ab ){
+		    if Path::new(&expr_path).exists(){
+		    	println!("Loading expression index from path {expr_path}");
+		    	match expr_index_obj.load_index( expr_path ){
 		    		Ok(_r) => (),
 		    		Err(e) => panic!("Failed to load the te_index {e:?}")
 		    	}
@@ -137,7 +124,11 @@ impl AnalysisTE{
 		    	eprintln!("expression_index file could not be read - ignoring")
 		    }
 
-		}
+		} 
+
+		let gene_names = te_index_obj.names.keys().cloned().collect::<Vec<String>>();
+		let te_names   = expr_index_obj.names.keys().cloned().collect::<Vec<String>>();
+
 
 	    //  now we need to get a CellIDs object, too
 	    let cells:  Box::<dyn CellIndex + Sync> = match exp {
@@ -217,8 +208,8 @@ impl AnalysisTE{
 			cells,
 			gex,
 			sample_names,
-			gene_names,
-			te_names,
+			gene_names: gene_names.to_vec(),
+			te_names: te_names.to_vec(),
 			num_threads,
 		}
 	}
@@ -411,6 +402,7 @@ impl AnalysisTE{
 		                    	report.no_data +=1;
 		                    }
 		                };
+
 		            }
 	            },
 	            Err(_err) => {
