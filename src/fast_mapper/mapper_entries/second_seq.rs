@@ -98,11 +98,37 @@ impl SecondSeq {
         max(a, max(b, c))
     }
 
+    fn di_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
+        let mut size = self.min_length( other );
+        if size == 32{
+            size = 31
+        }
+        let mut a_sum = vec![0_i8;16];
+        let mut b_sum = vec![0_i8;16];
+
+        for i in 0..size{
+            let a = (self.0 >> (i * 2)) & 0b1111;
+            let b = (other.0 >> (i * 2)) & 0b1111;
+            a_sum[a as usize] +=1;
+            b_sum[b as usize] +=1;
+        }
+        let mut ret = 0;
+        for i in 0..16{
+            ret += a_sum[i].abs_diff(b_sum[i]) as usize
+        }
+        ret as f32 / 2.0 / size as f32
+    }
+
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
+    /// for sequences shorter than 15 bp this fails and returns 100.0
     pub fn needleman_wunsch(&self, other: &SecondSeq ) -> f32 {
 
         let size = self.min_length(other);
+
+        if size < 15 || self.di_nuc_abs_diff(other) > 0.25{
+            return 100.0
+        }
 
         let rows: usize = size;
         let cols: usize = size;
@@ -154,6 +180,8 @@ impl SecondSeq {
             }
             println!();
         }*/
+
+        //println!("Can that be cut short: {self} vs {other} - abs_diff {} NW {}", self.di_nuc_abs_diff(other),  (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
 
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
@@ -340,5 +368,17 @@ mod tests {
         assert_eq!( seq1.hamming_distance( &seq5 ), 2 );
         let seq6 = SecondSeq(0b0, 20);
         assert_eq!( seq1.hamming_distance( &seq6 ), 3 );
+    }
+
+    #[test]
+    fn test_di_nuc_abs_diff() {
+        let seq1 = SecondSeq(0b101010, 20);
+        let seq2 = SecondSeq(0b101010, 20);
+        assert_eq!( seq1.di_nuc_abs_diff( &seq2 ), 0.0 );
+        let seq3 = SecondSeq(0b011001, 20);
+        assert_eq!( seq1.di_nuc_abs_diff( &seq3 ), 3.0/20.0 );
+        assert_eq!( seq3.di_nuc_abs_diff( &seq1 ), 3.0/20.0 );
+        let seq3 = SecondSeq(0b011001, 15);
+        assert_eq!( seq3.di_nuc_abs_diff( &seq1 ), 3.0/15.0 );
     }
 }
