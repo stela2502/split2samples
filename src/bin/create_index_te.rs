@@ -80,6 +80,9 @@ struct Opts {
     /// the per processor chunk size (default 100_000)
     #[clap(default_value_t=100, long)]
     chunk_size: usize,
+    /// processor cores to use (default all)
+    #[clap( short)]
+    n: Option<usize>,
 }
 
 
@@ -389,7 +392,9 @@ fn main() {
     let reader = BufReader::new( file1 );
     //let mut missing_chr:HashSet<String>  = HashSet::new();
 
-    let num_threads = num_cpus::get();
+    let num_threads = opts.n.unwrap_or(num_cpus::get());
+
+    println!("I am using {num_threads} cores");
 
     let m = MultiProgress::new();
     let pb = m.add(ProgressBar::new(5000));
