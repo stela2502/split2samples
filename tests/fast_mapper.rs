@@ -10,7 +10,7 @@ mod tests {
 
     #[test]
     fn check_integrate_repeats1() {
-        let mut mapper = FastMapper::new( 32, 10 );
+        let mut mapper = FastMapper::new( 32, 10, 0 );
         let classes1 = vec![ "Ulk2".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
 
         let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn check_integrate_repeats2() {
-        let mut mapper = FastMapper::new( 32, 10 );
+        let mut mapper = FastMapper::new( 32, 10, 0 );
         let classes1 = vec![ "Ulk2".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
 
         let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
@@ -71,7 +71,7 @@ mod tests {
         let classes2 = vec![ "Ulk1".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
         mapper.add( &seq.to_vec(), "Ulk1".to_string(), classes2 );
 
-        let mut mapper2 = FastMapper::new( 32, 10 );
+        let mut mapper2 = FastMapper::new( 32, 10, 0 );
         let classes3 = vec![ "Ulk2".to_string(), "famB".to_string(), "clusterA".to_string(), "regionA".to_string()];
 
         let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn check_geneids() {
-        let mut mapper = FastMapper::new( 32, 10 );
+        let mut mapper = FastMapper::new( 32, 10, 0 );
 
         let mut geneid = 0;
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
@@ -138,7 +138,7 @@ mod tests {
     }
     #[test]
     fn check_changed_start() {
-        let mut mapper = FastMapper::new( 16, 10 );
+        let mut mapper = FastMapper::new( 16, 10, 0 );
         mapper.change_start_id( 10 );
         assert_eq!( mapper.last_count, 10);
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
@@ -147,8 +147,17 @@ mod tests {
     }
 
     #[test]
+    fn check_offset() {
+        let mut mapper = FastMapper::new( 16, 10, 10 );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(),
+         "Gene1".to_string(),EMPTY_VEC.clone() );
+        assert_eq!( mapper.last_count, 11 );
+        assert_eq!(mapper.names_store[0] , "Gene1".to_string(), "gene was 'Gene1'");
+    }
+
+    #[test]
     fn check_write_index() {
-        let mut mapper = FastMapper::new( 16, 10 );
+        let mut mapper = FastMapper::new( 16, 10, 0 );
 
         //log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles
 
@@ -172,7 +181,7 @@ mod tests {
         mapper.write_index( opath.to_string() ).unwrap();
         mapper.print();
 
-        let mut mapper2 = FastMapper::new( 16, 10 );
+        let mut mapper2 = FastMapper::new( 16, 10, 0 );
         mapper2.load_index( opath.to_string() ).unwrap();
 
         assert_eq!(  mapper.with_data, mapper2.with_data );
@@ -192,7 +201,7 @@ mod tests {
     #[test]
     fn check_merge() {
 
-        let mut mapper = FastMapper::new( 16, 10 );
+        let mut mapper = FastMapper::new( 16, 10, 0 );
 
 
         let geneid = 0;
@@ -200,7 +209,7 @@ mod tests {
         mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
-        let mut other = FastMapper::new( 16, 10 );
+        let mut other = FastMapper::new( 16, 10, 0 );
 
         other.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
             "Gene2".to_string(),EMPTY_VEC.clone() );
@@ -216,7 +225,7 @@ mod tests {
 
     #[test]
     fn check_samples() {
-        let mut mapper = FastMapper::new( 32, 10 );
+        let mut mapper = FastMapper::new( 32, 10, 0 );
         let sample2 =  b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
         //let sample_0 =                           b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG";
         let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
@@ -248,7 +257,7 @@ mod tests {
 
     #[test]
     fn check_samples_shifted() {
-        let mut mapper = FastMapper::new( 32, 10 );
+        let mut mapper = FastMapper::new( 32, 10, 0 );
         //mapper.change_start_id( 10 );
         //  samples[0]                   "AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG"
         //                                      "GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT"
@@ -289,7 +298,7 @@ mod tests {
 
     #[test]
     fn check_duplicate_seqs() {
-        let mut index = FastMapper::new( 32, 10 );
+        let mut index = FastMapper::new( 32, 10, 0 );
 
         //             "AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC"
         let seq = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACAT";

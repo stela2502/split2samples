@@ -306,7 +306,7 @@ fn main() {
 
     // and init the Index:
 
-    let mut index = FastMapper::new( kmer_size, 1000 ); // how many genes do we expect?
+    let mut index = FastMapper::new( kmer_size, 1000, 0 ); // how many genes do we expect?
 
     // in short I need to get an internal model of a gene to work.
     // I want to know where the gene starts ans ends (likely transcripts)
@@ -409,7 +409,7 @@ fn main() {
             //        panic!("thread {thread_id_str} Error: {err:#?}" );
             //    }
             //};
-            let mut idx = FastMapper::new( kmer_size,  reads_per_chunk );
+            let mut idx = FastMapper::new( kmer_size,  reads_per_chunk, 0 );
             // Clone or create a new thread-specific report for each task      
             process_genes_multi( data_split, &mut idx, &seq_records, &chr );
             idx

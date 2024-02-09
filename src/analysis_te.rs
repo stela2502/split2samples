@@ -91,9 +91,8 @@ impl AnalysisTE{
 
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut expr_index_obj :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
-	    let mut expr_index_obj :FastMapper = FastMapper::new( gene_kmers, 100_000 ); // split them into 9 bp kmers
-	    let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000  );
-	    let mut te_index_obj :FastMapper = FastMapper::new( gene_kmers, 10_000  );
+	    
+	    let mut te_index_obj :FastMapper = FastMapper::new( gene_kmers, 10_000, 0  );
 
 	    let mut gene_count = 600;
 	    
@@ -108,7 +107,7 @@ impl AnalysisTE{
 	    	
 	    }
 
-	    
+	    let mut expr_index_obj :FastMapper = FastMapper::new( gene_kmers, 100_000, gene_count ); // split them into 9 bp kmers
 
 	    if let Some(expr_path) = expression_index {
 
@@ -146,7 +145,9 @@ impl AnalysisTE{
 	    let mut sample_names:Vec<String> = Vec::with_capacity(12);
 
 	    let mut id = 1;
-	    samples.change_start_id( te_index_obj.last_count );
+
+	   	let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000, te_index_obj.names.len() +  expr_index_obj.names.len()  );
+
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
 	        // GTTGTCAAGATGCTACCGTTCAGAGATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG

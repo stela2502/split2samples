@@ -205,7 +205,7 @@ fn process_batch(
     let results: Vec<FastMapper> = lines
         .par_chunks(lines.len() / num_threads + 1)
         .map(|data_split| {
-            let mut idx = FastMapper::new(32, 10 );
+            let mut idx = FastMapper::new(32, 10, 0 );
             let _res = process_lines(
                 &data_split,
                 &mut idx,
@@ -310,7 +310,7 @@ fn main() {
 
     // and init the Index:
 
-    let mut index = FastMapper::new( kmer_size, 900_000 );
+    let mut index = FastMapper::new( kmer_size, 900_000, 0 );
 
     // in short I need to get an internal model of a gene to work.
     // I want to know where the gene starts ans ends (likely transcripts)
@@ -412,7 +412,7 @@ fn main() {
 
     let mut last_chr = "".to_string();
 
-    let mut partial_index = FastMapper::new( kmer_size, 900_000 );
+    let mut partial_index = FastMapper::new( kmer_size, 900_000,0 );
     report.start_ticker();
     for line in reader.lines() {
         let rec = line.ok().expect("Error reading record.");
@@ -442,7 +442,7 @@ fn main() {
             partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
 
             index.merge( partial_index );
-            partial_index = FastMapper::new( kmer_size, 900_000 );
+            partial_index = FastMapper::new( kmer_size, 900_000, 0 );
 
             let (_h, m, s, ms) = report.stop_ticker();
             println!(

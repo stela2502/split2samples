@@ -60,13 +60,21 @@ pub struct FastMapper{
     mask:u64, // a mask to fill matching sequences to match the index's kmer_len
     pub pos: usize, // when creating the index - this is the amount of times we added a new matching sequence
     pub neg: usize, // when creating the index - this is the amount of times we failed to add a new matching sequence (as we already had this connection)
+    /*offset is used to make a fixed index report 'wrong' gene_ids.
+    Here is an example: You have two indices and want to collect the data from both into one SingleCellData matrix.
+    As these indeices have been created with a basis of 0 you can not collect both data into the same object.
+    But using this offset you can give the second index an offset of the max id of the other index.
+    Therefore the second index will report ids shifted by that value.
+    But it will be totally transperent to the ouside world.
+     */
+    offset: usize, // the offset is to make a index report 'wrong' ids - say you want
 }
 
 // here the functions
 
 impl FastMapper{
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
-    pub fn new( kmer_len:usize, allocate:usize )-> Self {
+    pub fn new( kmer_len:usize, allocate:usize, offset: usize )-> Self {
         //println!("I would add {} new entries here:", u16::MAX);
         let mut mapper: Vec<MapperEntry> = Vec::with_capacity(u16::MAX as usize);
         
@@ -109,6 +117,7 @@ impl FastMapper{
             mask,
             pos,
             neg,
+            offset: offset,
         }
     }
 
@@ -152,10 +161,23 @@ impl FastMapper{
 
     }
 
+
+    /// You get a Vector og gene names for a vector of IDs.
+    /// This function takes into account that we might have an offset here.
     pub fn gene_names_for_ids( &self, ids:&Vec<usize> ) -> Vec<String> {
         let mut ret = Vec::<String>::with_capacity( ids.len() );
         for id in ids.iter(){
-            ret.push( self.names_store[*id].clone())
+            let fixed = *id - self.offset;
+            ret.push( self.names_store[fixed].clone())
+        }
+        ret
+    }
+
+    fn gene_names_for_intern_ids( &self, ids:&Vec<usize> ) -> Vec<String> {
+        let mut ret = Vec::<String>::with_capacity( ids.len() );
+        for id in ids.iter(){
+            let fixed = *id;
+            ret.push( self.names_store[fixed].clone())
         }
         ret
     }
@@ -170,9 +192,52 @@ impl FastMapper{
                 self.last_count += 1;
             }
             let id = self.get_id( name.to_string() ).clone();
-            ret.push( id);
+            ret.push( id + self.offset );
         }
         ret
+    }
+
+    fn intern_ids_for_gene_names( &mut self, ids:&Vec<String> ) -> Vec<usize> {
+        let mut ret = Vec::<usize>::with_capacity( ids.len() );
+        for name in ids.iter(){
+            if ! self.names.contains_key( name ){
+                self.names.insert( name.clone(), self.last_count );
+                self.names_store.push( name.clone() );
+                self.names_count.push( 0 );
+                self.last_count += 1;
+            }
+            let id = self.get_id( name.to_string() ).clone();
+            ret.push( id );
+        }
+        ret
+    }
+
+    pub fn get_id( &self, name: String ) -> usize{
+        let id = match self.names.get( &name ) {
+            Some( id ) => id + self.offset,
+            None => panic!("Gene {name} not defined in the GeneID object"),
+        };
+        id.clone()
+    }
+
+    fn intern_get_id( &self, name: String ) -> usize{
+        let id = match self.names.get( &name ) {
+            Some( id ) => id ,
+            None => panic!("Gene {name} not defined in the GeneID object"),
+        };
+        id.clone()
+    }
+
+    pub fn get_name( &self, id:usize) -> String{
+        let name = match self.names_store.get( id - self.offset ){
+            Some( na ) => na,
+            None => panic!("GeneID {id} not defined in the GeneID object"),
+        };
+        name.to_string()
+    }
+
+    fn local_gene_id (&self, id:usize) -> usize {
+        id - self.offset
     }
 
     pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:SecondSeq, name:String, ids: Vec<String> )  ->Result<(), &str>{
@@ -217,15 +282,12 @@ impl FastMapper{
 
     pub fn add_small(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
 
-        if ! self.names.contains_key( &name ){
-            self.names.insert( name.clone(), self.last_count );
-            self.names_store.push( name.clone() );
-            self.names_count.push( 0 );
-            self.last_count += 1;
-        }
 
-        let classes =  self.ids_for_gene_names( &class_ids );
-        let gene_id = self.get_id( name.to_string() );
+        let mut classes_vec = vec![name.clone()];
+        classes_vec.extend( class_ids);
+
+        let classes =  self.ids_for_gene_names( &classes_vec );
+        let gene_id = classes[0];
         //eprintln!("fast_mapper: I have {} -> {}", name, gene_id);
 
         //let mut long:u64;
@@ -306,15 +368,12 @@ impl FastMapper{
 
     pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
 
-        if ! self.names.contains_key( &name ){
-            self.names.insert( name.clone(), self.last_count );
-            self.names_store.push( name.clone() );
-            self.names_count.push( 0 );
-            self.last_count += 1;
-        }
 
-        let classes =  self.ids_for_gene_names( &class_ids );
-        let gene_id = self.get_id( name.to_string() );
+        let mut classes_vec = vec![name.clone()];
+        classes_vec.extend( class_ids);
+
+        let classes =  self.ids_for_gene_names( &classes_vec );
+        let gene_id = classes[0];
 
         self.tool.from_vec_u8( seq.to_vec() );
         let mut tmp = "".to_string();
@@ -363,7 +422,7 @@ impl FastMapper{
                 //println!("I have added a sequence! {:#b}+{} -> geneid ({gene_id}, 0) + classes {classes:?} names_ ({:?})",entries.0, entries.1, 
                 //    self.gene_names_for_ids(&vec![gene_id, classes[0] as usize, classes[1] as usize] ) );
                 self.pos += 1;
-                self.names_count[gene_id] +=1;
+                self.names_count[ self.gene_id] +=1;
                 if i < self.names_count[gene_id]{
                     i = self.names_count[gene_id];
                 }
@@ -476,21 +535,7 @@ impl FastMapper{
         }
     }
 
-    pub fn get_id( &self, name: String ) -> usize{
-        let id = match self.names.get( &name ) {
-            Some( id ) => id,
-            None => panic!("Gene {name} not defined in the GeneID object"),
-        };
-        id.clone()
-    }
-
-    pub fn get_name( &self, id:usize) -> String{
-        let name = match self.names_store.get( id ){
-            Some( na ) => na,
-            None => panic!("GeneID {id} not defined in the GeneID object"),
-        };
-        name.to_string()
-    }
+    
 
     fn get_best_gene( &self, genes:&HashMap::<(usize, usize), usize>, ret: &mut Vec::<usize> ) -> bool{
         ret.clear();

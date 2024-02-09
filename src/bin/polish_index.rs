@@ -30,7 +30,7 @@ fn main() {
     //// create the report object /////////////////////////////////////
     let opts: Opts = Opts::parse();
 
-    let mut index = FastMapper::new( 32, 10 );
+    let mut index = FastMapper::new( 32, 10, 0 );
 
     match index.load_index( opts.index ){
     	Ok(_) => {},
@@ -43,7 +43,7 @@ fn main() {
 
     index.print();
 
-    let mut fixed_index = FastMapper::new(32, 10);
+    let mut fixed_index = FastMapper::new(32, 10, 0);
 
     fixed_index.merge(index); // this should re-calculate the genes vector!
 

@@ -45,9 +45,9 @@ fn main() {
 
 	// let mut cell_umi:HashSet<u128> = HashSet::new();
     //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
-    let mut genes :FastMapper = FastMapper::new( 32, 100_000 ); // split them into 9 bp kmers
-    let mut samples :FastMapper = FastMapper::new( 32, 10_000  );
-    let mut antibodies :FastMapper = FastMapper::new( 32, 10_000  );
+    let mut genes :FastMapper = FastMapper::new( 32, 100_000, 0 ); // split them into 9 bp kmers
+    let mut samples :FastMapper = FastMapper::new( 32, 10_000 , 0 );
+    let mut antibodies :FastMapper = FastMapper::new( 32, 10_000, 0  );
 
     let mut gene_count = 600;
     
