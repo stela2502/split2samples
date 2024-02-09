@@ -92,10 +92,8 @@ impl Analysis{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000, 0 ); // split them into 9 bp kmers
-	    let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000, 0  );
-	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000, 0  );
 
-	    let mut gene_count = 600;
+	    //let mut gene_count = 0;
 	    
 	    if let Some(i) = index {
 	    	println!("Loading index from path {i}");
@@ -104,11 +102,11 @@ impl Analysis{
 	    		Err(e) => panic!("Failed to load the index {e:?}")
 	    	}
 	    	genes.print();
-	    	gene_count = genes.names.len();
+	    	//gene_count = genes.names.len();
 	    	
 	    }
 
-	    let mut gene_names = Vec::new();
+	    /*let mut gene_names = Vec::new();
 	    for gname in &genes.names_store {
 	    	gene_names.push( gname.to_string());
 	    }
@@ -120,7 +118,7 @@ impl Analysis{
 	    }
 	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
 
-	    let mut seq_temp:Vec::<u8>;
+	    let mut seq_temp:Vec::<u8>;*/
 
 	    if let Some(ex) = expression {
 	    	if Path::new(&ex).exists(){
@@ -133,12 +131,8 @@ impl Analysis{
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		if ! genes.names.contains_key(  id ){
-		                			seq_temp = seqrec.seq().to_vec();
-		                			//seq_temp.reverse();
-			                    	genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
-		                    		gene_names.push( id.to_string() );
+			                    	genes.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
 		                    	}
-		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 		                	}
 		            	},
 		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -149,8 +143,8 @@ impl Analysis{
 		    }
 	    }
 
-	    eprintln!("Changing the expression start gene id to {}", genes.last_count );
-		antibodies.change_start_id( genes.last_count);
+	    eprintln!("Changing the expression start gene id to {}", genes.names.len() );
+	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000, genes.names.len()  );
 
 	    if let Some(ab) = antibody {
 
@@ -163,10 +157,10 @@ impl Analysis{
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
-		                		seq_temp = seqrec.seq().to_vec();
+		                		//seq_temp = seqrec.seq().to_vec();
 		                		//seq_temp.reverse();
-			                    antibodies.add_small( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
-		                    	ab_names.push( id.to_string() );
+			                    antibodies.add_small( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
+		                    	//ab_names.push( id.to_string() );
 		                    	//gene_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 		                	};
@@ -196,16 +190,17 @@ impl Analysis{
 	    // here I need the cell kmer site.
 	    let gex = SingleCellData::new( num_threads );
 
-	    let mut sample_names:Vec<String> = Vec::with_capacity(12);
+	    let mut samples= FastMapper::new( gene_kmers, 10_000, antibodies.names.len() + genes.names.len() );
+	    //let mut sample_names:Vec<String> = Vec::with_capacity(12);
 
 	    let mut id = 1;
-	    samples.change_start_id( antibodies.last_count );
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
 	        // GTTGTCAAGATGCTACCGTTCAGAGATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG
 	        //                        b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG"
 	        // Seams they have introduced new sample ids, too....
-	        let sequences = [ b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG",
+	        let sequences = [ 
+	        b"ATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG", b"TGGATGGGATAAGTGCGTGATGGACCGAAGGGACCTCGTGGCCGG",
 	        b"CGGCTCGTGCTGCGTCGTCTCAAGTCCAGAAACTCCGTGTATCCT", b"ATTGGGAGGCTTTCGTACCGCTGCCGCCACCAGGTGATACCCGCT", 
 	        b"CTCCCTGGTGTTCAATACCCGATGTGGTGGGCAGAATGTGGCTGG", b"TTACCCGCAGGAAGACGTATACCCCTCGTGCCAGGCGACCAATGC",
 	        b"TGTCTACGTCGGACCGCAAGAAGTGAGTCAGAGGCTGCACGCTGT", b"CCCCACCAGGTTGCTTTGTCGGACGAGCCCGCACAGCGCTAGGAT",
@@ -214,29 +209,39 @@ impl Analysis{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
-	        	seq_ext.extend_from_slice( seq );
-	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	sample_names.push( format!("Sample{id}") );
+	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	//seq_ext.extend_from_slice( seq );
+	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 	    }
 	    else if specie.eq("mouse") {
 	        // and the mouse ones
-	        let sequences = [b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
+	        let sequences = [
+	        b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
 	        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
 	        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
 	        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
 	        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
 	        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
 
+	        /* real world examples
+	        "GTTGTCAAGATGCTACCG TTCAGAGTTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCTAAAA"
+	        "                         ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC"
+	        "GTTGTCAAGATGCTACCG TTCAGGACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCCAAAAA
+	        "                          TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT"
+			"GTTGTCAAGATGCTACCG TTCAGAGTTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT"
+			"                          AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC"
+			"GTTGTCAAGATGCTACG  TTCAGAGAGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTCAAGAA"
+			*/
 	        for seq in sequences{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	sample_names.push( format!("Sample{id}") );
+	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 
@@ -252,6 +257,9 @@ impl Analysis{
 		samples.print();
 		println!("and the antibodies index:");
 		antibodies.print();
+		let sample_names: Vec<String>  = samples.names.keys().cloned().collect();
+		let gene_names: Vec<String>  = genes.names.keys().cloned().collect();
+		let ab_names: Vec<String>  = antibodies.names.keys().cloned().collect();
 	    
 		Self{
 			genes,
@@ -767,7 +775,7 @@ impl Analysis{
 		                	ok = match &self.samples.get_strict( &seqrec2.seq(),  &mut tool ){
 		                		Some(gene_id) =>{
 		                			report.iter_read_type( "sample reads" );
-			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec.seq()) );
+			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec2.seq()) );
 
 			                    	//eprintln!("Got a samples match! {gene_id}");
 			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );

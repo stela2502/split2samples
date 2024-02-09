@@ -442,6 +442,7 @@ fn main() {
             partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
 
             index.merge( partial_index );
+            index.make_index_te_ready();
             partial_index = FastMapper::new( kmer_size, 900_000, 0 );
 
             let (_h, m, s, ms) = report.stop_ticker();
@@ -496,6 +497,8 @@ fn main() {
     }
 
     partial_index.make_index_te_ready();
+    partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
+
     index.merge( partial_index );
     let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
 
@@ -503,6 +506,7 @@ fn main() {
 
     index.make_index_te_ready();
 
+    //println!("The merged index has not been produced ( memory issues!)");
 
     eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
 
@@ -511,31 +515,12 @@ fn main() {
     if opts.text{
         index.write_index_txt( opts.outpath.to_string() ).unwrap();
     }
-
-    //index.write_index_txt( opts.outpath.to_string() ).unwrap();
-    //eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
     
     eprintln!("{}", report.program_states_string() );
 
     eprintln!("Index stored in folder {}", opts.outpath );
 
     println!("finished at {}\n", report.now() );
-    // match now.elapsed() {
-    //     Ok(elapsed) => {
-    //         let mut milli = elapsed.as_millis();
 
-    //         let mil = milli % 1000;
-    //         milli= (milli - mil) /1000;
-
-    //         let sec = milli % 60;
-    //         milli= (milli -sec) /60;
-
-    //         let min = milli % 60;
-    //         milli= (milli -min) /60;
-
-    //         eprintln!("finished in {milli} h {min} min {sec} sec {mil} milli sec");
-    //     },
-    //     Err(e) => {println!("Error: {e:?}");}
-    // }
 
 }

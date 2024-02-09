@@ -240,11 +240,8 @@ impl CellData{
         //return self.total_umis;
         let mut n = 0;
         for gname in gnames{
-            let id = match gene_info.names.get( gname ){
-                Some(g_id) => g_id,
-                None => panic!("I could not resolve the gene name {gname}" ),
-            };
-            n += match self.total_reads.get( id  ){
+            let id = gene_info.get_id( gname.to_string() );
+            n += match self.total_reads.get( &id  ){
                 Some( count ) => {
                     *count
                 },

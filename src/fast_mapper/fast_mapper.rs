@@ -122,11 +122,12 @@ impl FastMapper{
     }
 
     pub fn change_start_id ( &mut self, new_start :usize ){
-        self.last_count = new_start;
+        self.offset = new_start
+        /*self.last_count = new_start;
         for _i in 0..new_start{
             self.names_store.push("PLACEHOLDER".to_string());
             self.names_count.push(0);
-        }
+        }*/
     }
 
     /// For the multicore processing I need this object to be mergable
@@ -206,10 +207,14 @@ impl FastMapper{
                 self.names_count.push( 0 );
                 self.last_count += 1;
             }
-            let id = self.get_id( name.to_string() ).clone();
+            let id = self.get_intern_id( name.to_string() ).clone();
             ret.push( id );
         }
         ret
+    }
+
+    fn get_extern_id_from_intern( &self, id: usize ) -> usize{
+        id + self.offset
     }
 
     pub fn get_id( &self, name: String ) -> usize{
@@ -220,7 +225,7 @@ impl FastMapper{
         id.clone()
     }
 
-    fn intern_get_id( &self, name: String ) -> usize{
+    fn get_intern_id( &self, name: String ) -> usize{
         let id = match self.names.get( &name ) {
             Some( id ) => id ,
             None => panic!("Gene {name} not defined in the GeneID object"),
@@ -286,7 +291,7 @@ impl FastMapper{
         let mut classes_vec = vec![name.clone()];
         classes_vec.extend( class_ids);
 
-        let classes =  self.ids_for_gene_names( &classes_vec );
+        let classes =  self.intern_ids_for_gene_names( &classes_vec );
         let gene_id = classes[0];
         //eprintln!("fast_mapper: I have {} -> {}", name, gene_id);
 
@@ -337,7 +342,7 @@ impl FastMapper{
                 continue;
             }
             if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
-                //eprintln!("I have added a sequence!");
+                //eprintln!("I have added a sequence! - getting the gene_id {gene_id}");
                 self.pos += 1;
                 self.names_count[gene_id] +=1;
                 i+=1;
@@ -365,7 +370,7 @@ impl FastMapper{
     }
 
 
-
+    /// The add function returns the intern id. 
     pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
 
 
@@ -422,7 +427,7 @@ impl FastMapper{
                 //println!("I have added a sequence! {:#b}+{} -> geneid ({gene_id}, 0) + classes {classes:?} names_ ({:?})",entries.0, entries.1, 
                 //    self.gene_names_for_ids(&vec![gene_id, classes[0] as usize, classes[1] as usize] ) );
                 self.pos += 1;
-                self.names_count[ self.gene_id] +=1;
+                self.names_count[ gene_id] +=1;
                 if i < self.names_count[gene_id]{
                     i = self.names_count[gene_id];
                 }
@@ -601,8 +606,8 @@ impl FastMapper{
                 s.to_string()
             }
             if good.len() == 2{
-                if remove_suffix_string_int( &self.names_store[good[0]] ) == remove_suffix_string_int( &self.names_store[good[1]] ){
-                    ret.push( self.get_id(remove_suffix_string_int( &self.names_store[good[0]] ) ) );
+                if remove_suffix_string_int( &self.get_name(good[0]) ) == remove_suffix_string_int( &self.get_name(good[1]) ){
+                    ret.push( self.get_id(remove_suffix_string_int( &self.get_name(good[0]) ) ) );
                     // if report {
                          //eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1],  &self.names_store[ret[ret.len()-1]] );
                     // }
@@ -706,7 +711,8 @@ impl FastMapper{
                         //println!("And we got a match! ({gene_id:?})");
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
-                                match genes.get_mut( gid) {
+                                let ext_gid = self.get_extern_id_from_intern( gid.0 );
+                                match genes.get_mut( &(ext_gid, gid.1) ) {
                                     Some(gene_count) => {
                                         *gene_count +=1;
                                         if *gene_count == 4 && genes.len() == 1 {
@@ -715,7 +721,7 @@ impl FastMapper{
                                     },
                                     None => {
                                         //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-                                        genes.insert( gid.clone(), 1);
+                                        genes.insert( (ext_gid, gid.1), 1);
                                     },
                                 };
 
@@ -741,6 +747,12 @@ impl FastMapper{
     pub fn get(&self, seq: &[u8], tool: &mut IntToStr  ) -> Option< Vec<usize> >{ // gene_id, gene_level
         
         //let mut id:usize;
+
+        match self.get_strict( seq, tool ){
+            Some(gene_id) => return Some(gene_id),
+            None => {}
+        };
+
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
@@ -795,7 +807,8 @@ impl FastMapper{
                         //println!("Got some gene ids (one?): {:?}", gene_ids);
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
-                                match genes.get_mut( &gid) {
+                                let ext_gid = self.get_extern_id_from_intern( gid.0 );
+                                match genes.get_mut( &(ext_gid, gid.1) ) {
                                     Some(gene_count) => {
                                         //println!( "Adding to existsing {} with count {gene_count}+1", gid.0);
                                         *gene_count +=1;
@@ -805,7 +818,7 @@ impl FastMapper{
                                     },
                                     None => {
                                         //println!( "Adding a new gene {} with count 1 here!", gid.0);
-                                        genes.insert( gid.clone(), 1);
+                                        genes.insert( (ext_gid, gid.1), 1);
                                     },
                                 };
                             }
@@ -820,7 +833,8 @@ impl FastMapper{
                                 //eprintln!("But in the second I got one: {gene_ids:?}");
                                 for name_entry in &gene_ids{
                                     for gid in &name_entry.data{
-                                        match genes.get_mut(&gid) {
+                                        let ext_gid = self.get_extern_id_from_intern( gid.0 );
+                                        match genes.get_mut(&(ext_gid, gid.1)) {
                                             Some(gene_count) => {
                                                 //eprintln!( "Second Adding to existsing {} with count {gene_count}+1", gid.0);
                                                 *gene_count +=1;
@@ -830,7 +844,7 @@ impl FastMapper{
                                             },
                                             None => {
                                                 //eprintln!( "Second Adding a new gene {} with count 1 here!", gid.0);
-                                                genes.insert( gid.clone(), 1);
+                                                genes.insert( (ext_gid, gid.1), 1);
                                                 //eprintln!("I have finished with the indert");
                                             },
                                         };

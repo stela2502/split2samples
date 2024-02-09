@@ -61,7 +61,7 @@ struct Opts {
     /// how many threads to use to analyze this (default max available)
     #[clap(short, long)]
     num_threads: Option<usize>,
-    /// this is a BD rhapsody or a 10x expression experiment( default 10x)? 
+    /// this is a BD rhapsody (bd) or a 10x expression experiment( default 10x)? 
     #[clap(default_value="10x", long)]
     exp: String,
 }

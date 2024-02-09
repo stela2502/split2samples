@@ -125,9 +125,8 @@ impl AnalysisTE{
 
 		} 
 
-		let gene_names = te_index_obj.names.keys().cloned().collect::<Vec<String>>();
-		let te_names   = expr_index_obj.names.keys().cloned().collect::<Vec<String>>();
-
+		let te_names = te_index_obj.names.keys().cloned().collect::<Vec<String>>();
+		let gene_names = expr_index_obj.names.keys().cloned().collect::<Vec<String>>();
 
 	    //  now we need to get a CellIDs object, too
 	    let cells:  Box::<dyn CellIndex + Sync> = match exp {
@@ -162,22 +161,33 @@ impl AnalysisTE{
 
 	        for seq in sequences{
 	        	//seq.reverse();
-	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
-	        	seq_ext.extend_from_slice( seq );
-	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	//seq_ext.extend_from_slice( seq );
+	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 	    }
 	    else if specie.eq("mouse") {
 	        // and the mouse ones
-	        let sequences = [b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
+	        let sequences = [
+	        b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
 	        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
 	        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
 	        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
 	        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
 	        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
 
+	        /*
+	        " GTTGTCAAGATGCTACCGTTCAGAG ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC"
+			"GTTGTCAAGATGCTACCGTTCAGGG ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCCAAAA"
+			"                          AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC"
+			"GTTGTCAAGATGCTATCGTTCAGAG AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTCAAAA"
+			"                          TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT"
+			"GTTGTCAAGATG-TACCGTTCAGAG TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCTAAAAA"
+			"                          ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC"
+			"GA GTCAAGATGCTACCGTTCAGAG ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCCAAAAA"
+	        */
 	        for seq in sequences{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
@@ -194,12 +204,13 @@ impl AnalysisTE{
 	    }
 
 	    println!("After indexing all fastq files we have the following indices:");
-		println!("the exspression index:");
-		expr_index_obj.print();
-		println!("the sample id index:");
-		samples.print();
-		println!("and the TE index:");
+	    println!("the TE index:");
 		te_index_obj.print();
+		println!("the expression index:");
+		expr_index_obj.print();
+		println!("and the sample id index:");
+		samples.print();
+		
 	    
 		Self{
 			expr_index_obj,
@@ -312,7 +323,7 @@ impl AnalysisTE{
 	                    Some(gene_id) =>{
 	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
-	                    	report.iter_read_type( "expression_index reads" );
+	                    	report.iter_read_type( "expression reads" );
 	                    	if gene_id.len() == 1 {
 	                    		let data = GeneUmiHash( gene_id[0], *umi);
 		                    	if ! gex.try_insert( 
@@ -364,7 +375,9 @@ impl AnalysisTE{
 	                	
 		                match &self.te_index_obj.get_strict( &data[i].1,  &mut tool ){
 		                	Some(gene_id) =>{
-		                		report.iter_read_type( "expression reads" );
+		                		report.iter_read_type( "antibody reads" );
+		                		//println!("gene found strict, but not lax?! ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
+		                    	//eprintln!("I got a sample umi id {umi}");
 			                    if gene_id.len() == 1 {
 			                    	let data = GeneUmiHash( gene_id[0], *umi);
 			                        if ! gex.try_insert( 
@@ -690,9 +703,13 @@ impl AnalysisTE{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.te_index_obj.get_strict( &seqrec2.seq(),  &mut tool ){
-		            		Some(gene_id) =>{
-		            			report.iter_read_type( "expression_index reads" );
+		            	ok = match &self.samples.get_strict( &seqrec2.seq(),  &mut tool ){
+	                		Some(gene_id) =>{
+	                			report.iter_read_type( "sample reads" );
+		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec.seq()) );
+
+		                    	//eprintln!("Got a samples match! {gene_id}");
+		                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );
 		                    	if gene_id.len() == 1 {
 		                    		let data = GeneUmiHash( gene_id[0], *umi);
 			                    	self.gex.try_insert( 
@@ -704,22 +721,18 @@ impl AnalysisTE{
 			                    }
 			                    else {
 			                    	false
-
 			                    }
 		                    },
 		                    None => {
 		                    	false
 		                    }
 		                };
+		            	
 
 		                if ! ok{
-		                	ok = match &self.samples.get_strict( &seqrec2.seq(),  &mut tool ){
-		                		Some(gene_id) =>{
-		                			report.iter_read_type( "sample reads" );
-			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec.seq()) );
-
-			                    	//eprintln!("Got a samples match! {gene_id}");
-			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );
+		                	ok = match &self.te_index_obj.get_strict( &seqrec2.seq(),  &mut tool ){
+			            		Some(gene_id) =>{
+			            			report.iter_read_type( "expression_index reads" );
 			                    	if gene_id.len() == 1 {
 			                    		let data = GeneUmiHash( gene_id[0], *umi);
 				                    	self.gex.try_insert( 
@@ -731,12 +744,13 @@ impl AnalysisTE{
 				                    }
 				                    else {
 				                    	false
+
 				                    }
 			                    },
 			                    None => {
 			                    	false
 			                    }
-			                };
+			                }; 	
 			            }
 
 			            if ! ok{
@@ -819,21 +833,25 @@ impl AnalysisTE{
 	    results.stop_file_io_time();
 	    
 	    println!("filtering cells");
-	    self.gex.mtx_counts( &mut self.expr_index_obj, &self.gene_names, min_umi, self.gex.num_threads ) ;
+	    self.gex.mtx_counts( &mut self.te_index_obj, &self.te_names, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
-	    println!("writing gene expression");
+	    println!("writing expression sets:");
 
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.expr_index_obj , &self.gene_names, min_umi ) {
-	    	Ok(_) => (),
-	    	Err(err) => panic!("Error in the data write: {err}")
-	    };
+	    if self.gene_names.len() > 0{ 
+		    println!("writing gene expression");
+
+		    match self.gex.write_sparse_sub ( file_path_sp, &mut self.expr_index_obj , &self.gene_names, min_umi ) {
+		    	Ok(_) => (),
+		    	Err(err) => panic!("Error in the data write: {err}")
+		    };
+		}
 
 	    let file_path_sp = PathBuf::from(&outpath).join(
-	    	"BD_Rhapsody_te_index_obj"
+	    	"BD_Rhapsody_te_expression"
 	    	);
 
-	    println!("Writing expression_index counts");
+	    println!("Writing TE counts");
 	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.te_index_obj, &self.te_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")

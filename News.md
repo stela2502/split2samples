@@ -1,3 +1,19 @@
+# 2.0.0
+
+This is a huge update. The mapper has become even better. Is is almost as fast as before the huge update, but finds lots more genes now.
+And I can not find any read (up to now) that would be a false positive.
+
+The genomic analysis should in theory be working now too, as the index has gotten the most updates this time.
+
+There is now a new binary - te_analysis. It can do almost everything the quantify_rhapsody_multi can do, but it does not index fasta files.
+The enw binary needs index folders to work. BUT - it can utilize two indices at the same time!
+
+The expression index is matched using fuzzy matching and the te index is match using exact matches. So using this you can e.g. compare two indices
+or index both human and mouse genes or you can index genes and transposable elements (TE) at the same time.
+
+The TE's are also collected per cell - so you can analyze a whole e.g. 10x sample using one run. The first version needed ~1h per 100 mio reads is only TE elements from chr1 are checked.
+More info when available.
+
 # 1.2.5
 
 Mapper has significantly improved: both the false positive as well as false negative rate had improved.
