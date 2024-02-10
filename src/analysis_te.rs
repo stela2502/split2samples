@@ -8,7 +8,7 @@ use crate::singlecelldata::cell_data::GeneUmiHash;
 use crate::fast_mapper::FastMapper;
 use crate::int_to_str::IntToStr;
 //use crate::traits::te_index;
-
+use crate::errors::{ FilterError, MappingError }; // not really errors but enums!
 use crate::cellids::CellIds;
 use crate::cellids10x::CellIds10x;
 use crate::traits::CellIndex;
@@ -39,13 +39,6 @@ use crate::ofiles::{Ofiles, Fspot};
 
 static EMPTY_VEC: Vec<String> = Vec::new();
 
-#[derive(Debug)]
-enum FilterError {
-    Length,
-    //PolyA,
-    Ns,
-    Quality,
-}
 
 fn mean_u8( data:&[u8] ) -> f32 {
     let this = b"!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
@@ -320,53 +313,57 @@ impl AnalysisTE{
 
 
 	            	ok = match &self.expr_index_obj.get( &data[i].1, &mut tool ){
-	                    Some(gene_id) =>{
+	                    Ok(gene_id) =>{
 	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
 	                    	report.iter_read_type( "expression reads" );
-	                    	if gene_id.len() == 1 {
-	                    		let data = GeneUmiHash( gene_id[0], *umi);
-		                    	if ! gex.try_insert( 
-		                        	&(*cell_id as u64),
-		                        	data,
-		                        	report
-		                        ){
-		                        	report.pcr_duplicates += 1 
-		                        }
-		                        true
-		                    }else {
-		                    	false
-		                    }
-		                    
+	                    	
+                    		let data = GeneUmiHash( gene_id[0], *umi);
+	                    	if ! gex.try_insert( 
+	                        	&(*cell_id as u64),
+	                        	data,
+	                        	report
+	                        ){
+	                        	report.pcr_duplicates += 1 
+	                        }
+	                        true
 	                    },
-	                    None => {
-							false
+	                    Err(MappingError::NoMatch) => {
+	                    	false
+	                    },
+	                    Err(MappingError::MultiMatch) => {
+	                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+	                    	report.multimapper +=1;
+	                    	report.no_data +=1;
+	                    	continue
 	                    }
 	                };
 
 	                if ! ok{
 	                	ok = match &self.samples.get_strict( &data[i].1,  &mut tool ){
-		                    Some(gene_id) =>{
+		                    Ok(gene_id) =>{
 		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
-		                    	if gene_id.len() == 1 {
-		                    		let data = GeneUmiHash( gene_id[0], *umi);
-			                        if ! gex.try_insert( 
-			                        	&(*cell_id as u64),
-			                        	data,
-			                        	report
-			                        ) { 
-			                        	report.pcr_duplicates += 1 
-			                        }
-			                        true
-			                    }else {
-			                    	false
-			                    }
-			                    
+		                    	
+	                    		let data = GeneUmiHash( gene_id[0], *umi);
+		                        if ! gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	data,
+		                        	report
+		                        ) { 
+		                        	report.pcr_duplicates += 1 
+		                        }
+		                        true 
 		                    },
-		                    None => {
-								false
+		                    Err(MappingError::NoMatch) => {
+		                    	false
+		                    },
+		                    Err(MappingError::MultiMatch) => {
+		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+		                    	report.multimapper +=1;
+		                    	report.no_data +=1;
+		                    	continue
 		                    }
 		                };
 	                }
@@ -374,36 +371,25 @@ impl AnalysisTE{
 	                if ! ok{
 	                	
 		                match &self.te_index_obj.get_strict( &data[i].1,  &mut tool ){
-		                	Some(gene_id) =>{
+		                	Ok(gene_id) =>{
+		                		// will now always be exactly ONE!
 		                		report.iter_read_type( "antibody reads" );
 		                		//println!("gene found strict, but not lax?! ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
-			                    if gene_id.len() == 1 {
-			                    	let data = GeneUmiHash( gene_id[0], *umi);
-			                        if ! gex.try_insert( 
-			                        	&(*cell_id as u64),
-			                        	data,
-			                        	report
-			                        ){
-			                        	report.pcr_duplicates += 1 
-			                        }
-			                        /*if gene_id[0] == goi_id{
-			                        	println!( "UMI for gene id {goi_id} and cell {cell_id} is {umi}" );
-			                        }*/
-			                    }else {
-			                    	panic!("Multimapper have been deactivated!");
-			                    	/*if ! gex.try_insert_multimapper(
-				                    		&(*cell_id as u64),
-				                    		gene_id,
-				                    		umi,
-				                    		report
-				                    	) {
-			                    		report.pcr_duplicates += 1 
-			                    	}*/
-			                    }
 			                    
+		                    	let data = GeneUmiHash( gene_id[0], *umi);
+		                        if ! gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	data,
+		                        	report
+		                        ){
+		                        	report.pcr_duplicates += 1 
+		                        }
+		                        /*if gene_id[0] == goi_id{
+		                        	println!( "UMI for gene id {goi_id} and cell {cell_id} is {umi}" );
+		                        }*/
 		                    },
-		                    None => {
+		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
 		                    	report.write_to_ofile( Fspot::Buff1, 
 		                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].1) 
@@ -412,7 +398,11 @@ impl AnalysisTE{
 								report.write_to_ofile( Fspot::Buff2, 
 									format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].0 ) 
 								);
-
+		                    	report.no_data +=1;
+		                    },
+		                    Err(MappingError::MultiMatch) => {
+		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+		                    	report.multimapper +=1;
 		                    	report.no_data +=1;
 		                    }
 		                };
@@ -445,7 +435,7 @@ impl AnalysisTE{
 
     /// Analze BPO Rhapsody data in a paralel way.
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
-    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str, max_reads:usize ){
+    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str, max_reads:usize, chunk_size:usize ){
 
     	println!("I am using {} cpus", self.num_threads);
 
@@ -473,16 +463,16 @@ impl AnalysisTE{
         let pb = m.add(ProgressBar::new(5000));
         pb.set_style(spinner_style);
 
-        let reads_perl_chunk = 1_000_000;
+        //let reads_perl_chunk = 1_000_000;
         //eprintln!("Starting with data collection");
-        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_chunk * self.num_threads );
+        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( chunk_size * self.num_threads );
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
         	if report.total > max_reads{
         		break 'main
         	}
-        	if good_read_count < reads_perl_chunk*self.num_threads {
+        	if good_read_count < chunk_size*self.num_threads {
         		report.total += 1;
 	            let read2 = match record2{
 	                Ok( res ) => res,
@@ -575,7 +565,7 @@ impl AnalysisTE{
 		}
 		
 
-	    if reads_perl_chunk > 0{
+	    if good_read_count > 0{
 	    	report.stop_file_io_time();
 	    	pb.set_message( format!("mapping reads - {}", report.log_str() ) );
 	    	// there is data in the good_reads
@@ -624,7 +614,7 @@ impl AnalysisTE{
 
     }
 
-
+/*
     pub fn parse(&mut self,  f1:String, f2:String,  report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2]  ){
 
     	let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
@@ -808,7 +798,7 @@ impl AnalysisTE{
         pb.finish_with_message( log_str );
 
     }
-
+*/
     /*
     c1 = (0, 9);
     c2 = (21,30);

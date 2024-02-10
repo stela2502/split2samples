@@ -24,7 +24,7 @@ check_matrix.mtx
 cmp
 
 /data/
-
+/CellRanger/
 # projedct specififcs
 
 *_not_in_index.txt

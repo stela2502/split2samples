@@ -192,7 +192,7 @@ fn main() {
 	let mut collected:HashMap::<usize, usize>= HashMap::new();
 
 	let mut ok = match antibodies.get( &opts.dna.as_bytes(), &mut tool ){
-		Some(gene_ids) =>{
+		Ok(gene_ids) =>{
         	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
         	//eprintln!("I got an ab id {gene_id}");
         	
@@ -211,13 +211,13 @@ fn main() {
 		    }
 		    true
 		},
-		None => {
+		Err(_) => {
 			false
 		}
 	};
 	if ! ok{
 		ok = match samples.get( &opts.dna.as_bytes(),  &mut tool ){
-			Some(gene_ids) =>{
+			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");
 	        	
@@ -236,7 +236,7 @@ fn main() {
 			    }
 			    true
 			},
-			None => {
+			Err(_) => {
 				false
 			}
 		};
@@ -244,7 +244,7 @@ fn main() {
 
 	if ! ok{
 		let _ = match genes.get( &opts.dna.as_bytes(),  &mut tool ){
-			Some(gene_ids) =>{
+			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");
 	        	
@@ -263,7 +263,7 @@ fn main() {
 			    }
 			    true
 			},
-			None => {
+			Err(_) => {
 				false
 			}
 		};

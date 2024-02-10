@@ -59,6 +59,8 @@ Do not forget the --release while building the tool.
 The test case for quantify_rhapsody would finish in 55 sec instead of 3 sec (> x15!)
 using a AMD Ryzen 7 5700X processor and a SSD as mass storage.
 
+This info is a little outdated - quantify_rhapsody would need ~ 5 to 6 sec in version 2.0.0, but the \_multi version needs only 1 sec!
+
 
 ## Testing
 

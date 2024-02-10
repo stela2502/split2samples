@@ -67,6 +67,9 @@ struct Opts {
     /// this is a BD rhapsody or a 10x expression experiment? 
     #[clap(default_value="bd", long)]
     exp: String,
+    /// how many sequences should be analyzed in one chunk
+    #[clap(default_value_t=1_000_000, long)]
+    chunk_size: usize,
 }
 
 /*
@@ -169,7 +172,7 @@ fn main() {
         if let Some(f2) = split2.next(){
             id += 1;
             println!("\nParsing file pair {id}\n");
-            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath, opts.max_reads );
+            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath, opts.max_reads ,opts.chunk_size );
         }
         
     }

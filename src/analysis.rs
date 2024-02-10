@@ -8,6 +8,7 @@ use crate::singlecelldata::cell_data::GeneUmiHash;
 use crate::fast_mapper::FastMapper;
 use crate::int_to_str::IntToStr;
 //use crate::traits::Index;
+use crate::errors::MappingError;
 
 use crate::cellids::CellIds;
 use crate::cellids10x::CellIds10x;
@@ -369,53 +370,57 @@ impl Analysis{
 
 
 	            	ok = match &self.antibodies.get_strict( &data[i].1, &mut tool ){
-	                    Some(gene_id) =>{
+	                    Ok(gene_id) =>{
 	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
 	                    	report.iter_read_type( "antibody reads" );
-	                    	if gene_id.len() == 1 {
-	                    		let data = GeneUmiHash( gene_id[0], *umi);
-		                    	if ! gex.try_insert( 
-		                        	&(*cell_id as u64),
-		                        	data,
-		                        	report
-		                        ){
-		                        	report.pcr_duplicates += 1 
-		                        }
-		                        true
-		                    }else {
-		                    	false
-		                    }
-		                    
+                    		
+                    		let data = GeneUmiHash( gene_id[0], *umi);
+	                    	if ! gex.try_insert( 
+	                        	&(*cell_id as u64),
+	                        	data,
+	                        	report
+	                        ){
+	                        	report.pcr_duplicates += 1 
+	                        }
+	                        true
 	                    },
-	                    None => {
-							false
+	                    Err(MappingError::NoMatch) => {
+	                    	false
+	                    },
+	                    Err(MappingError::MultiMatch) => {
+	                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+	                    	report.multimapper +=1;
+	                    	report.no_data +=1;
+	                    	continue
 	                    }
 	                };
 
 	                if ! ok{
 	                	ok = match &self.samples.get_strict( &data[i].1,  &mut tool ){
-		                    Some(gene_id) =>{
+		                    Ok(gene_id) =>{
 		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
-		                    	if gene_id.len() == 1 {
-		                    		let data = GeneUmiHash( gene_id[0], *umi);
-			                        if ! gex.try_insert( 
-			                        	&(*cell_id as u64),
-			                        	data,
-			                        	report
-			                        ) { 
-			                        	report.pcr_duplicates += 1 
-			                        }
-			                        true
-			                    }else {
-			                    	false
-			                    }
-			                    
+		                    	
+	                    		let data = GeneUmiHash( gene_id[0], *umi);
+		                        if ! gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	data,
+		                        	report
+		                        ) { 
+		                        	report.pcr_duplicates += 1 
+		                        }
+		                        true
 		                    },
-		                    None => {
-								false
+		                    Err(MappingError::NoMatch) => {
+		                    	false
+		                    },
+		                    Err(MappingError::MultiMatch) => {
+		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+		                    	report.multimapper +=1;
+		                    	report.no_data +=1;
+		                    	continue
 		                    }
 		                };
 	                }
@@ -423,34 +428,19 @@ impl Analysis{
 	                if ! ok{
 	                	
 		                match &self.genes.get( &data[i].1,  &mut tool ){
-		                	Some(gene_id) =>{
+		                	Ok(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
-			                    if gene_id.len() == 1 {
-			                    	let data = GeneUmiHash( gene_id[0], *umi);
-			                        if ! gex.try_insert( 
-			                        	&(*cell_id as u64),
-			                        	data,
-			                        	report
-			                        ){
-			                        	report.pcr_duplicates += 1 
-			                        }
-			                        /*if gene_id[0] == goi_id{
-			                        	println!( "UMI for gene id {goi_id} and cell {cell_id} is {umi}" );
-			                        }*/
-			                    }else {
-			                    	panic!("Multimapper have been deactivated!");
-			                    	/*if ! gex.try_insert_multimapper(
-				                    		&(*cell_id as u64),
-				                    		gene_id,
-				                    		umi,
-				                    		report
-				                    	) {
-			                    		report.pcr_duplicates += 1 
-			                    	}*/
-			                    }
-			                    
+
+		                    	let data = GeneUmiHash( gene_id[0], *umi);
+		                        if ! gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	data,
+		                        	report
+		                        ){
+		                        	report.pcr_duplicates += 1 
+		                        }
 		                    },
-		                    None => {
+		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
 		                    	report.write_to_ofile( Fspot::Buff1, 
 		                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].1) 
@@ -459,7 +449,11 @@ impl Analysis{
 								report.write_to_ofile( Fspot::Buff2, 
 									format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].0 ) 
 								);
-
+		                    	report.no_data +=1;
+		                    },
+		                    Err(MappingError::MultiMatch) => {
+		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+		                    	report.multimapper +=1;
 		                    	report.no_data +=1;
 		                    }
 		                };
@@ -491,7 +485,7 @@ impl Analysis{
 
     /// Analze BPO Rhapsody data in a paralel way.
     pub fn parse_parallel(&mut self,  f1:&str, f2:&str,  
-    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str, max_reads:usize ){
+    	report:&mut MappingInfo,pos: &[usize;8], min_sizes: &[usize;2], outpath: &str, max_reads:usize, chunk_size:usize ){
 
     	println!("I am using {} cpus", self.num_threads);
 
@@ -519,16 +513,16 @@ impl Analysis{
         let pb = m.add(ProgressBar::new(5000));
         pb.set_style(spinner_style);
 
-        let reads_perl_chunk = 1_000_000;
+        //let reads_perl_chunk = 1_000_000;
         //eprintln!("Starting with data collection");
-        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( reads_perl_chunk * self.num_threads );
+        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( chunk_size * self.num_threads );
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
         	if report.total > max_reads{
         		break 'main
         	}
-        	if good_read_count < reads_perl_chunk*self.num_threads {
+        	if good_read_count < chunk_size *self.num_threads {
         		report.total += 1;
 	            let read2 = match record2{
 	                Ok( res ) => res,
@@ -621,7 +615,7 @@ impl Analysis{
 		}
 		
 
-	    if reads_perl_chunk > 0{
+	    if good_read_count > 0{
 	    	report.stop_file_io_time();
 	    	pb.set_message( format!("mapping reads - {}", report.log_str() ) );
 	    	// there is data in the good_reads
@@ -749,86 +743,97 @@ impl Analysis{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec2.seq(),  &mut tool ){
-		            		Some(gene_id) =>{
-		            			report.iter_read_type( "antibody reads" );
-		                    	if gene_id.len() == 1 {
-		                    		let data = GeneUmiHash( gene_id[0], *umi);
-			                    	self.gex.try_insert( 
-			                    		&(*cell_id as u64),
-			                    		data,
-			                    		report
-			                    		);
-			                    	true
-			                    }
-			                    else {
-			                    	false
-
-			                    }
+		            	ok = match &self.antibodies.get_strict( &seqrec2.seq(), &mut tool ){
+		                    Ok(gene_id) =>{
+		                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );
+		                    	//eprintln!("I got an ab id {gene_id}");
+		                    	report.iter_read_type( "antibody reads" );
+	                    		
+	                    		let data = GeneUmiHash( gene_id[0], *umi);
+		                    	if ! self.gex.try_insert( 
+		                        	&(*cell_id as u64),
+		                        	data,
+		                        	report
+		                        ){
+		                        	report.pcr_duplicates += 1 
+		                        }
+		                        true
 		                    },
-		                    None => {
+		                    Err(MappingError::NoMatch) => {
 		                    	false
+		                    },
+		                    Err(MappingError::MultiMatch) => {
+		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+		                    	report.multimapper +=1;
+		                    	report.no_data +=1;
+		                    	continue
 		                    }
 		                };
 
 		                if ! ok{
 		                	ok = match &self.samples.get_strict( &seqrec2.seq(),  &mut tool ){
-		                		Some(gene_id) =>{
-		                			report.iter_read_type( "sample reads" );
-			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&seqrec2.seq()) );
-
-			                    	//eprintln!("Got a samples match! {gene_id}");
-			                    	//eprintln!( "{:?} got {gene_id} resp {:?} ", String::from_utf8_lossy( &seqrec.seq() ), &self.samples.names_store[*gene_id] );
-			                    	if gene_id.len() == 1 {
-			                    		let data = GeneUmiHash( gene_id[0], *umi);
-				                    	self.gex.try_insert( 
-				                    		&(*cell_id as u64),
-				                    		data,
-				                    		report
-				                    		);
-				                    	true
-				                    }
-				                    else {
-				                    	false
-				                    }
+			                    Ok(gene_id) =>{
+			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
+			                    	//eprintln!("I got a sample umi id {umi}");
+			                    	report.iter_read_type( "sample reads" );
+			                    	
+		                    		let data = GeneUmiHash( gene_id[0], *umi);
+			                        if ! self.gex.try_insert( 
+			                        	&(*cell_id as u64),
+			                        	data,
+			                        	report
+			                        ) { 
+			                        	report.pcr_duplicates += 1 
+			                        }
+			                        true
 			                    },
-			                    None => {
+			                    Err(MappingError::NoMatch) => {
 			                    	false
+			                    },
+			                    Err(MappingError::MultiMatch) => {
+			                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+			                    	report.multimapper +=1;
+			                    	report.no_data +=1;
+			                    	continue
 			                    }
 			                };
-			            }
+		                }
 
-			            if ! ok{
-			            	// multimapper are only allowed for expression reads - 
-			            	// if either sample ids or AB reads would have this it would be a library design fault!
-			            	match &self.genes.get( &seqrec2.seq(),  &mut tool ){
-			            		Some(gene_id) =>{
-			            			report.iter_read_type( "expression reads" );
-			            			if gene_id.len() == 1 {
-			            				let data = GeneUmiHash( gene_id[0], *umi);
-				            			self.gex.try_insert( 
-				            				&(*cell_id as u64),
-				            				data,
-				            				report
-				            			);
-				            		}
-				            		else {
-				            			panic!("Multimapper? - I have removed this option!");
-			            				/*self.gex.try_insert_multimapper(
-				                    		&(*cell_id as u64),
-				                    		gene_id,
-				                    		umi,
-				                    		report
-				                    	);*/
-				            		}
-			                        //println!("R2 {}",String::from_utf8_lossy(&seqrec.id()).to_owned() );
-			                        //println!("R1 {}",String::from_utf8_lossy(&seqrec1.id()).to_owned() );
+		                if ! ok{
+		                	
+			                match &self.genes.get( &seqrec2.seq(),  &mut tool ){
+			                	Ok(gene_id) =>{
+			                		report.iter_read_type( "expression reads" );
+
+			                    	let data = GeneUmiHash( gene_id[0], *umi);
+			                        if ! self.gex.try_insert( 
+			                        	&(*cell_id as u64),
+			                        	data,
+			                        	report
+			                        ){
+			                        	report.pcr_duplicates += 1 
+			                        }
 			                    },
-			                    None => {
+			                    Err(MappingError::NoMatch) => {
+			                    	// I want to be able to check why this did not work
+			                    	report.write_to_ofile( Fspot::Buff1, 
+			                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &seqrec2.seq()) 
+			                    	);
+									
+									report.write_to_ofile( Fspot::Buff2, 
+										format!(">Cell{cell_id} no gene detected\n{:?}\n", &seqrec1.seq()) 
+									);
+			                    	report.no_data +=1;
+			                    },
+			                    Err(MappingError::MultiMatch) => {
+			                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
+			                    	report.multimapper +=1;
 			                    	report.no_data +=1;
 			                    }
 			                };
 			            }
+
+		            	
 			        },
 			        Err(_err) => {
 			        	/*println!("R1 di not match to any cell: {} {} {}",

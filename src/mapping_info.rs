@@ -25,6 +25,7 @@ pub struct MappingInfo{
     pub ok_reads:usize,
     /// reads with cell_id - gene_id is not checked
     pub cellular_reads: usize,
+    pub multimapper: usize,
     /// reads that are duplicates on the UMI level per cell and gene
     pub pcr_duplicates:usize,
     /// the amount of ok_reads after which to write a entry into the log file
@@ -64,6 +65,7 @@ impl MappingInfo{
 			no_data: 0,
 			ok_reads: 0,
 			cellular_reads: 0,
+			multimapper: 0,
 			pcr_duplicates: 0,
 			split: 1_000_000,
 			log_iter: 0,
@@ -210,10 +212,11 @@ impl MappingInfo{
 	}
 
 	pub fn log_str( &mut self ) -> String{
-		format!("{:.2} mio reads ({:.2}% with cell_id, {:.2}% with gene_id)",
+		format!("{:.2} mio reads ({:.2}% with cell_id, {:.2}% with gene_id {:.2}% multimapper)",
             self.total as f32 / self.split as f32,
             self.cellular_reads as f32 / (self.analyzed) as f32 * 100.0 , 
-            self.ok_reads as f32 / (self.analyzed) as f32 * 100.0 
+            self.ok_reads as f32 / (self.analyzed) as f32 * 100.0,
+            self.multimapper as f32 / (self.analyzed) as f32 * 100.0,
          )
 	}
 	pub fn program_states_string( &self ) -> String{
@@ -239,7 +242,7 @@ impl MappingInfo{
 	    	+format!(     "no cell ID reads  : {} reads ({:.2}% of total)\n", self.no_sample, (self.no_sample as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "no gene ID reads  : {} reads ({:.2}% of total)\n", self.no_data.saturating_sub(self.no_sample), ( self.no_data.saturating_sub( self.no_sample) as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     "filtered   reads  : {} reads ({:.2}% of total)\n", unknown, (unknown as f32 / self.total as f32) * 100.0).as_str()
-	    	//+format!(     " ->        polyA  : {} reads ({:.2}% of total)\n", self.poly_a, ( self.poly_a as f32 / self.total as f32) * 100.0).as_str()
+	    	+format!(     " ->  multimapper  : {} reads ({:.2}% of total)\n", self.multimapper, ( self.multimapper as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " -> bad qualiity  : {} reads ({:.2}% of total)\n", self.quality, ( self.quality as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " ->    too short  : {} reads ({:.2}% of total)\n", self.length, ( self.length as f32 / self.total as f32) * 100.0).as_str()
 	    	+format!(     " ->          N's  : {} reads ({:.2}% of total)\n", self.n_s, ( self.n_s as f32 / self.total as f32) * 100.0).as_str()

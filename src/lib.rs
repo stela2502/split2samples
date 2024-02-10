@@ -25,6 +25,8 @@ mod tests {
     }
 }
 
+pub mod errors;
+pub mod opts_te;
 pub mod cellids10x;
 pub mod cellids;
 pub mod geneids;

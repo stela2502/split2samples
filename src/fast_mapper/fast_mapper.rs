@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
+use crate::errors::MappingError; // not really errors but enums!
 
 use rayon::prelude::*; // for the make_index_te_ready
 
@@ -173,7 +174,7 @@ impl FastMapper{
         }
         ret
     }
-
+/*
     fn gene_names_for_intern_ids( &self, ids:&Vec<usize> ) -> Vec<String> {
         let mut ret = Vec::<String>::with_capacity( ids.len() );
         for id in ids.iter(){
@@ -182,7 +183,7 @@ impl FastMapper{
         }
         ret
     }
-
+*/
     pub fn ids_for_gene_names( &mut self, ids:&Vec<String> ) -> Vec<usize> {
         let mut ret = Vec::<usize>::with_capacity( ids.len() );
         for name in ids.iter(){
@@ -241,9 +242,9 @@ impl FastMapper{
         name.to_string()
     }
 
-    fn local_gene_id (&self, id:usize) -> usize {
+    /*fn local_gene_id (&self, id:usize) -> usize {
         id - self.offset
-    }
+    }*/
 
     pub fn incorporate_match_combo( &mut self, initial_match:usize, secondary_match:SecondSeq, name:String, ids: Vec<String> )  ->Result<(), &str>{
         // this is cheked beforehand in the merge function
@@ -681,7 +682,7 @@ impl FastMapper{
 
     }
 
-    pub fn get_strict(&self, seq: &[u8], tool: &mut IntToStr ) -> Option< Vec<usize> >{ // gene_id, gene_level
+    pub fn get_strict(&self, seq: &[u8], tool: &mut IntToStr ) -> Result< Vec<usize>, MappingError >{ // gene_id, gene_level
         
         //let mut id:usize;
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
@@ -699,7 +700,7 @@ impl FastMapper{
         'main :while let Some(entries) = tool.next(){
 
             if na == 10 && matching_geneids.len() == 0{
-                //return None
+                return Err(MappingError::NoMatch)
             }
             if self. mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
@@ -735,22 +736,25 @@ impl FastMapper{
             }
 
         }
+        if genes.len() == 0 {
+            return Err(MappingError::NoMatch)
+        }
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
             //println!("And I got a match! ({matching_geneids:?})");
-            return Some( matching_geneids )
+            return Ok( matching_geneids )
         }
-        None
+        return Err(MappingError::NoMatch)
     }
 
 
-    pub fn get(&self, seq: &[u8], tool: &mut IntToStr  ) -> Option< Vec<usize> >{ // gene_id, gene_level
+    pub fn get(&self, seq: &[u8], tool: &mut IntToStr  ) -> Result< Vec<usize>, MappingError >{ // gene_id, gene_level
         
         //let mut id:usize;
 
         match self.get_strict( seq, tool ){
-            Some(gene_id) => return Some(gene_id),
-            None => {}
+            Ok(gene_id) => return Ok(gene_id),
+            Err(_) => {}
         };
 
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
@@ -773,7 +777,7 @@ impl FastMapper{
 
             if na == 10 && matching_geneids.len() == 0 {
                 // This is obviousely not exisitingn in the index.
-                return None
+                return Err(MappingError::NoMatch)
             }
 
             if self.mapper[entries.0 as usize].has_data() {
@@ -871,7 +875,7 @@ impl FastMapper{
             // }
         }
         if genes.len() == 0 {
-            return None
+            return Err(MappingError::NoMatch)
         }
         
         /*let bad_gene = "ADA";
@@ -884,22 +888,9 @@ impl FastMapper{
                 println!("read mapping to {} - should not happen here?: {:?}\n{:?}", bad_gene, self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
                 //println!("This is our total matching set: {:?}", genes);
             }*/
-            return Some( matching_geneids )
+            return Ok( matching_geneids )
         }
-        if matching_geneids.len() > 2{
-            // ohoh - we might have found too manny as we did not be specific enough!
-            if let Some(gene_id) = self.get_strict( seq, tool ){
-                //eprintln!("get_strict was a better choise here! {gene_id:?}");
-                return Some(gene_id)
-            }
-            /*else {
-                matching_geneids.sort();
-                //eprintln!("read mapping to multiple genes: {:?}\n{:?}", self.gene_names_for_ids( &matching_geneids ),
-                //String::from_utf8_lossy(seq) );
-                //eprintln!("The total mapping: {genes:?}");
-            }*/
-        }
-        None
+        return Err(MappingError::MultiMatch)
     }
 
     pub fn to_header( &self ) -> std::string::String {
