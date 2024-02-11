@@ -890,7 +890,7 @@ impl FastMapper{
             }*/
             return Ok( matching_geneids )
         }
-        eprintln!("We got a mutlimatcher?! {matching_geneids:?}, {genes:?}");
+        //eprintln!("We got a mutlimatcher?! {matching_geneids:?}, {genes:?}");
 
         return Err(MappingError::MultiMatch)
     }
