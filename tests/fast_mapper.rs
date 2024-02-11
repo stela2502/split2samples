@@ -6,7 +6,63 @@ mod tests {
     use kmers::naive_impl::Kmer;
     //use rustody::mapping_info::MappingInfo;
     use rustody::int_to_str::IntToStr;
+    use rustody::errors::MappingError;
     static EMPTY_VEC: Vec<String> = Vec::new();
+
+
+    #[test]
+    fn check_samples() {
+        let mut mapper = FastMapper::new( 32, 10, 0 );
+        let sample2 =  b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
+        //let sample_0 =                           b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG";
+        let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
+        let sequences = [
+        b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
+        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
+        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
+        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
+        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
+        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
+
+        let mut id = 1;
+        for seq in sequences{
+            //seq.reverse();
+            mapper.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+            id +=1;
+        }
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
+
+        let expected_results = (0..12).map(|i| vec![i]).collect::<Vec<_>>();
+
+        for (sequence, expected_result) in sequences.iter().zip(expected_results.iter()) {
+            match mapper.get(*sequence, &mut tool) {
+                Ok(result) => {
+                    assert_eq!(result, *expected_result, "Unexpected result for sequence: {:?}", sequence);
+                }
+                Err(err) => {
+                    panic!("Error occurred for sequence {:?}: {:?}", sequence, err);
+                }
+            }
+            
+        }
+
+        match mapper.get_strict( sample2, &mut tool ){
+            Err(MappingError::NoMatch) => {
+                assert_eq!( "NoMatch Error", "NoMatch Error", "expected error detected" )
+            },
+            Err(e) => {
+                panic!("The expected error MappingError::NoMatch was not thrown! {e:?}")
+            },
+            Ok(v) => {
+                panic!("This search should have given a MappingError::NoMatch and I got {v:?}");
+            }
+        }
+
+        assert_eq!( mapper.get( &sequences[0][7..], &mut tool ).unwrap(), vec![0] );
+        assert_eq!( mapper.get( &sequences[11][7..], &mut tool ).unwrap(), vec![11] );
+        assert_eq!( mapper.get( sample_real, &mut tool ).unwrap(), vec![0] );
+    }
+
 
     #[test]
     fn check_integrate_repeats1() {
@@ -20,44 +76,32 @@ mod tests {
         
         let mut tool = IntToStr::new(seq.to_vec(), 32);
         if let Some((first, second)) = tool.next(){
-            let mapper_entry = &mapper.mapper[ first as usize ];
-            let name_entry = match mapper_entry.get( &second ) {
-                Some(obj) => {
-                     assert_eq!( 1,1, "found the object");
-                     obj
-                },
-                None => {
-                    panic!("mapper_entry.get( second ) failed!");
-                }
-            };
-            assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
-            assert_eq!( name_entry[0].get().len(), 2, "I have two gene names in one name_entry" );
-
-
+            let mapper_obj = &mapper.mapper[ first as usize ];
+            let matched = mapper_obj.get( &second );
+            assert!(matched.is_some(), "found the object" );
+            if let Some(name_entry) = matched{
+                assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
+                assert_eq!( name_entry[0].get().len(), 2, "I have two gene names in one name_entry" );
+            }
         }else {
-            panic!("IntToStr did not give me a single (first, second) touple!");
+            panic!("could not get a single next from IntToSeq");
         }
 
         mapper.make_index_te_ready();
 
         if let Some((first, second)) = tool.next(){
-            let mapper_entry = &mapper.mapper[ first as usize ];
-            let name_entry = match mapper_entry.get( &second ) {
-                Some(obj) => {
-                     assert_eq!( 1,1, "found the object");
-                     obj
-                },
-                None => {
-                    panic!("mapper_entry.get( second ) failed!");
-                }
-            };
-            assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
-            assert_eq!( name_entry[0].get().len(), 1, "I have two gene names in one name_entry" );
-            assert_eq!( name_entry[0].get(), vec![(1,1)], "The famA is the tag for the collapsed name entry" );
-
-
+            let mapper_obj = &mapper.mapper[ first as usize ];
+            let matched = mapper_obj.get( &second );
+            assert!( matched.is_some(), "found a match using second next element" );
+            if let Some(name_entry) = matched{
+                assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
+                assert_eq!( name_entry[0].get().len(), 1, "I have two gene names in one name_entry" );
+                assert_eq!( name_entry[0].get(), vec![(1,2)], "The famA is the tag for the collapsed name entry" );
+            }else {
+                panic!("No match using the second next sequenes {first:?} and {second:?}")
+            }
         }else {
-            panic!("IntToStr did not give me a single (first, second) touple!");
+            panic!("IntToStr did not give me a second (first, second) touple!");
         }
     }
 
@@ -127,34 +171,59 @@ mod tests {
 
         //assert_eq!( mapper.with_data, 51 );
 
-        assert_eq!(  mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ), Some(vec![0]) );
-        assert_eq!(  mapper.get( b"GGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagt", &mut tool ), Some(vec![1]) );
+        assert_eq!(  mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ).unwrap(), vec![0] );
+        assert_eq!(  mapper.get( b"GGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagt", &mut tool ).unwrap(), vec![1] );
 
         //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
         mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
 
-        assert_eq!(  mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ), None );
+        match mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ){
+            Err(MappingError::MultiMatch) => {
+                assert_eq!( "NoMatch Error", "NoMatch Error", "expected error detected" )
+            },
+            Err(e) => {
+                panic!("The expected error MappingError::NoMatch was not thrown! {e:?}")
+            },
+            Ok(v) => {
+                panic!("This search should have given a MappingError::NoMatch and I got {v:?}");
+            }
+        }
 
     }
+
+    
     #[test]
     fn check_changed_start() {
         let mut mapper = FastMapper::new( 16, 10, 0 );
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
         mapper.change_start_id( 10 );
-        assert_eq!( mapper.last_count, 10);
+        assert_eq!( mapper.last_count, 0);
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
-        assert_eq!( mapper.last_count, 11 );
-        assert_eq!(mapper.names_store[10] , "Gene1".to_string(), "gene was 'Gene1'");
+        assert_eq!( mapper.last_count, 1 );
+        assert_eq!(mapper.names_store[0] , "Gene1".to_string(), "gene was 'Gene1'");
+        let res = mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool );
+        assert!( res.is_ok() , "Got a result from the search" );
+        if let Ok(gene_id) = res {
+            assert_eq!( gene_id, vec![10] , "obtained th shifted gene id");
+        }
     }
-
+    
     #[test]
     fn check_offset() {
         let mut mapper = FastMapper::new( 16, 10, 10 );
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(),
-         "Gene1".to_string(),EMPTY_VEC.clone() );
-        assert_eq!( mapper.last_count, 11 );
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        assert_eq!( mapper.last_count, 0);
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
+        assert_eq!( mapper.last_count, 1 );
         assert_eq!(mapper.names_store[0] , "Gene1".to_string(), "gene was 'Gene1'");
+        let res = mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool );
+        assert!( res.is_ok() , "Got a result from the search" );
+        if let Ok(gene_id) = res {
+            assert_eq!( gene_id, vec![10] , "obtained th shifted gene id");
+        }
     }
 
+    
     #[test]
     fn check_write_index() {
         let mut mapper = FastMapper::new( 16, 10, 0 );
@@ -174,8 +243,8 @@ mod tests {
 
         //assert_eq!( mapper.with_data, 26);
 
-        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ), Some(vec![0]) );
-        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ), Some(vec![1]) );
+        assert_eq!(  mapper.get( b"ATCCCATCCTTCATTGTTCGCCTGGACTCTCAGAAGCACATCGACTTCTCCCTCCGTTCTCCTTATGGCGGCGGC", &mut tool ).unwrap(), vec![0] );
+        assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ).unwrap(), vec![1] );
 
         let opath = "testData/output_index_test";
         mapper.write_index( opath.to_string() ).unwrap();
@@ -222,80 +291,6 @@ mod tests {
 
     }
 
-
-    #[test]
-    fn check_samples() {
-        let mut mapper = FastMapper::new( 32, 10, 0 );
-        let sample2 =  b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
-        //let sample_0 =                           b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG";
-        let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
-        let sequences = [
-        b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
-        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
-        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
-        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
-        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
-        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
-
-        let mut id = 1;
-        for seq in sequences{
-            //seq.reverse();
-            mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-            id +=1;
-        }
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
-
-        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![0]) );
-        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![1]) );
-        assert_eq!( mapper.get_strict( sample2, &mut tool ), None );
-        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![0]) );
-        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(vec![11]) );
-        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(vec![0]) );
-    }
-
-
-
-    #[test]
-    fn check_samples_shifted() {
-        let mut mapper = FastMapper::new( 32, 10, 0 );
-        //mapper.change_start_id( 10 );
-        //  samples[0]                   "AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG"
-        //                                      "GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT"
-        let sample2 = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACATTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
-        //let sample  = b"GTTGTCAAGATGCTACCGTTCTGAGGGCAAGGTGTCACTTTGGGCTACCGCGGGAAGTCGACCAGATCCTA";
-        //                     
-        let sample_real = b"GTTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
-        let sequences = [
-        b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG", b"ACCGATTAGGTGCGAGGCGCTATAGTCGTACGTCGTTGCCGTGCC", 
-        b"AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC", b"TTAACCGAGGCGTGAGTTTGGAGCGTACCGGCTTTGCGCAGGGCT",
-        b"GGCAAGGTGTCACATTGGGCTACCGCGGGAGGTCGACCAGATCCT", b"GCGGGCACAGCGGCTAGGGTGTTCCGGGTGGACCATGGTTCAGGC",
-        b"ACCGGAGGCGTGTGTACGTGCGTTTCGAATTCCTGTAAGCCCACC", b"TCGCTGCCGTGCTTCATTGTCGCCGTTCTAACCTCCGATGTCTCG",
-        b"GCCTACCCGCTATGCTCGTCGGCTGGTTAGAGTTTACTGCACGCC", b"TCCCATTCGAATCACGAGGCCGGGTGCGTTCTCCTATGCAATCCC",
-        b"GGTTGGCTCAGAGGCCCCAGGCTGCGGACGTCGTCGGACTCGCGT", b"CTGGGTGCCTGGTCGGGTTACGTCGGCCCTCGGGTCGCGAAGGTC"];
-
-        let mut id = 1;
-        for seq in sequences{
-            //seq.reverse();
-            mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-            id +=1;
-        }
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
-
-        assert_eq!( mapper.get_strict( sequences[0], &mut tool ), Some(vec![0]) );
-        println!("\n");
-        assert_eq!( mapper.get_strict( sequences[1], &mut tool ), Some(vec![1]) );
-        println!("\n");
-        assert_eq!( mapper.get( sample2, &mut tool ), Some(vec![4]) );
-        println!("\n");
-        assert_eq!( mapper.get_strict( &sequences[0][7..], &mut tool ), Some(vec![0]) );
-        println!("\n");
-        assert_eq!( mapper.get_strict( &sequences[11][7..], &mut tool ), Some(vec![11]) );
-        println!("\n");
-        assert_eq!( mapper.get_strict( sample_real, &mut tool ), Some(vec![0]) );
-        println!("\n");
-    }
-
-
     #[test]
     fn check_duplicate_seqs() {
         let mut index = FastMapper::new( 32, 10, 0 );
@@ -306,11 +301,22 @@ mod tests {
         index.add( &seq.to_vec(), "Transcript1".to_string(),vec!( "Transcript1".to_string(), "Gene1".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
 
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
-        assert_eq!( index.get( seq,  &mut tool ), None );
+
+        match index.get( seq,  &mut tool ){
+            Err(MappingError::MultiMatch) => {
+                assert_eq!( "MultiMatch Error", "MultiMatch Error", "expected error detected" )
+            },
+            Err(e) => {
+                panic!("The expected error MappingError::MultiMatch was not thrown! {e:?}")
+            },
+            Ok(v) => {
+                panic!("This search should have given a MappingError::MultiMatch and I got {v:?}");
+            }
+        }
 
         index.make_index_te_ready();
 
-        assert_eq!( index.get( seq,  &mut tool ), Some(vec![2_usize]) ); // family0
+        assert_eq!( index.get( seq,  &mut tool ).unwrap(), vec![2_usize] ); // family0
 
 
     }

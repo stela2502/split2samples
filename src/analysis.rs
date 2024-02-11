@@ -397,7 +397,7 @@ impl Analysis{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get_strict( &data[i].1,  &mut tool ){
+	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
 		                    Ok(gene_id) =>{
 		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");

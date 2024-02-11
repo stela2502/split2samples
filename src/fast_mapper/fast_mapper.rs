@@ -118,12 +118,12 @@ impl FastMapper{
             mask,
             pos,
             neg,
-            offset: offset,
+            offset: offset, // just to be on the save side here.
         }
     }
 
     pub fn change_start_id ( &mut self, new_start :usize ){
-        self.offset = new_start
+        self.offset = new_start;
         /*self.last_count = new_start;
         for _i in 0..new_start{
             self.names_store.push("PLACEHOLDER".to_string());
@@ -378,7 +378,7 @@ impl FastMapper{
         let mut classes_vec = vec![name.clone()];
         classes_vec.extend( class_ids);
 
-        let classes =  self.ids_for_gene_names( &classes_vec );
+        let classes =  self.intern_ids_for_gene_names( &classes_vec );
         let gene_id = classes[0];
 
         self.tool.from_vec_u8( seq.to_vec() );
@@ -890,6 +890,8 @@ impl FastMapper{
             }*/
             return Ok( matching_geneids )
         }
+        eprintln!("We got a mutlimatcher?! {matching_geneids:?}, {genes:?}");
+
         return Err(MappingError::MultiMatch)
     }
 
