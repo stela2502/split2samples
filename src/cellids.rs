@@ -9,6 +9,7 @@ use crate::int_to_str::IntToStr;
 //use crate::sampleids::SampleIds;
 use crate::traits::CellIndex;
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
+use crate::traits::BinaryMatcher;
 
 //use std::thread;
 

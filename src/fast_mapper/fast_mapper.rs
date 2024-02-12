@@ -9,6 +9,7 @@ use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 use crate::errors::MappingError; // not really errors but enums!
+use crate::traits::{BinaryMatcher};
 
 use rayon::prelude::*; // for the make_index_te_ready
 

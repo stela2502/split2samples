@@ -2,6 +2,7 @@
 use std::hash::{Hash, Hasher};
 use core::fmt;
 
+use crate::traits::{ BinaryMatcher, Cell, Direction};
 
 use std::cmp::{max, Ord};
 
@@ -13,19 +14,6 @@ const GAP_PENALTY: i32 = -2;
 static MASK3: u64 = 0x5555555555555555;
 const HAMMING_LOOKUP: [u32; 4] = [0, 1, 1, 1];*/
 
-//for the needleman-wush mapping proocess (implemented using Chatty)
-#[derive(Clone, Copy)]
-struct Cell {
-    score: i32,
-    direction: Direction,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-enum Direction {
-    Diagonal,
-    Up,
-    Left,
-}
 
 #[derive(Debug, Copy, Clone)]
 pub struct SecondSeq( pub u64, pub u8);
@@ -62,18 +50,13 @@ impl Hash for SecondSeq {
     }
 }
 
-// Implementing Display trait for SecondSeq
-impl fmt::Display for SecondSeq {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SecondSeq (u64: {:b} or {}, u8: {})", self.0, self.to_string().as_str(), self.1)
-    }
-}
 
 
 
-impl SecondSeq {
 
-    pub fn to_string(&self) -> String {
+impl BinaryMatcher for SecondSeq {
+
+    fn to_string(&self) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
         for i in 0..self.1 {
@@ -92,10 +75,6 @@ impl SecondSeq {
 
         //println!("\nMakes sense? {:?}", data);
         data
-    }
-
-    fn max3<T: Ord>(a: T, b: T, c: T) -> T {
-        max(a, max(b, c))
     }
 
     fn di_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
@@ -122,7 +101,7 @@ impl SecondSeq {
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
     /// for sequences shorter than 15 bp this fails and returns 100.0
-    pub fn needleman_wunsch(&self, other: &SecondSeq ) -> f32 {
+    fn needleman_wunsch(&self, other: &SecondSeq ) -> f32 {
 
         let size = self.min_length(other);
 
@@ -186,23 +165,9 @@ impl SecondSeq {
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
 
-    /// returns the minimal size the two SecondSeq obejcts are defined for
-    /// Something between 32 and 0 bp.
-    pub fn min_length( &self, other: &SecondSeq) -> usize {
-        let size:usize;
-        if other.1 > self.1{
-            size = self.1 as usize;
-            //mask = (1 << (self.1 as u64) *2 ) - 1;
-        }else {
-            size = other.1 as usize;
-            //mask = (1 << (other.1 as u64) *2 ) - 1;
-        }
-        return size
-    }
-
     /// calculate the base flips between two u64 sequences
     /// stops after having detected 4 different bases.
-    pub fn hamming_distance(self, other: &SecondSeq) -> u32 {
+    fn hamming_distance(self, other: &SecondSeq) -> u32 {
         
         //let mask:u64;
         let size = self.min_length(other);
@@ -247,46 +212,7 @@ impl SecondSeq {
         */
     }
 
-    /// the == takes a mininmal matching region into a account
-    /// This same function soes not do that.
-    pub fn same(&self, other: &Self ) -> bool {
-        self.0 == other.0
-    }
-
-    pub fn print_second_seq(&self) {
-        println!("Contents of SecondSeq:");
-        println!("u64: {:b} or {:?}", self.0, self.to_string() );
-        println!("{} sig bp", self.1);
-    }
-
-    pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
-
-        //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
-        return self.needleman_wunsch( other ) <= max_dist.try_into().unwrap()
-    }
-    pub fn to_le_bytes(&self) -> [u8; std::mem::size_of::<u64>() + std::mem::size_of::<u8>()] {
-        let mut bytes = [0; std::mem::size_of::<u64>() + std::mem::size_of::<u8>()];
-        bytes[..std::mem::size_of::<u64>()].copy_from_slice(&self.0.to_le_bytes());
-        bytes[std::mem::size_of::<u64>()..].copy_from_slice(&self.1.to_le_bytes());
-        bytes
-    }
-    pub fn from_le_bytes(bytes: [u8; 9]) -> Option<Self> {
-        if bytes.len() >= std::mem::size_of::<u64>() + std::mem::size_of::<u8>() {
-            let mut u64_bytes = [0; std::mem::size_of::<u64>()];
-            let mut u8_bytes = [0; std::mem::size_of::<u8>()];
-
-            u64_bytes.copy_from_slice(&bytes[..std::mem::size_of::<u64>()]);
-            u8_bytes.copy_from_slice(&bytes[std::mem::size_of::<u64>()..]);
-
-            let u64_val = u64::from_le_bytes(u64_bytes);
-            let u8_val = u8::from_le_bytes(u8_bytes);
-
-            Some(SecondSeq(u64_val, u8_val))
-        } else {
-            None
-        }
-    }
-    pub fn table(&self) -> std::collections::HashMap<char, u32> {
+    fn table(&self) -> std::collections::HashMap<char, u32> {
         let mut a_cnt = 0;
         let mut c_cnt = 0;
         let mut g_cnt = 0;
@@ -312,6 +238,86 @@ impl SecondSeq {
 
         counts
     }
+
+
+}
+
+
+// Implementing Display trait for SecondSeq
+impl fmt::Display for SecondSeq {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SecondSeq (u64: {:b} or {}, u8: {})", self.0,  BinaryMatcher::to_string(self), self.1)
+    }
+}
+
+impl SecondSeq {
+
+    const BYTE_SIZE: usize = std::mem::size_of::<u64>() + std::mem::size_of::<u8>();
+
+    fn max3<T: Ord>(a: T, b: T, c: T) -> T {
+        max(a, max(b, c))
+    }
+
+    pub fn to_le_bytes(&self) -> [u8; Self::BYTE_SIZE ] {
+        let mut bytes = [0; Self::BYTE_SIZE ];
+        bytes[..std::mem::size_of::<u64>()].copy_from_slice(&self.0.to_le_bytes());
+        bytes[std::mem::size_of::<u64>()..].copy_from_slice(&self.1.to_le_bytes());
+        bytes
+    }
+
+    pub fn from_le_bytes(bytes: [u8; Self::BYTE_SIZE]) -> Option<Self> {
+        if bytes.len() == Self::BYTE_SIZE {
+            let mut u64_bytes = [0; std::mem::size_of::<u64>()];
+            let mut u8_bytes = [0; std::mem::size_of::<u8>()];
+
+            u64_bytes.copy_from_slice(&bytes[..std::mem::size_of::<u64>()]);
+            u8_bytes.copy_from_slice(&bytes[std::mem::size_of::<u64>()..]);
+
+            let u64_val = u64::from_le_bytes(u64_bytes);
+            let u8_val = u8::from_le_bytes(u8_bytes);
+
+            Some(SecondSeq(u64_val, u8_val))
+        } else {
+            None
+        }
+    }
+    
+
+    /// returns the minimal size the two SecondSeq obejcts are defined for
+    /// Something between 32 and 0 bp.
+    pub fn min_length( &self, other: &SecondSeq) -> usize {
+        let size:usize;
+        if other.1 > self.1{
+            size = self.1 as usize;
+            //mask = (1 << (self.1 as u64) *2 ) - 1;
+        }else {
+            size = other.1 as usize;
+            //mask = (1 << (other.1 as u64) *2 ) - 1;
+        }
+        return size
+    }
+
+    
+
+    /// the == takes a mininmal matching region into a account
+    /// This same function soes not do that.
+    pub fn same(&self, other: &Self ) -> bool {
+        self.0 == other.0
+    }
+
+    pub fn print_second_seq(&self) {
+        println!("Contents of SecondSeq:");
+        println!("u64: {:b} or {:?}", self.0, BinaryMatcher::to_string(self) );
+        println!("{} sig bp", self.1);
+    }
+
+    pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
+
+        //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
+        return self.needleman_wunsch( other ) <= max_dist.try_into().unwrap()
+    }
+
+    
 }
 
 

@@ -19,3 +19,26 @@ pub trait Index : Sync{
 pub trait CellIndex: Sync{
 	fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), &str>;
 }
+
+
+/// likely necessary/helpful for the BinaryMatcher::needleman_wunsch
+#[derive(Clone, Copy)]
+pub struct Cell {
+    pub score: i32,
+    pub direction: Direction,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum Direction {
+    Diagonal,
+    Up,
+    Left,
+}
+
+pub trait BinaryMatcher : Sync{
+	fn to_string(&self) -> String ;
+	fn di_nuc_abs_diff( &self, other: &Self  ) -> f32;
+	fn needleman_wunsch(&self, other: &Self ) -> f32;
+	fn hamming_distance(self, other: &Self) -> u32;
+	fn table(&self) -> std::collections::HashMap<char, u32>;
+}

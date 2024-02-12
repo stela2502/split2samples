@@ -34,7 +34,7 @@ use rayon::prelude::*;
 pub struct SingleCellData{    
     //kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
-    data: [BTreeMap< u64, CellData>;256],
+    data: [BTreeMap< u64, CellData>; u8::MAX as usize],
     //ambient_cell_content: BTreeMap< u64, CellData>,
     checked: bool,
     passing: usize,
@@ -56,7 +56,7 @@ impl SingleCellData{
     pub fn new(num_threads:usize )-> Self {
 
         const EMPTY_MAP: BTreeMap<u64, CellData> = BTreeMap::new();
-        let data = [EMPTY_MAP ;256];
+        let data = [EMPTY_MAP ;u8::MAX as usize];
         let checked:bool = false;
         let passing = 0;
         let genes_with_data = HashSet::new();
@@ -70,6 +70,11 @@ impl SingleCellData{
             num_threads,
             //ambient_store:AmbientRnaDetect::new(),
         }
+    }
+
+    fn to_key(&self, name: &u64 ) -> usize{
+        // 48 = 64 -16
+        return (*name >> 54) as usize;
     }
 
     fn values(&self) -> impl Iterator<Item = &CellData> {
@@ -93,12 +98,12 @@ impl SingleCellData{
     } 
 
     fn get_mut(&mut self, key: &u64) -> Option<&mut CellData> {
-        let index = (*key >> 56) as usize; // Extracting the first u8 of the u64 key
+        let index = self.to_key(key); // Extracting the first u8 of the u64 key
         self.data[index].get_mut(key)
     }
 
     pub fn get(&self, key: &u64) -> Option<&CellData> {
-        let index = (*key >> 56) as usize; // Extracting the first u8 of the u64 key
+        let index = self.to_key(key); // Extracting the first u8 of the u64 key
         self.data[index].get(key)
     }
 
@@ -116,7 +121,7 @@ impl SingleCellData{
         self.genes_with_data = HashSet::new();
 
         for other_cell in other.values() {
-            let index = (other_cell.name >> 56) as usize; // Extracting the first u8 of the u64 key
+            let index = self.to_key(&other_cell.name); // Extracting the first u8 of the u64 key
             match self.data[index].entry(other_cell.name) {
                 std::collections::btree_map::Entry::Occupied(mut entry) => {
                     // If cell exists, merge with existing cell
@@ -140,7 +145,7 @@ impl SingleCellData{
 
     /// try_insert now is more slick and insterts the data in 256 different sub-areas.
     pub fn try_insert(&mut self, name: &u64, data: GeneUmiHash, report: &mut MappingInfo) -> bool {
-        let index = (*name >> 56) as usize; // Extracting the first u8 of the u64 key
+        let index = self.to_key(name); // Extracting the first u8 of the u64 key
         self.genes_with_data.insert(data.0);
         self.checked = false;
 

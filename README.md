@@ -568,3 +568,69 @@ To debug this I selected two cells from the whole data which one had detected ex
 I had hoped my mapping was more sensitive, but it turned out it was these stragne PolA containing R2 reads (again).
 
 I have updated the PolyA detection in the newest version and also updated the report to be more phony of why a read was filtered out.
+
+# Analyze the BD test data Rhap-VDJ-Demo
+
+The data can be found on the the BD public data share:
+http://bd-rhapsody-public.s3-website-us-east-1.amazonaws.com/Rhapsody-Demo-Data-Inputs/VDJDemo/
+
+
+The VDJ part of this data is not handled at the moment using Rustody and currently there is no time plan or idea of how to implement that.
+
+Analyzing this data with the latest version (devel branch commit 63ea23f) using this command:
+```
+/home/med-sal/git_Projects/Rustody/target/release/quantify_rhapsody_multi -r /mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L004_R1_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L003_R1_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L001_R1_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L002_R1_001.fastq.gz  -f /mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L004_R2_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L002_R2_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L001_R2_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L003_R2_001.fastq.gz -o /mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result -s human -e /mnt/data2/RhapsodyTest/VDJ_v1_example/BD_Rhapsody_Immune_Response_Panel_Hs.fasta -m 200 -v 'v1' 1>&2 > /mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result.log
+```
+
+I get these measurements:
+```
+I am using 12 cpus
+
+
+Writing outfiles ...
+filtering cells
+Dropping cell with too little counts (n=143511)
+2766 cells have passed the cutoff of 200 umi counts per cell.
+
+
+writing gene expression
+sparse Matrix: 2766 cell(s), 367 gene(s) and 414279 entries written to path Ok("/mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result/BD_Rhapsody_expression"); 
+Writing Antibody counts
+Writing samples table
+dense matrix: 2766 cell written
+
+Summary:
+cellular   reads  : 4832305 reads (62.61% of total)
+no cell ID reads  : 2371673 reads (30.73% of total)
+no gene ID reads  : 0 reads (0.00% of total)
+filtered   reads  : 514614 reads (6.67% of total)
+ ->  multimapper  : 0 reads (0.00% of total)
+ -> bad qualiity  : 511637 reads (6.63% of total)
+ ->    too short  : 1009 reads (0.01% of total)
+ ->          N's  : 1968 reads (0.03% of total)
+
+total      reads  : 7718592 reads
+
+collected read counts:
+expression reads  : 4727781 reads (97.84% of cellular)
+antibody reads    : 0 reads (0.00% of cellular)
+sample reads      : 0 reads (0.00% of cellular)
+
+reported UMI counts:
+expression reads  : 2748802 UMIs (56.88% of cellular)
+antibody reads    : 0 UMIs (0.00% of cellular)
+sample reads      : 0 UMIs (0.00% of cellular)
+
+PCR duplicates or bad cells: 2083503 reads (43.12% of cellular)
+
+timings:
+   overall run time 0 h 1 min 30 sec 621 millisec
+   file-io run time 0 h 0 min 16 sec 246 millisec
+single-cpu run time 0 h 0 min 1 sec 532 millisec
+ multi-cpu run time 0 h 1 min 11 sec 484 millisec
+
+
+Cell->Sample table written to "/mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 1min 30 sec 662milli sec
+```

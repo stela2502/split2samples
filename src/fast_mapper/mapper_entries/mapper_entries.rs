@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use crate::traits::BinaryMatcher;
+
 
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 use crate::fast_mapper::mapper_entries::NameEntry;
