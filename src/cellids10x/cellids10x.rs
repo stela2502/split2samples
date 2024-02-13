@@ -14,7 +14,7 @@ use std::io::BufRead;
 use std::env;
 use crate::errors::CellIdError;
 
-
+use std::process;
 
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
 /// But I do not correct the UMIs here - even with sequencing errors 
@@ -79,7 +79,10 @@ impl  CellIds10x{
             //"9K-LT-march-2021.txt.gz" => "Single Cell 3' LT",
             //"Fixed RNA Profiling" => "737k-fixed-rna-profiling.txt.gz",
             _ => {
-                panic!("CellId10x does not supprt the 10x version {ver}!");
+
+                eprintln!("CellId10x does not supprt the 10x version {ver}!");
+                eprintln!("All/Only versions supported by CellRanger 6.0 are available here.");
+                process::exit(0);   
             }
         };
 
@@ -91,7 +94,8 @@ impl  CellIds10x{
             filepath.push(filename);
         } else {
             // Handle case where RustodyFiles environment variable is not set
-            panic!("RustodyFiles environment variable not set!");
+            eprintln!("RustodyFiles environment variable not set!");
+            process::exit(0);   
         }
 
         let mut possible: Vec<CellId10x> = Vec::new();
@@ -102,6 +106,7 @@ impl  CellIds10x{
         if let Ok(file) = File::open(&filepath) {
             // Check if it's a gz file
             if filepath.extension() == Some("gz".as_ref()) {
+                println!("I for a file and I know where it would be");
                 let gz = BufReader::new(GzDecoder::new(file));
                 size = Self::read_sequences(gz, &mut possible, &mut tool);
             } else {
@@ -109,7 +114,8 @@ impl  CellIds10x{
             }
         } else {
             // Handle case where file does not exist
-            panic!("File {} does not exist!", filepath.display());
+            eprintln!("The expected CellRanger CellIDs file {} does not exist!", filepath.display());
+            process::exit(0);   
         }
 
         Self {
