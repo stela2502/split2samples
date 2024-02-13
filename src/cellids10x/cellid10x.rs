@@ -1,13 +1,13 @@
 use crate::traits::{BinaryMatcher, Cell, Direction};
+
 use core::cmp::max;
 
 use std::hash::{Hash, Hasher};
-use core::fmt;
 
 /// This is in fact only a u32, but I'll attach all ma matching function to that
 
 #[derive(Debug, Clone, Copy)]
-pub struct CellId10x(u32);
+pub struct CellId10x(pub u32);
 
 
 const MATCH_SCORE: i32 = 1;

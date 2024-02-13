@@ -4,17 +4,16 @@
 
 use crate::traits::CellIndex;
 use crate::int_to_str::IntToStr;
-use crate::traits::BinaryMatcher;
+use crate::cellids10x::CellId10x;
 
-
+use std::path::PathBuf;
 use std::fs::File;
-use std::path::Path;
 use flate2::read::GzDecoder;
 use std::io::BufReader;
-
+use std::io::BufRead;
 use std::env;
+use crate::errors::CellIdError;
 
-use crate::cellids10x::cellid10x;
 
 
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
@@ -23,42 +22,29 @@ use crate::cellids10x::cellid10x;
 pub struct CellIds10x{
     pub ver: String,
     possible: Vec<CellId10x>, // all possible cell tags
-    detected: HashSet<CellId10x>, // those that we already saw in this analysis
+    //detected: HashSet<CellId10x>, // those that we already saw in this analysis
     size: usize, // how long are the sequences normally?
 }
 
 impl CellIndex for CellIds10x{
 
-    fn to_cellid (&mut self, r1: &[u8]  )-> Result<( u32, u64 ), &str>{
+    fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64 ), CellIdError >{
 
         let mut tool = IntToStr::new( r1[..self.size].to_vec(), 9);
 
         let cell:u32 = tool.into_u32();
         tool.from_vec_u8 ( r1[self.size..].to_vec());
-        let mut umi:u64  = tool.into_u64();
+        let umi:u64  = tool.into_u64();
 
-        if 
+        if let Some(checked_cell) = self.process_sequence( cell ){
+            return Ok( (checked_cell, umi) )
+        }
         //println!("We found a cellid {} and an umi {}", cell, umi);
-        return Ok( (cell, umi) )
+        return Err( CellIdError::NoMatch )
 
     }
 
-    pub fn process_sequence(&mut self, sequence: u32) -> Option<u64> {
-        // Check if the sequence is already detected
-        if self.detected.contains(&CellId10x(sequence)) {
-            return Some(sequence);
-        }
 
-        // Check if the sequence matches any possible cell tag
-        if let Some(cell_id) = self.possible.iter().find(|&&cell| cell.0 == sequence) {
-            // Add the detected cell ID to the detected set
-            self.detected.insert(*cell_id);
-            // Return the sequence as u64
-            Some(sequence as u64)
-        } else {
-            None
-        }
-    }
 }
 
 
@@ -82,12 +68,12 @@ impl  CellIds10x{
             "Single Cell 3' v3" => "3M-febrary-2018.txt.gz",
             "Single Cell 3' v3.1" => "3M-febrary-2018.txt.gz",
             "Single Cell 3' HT v3.1" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' v2" => "737k-august-2016.txt",
-            "Single Cell 5' v1 and v2" => "737k-august-2016.txt",
-            "Single Cell 5' v1" => "737k-august-2016.txt",
-            "Single Cell 5' v2" => "737k-august-2016.txt",
-            "Single Cell 5' HT v2" => "737k-august-2016.txt",
-            "Single Cell 3' v1" => "737k-april-2014_rc.txt",
+            "Single Cell 3' v2" => "737k-august-2016.txt.gz",
+            "Single Cell 5' v1 and v2" => "737k-august-2016.txt.gz",
+            "Single Cell 5' v1" => "737k-august-2016.txt.gz",
+            "Single Cell 5' v2" => "737k-august-2016.txt.gz",
+            "Single Cell 5' HT v2" => "737k-august-2016.txt.gz",
+            "Single Cell 3' v1" => "737k-april-2014_rc.txt.gz",
             "Single Cell Multiome (ATAC+GEX) v1" => "737k-arc-v1.txt.gz",
             "Single Cell ATAC" => "737k-arc-v1.txt.gz",
             //"9K-LT-march-2021.txt.gz" => "Single Cell 3' LT",
@@ -97,11 +83,11 @@ impl  CellIds10x{
             }
         };
 
-        let mut tool = IntToStr::new(b"AGCT");
+        let mut tool = IntToStr::new(b"AGCT".to_vec(), 16);
 
         let mut filepath = PathBuf::new();
         if let Ok(path) = env::var("RustodyFiles") {
-            filepath.push();
+            filepath.push(path);
             filepath.push(filename);
         } else {
             // Handle case where RustodyFiles environment variable is not set
@@ -109,15 +95,17 @@ impl  CellIds10x{
         }
 
         let mut possible: Vec<CellId10x> = Vec::new();
+        //let mut size: usize;
+        #[allow(unused_assignments)]
         let mut size = 0;
 
         if let Ok(file) = File::open(&filepath) {
             // Check if it's a gz file
             if filepath.extension() == Some("gz".as_ref()) {
-                let gz = GzDecoder::new(BufReader::new(file));
-                size = Self::read_sequences(gz, &mut sequences);
+                let gz = BufReader::new(GzDecoder::new(file));
+                size = Self::read_sequences(gz, &mut possible, &mut tool);
             } else {
-                size = Self::read_sequences(BufReader::new(file), &mut possible);
+                size = Self::read_sequences(BufReader::new(file), &mut possible, &mut tool);
             }
         } else {
             // Handle case where file does not exist
@@ -127,8 +115,25 @@ impl  CellIds10x{
         Self {
             ver: ver.to_string(),
             possible,
-            detected: HashSet::new(),
+            //detected: HashSet::new(),
             size,
+        }
+    }
+
+    fn process_sequence(&self, sequence: u32) -> Option<u32> {
+        // Check if the sequence is already detected
+        /*if self.detected.contains(&CellId10x(sequence)) {
+            return Some(sequence);
+        }*/
+
+        // Check if the sequence matches any possible cell tag
+        if let Some(cell_id) = self.possible.iter().find(|&&cell| cell.0 == sequence) {
+            // Add the detected cell ID to the detected set
+            //self.detected.insert(*cell_id);
+            // Return the sequence as u64
+            Some(cell_id.0)
+        } else {
+            None
         }
     }
 
@@ -137,11 +142,10 @@ impl  CellIds10x{
         for line in reader.lines() {
             if let Ok(sequence) = line {
                 size = sequence.len();
-                tool.from_vec_u8( sequence );
+                tool.from_vec_u8( sequence.as_bytes().to_vec() );
                 sequences.push( CellId10x( tool.into_u32() ) ) ;
             } else {
-                // Handle error while reading line
-                panic!("Error reading line from file!");
+                panic!("I could not read a line in the file!")
             }
         }
         size

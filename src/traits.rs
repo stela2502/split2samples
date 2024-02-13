@@ -1,4 +1,5 @@
 /// here I plann to define all my traits - or the one I have planned for now :-D
+use crate::errors::CellIdError;
 
 
 pub trait Index : Sync{
@@ -17,7 +18,7 @@ pub trait Index : Sync{
 }
 
 pub trait CellIndex: Sync{
-	fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), &str>;
+	fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), CellIdError>;
 }
 
 

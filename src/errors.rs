@@ -7,10 +7,16 @@ pub enum FilterError {
     Quality,
 }
 
-
-
 #[derive(Debug)]
 pub enum MappingError {
     NoMatch,
     MultiMatch,
 }
+
+#[derive(Debug)]
+pub enum CellIdError {
+    NoMatch,
+    Ns,
+}
+
+

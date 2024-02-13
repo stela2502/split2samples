@@ -10,6 +10,7 @@ use crate::int_to_str::IntToStr;
 use crate::traits::CellIndex;
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 use crate::traits::BinaryMatcher;
+use crate::errors::CellIdError;
 
 //use std::thread;
 
@@ -46,7 +47,7 @@ impl CellIndex for CellIds{
     /// to_cellid checks up to 5 bp of shift in the read stucure.
     /// It seams as if the UMI has to also been shifted as it is read from the same read as the cell id!
     /// hence we need to report the shift back to the caller (id:u32, umi:u64)
-    fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), &str>{
+    fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), CellIdError>{
         
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
@@ -63,7 +64,7 @@ impl CellIndex for CellIds{
             for nuc in km{  
                 if *nuc ==b'N'{
                     //let tmp = std::str::from_utf8(km)?;
-                    return Err::<(u32, u64), &str>( "NnuclError");
+                    return Err( CellIdError::Ns) ;
                     //Err::<i32, NnuclError<'_>>( NnuclError::new( &tmp ));
                 }
             }
@@ -187,7 +188,7 @@ impl CellIndex for CellIds{
         println!("c2:                  {}", self.c1s[matches[1].0] );
         println!("c3:                                        {}", self.c1s[matches[2].0] );
         */
-        return  Err::<(u32, u64), &str>( "no match to any cell id in this read" )
+        return  Err( CellIdError::NoMatch )
     }
 
 }

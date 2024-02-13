@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use rustody::fast_mapper::mapper_entries::SecondSeq;
+    use rustody::traits::BinaryMatcher;
     #[test]
     fn test_second_seq_equality() {
         let seq1 = SecondSeq(0b1010101010101010101010101010101010101010, 20);
@@ -79,7 +80,7 @@ mod tests {
         let seq_u64 = 13632604658164817131_u64;
         let obj = SecondSeq(seq_u64, 32);
 
-        assert_eq!( obj.to_string(), seq );
+        assert_eq!( BinaryMatcher::to_string(&obj), seq );
         
     }
     

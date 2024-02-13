@@ -364,7 +364,7 @@ impl AnalysisTE{
 		                    	report.multimapper +=1;
 		                    	report.no_data +=1;
 		                    	continue
-		                    }
+		                    },
 		                };
 	                }
 
