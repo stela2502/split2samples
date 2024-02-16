@@ -320,7 +320,7 @@ impl SingleCellData{
             for (gene_id, name) in genes.names4sparse.keys().enumerate() {
                 let n = cell_obj.n_umi_4_gene(genes, name);
                 if n > 0 {
-                    match writeln!(writer, "{gene_id} {cell_id} {n}") {
+                    match writeln!(writer, "{} {cell_id} {n}", gene_id+1) {
                         Ok(_) => { entries += 1; },
                         Err(err) => {
                             eprintln!("write error: {err}");
