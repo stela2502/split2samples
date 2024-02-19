@@ -9,7 +9,7 @@ use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
 //use std::collections::HashSet;
 use crate::errors::MappingError; // not really errors but enums!
-//use crate::traits::{BinaryMatcher};
+use std::mem;
 
 use rayon::prelude::*; // for the make_index_te_ready
 
@@ -121,6 +121,16 @@ impl FastMapper{
             neg,
             offset: offset, // just to be on the save side here.
         }
+    }
+
+    // Method to calculate memory size
+    pub fn memory_size(&self) -> usize {
+        let size = mem::size_of::<usize>() * 12 // Sizes of usize fields
+                 + mem::size_of::<u64>()        // Size of u64 field
+                 + mem::size_of::<Vec<String>>() + self.names_store.iter().map(|s| mem::size_of::<String>() + s.capacity()).sum::<usize>() // Size of Vec<String> and its contents
+                 + mem::size_of::<Vec<usize>>() + self.names_count.len() * mem::size_of::<usize>() // Size of Vec<usize> and its contents
+                 + mem::size_of::<Vec<MapperEntry>>() + self.mapper.iter().map(|entry| entry.memory_size()).sum::<usize>(); // Size of Vec<MapperEntry> and its contents
+        size
     }
 
     pub fn change_start_id ( &mut self, new_start :usize ){

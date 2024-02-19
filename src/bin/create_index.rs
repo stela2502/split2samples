@@ -214,6 +214,14 @@ fn process_genes_multi ( genes: &[Gene], index: &mut FastMapper ,
 }
 
 
+// Function to check if a file exists
+fn check_file_existence(file_path: &str, option: &str, errors: &mut Vec<String>) {
+    if !fs::metadata(file_path).is_ok() {
+        errors.push(format!("Option {option} - File not found: {file_path}"));
+    }
+}
+
+
 // the main function nowadays just calls the other data handling functions
 fn main() {
     // parse the options
@@ -223,22 +231,39 @@ fn main() {
     //// create the report object /////////////////////////////////////
     let opts: Opts = Opts::parse();
 
+    // Check if each file exists
+    let mut errors = Vec::new();
+    check_file_existence(&opts.gtf, "gtf", &mut errors);
+    check_file_existence(&opts.file, "file", &mut errors);
+    check_file_existence(&opts.antibody, "antibody", &mut errors);
+
+    // If there are errors, print them and exit
+    if !errors.is_empty() {
+        eprintln!("Error: Some files do not exist:");
+        for error in &errors {
+            eprintln!("{}", error);
+        }
+        std::process::exit(1);
+    }
 
     if fs::metadata(&opts.outpath).is_ok() {
         if let Err(err) = fs::remove_dir_all(&opts.outpath) {
             eprintln!("Error old index directory: {}", err);
+            std::process::exit(1);
         } else {
             println!("Old index directory removed successfully!");
         }
 
         if let Err(err) = fs::create_dir_all(&opts.outpath) {
             eprintln!("Error creating directory: {}", err);
+            std::process::exit(1);
         } else {
             println!("New index directory created successfully!");
         }
     }else {
         if let Err(err) = fs::create_dir_all(&opts.outpath) {
             eprintln!("Error creating directory: {}", err);
+            std::process::exit(1);
         } else {
             println!("New index directory created successfully!");
         }
@@ -418,12 +443,15 @@ fn main() {
     .collect(); // Collect the results into a Vec
     report.stop_multi_processor_time();
     eprintln!("Integrating multicore results");
+    eprintln!("Memory size of main index: {} bytes", index.memory_size() );
     for idx in results{
+        eprintln!("Memory size of add_on tread content: {} bytes", idx.memory_size() );
         index.merge(idx);
         //report.merge( &gex.1 );
     }
-
-    //index.make_index_te_ready(); 
+    eprintln!("Memory size of main index after merge: {} bytes", index.memory_size() );
+    index.make_index_te_ready(); 
+    eprintln!("Memory size of main index after clean up: {} bytes", index.memory_size() );
     report.stop_single_processor_time();
 
     let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );

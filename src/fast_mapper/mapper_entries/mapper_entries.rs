@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use crate::traits::BinaryMatcher;
-
+use std::mem;
 
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 use crate::fast_mapper::mapper_entries::NameEntry;
@@ -29,6 +29,23 @@ impl MapperEntry{
 			needleman_wunsch_cut: 0.4 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
 		}
 	}
+
+	// Method to calculate memory size
+    pub fn memory_size(&self) -> usize {
+        let mut size = mem::size_of::<HashMap<SecondSeq, NameEntry>>(); // Size of HashMap<SecondSeq, NameEntry>
+        
+        // Iterate over each entry in the map and sum up the memory size of NameEntry instances
+        for (_, name_entry) in &self.map {
+            size += name_entry.memory_size();
+        }
+        
+        // Add the size of other fields in MapperEntry
+        size += mem::size_of::<usize>() // Size of usize field (only)
+              + mem::size_of::<u32>() // Size of u32 field (hamming_cut)
+              + mem::size_of::<f32>(); // Size of f32 field (needleman_wunsch_cut)
+        
+        size
+    }
 
 	pub fn collapse_classes (&mut self ){
 		// afterwards we should only have the mapper entries left that actually contained unique information.
