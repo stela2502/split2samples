@@ -8,3 +8,4 @@ cp target/release/int_2_seq ~/sens05_home/bin/
 cp target/release/create_index ~/sens05_home/bin/
 cp target/release/create_index_te ~/sens05_home/bin/
 cp target/release/te_analysis ~/sens05_home/bin/
+cp target/release/subset_fastqs ~/sens05_home/bin/

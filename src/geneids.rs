@@ -117,7 +117,7 @@ impl Index for GeneIds {
 
     }
 
-    fn get(&self, seq: &[u8]) -> Option<usize> {        
+    fn get(&self, seq: &[u8], needleman_wunsch_cut: f32, min_counts:usize) -> Option<usize> {        
         // let min_value = 2;
         // let min_z = 1;
         // let mut max_value = 0;

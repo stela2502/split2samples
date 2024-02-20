@@ -153,7 +153,7 @@ fn main() {
 	        	//seq.reverse();
 	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	seq_ext.extend_from_slice( seq );
-	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -172,7 +172,7 @@ fn main() {
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -191,7 +191,7 @@ fn main() {
 
 	let mut collected:HashMap::<usize, usize>= HashMap::new();
 
-	let mut ok = match antibodies.get( &opts.dna.as_bytes(), &mut tool ){
+	let mut ok = match antibodies.get( &opts.dna.as_bytes(), &mut tool , 0.2, 5){
 		Ok(gene_ids) =>{
         	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
         	//eprintln!("I got an ab id {gene_id}");
@@ -216,7 +216,7 @@ fn main() {
 		}
 	};
 	if ! ok{
-		ok = match samples.get( &opts.dna.as_bytes(),  &mut tool ){
+		ok = match samples.get( &opts.dna.as_bytes(),  &mut tool, 0.18, 15){
 			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");
@@ -243,7 +243,7 @@ fn main() {
 	}
 
 	if ! ok{
-		let _ = match genes.get( &opts.dna.as_bytes(),  &mut tool ){
+		let _ = match genes.get( &opts.dna.as_bytes(),  &mut tool, 0.4, 5 ){
 			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");
@@ -269,8 +269,21 @@ fn main() {
 		};
 	}
 
+	let mut names =Vec::<String>::with_capacity( collected.len());
+	for key in collected.keys(){
+		if key < &antibodies.last_count{
+			names.push( antibodies.names_store[ key - antibodies.offset ].to_string());
+		}
+		else if key < &samples.last_count{
+			names.push( samples.names_store[ key - samples.offset ].to_string());
+		}
+		else {
+			names.push( genes.names_store[ key - genes.offset ].to_string());
+		}
+	}
 
-    println!("I have collected these genes: {collected:?}" );
+
+    println!("I have collected these genes: {names:?}" );
 
 
 

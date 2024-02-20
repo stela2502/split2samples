@@ -58,7 +58,7 @@ struct Opts {
     /// minimal sequencing quality 
     #[clap(default_value_t=25.0, long)]
     min_quality: f32,
-    /// minimal sequencing quality 
+    /// kmer length (ignored)
     #[clap(default_value_t=32, long)]
     gene_kmers: usize,
     /// how many threads to use to analyze this (default max available)
@@ -78,12 +78,6 @@ struct Opts {
     umi_count: u8,
 */
 
-// Function to check if a file exists
-fn check_file_existence(file_path: &str, option: &str, errors: &mut Vec<String>) {
-    if !fs::metadata(file_path).is_ok() {
-        errors.push(format!("Option {option} - File not found: {file_path}"));
-    }
-}
 
 // the main function nowadays just calls the other data handling functions
 fn main() {

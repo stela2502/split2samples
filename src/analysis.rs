@@ -209,11 +209,13 @@ impl Analysis{
 	        b"CGCGTCCAATTTCCGAAGCCCCGCCCTAGGAGTTCCCCTGCGTGC", b"GCCCATTCATTGCACCCGCCAGTGATCGACCCTAGTGGAGCTAAG" ];
 
 	        for seq in sequences{
-	        	//seq.reverse();
-	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
-	        	//seq_ext.extend_from_slice( seq );
+	        	/*
+	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	seq_ext.extend_from_slice( seq );
+	        	seq_ext.extend_from_slice( b"AAAAAAAAAAAAA" );
+	        	samples.add( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	*/
 	        	samples.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 	    }
@@ -237,12 +239,13 @@ impl Analysis{
 			"GTTGTCAAGATGCTACG  TTCAGAGAGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTCAAGAA"
 			*/
 	        for seq in sequences{
-	        	//seq.reverse();
-	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
-	        	//seq_ext.extend_from_slice( seq );
-	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	/*
+	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
+	        	seq_ext.extend_from_slice( seq );
+	        	seq_ext.extend_from_slice( b"AAAAAAAAAAAAA" );
+	        	samples.add( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	*/
 	        	samples.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 
@@ -369,7 +372,7 @@ impl Analysis{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get( &data[i].1, &mut tool ){
+	            	ok = match &self.antibodies.get( &data[i].1, &mut tool, 0.2,10 ){
 	                    Ok(gene_id) =>{
 	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
@@ -397,9 +400,9 @@ impl Analysis{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
+	                	ok = match &self.samples.get( &data[i].1,  &mut tool, 0.2,10 ){
 		                    Ok(gene_id) =>{
-		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
+		                    	//println!("sample ({:?}) with {:?}",self.samples.names_store[gene_id[0] - self.samples.offset ], String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
 		                    	
@@ -427,7 +430,7 @@ impl Analysis{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get( &data[i].1,  &mut tool ){
+		                match &self.genes.get( &data[i].1,  &mut tool, 0.4,10 ){
 		                	Ok(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
 
@@ -743,7 +746,7 @@ impl Analysis{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec2.seq(), &mut tool ){
+		            	ok = match &self.antibodies.get( &seqrec2.seq(), &mut tool, 0.2, 5 ){
 		                    Ok(gene_id) =>{
 		                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );
 		                    	//eprintln!("I got an ab id {gene_id}");
@@ -771,7 +774,7 @@ impl Analysis{
 		                };
 
 		                if ! ok{
-		                	ok = match &self.samples.get_strict( &seqrec2.seq(),  &mut tool ){
+		                	ok = match &self.samples.get( &seqrec2.seq(),  &mut tool, 0.2, 7 ){
 			                    Ok(gene_id) =>{
 			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 			                    	//eprintln!("I got a sample umi id {umi}");
@@ -801,7 +804,7 @@ impl Analysis{
 
 		                if ! ok{
 		                	
-			                match &self.genes.get( &seqrec2.seq(),  &mut tool ){
+			                match &self.genes.get( &seqrec2.seq(),  &mut tool, 0.4, 6 ){
 			                	Ok(gene_id) =>{
 			                		report.iter_read_type( "expression reads" );
 

@@ -69,7 +69,7 @@ pub struct FastMapper{
     Therefore the second index will report ids shifted by that value.
     But it will be totally transperent to the ouside world.
      */
-    offset: usize, // the offset is to make a index report 'wrong' ids - say you want
+    pub offset: usize, // the offset is to make a index report 'wrong' ids - say you want
 }
 
 // here the functions
@@ -554,7 +554,7 @@ impl FastMapper{
 
     
 
-    fn get_best_gene( &self, genes:&HashMap::<(usize, usize), usize>, ret: &mut Vec::<usize> ) -> bool{
+    fn get_best_gene( &self, genes:&HashMap::<(usize, usize), usize>, ret: &mut Vec::<usize>, min_counts:usize ) -> bool{
         ret.clear();
         if genes.is_empty(){
             return false
@@ -573,7 +573,7 @@ impl FastMapper{
         let most_matches = genes.values().max().unwrap_or(&0);
         //eprintln!("I got this as most matches {most_matches}");
         
-        if most_matches < &2_usize {
+        if most_matches < &min_counts {
             return false
         }
         
@@ -651,7 +651,7 @@ impl FastMapper{
                     return true
                 }
             }
-            if most_matches < &5 {
+            if most_matches < &min_counts {
                 return false
             }
 
@@ -751,7 +751,7 @@ impl FastMapper{
             return Err(MappingError::NoMatch)
         }
         // check if there is only one gene //
-        if self.get_best_gene( &genes, &mut matching_geneids ){
+        if self.get_best_gene( &genes, &mut matching_geneids, 5 ){
             //println!("And I got a match! ({matching_geneids:?})");
             return Ok( matching_geneids )
         }
@@ -759,7 +759,7 @@ impl FastMapper{
     }
 
 
-    pub fn get(&self, seq: &[u8], tool: &mut IntToStr  ) -> Result< Vec<usize>, MappingError >{ // gene_id, gene_level
+    pub fn get(&self, seq: &[u8], tool: &mut IntToStr, needleman_wunsch_cut: f32, min_counts:usize  ) -> Result< Vec<usize>, MappingError >{ // gene_id, gene_level
         
         //let mut id:usize;
 
@@ -778,6 +778,7 @@ impl FastMapper{
 
         let mut matching_geneids = Vec::< usize>::with_capacity(10);
         let mut na = 0;
+        let mut tries = 0;
         // entries is a Option<(u16, u64, usize)
 
         /*let mut i = 0;
@@ -815,7 +816,7 @@ impl FastMapper{
                 // }
 
                 //eprintln!("Ill create a new tool here based on seq {}", entries.1);
-
+                tries += 1;
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
 
                     Some( gene_ids ) => {
@@ -827,7 +828,7 @@ impl FastMapper{
                                     Some(gene_count) => {
                                         //println!( "Adding to existsing {} with count {gene_count}+1", gid.0);
                                         *gene_count +=1;
-                                        if *gene_count == 4 && genes.len() ==1 {
+                                        if *gene_count == min_counts && genes.len() ==1 {
                                             break 'main;
                                         }
                                     },
@@ -843,7 +844,7 @@ impl FastMapper{
                     None => {
                         
                         //eprintln!("Got no gene id in the first run get() run -> find() instead:");
-                        match self.mapper[entries.0 as usize].find(  &entries.1 ){
+                        match self.mapper[entries.0 as usize].find(  &entries.1 , needleman_wunsch_cut ){
                             Some( gene_ids ) => {
                                 //eprintln!("But in the second I got one: {gene_ids:?}");
                                 for name_entry in &gene_ids{
@@ -853,7 +854,7 @@ impl FastMapper{
                                             Some(gene_count) => {
                                                 //eprintln!( "Second Adding to existsing {} with count {gene_count}+1", gid.0);
                                                 *gene_count +=1;
-                                                if *gene_count == 4 && genes.len() ==1 {
+                                                if *gene_count == min_counts && genes.len() ==1 {
                                                     break 'main;
                                                 }
                                             },
@@ -889,11 +890,12 @@ impl FastMapper{
             return Err(MappingError::NoMatch)
         }
         
+        //println!("\nFastMapper::get - I got {genes:?} for you! (in {tries} tries)\n");
         /*let bad_gene = "ADA";
         let bad = self.get_id( bad_gene.to_string()) ;*/
         
         // check if there is only one gene //
-        if self.get_best_gene( &genes, &mut matching_geneids ){
+        if self.get_best_gene( &genes, &mut matching_geneids, tries -3 ){
             // Cd3e <- keep that to fiond this place back
             /*if matching_geneids[0] == bad {
                 println!("read mapping to {} - should not happen here?: {:?}\n{:?}", bad_gene, self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );

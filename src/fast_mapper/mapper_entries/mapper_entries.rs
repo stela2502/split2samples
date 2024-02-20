@@ -12,7 +12,7 @@ pub struct MapperEntry{
 	pub map: HashMap<SecondSeq, NameEntry>, // to speed up the fast_mapper merge function
 	only:usize,
 	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
-	needleman_wunsch_cut: f32,
+	//needleman_wunsch_cut: f32,
 }
 
 impl MapperEntry{
@@ -26,7 +26,7 @@ impl MapperEntry{
 			map,
 			only :0,
 			hamming_cut :2,
-			needleman_wunsch_cut: 0.4 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
+			//needleman_wunsch_cut: 0.4 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
 		}
 	}
 
@@ -109,6 +109,7 @@ impl MapperEntry{
 
 		match &self.map.get( &new_entry.key ){
 			Some(entry) => {
+				//println!("Mapper::get I have a match to {}", new_entry.key);
 				ret.push(entry);
 				Some(ret)
 			},
@@ -123,7 +124,7 @@ impl MapperEntry{
 	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
 	/// But not continuousely as that would need me to convert them back to string.
 	/// If this becomes necessary it can be added later.
-	pub fn find (&self, seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
+	pub fn find (&self, seq:&SecondSeq, needleman_wunsch_cut:f32 ) -> Option<Vec<&NameEntry>> {
 		let mut ret : Vec::<&NameEntry> = vec![];
 
 		let mut dists : Vec::<f32> = vec![];
@@ -134,7 +135,7 @@ impl MapperEntry{
 			let dist = name_entry.key.needleman_wunsch( seq );
 			//eprintln!("Distance is {dist}");
 			//if dist <= self.hamming_cut {
-			if dist <= self.needleman_wunsch_cut {
+			if dist <= needleman_wunsch_cut {
 				// look at the matches that are almost rejected.
 				/*if dist > self.needleman_wunsch_cut * 0.9 {
 					println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", self.map[i].0, dist);

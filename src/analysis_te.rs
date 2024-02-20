@@ -156,8 +156,9 @@ impl AnalysisTE{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
-	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	sample_names.push( format!("Sample{id}") );
+	        	//samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.names_store.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 	    }
@@ -186,8 +187,9 @@ impl AnalysisTE{
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	sample_names.push( format!("Sample{id}") );
+	        	//samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.names_store.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
 
@@ -312,7 +314,7 @@ impl AnalysisTE{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.expr_index_obj.get( &data[i].1, &mut tool ){
+	            	ok = match &self.expr_index_obj.get( &data[i].1, &mut tool, 0.3, 5 ){
 	                    Ok(gene_id) =>{
 	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                    	//eprintln!("I got an ab id {gene_id}");
@@ -340,7 +342,7 @@ impl AnalysisTE{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
+	                	ok = match &self.samples.get( &data[i].1,  &mut tool, 0.2, 5 ){
 		                    Ok(gene_id) =>{
 		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
@@ -599,10 +601,12 @@ impl AnalysisTE{
 
 	        report.stop_multi_processor_time();
 
+
 	        for gex in total_results{
 	        	self.gex.merge(&gex.0);
 	        	report.merge( &gex.1 );
 	        }
+
 	        pb.set_message( report.log_str().clone() );
 	    }
 

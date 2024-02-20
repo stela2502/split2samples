@@ -59,7 +59,10 @@ impl CellIndex for CellIds{
         //println!("to_cellid the c1 seq: {:?}", std::str::from_utf8( &r1[c1[0]..c1[1]] ) );
         //println!("to_cellid the c2 seq: {:?}", std::str::from_utf8( &r1[c2[0]..c2[1]] ) );
         //println!("to_cellid the c3 seq: {:?}", std::str::from_utf8( &r1[c3[0]..c3[1]] ) );
-
+        if &r1.len() < &(self.umi.1 +4)  {
+            //println!("Too short!");
+            return Err( CellIdError::Ns );
+        }
         for km in [ &r1[self.c1.0..self.c1.1], &r1[self.c2.0..self.c2.1], &r1[self.c3.0..self.c3.1 ] ]{
             for nuc in km{  
                 if *nuc ==b'N'{

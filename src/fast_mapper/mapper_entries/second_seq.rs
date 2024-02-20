@@ -160,7 +160,7 @@ impl BinaryMatcher for SecondSeq {
             println!();
         }*/
 
-        //println!("Can that be cut short: {self} vs {other} - abs_diff {} NW {}", self.di_nuc_abs_diff(other),  (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
+        //println!("Can that be cut short: \n{self} vs \n{other} - abs_diff {} NW {}", self.di_nuc_abs_diff(other),  (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
 
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
@@ -246,7 +246,7 @@ impl BinaryMatcher for SecondSeq {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for SecondSeq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SecondSeq (u64: {:b} or {}, u8: {})", self.0,  BinaryMatcher::to_string(self), self.1)
+        write!(f, "SecondSeq (u64: {} or {:b}, u8: {})",  BinaryMatcher::to_string(self), self.0, self.1)
     }
 }
 

@@ -237,6 +237,31 @@ fn check_file_existence(file_path: &str, option: &str, errors: &mut Vec<String>)
     }
 }
 
+fn get_system_memory_info( ) -> String {
+        let mut result = String::new();
+        
+        if let Ok(file) = File::open("/proc/meminfo") {
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    if line.starts_with("MemTotal:")
+                        || line.starts_with("MemFree:")
+                        || line.starts_with("MemAvailable:")
+                        || line.starts_with("Buffers:")
+                        || line.starts_with("Cached:")
+                        || line.starts_with("SwapCached:")
+                    {
+                        result.push_str(&line);
+                        result.push('\n'); // Add newline for readability
+                    }
+                }
+            }
+        } else {
+            result.push_str("Failed to read system memory information.");
+        }
+        
+        result
+    }
 
 // the main function nowadays just calls the other data handling functions
 fn main() {
@@ -458,12 +483,16 @@ fn main() {
                 good_read_count = 0;
             }
             println!("Chromosome {last_chr} is finished - integrating it");
+            println!("before the merge:\n {}",get_system_memory_info());
 
             partial_index.make_index_te_ready();
             partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
 
             index.merge( partial_index );
             index.make_index_te_ready();
+
+            println!("after the merge:\n {}",get_system_memory_info());
+
             partial_index = FastMapper::new( kmer_size, 900_000, 0 );
 
             let (_h, m, s, ms) = report.stop_ticker();
@@ -517,6 +546,8 @@ fn main() {
         //good_read_count = 0;
     }
 
+    println!("before the final merge:\n {}",get_system_memory_info());
+
     partial_index.make_index_te_ready();
     partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
 
@@ -525,9 +556,11 @@ fn main() {
 
     println!("Collapsing the index down to a usable size? at {h}h {m}min {s}sec.");
 
-    index.make_index_te_ready();
+    index.make_index_te_ready_single();
 
-    //println!("The merged index has not been produced ( memory issues!)");
+    println!("after the final merge:\n {}",get_system_memory_info());
+
+    println!("The merged index now has the size of {} bytes", index.memory_size() );
 
     eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
 

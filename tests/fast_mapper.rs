@@ -35,7 +35,7 @@ mod tests {
         let expected_results = (0..12).map(|i| vec![i]).collect::<Vec<_>>();
 
         for (sequence, expected_result) in sequences.iter().zip(expected_results.iter()) {
-            match mapper.get(*sequence, &mut tool) {
+            match mapper.get(*sequence, &mut tool, 0.2) {
                 Ok(result) => {
                     assert_eq!(result, *expected_result, "Unexpected result for sequence: {:?}", sequence);
                 }
@@ -77,7 +77,7 @@ mod tests {
         let mut tool = IntToStr::new(seq.to_vec(), 32);
         if let Some((first, second)) = tool.next(){
             let mapper_obj = &mapper.mapper[ first as usize ];
-            let matched = mapper_obj.get( &second );
+            let matched = mapper_obj.get( &second, 0.4);
             assert!(matched.is_some(), "found the object" );
             if let Some(name_entry) = matched{
                 assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
@@ -91,7 +91,7 @@ mod tests {
 
         if let Some((first, second)) = tool.next(){
             let mapper_obj = &mapper.mapper[ first as usize ];
-            let matched = mapper_obj.get( &second );
+            let matched = mapper_obj.get( &second, 0.4);
             assert!( matched.is_some(), "found a match using second next element" );
             if let Some(name_entry) = matched{
                 assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
@@ -128,7 +128,7 @@ mod tests {
         let mut tool = IntToStr::new(seq.to_vec(), 32);
         if let Some((first, second)) = tool.next(){
             let mapper_entry = &mapper.mapper[ first as usize ];
-            let name_entry = match mapper_entry.get( &second ) {
+            let name_entry = match mapper_entry.get( &second, 0.4 ) {
                 Some(obj) => {
                      assert_eq!( 1,1, "found the object");
                      obj
@@ -171,13 +171,13 @@ mod tests {
 
         //assert_eq!( mapper.with_data, 51 );
 
-        assert_eq!(  mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ).unwrap(), vec![0] );
-        assert_eq!(  mapper.get( b"GGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagt", &mut tool ).unwrap(), vec![1] );
+        assert_eq!(  mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool, 0.4 ).unwrap(), vec![0] );
+        assert_eq!(  mapper.get( b"GGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagt", &mut tool, 0.4 ).unwrap(), vec![1] );
 
         //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
         mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
 
-        match mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ){
+        match mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool, 0.4 ){
             Err(MappingError::MultiMatch) => {
                 assert_eq!( "NoMatch Error", "NoMatch Error", "expected error detected" )
             },

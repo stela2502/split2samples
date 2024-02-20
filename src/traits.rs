@@ -4,7 +4,7 @@ use crate::errors::CellIdError;
 
 pub trait Index : Sync{
 
-	fn get(&self, seq: &[u8]) ->  Option< usize >;
+	fn get(&self, seq: &[u8], needleman_wunsch_cut:f32, min_counts:usize ) ->  Option< usize >;
 	fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize;
 	fn get_id( &self, name: String ) -> usize;
 	fn print( &self );
