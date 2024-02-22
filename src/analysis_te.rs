@@ -87,8 +87,6 @@ impl AnalysisTE{
 	    
 	    let mut te_index_obj :FastMapper = FastMapper::new( gene_kmers, 10_000, 0  );
 
-	    let mut gene_count = 600;
-	    
 	    if let Some(i) = te_index {
 	    	println!("Loading te_index from path {i}");
 	    	match te_index_obj.load_index( i ){
@@ -96,11 +94,9 @@ impl AnalysisTE{
 	    		Err(e) => panic!("Failed to load the te_index {e:?}")
 	    	}
 	    	te_index_obj.print();
-	    	gene_count = te_index_obj.names.len();
-	    	
 	    }
 
-	    let mut expr_index_obj :FastMapper = FastMapper::new( gene_kmers, 100_000, gene_count ); // split them into 9 bp kmers
+	    let mut expr_index_obj :FastMapper = FastMapper::new( gene_kmers, 100_000, te_index_obj.get_gene_count() ); // split them into 9 bp kmers
 
 	    if let Some(expr_path) = expression_index {
 
@@ -118,8 +114,8 @@ impl AnalysisTE{
 
 		} 
 
-		let te_names = te_index_obj.names.keys().cloned().collect::<Vec<String>>();
-		let gene_names = expr_index_obj.names.keys().cloned().collect::<Vec<String>>();
+		let te_names = te_index_obj.get_all_gene_names();
+		let gene_names = expr_index_obj.get_all_gene_names();
 
 	    //  now we need to get a CellIDs object, too
 	    let cells:  Box::<dyn CellIndex + Sync> = match exp {
@@ -138,7 +134,7 @@ impl AnalysisTE{
 
 	    let mut id = 1;
 
-	   	let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000, te_index_obj.names.len() +  expr_index_obj.names.len()  );
+	   	let mut samples :FastMapper = FastMapper::new( gene_kmers, 10_000, te_index_obj.get_gene_count() +  expr_index_obj.get_gene_count()  );
 
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.

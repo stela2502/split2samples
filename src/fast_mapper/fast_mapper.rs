@@ -50,7 +50,7 @@ pub struct FastMapper{
     pub kmer_len:usize, // how long should the second entries be (up to 32 bp + 8bp initial map) 
     spacer:usize,
     pub mapper: Vec<MapperEntry>, // the position is the sequence!
-    pub names : BTreeMap<std::string::String, usize>, // gene name and gene id
+    names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names_store: Vec<String>, // store gene names as vector
     pub names_count: Vec<usize>, // store the number of mappers for this gene
@@ -134,7 +134,11 @@ impl FastMapper{
     }
 
     pub fn change_start_id ( &mut self, new_start :usize ){
-        self.offset = new_start;
+        if self.offset == 0 {
+            self.offset = new_start;
+        }else {
+            panic!("You try to change the start id twice - not supported!");
+        }
         /*self.last_count = new_start;
         for _i in 0..new_start{
             self.names_store.push("PLACEHOLDER".to_string());
@@ -166,7 +170,7 @@ impl FastMapper{
                     let gene_names = other.gene_names_for_ids( &name_entry.classes[idx] );
                     let gene_name = other.gene_names_for_ids( &vec![ name_entry.data[idx].0 ]);
                     // And get my own ids for these names
-                    //let gene_ids = self.ids_for_gene_names( &gene_names );
+                    //let gene_ids = self.ids_for_gene_names_mut( &gene_names );
                     let _ = self.incorporate_match_combo( primary_id, name_entry.key , gene_name[0].clone(), gene_names );
                 }           
             }
@@ -185,6 +189,17 @@ impl FastMapper{
         }
         ret
     }
+
+    /// how many genes does this index describe?
+    pub fn get_gene_count( &self) -> usize {
+        self.names.len()
+    }
+
+    /// Returns all possible gene names this index object describes
+    pub fn get_all_gene_names (&self) -> Vec::<String> {
+        self.names.keys().map(|name| name.to_string()).collect()
+    }
+    
 /*
     fn gene_names_for_intern_ids( &self, ids:&Vec<usize> ) -> Vec<String> {
         let mut ret = Vec::<String>::with_capacity( ids.len() );
@@ -195,7 +210,19 @@ impl FastMapper{
         ret
     }
 */
-    pub fn ids_for_gene_names( &mut self, ids:&Vec<String> ) -> Vec<usize> {
+
+    pub fn ids_for_gene_names( &self, ids:&Vec<String> ) -> Vec<usize> {
+        let mut ret = Vec::<usize>::with_capacity( ids.len() );
+        for name in ids.iter(){
+            let id = self.get_id( name.to_string() );
+
+            ret.push( id );
+        }
+        ret
+    }
+
+
+    pub fn ids_for_gene_names_mut( &mut self, ids:&Vec<String> ) -> Vec<usize> {
         let mut ret = Vec::<usize>::with_capacity( ids.len() );
         for name in ids.iter(){
             if ! self.names.contains_key( name ){
@@ -205,7 +232,7 @@ impl FastMapper{
                 self.last_count += 1;
             }
             let id = self.get_id( name.to_string() ).clone();
-            ret.push( id + self.offset );
+            ret.push( id  );
         }
         ret
     }
@@ -276,7 +303,7 @@ impl FastMapper{
 
         }
         let gene_id = self.get_id( name.to_string() ).clone();
-        let classes =  self.ids_for_gene_names( &ids );
+        let classes =  self.ids_for_gene_names_mut( &ids );
 
         if ! self.mapper[initial_match].has_data() {
             // will add in the next step so
@@ -713,7 +740,7 @@ impl FastMapper{
             if na == 10 && matching_geneids.len() == 0{
                 return Err(MappingError::NoMatch)
             }
-            if self. mapper[entries.0 as usize].has_data() {
+            if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
                 //i +=1;
                 //println!("We are at iteration {i}");
@@ -724,6 +751,9 @@ impl FastMapper{
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
                                 let ext_gid = self.get_extern_id_from_intern( gid.0 );
+                                /*if self.offset > 0 {
+                                    println!("get_strict got extern id {} from the intern id {} ({})", ext_gid, gid.0, self.offset );
+                                }*/
                                 match genes.get_mut( &(ext_gid, gid.1) ) {
                                     Some(gene_count) => {
                                         *gene_count +=1;
@@ -916,8 +946,11 @@ impl FastMapper{
         }
         ret.push("Most likely name".to_string());
         ret.push("Faction total".to_string());
+        ret.push("dist to nr.2 [%max]".to_string());
         "CellID\t".to_owned()+&ret.join("\t")
     }
+
+    
 
     pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
         let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );

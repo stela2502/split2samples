@@ -131,9 +131,7 @@ impl Analysis{
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
-		                		if ! genes.names.contains_key(  id ){
-			                    	genes.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
-		                    	}
+			                    genes.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
 		                	}
 		            	},
 		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -144,8 +142,8 @@ impl Analysis{
 		    }
 	    }
 
-	    eprintln!("Changing the expression start gene id to {}", genes.names.len() );
-	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000, genes.names.len()  );
+	    eprintln!("Changing the expression start gene id to {}", genes.get_gene_count() );
+	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000, genes.get_gene_count()  );
 
 	    if let Some(ab) = antibody {
 
@@ -191,7 +189,8 @@ impl Analysis{
 	    // here I need the cell kmer site.
 	    let gex = SingleCellData::new( num_threads );
 
-	    let mut samples= FastMapper::new( gene_kmers, 10_000, antibodies.names.len() + genes.names.len() );
+	    //panic!("Antibody count {} and expression count {}", antibodies.get_gene_count(), genes.get_gene_count());
+	    let mut samples= FastMapper::new( gene_kmers, 10_000, antibodies.get_gene_count() + genes.get_gene_count() );
 	    //let mut sample_names:Vec<String> = Vec::with_capacity(12);
 
 	    let mut id = 1;
@@ -258,9 +257,9 @@ impl Analysis{
 		samples.print();
 		println!("and the antibodies index:");
 		antibodies.print();
-		let sample_names: Vec<String>  = samples.names.keys().cloned().collect();
-		let gene_names: Vec<String>  = genes.names.keys().cloned().collect();
-		let ab_names: Vec<String>  = antibodies.names.keys().cloned().collect();
+		let sample_names: Vec<String>  = samples.get_all_gene_names();
+		let gene_names: Vec<String>  = genes.get_all_gene_names();
+		let ab_names: Vec<String>  = antibodies.get_all_gene_names();
 	    
 		Self{
 			genes,
@@ -399,7 +398,7 @@ impl Analysis{
 	                if ! ok{
 	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
 		                    Ok(gene_id) =>{
-		                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
+		                    	println!("sample ({:?} and ids {gene_id:?}) with {:?}",self.samples.gene_names_for_ids( gene_id ), String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
 		                    	

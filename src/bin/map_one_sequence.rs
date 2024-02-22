@@ -48,8 +48,6 @@ fn main() {
     let mut genes :FastMapper = FastMapper::new( 32, 100_000, 0 ); // split them into 9 bp kmers
     let mut samples :FastMapper = FastMapper::new( 32, 10_000 , 0 );
     let mut antibodies :FastMapper = FastMapper::new( 32, 10_000, 0  );
-
-    let mut gene_count = 600;
     
     let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
@@ -60,21 +58,10 @@ fn main() {
     		Err(e) => panic!("Failed to load the index {e:?}")
     	}
     	genes.print();
-    	gene_count = genes.names.len();
     	
     }
 
-    let mut gene_names = Vec::new();
-    for gname in &genes.names_store {
-    	gene_names.push( gname.to_string());
-    }
-
-    let mut gene_names:Vec<String> = Vec::with_capacity(gene_count);
-
-    for gene in genes.names.keys() {
-    	gene_names.push(gene.to_string());
-    }
-    let mut ab_names:Vec<String> = Vec::with_capacity(30);
+    let mut gene_names = genes.get_all_gene_names();
 
     let mut seq_temp:Vec::<u8>;
 
@@ -88,13 +75,10 @@ fn main() {
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-	                		if ! genes.names.contains_key(  id ){
-	                			seq_temp = seqrec.seq().to_vec();
-	                			//seq_temp.reverse();
-		                    	genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
-	                    		gene_names.push( id.to_string() );
-	                    	}
-	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
+                			seq_temp = seqrec.seq().to_vec();
+                			//seq_temp.reverse();
+	                    	genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
+                    		gene_names.push( id.to_string() );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -122,7 +106,6 @@ fn main() {
 	                		seq_temp = seqrec.seq().to_vec();
 	                		//seq_temp.reverse();
 		                    antibodies.add_small( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
-	                    	ab_names.push( id.to_string() );
 	                    	//gene_names.push( id.to_string() );
 	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 	                	};
@@ -135,8 +118,9 @@ fn main() {
 	    }
 
 	}
+	//let ab_names = antibodies.get_all_gene_names();
 	let mut id = 0;
-	samples.change_start_id( antibodies.last_count );
+	samples.change_start_id( genes.last_count+ antibodies.last_count );
 	    if  opts.specie.eq("human") {
 	        // get all the human sample IDs into this.
 	        // GTTGTCAAGATGCTACCGTTCAGAGATTCAAGGGCAGCCGCGTCACGATTGGATACGACTGTTGGACCGG

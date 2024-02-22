@@ -493,7 +493,8 @@ fn main() {
             );
             report.start_ticker();
             lines.clear();
-            good_read_count = 0;
+            lines.push(rec);
+            good_read_count = 1;
         }
     }
 

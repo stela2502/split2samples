@@ -325,18 +325,25 @@ impl CellData{
         self.multimapper.clear();
     }*/
 
-    pub fn n_umi_4_gene( &self, gene_info:&FastMapper, gname:&String) -> usize {
+    // replace this function call with a
+    //let gene_ids = gene_info.ids_for_gene_names_mut( names );
+    //for id in gene_ids { let n = *self.total_reads.get( &id  ).unwrap_or(&0);}
+    /*pub fn n_umi_4_gene( &self, gene_info:&FastMapper, gname:&String) -> usize {
         let id = match gene_info.names.get( gname ){
             Some(g_id) => g_id,
             None => panic!("Programming error: I could not resolve the gene name {gname}" ),
         };
         *self.total_reads.get( id  ).unwrap_or(&0)
-    }
+    }*/
+    
 
+    pub fn n_umi_4_gene_id( &self, gene_id:&usize ) -> usize{
+        *self.total_reads.get( gene_id ).unwrap_or(&0)
+    }
     
     pub fn to_str(&self, gene_info:&FastMapper, names: &Vec<String> ) -> String {
 
-        let mut data = Vec::<std::string::String>::with_capacity( gene_info.names.len()+3 ); 
+        let mut data = Vec::<std::string::String>::with_capacity( gene_info.get_gene_count()+4 ); 
         data.push(format!( "Cell{}", self.name ) );
 
         // here our internal data already should be stored with the same ids as the gene names.
@@ -344,12 +351,14 @@ impl CellData{
         let mut max = 0;
         let mut max_name:std::string::String = "na".to_string();
 
-        for name in names {
-            
-            let n = self.n_umi_4_gene(gene_info, name );
+        let gene_ids = gene_info.ids_for_gene_names( names );
+        let mut dist2max = 0;
+        for (i, id) in gene_ids.iter().enumerate(){
+            let n = *self.total_reads.get( &id  ).unwrap_or(&0);
             //println!("I collected expression for gene {}: n={}", name, n);
             if max < n {
-                max_name = name.to_string();
+                max_name = names[i].to_string();
+                dist2max = n - max;
                 max = n;
             }
             data.push( n.to_string() );
@@ -358,6 +367,7 @@ impl CellData{
 
         data.push( max_name ); // max expressing gene (or sample id in an HTO analysis)
         data.push( (max as f32 / total as f32 ).to_string()); // fraction of reads for the max gene
+        data.push( (dist2max as f32 / max as f32 ).to_string()); // percent max reads distance to nr.2
         data.push( ( total ).to_string());
         data.join( "\t" )
     }

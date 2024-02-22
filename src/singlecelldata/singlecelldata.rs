@@ -165,10 +165,7 @@ impl SingleCellData{
 
     pub fn write (&mut self, file_path: PathBuf, genes: &mut FastMapper, min_count:usize) -> Result< (), &str>{
 
-        let mut names: Vec<String> = Vec::with_capacity(genes.names.len());
-        for name in genes.names.keys() {
-            names.push( name.to_string() );
-        }
+        let names = genes.get_all_gene_names();
         return self.write_sub( file_path, genes, &names, min_count);
     }
 
@@ -199,11 +196,15 @@ impl SingleCellData{
             self.mtx_counts( genes, names, min_count, self.num_threads );
         }
 
+        println!("We are here exporting a samples table and want these samples to be included: {:?}", names );
+        println!("And we have these ids for them: {:?} using the offset", genes.ids_for_gene_names( names) );
+
         for cell_obj in self.values() {
             if ! cell_obj.passing{
                 continue;
             }
             let text = cell_obj.to_str( genes, names );
+            println!("this should contain some info {}", text);
             match writeln!( writer, "{text}" ){
                 Ok(_) => passed +=1,
                 Err(err) => {
@@ -220,8 +221,7 @@ impl SingleCellData{
 
     /// this will create a path and populate that with 10x kind of files.
     pub fn write_sparse (&mut self, file_path: PathBuf, genes: &mut FastMapper, min_count:usize) -> Result< (), &str>{
-        let names: Vec<String> = genes.names.keys().map(|k| k.to_string()).collect();
-
+        let names= genes.get_all_gene_names();
         return self.write_sparse_sub( file_path, genes, &names, min_count);
     }
 
@@ -303,13 +303,16 @@ impl SingleCellData{
 
         let mut entries = 0;
         let mut cell_id = 0;
+
+        let gene_ids = genes.ids_for_gene_names( names );
+
         for cell_obj in self.values() {
             if ! cell_obj.passing {
                 continue;
             }
             cell_id += 1;
 
-            match writeln!( writer_b, "Cell{}",cell_obj.name ){
+            match writeln!( writer_b, "{}",cell_obj.name ){
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");
@@ -317,8 +320,8 @@ impl SingleCellData{
                 }
             };
 
-            for (gene_id, name) in genes.names4sparse.keys().enumerate() {
-                let n = cell_obj.n_umi_4_gene(genes, name);
+            for (gene_id, id) in gene_ids.iter().enumerate() {
+                let n = cell_obj.n_umi_4_gene_id( id);
                 if n > 0 {
                     match writeln!(writer, "{} {cell_id} {n}", gene_id+1) {
                         Ok(_) => { entries += 1; },
@@ -331,7 +334,7 @@ impl SingleCellData{
             }
         } 
 
-        println!( "sparse Matrix: {} cell(s), {} gene(s) and {} entries written to path {:?}; ", cell_id, genes.names4sparse.len(), entries, file_path.into_os_string().into_string());
+        println!( "sparse Matrix: {} cell(s), {} gene(s) and {} entries written to path {:?}; ", cell_id, gene_ids.len(), entries, file_path.into_os_string().into_string());
         Ok( () )
     }
     /// Update the gene names for export to sparse
@@ -355,14 +358,16 @@ impl SingleCellData{
             let mut names4sparse:  BTreeMap::<String, usize> = BTreeMap::new();
             let mut n:usize;
             let mut entry = 0;
+            let gene_ids = genes.ids_for_gene_names( names );
             for key in chunk {
                 if let Some(cell_obj) = self.get(key){
-                    for name in names {
-                        n = cell_obj.n_umi_4_gene( genes, name );
+                    for (id, int_id) in gene_ids.iter().enumerate() {
+                    //for name in names {
+                        n = *cell_obj.total_reads.get( &int_id  ).unwrap_or(&0);
                         if n > 0{
                             entry +=1;
-                            if ! names4sparse.contains_key ( name ){
-                                names4sparse.insert( name.to_string() , names4sparse.len() + 1 );
+                            if ! names4sparse.contains_key ( &names[id] ){
+                                names4sparse.insert( names[id].to_string() , names4sparse.len() + 1 );
                             } 
                         }
                     }

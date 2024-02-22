@@ -56,6 +56,24 @@ cp target/release/create_index_te /usr/bin
 cp target/release/te_analysis /usr/bin
 ``` 
 
+With 10x data we need also the 10x whitelists and therefore we need to set a environment variable.
+This is not complicated, but needs admin rights if not working in an docker or singularity environment:
+
+Make sure to compile the source before you run these install scripts. They do not compile the source.
+
+**Linux or other Unix likes:**
+
+This would need sudo right if not working in a docker or singularity image:
+```
+bash install_resources_unix.sh
+```
+
+**Windows (10 or 11)**
+```
+.\install_resources_windows.ps1 -ExecutionPolicy Bypass
+```
+
+
 Do not forget the --release while building the tool. 
 The test case for quantify_rhapsody would finish in 55 sec instead of 3 sec (> x15!)
 using a AMD Ryzen 7 5700X processor and a SSD as mass storage.

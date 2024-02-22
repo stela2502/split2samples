@@ -1,15 +1,16 @@
 #!/bin/bash
 
+path="/opt/Rustody_files"
 # Check if RustodyFiles environment variable is set in ~/.bashrc
 if ! grep -q "export RustodyFiles=" ~/.bashrc; then
     # Add RustodyFiles environment variable to ~/.bashrc
-    echo 'export RustodyFiles="/opt/Rustody_files"' >> ~/.bashrc
+    echo 'export RustodyFiles="${path}"' >> ~/.bashrc
 fi
 
 # Create directory and copy files if not already exists
 mkdir -p /opt/Rustody_files
-cp ./resources/CellRanger/*.gz /opt/Rustody_files
-export RustodyFiles="/opt/Rustody_files"
+cp ./resources/CellRanger/*.gz ${path}
+export RustodyFiles="${path}"
 
 cp target/release/split2samples /usr/bin
 cp target/release/quantify_rhapsody /usr/bin
