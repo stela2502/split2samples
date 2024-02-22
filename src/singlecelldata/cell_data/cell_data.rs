@@ -352,23 +352,30 @@ impl CellData{
         let mut max_name:std::string::String = "na".to_string();
 
         let gene_ids = gene_info.ids_for_gene_names( names );
-        let mut dist2max = 0;
+        let mut dist2max = usize::MAX;
         for (i, id) in gene_ids.iter().enumerate(){
             let n = *self.total_reads.get( &id  ).unwrap_or(&0);
             //println!("I collected expression for gene {}: n={}", name, n);
             if max < n {
                 max_name = names[i].to_string();
-                dist2max = n - max;
                 max = n;
             }
             data.push( n.to_string() );
             total += n;
         }
+        for id in gene_ids{
+            let n = *self.total_reads.get( &id  ).unwrap_or(&0);
+            if (dist2max > max - n) & (max - n != 0) {
+                dist2max = max - n;
+                //println!("setting dist2max to new max: {dist2max} ( {max} - {n}");
+            }
+        }
 
         data.push( max_name ); // max expressing gene (or sample id in an HTO analysis)
         data.push( (max as f32 / total as f32 ).to_string()); // fraction of reads for the max gene
-        data.push( (dist2max as f32 / max as f32 ).to_string()); // percent max reads distance to nr.2
         data.push( ( total ).to_string());
+        data.push( (dist2max as f32 / max as f32 ).to_string()); // percent max reads distance to nr.2
+        //println!("This should print one LINE here: {data:?}",);
         data.join( "\t" )
     }
 }

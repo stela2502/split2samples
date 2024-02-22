@@ -398,7 +398,7 @@ impl Analysis{
 	                if ! ok{
 	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
 		                    Ok(gene_id) =>{
-		                    	println!("sample ({:?} and ids {gene_id:?}) with {:?}",self.samples.gene_names_for_ids( gene_id ), String::from_utf8_lossy(&data[i].1) );
+		                    	//println!("sample ({:?} and ids {gene_id:?}) with {:?}",self.samples.gene_names_for_ids( gene_id ), String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
 		                    	

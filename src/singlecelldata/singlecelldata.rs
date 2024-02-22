@@ -196,15 +196,15 @@ impl SingleCellData{
             self.mtx_counts( genes, names, min_count, self.num_threads );
         }
 
-        println!("We are here exporting a samples table and want these samples to be included: {:?}", names );
-        println!("And we have these ids for them: {:?} using the offset", genes.ids_for_gene_names( names) );
+        //println!("We are here exporting a samples table and want these samples to be included: {:?}", names );
+        //println!("And we have these ids for them: {:?} using the offset", genes.ids_for_gene_names( names) );
 
         for cell_obj in self.values() {
             if ! cell_obj.passing{
                 continue;
             }
             let text = cell_obj.to_str( genes, names );
-            println!("this should contain some info {}", text);
+            //println!("this should contain some info {}", text);
             match writeln!( writer, "{text}" ){
                 Ok(_) => passed +=1,
                 Err(err) => {

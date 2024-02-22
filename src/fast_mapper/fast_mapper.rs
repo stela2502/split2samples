@@ -938,7 +938,7 @@ impl FastMapper{
 
     pub fn to_header( &self ) -> std::string::String {
 
-        let mut ret= Vec::<std::string::String>::with_capacity( self.names.len() +2 );
+        let mut ret= Vec::<std::string::String>::with_capacity( self.names.len() +4 );
         //println!( "I get try to push into a {} sized vector", self.names.len());
         for obj in self.names.keys() {
             //println!( "Pushing {} -> {}", obj, *id-1);
@@ -953,7 +953,7 @@ impl FastMapper{
     
 
     pub fn to_header_n( &self, names: &Vec<String> ) -> std::string::String {
-        let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
+        let mut ret= Vec::<std::string::String>::with_capacity( names.len() +5 );
         //println!( "I get try to push into a {} sized vector", self.names.len());
         for name in names {
             //println!( "Pushing {} -> {}", obj, *id-1);
@@ -962,6 +962,7 @@ impl FastMapper{
         ret.push("AsignedSampleName".to_string());
         ret.push("FractionTotal".to_string());
         ret.push("n".to_string());
+        ret.push("dist to nr.2 [%max]".to_string());
         "CellID\t".to_owned()+&ret.join("\t")
     }
 
