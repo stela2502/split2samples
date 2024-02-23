@@ -52,7 +52,8 @@ mod tests {
         let  names= vec!("Gene1".to_string(), "Gene3".to_string(), "Gene4".to_string() );
         // this string counts: genes, cell, lines
         let  exp2:String = "3 2 4".to_string();
-        let  val = celldata.mtx_counts( &mut mapper, &names, 1, 1 );
+        celldata.update_genes_to_print( &mapper, &names);
+        let  val = celldata.mtx_counts( &mut mapper, 1, 1 );
 
         assert_eq!( val,  exp2 ); 
 

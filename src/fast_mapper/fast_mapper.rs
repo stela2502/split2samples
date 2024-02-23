@@ -959,7 +959,7 @@ impl FastMapper{
             //println!( "Pushing {} -> {}", obj, *id-1);
             ret.push( name.to_string() ) ;
         }
-        ret.push("AsignedSampleName".to_string());
+        ret.push("AssignedSampleName".to_string());
         ret.push("FractionTotal".to_string());
         ret.push("n".to_string());
         ret.push("dist to nr.2 [%max]".to_string());

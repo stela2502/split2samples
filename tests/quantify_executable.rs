@@ -71,7 +71,7 @@ fn test_quantify_rhapsody_multi() {
     exp.insert( "Sample4".to_string(), 176 );
     exp.insert( "Sample5".to_string(), 24 );
     exp.insert( "Sample6".to_string(), 141 );
-    exp.insert( "AsignedSampleName".to_string(), 1 );
+    exp.insert( "AssignedSampleName".to_string(), 1 );
 
     // Iterate over the actual hashmap and assert each key-value pair separately
     let mut failed = false;
@@ -81,8 +81,6 @@ fn test_quantify_rhapsody_multi() {
                 if actual_value != expected_value {
                     eprintln!("{key} should be {expected_value} but was {actual_value}");
                     failed = true;
-                }else {
-                    eprintln!( "{key} expected {expected_value} was found {actual_value}");
                 }
             }
             None => {

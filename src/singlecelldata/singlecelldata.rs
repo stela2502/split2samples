@@ -35,6 +35,7 @@ pub struct SingleCellData{
     //kmer_size: usize,
     //kmers: BTreeMap<u64, u32>,
     data: [BTreeMap< u64, CellData>; u8::MAX as usize],
+    genes_to_print: Vec::<String>,
     //ambient_cell_content: BTreeMap< u64, CellData>,
     checked: bool,
     passing: usize,
@@ -63,6 +64,7 @@ impl SingleCellData{
         Self {
             //kmer_size,
             data,
+            genes_to_print: Vec::<String>::with_capacity(4),
             //ambient_cell_content: BTreeMap::new(),
             checked,
             passing,
@@ -193,7 +195,8 @@ impl SingleCellData{
         let mut passed = 0;
 
         if ! self.checked{
-            self.mtx_counts( genes, names, min_count, self.num_threads );
+            self.update_genes_to_print( genes, names);
+            self.mtx_counts( genes, min_count, self.num_threads );
         }
 
         //println!("We are here exporting a samples table and want these samples to be included: {:?}", names );
@@ -229,7 +232,9 @@ impl SingleCellData{
             
         let rs = Path::new( &file_path ).exists();
 
-        if names.is_empty(){
+        self.update_genes_to_print( genes, names);
+
+        if self.genes_to_print.is_empty(){
             eprintln!("No genes to report on - no data written to path {:?}", file_path.to_str());
             return Ok(())
         }
@@ -270,7 +275,7 @@ impl SingleCellData{
         let file2 = GzEncoder::new(file_b, Compression::default());
         let mut writer_b = BufWriter::with_capacity(4096,file2);
         match writeln!( writer, "%%MatrixMarket matrix coordinate integer general\n{}", 
-             self.mtx_counts( genes, names, min_count, self.num_threads ) ){
+            self.mtx_counts( genes, min_count, self.num_threads ) ){
             Ok(_) => (),
             Err(err) => {
                 eprintln!("write error: {err}");
@@ -289,7 +294,7 @@ impl SingleCellData{
         let file3 = GzEncoder::new(file_f, Compression::default());
         let mut writer_f = BufWriter::with_capacity(4096,file3);
 
-        for name in genes.names4sparse.keys() {
+        for name in &self.genes_to_print {
             match writeln!( writer_f, "{name}\t{name}\tGene Expression"  ){
                 Ok(_) => (),
                 Err(err) => {
@@ -304,7 +309,7 @@ impl SingleCellData{
         let mut entries = 0;
         let mut cell_id = 0;
 
-        let gene_ids = genes.ids_for_gene_names( names );
+        let gene_ids = genes.ids_for_gene_names( &self.genes_to_print );
 
         for cell_obj in self.values() {
             if ! cell_obj.passing {
@@ -312,7 +317,7 @@ impl SingleCellData{
             }
             cell_id += 1;
 
-            match writeln!( writer_b, "{}",cell_obj.name ){
+            match writeln!( writer_b, "Cell{}",cell_obj.name ){
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");
@@ -338,15 +343,12 @@ impl SingleCellData{
         Ok( () )
     }
     /// Update the gene names for export to sparse
-    pub fn update_names_4_sparse( &mut self, genes: &mut FastMapper, names:&Vec<String>) -> [usize; 2] {
+    /// returns the count of cells and the count of total gene values
+    pub fn update_genes_to_print( &mut self, genes: &FastMapper, names:&Vec<String>) -> [usize; 2] {
         
         let mut entries = 0;
-        let _ncell = 0;
-        if ! self.checked{
-            panic!("Please always run mtx_counts before update_names_4_sparse");
-        }
-        genes.names4sparse.clear();
-        genes.max_id = 0; // reset to collect the passing genes
+
+        self.genes_to_print.clear();
 
         let cell_keys:Vec<u64> = self.keys();
         let chunk_size = cell_keys.len() / self.num_threads +1;
@@ -361,6 +363,10 @@ impl SingleCellData{
             let gene_ids = genes.ids_for_gene_names( names );
             for key in chunk {
                 if let Some(cell_obj) = self.get(key){
+                    if self.checked & ! cell_obj.passing{
+                        println!("ignoring cell");
+                        continue;
+                    }
                     for (id, int_id) in gene_ids.iter().enumerate() {
                     //for name in names {
                         n = *cell_obj.total_reads.get( &int_id  ).unwrap_or(&0);
@@ -377,18 +383,19 @@ impl SingleCellData{
         }).collect();
 
         // Merge gene data from different chunks
+        let mut names4sparse = HashSet::<String>::new();
+
         for (genelist, n) in &gene_data{
             entries += n;
             for name in genelist.keys() {
-                if ! genes.names4sparse.contains_key ( name ){
-                    // Insert gene names into the FastMapper
-                    genes.max_id +=1;
-                    genes.names4sparse.insert( name.to_string() , genes.max_id );
-                }
+                names4sparse.insert( name.to_string() );
             }
         }
 
-        if genes.max_id  ==0 && ! names.is_empty() {
+        self.genes_to_print = names4sparse.iter().cloned().collect();
+
+
+        /*if genes.max_id  ==0 && ! names.is_empty() {
             let mut to = 10;
             if names.len() < 10{
                 to = names.len() -1;
@@ -403,12 +410,12 @@ impl SingleCellData{
                 used.push(name.to_string());
             }
             return self.update_names_4_sparse(genes, &used );
-        }
+        }*/
         [ self.len(), entries ]
     }
 
 
-    pub fn mtx_counts(&mut self, genes: &mut FastMapper, names: &Vec<String>, min_count:usize, num_threads: usize ) -> String{
+    pub fn mtx_counts(&mut self, genes: &mut FastMapper, min_count:usize, num_threads: usize ) -> String{
         
 
         if ! self.checked{
@@ -434,7 +441,7 @@ impl SingleCellData{
                 let mut ret= Vec::<(u64, bool)>::with_capacity(chunk_size);
                 for key in chunk {
                     if let Some(cell_obj) = &self.get(key) {
-                        let n = cell_obj.n_umi( genes, names );
+                        let n = cell_obj.n_umi( genes, &self.genes_to_print );
                         ret.push( (key.clone(), n >= min_count) );
                     }
                 }
@@ -461,19 +468,19 @@ impl SingleCellData{
 
         }
         
-        let ncell_and_entries = self.update_names_4_sparse( genes, names );
+        let ncell_and_entries = self.update_genes_to_print( &genes, &self.genes_to_print.clone() );
         self.passing = ncell_and_entries[0];
 
-        let ret = format!("{} {} {}", genes.names4sparse.len(), ncell_and_entries[0], ncell_and_entries[1] );
+        let ret = format!("{} {} {}", self.genes_to_print.len(), ncell_and_entries[0], ncell_and_entries[1] );
         //println!("mtx_counts -> final return: mtx_counts: {}", ret );
         ret
     }
 
-    pub fn n_reads( &mut self, genes: &mut FastMapper, names: &Vec<String> ) -> usize {
+    pub fn n_reads( &mut self, genes: &FastMapper, names: &Vec<String> ) -> usize {
         let mut count = 0;
 
         for cell_obj in self.values() {
-            count += cell_obj.n_reads( genes, names )
+            count += cell_obj.n_reads( &genes, names )
         }
         count
     }

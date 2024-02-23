@@ -882,7 +882,8 @@ impl Analysis{
 	    results.stop_file_io_time();
 	    
 	    println!("filtering cells");
-	    self.gex.mtx_counts( &mut self.genes, &self.gene_names, min_umi, self.gex.num_threads ) ;
+	    self.gex.update_genes_to_print( &self.genes, &self.gene_names );
+	    self.gex.mtx_counts( &mut self.genes, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
 	    println!("writing gene expression");

@@ -819,7 +819,8 @@ impl AnalysisTE{
 	    results.stop_file_io_time();
 	    
 	    println!("filtering cells");
-	    self.gex.mtx_counts( &mut self.te_index_obj, &self.te_names, min_umi, self.gex.num_threads ) ;
+	    self.gex.update_genes_to_print( &self.te_index_obj, &self.te_names );
+	    self.gex.mtx_counts( &mut self.te_index_obj, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
 	    println!("writing expression sets:");
