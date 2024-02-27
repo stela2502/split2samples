@@ -90,15 +90,15 @@ impl NameEntry{
 
 	// Method to calculate memory size
     pub fn memory_size(&self) -> usize {
-    	return 0;
-        let size = mem::size_of::<SecondSeq>() // Size of SecondSeq field 
+    	return 0
+        /*let size = mem::size_of::<SecondSeq>() // Size of SecondSeq field 
                  + mem::size_of::<usize>() *3 // Size of usize fields (length, min_level and pos)
                  + self.data.capacity() * mem::size_of::<(usize, usize)>() // Size of data vector's elements
                  + mem::size_of::<Vec<Vec<usize>>>() // Size of Vec<Vec<usize>>
                  + self.classes[0].capacity() * mem::size_of::<usize>()
                  + mem::size_of::<HashSet<u64>>() + self.hashes.capacity() * mem::size_of::<u64>() // Size of HashSet<u64>
                  + mem::size_of::<bool>(); // Size of bool field (keep)
-        size
+        size*/
     }
 
 	pub fn next(&mut self, significant_bp:&usize) -> Option<u64> {
