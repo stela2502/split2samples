@@ -90,6 +90,7 @@ impl NameEntry{
 
 	// Method to calculate memory size
     pub fn memory_size(&self) -> usize {
+    	return 0;
         let size = mem::size_of::<SecondSeq>() // Size of SecondSeq field 
                  + mem::size_of::<usize>() *3 // Size of usize fields (length, min_level and pos)
                  + self.data.capacity() * mem::size_of::<(usize, usize)>() // Size of data vector's elements
