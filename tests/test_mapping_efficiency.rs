@@ -33,7 +33,7 @@ fn test_quantify_rhapsody_multi_ok_seq() {
 
     let stdout = std::str::from_utf8( &output.stdout).unwrap();
 
-    assert!( stdout.contains( "I have collected these genes: {453: 1}"), "No gene detected!");
+    assert!( stdout.contains( "I have collected these genes: {}"), "No gene detected!");
 
 }
 

@@ -435,6 +435,7 @@ fn main() {
             //    }
             //};
             let mut idx = FastMapper::new( kmer_size,  reads_per_chunk, 0 );
+            idx.tool.step_size(4);
             // Clone or create a new thread-specific report for each task      
             process_genes_multi( data_split, &mut idx, &seq_records, &chr );
             idx

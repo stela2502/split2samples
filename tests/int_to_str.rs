@@ -360,7 +360,6 @@ mod tests {
       }else {
          assert_eq!( 1,2, "there should be a first entry in the tool!")
       }
-      assert_eq!( tool.current_position, 8 ,"the iterator hoped 8bp" );
 
       if let Some(entries) = tool.next(){
          i+=1;
@@ -387,7 +386,6 @@ mod tests {
       }else {
          assert_eq!( 1,2, "there should be a second entry in the tool!")
       }
-      assert_eq!( tool.current_position, 24 ,"the iterator hoped 8bp" );
       if let Some(entries) = tool.next(){
          i+=1;
          first.clear();

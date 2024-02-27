@@ -19,9 +19,11 @@ pub struct IntToStr {
 	pub lost:usize, // how many times have I lost 4bp?
 	pub shifted:usize, // how many times have we shifted our initial sequence?
 	pub kmer_size:usize,
+	step_size:usize,
 	checker:BTreeMap::<u8, usize>,
 	mask:u64, //a mask to fill matching sequences to match the index's kmer_len
-	pub current_position:usize,
+	current_position:usize,
+
 }
 
 // Implement the Index trait for MyClass
@@ -56,11 +58,11 @@ impl Iterator for IntToStr {
             return Some((cell_id, second_seq));
         } else {
             // If the shift is 7, stop the iteration - we reached the end
-            if (self.current_position % 8) == 7 {
+            if (self.current_position % 8) + self.step_size >= 8  {
                 return None;
             }
             // Otherwise, move to the next position
-            self.current_position = (self.current_position % 8) + 1;
+            self.current_position = (self.current_position % 8) + self.step_size;
 
             // Get the result at the updated position
             let result = self.seq_at_position(self.current_position);
@@ -109,10 +111,23 @@ impl IntToStr {
 			checker,
 			mask,
 			current_position:0,
+			step_size:1,
 		};
 
 		ret.regenerate();
 		return ret
+	}
+
+	pub fn step_size( &mut self, size:usize ) {
+		if size > 7 {
+			eprintln!("step_size can not be larger than 7");
+			self.step_size = 7;
+		}else if size == 0 {
+			eprintln!("step_size can not be zero");
+			self.step_size = 1;
+		}else {
+			self.step_size = size;
+		}
 	}
 
     // pub fn iter(&mut self) -> SeqIterator {

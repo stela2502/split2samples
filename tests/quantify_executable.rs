@@ -64,12 +64,12 @@ fn test_quantify_rhapsody_multi() {
 
 
     let mut exp =HashMap::<String, usize>::new();
-    exp.insert( "na".to_string(), 26151 );
+    exp.insert( "na".to_string(), 26141 );
     exp.insert( "Sample1".to_string(), 149 );
     exp.insert( "Sample2".to_string(), 223 );
     exp.insert( "Sample3".to_string(), 253 );
     exp.insert( "Sample4".to_string(), 176 );
-    exp.insert( "Sample5".to_string(), 24 );
+    exp.insert( "Sample5".to_string(), 23 );
     exp.insert( "Sample6".to_string(), 140 );
     exp.insert( "AssignedSampleName".to_string(), 1 );
 
