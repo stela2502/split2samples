@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
+use crate::cellids10x::cellid10x::CellId10x;
 use crate::errors::SeqError;
 use crate::traits::BinaryMatcher;
 
@@ -20,6 +21,7 @@ pub struct IntToStr {
 	pub kmer_size:usize,
 	checker:BTreeMap::<u8, usize>,
 	mask:u64, //a mask to fill matching sequences to match the index's kmer_len
+	pub current_position:usize,
 }
 
 // Implement the Index trait for MyClass
@@ -41,7 +43,40 @@ impl PartialEq<Vec<u8>> for IntToStr {
 }
 
 
+impl Iterator for IntToStr {
+    type Item = (u16, SecondSeq);
 
+    fn next(&mut self) -> Option<Self::Item> {
+
+        let result = self.seq_at_position(self.current_position);
+
+        if let Some((cell_id, second_seq)) = result {
+            // Advance to the next position
+            self.current_position += 8;
+            return Some((cell_id, second_seq));
+        } else {
+            // If the shift is 7, stop the iteration - we reached the end
+            if (self.current_position % 8) == 7 {
+                return None;
+            }
+            // Otherwise, move to the next position
+            self.current_position = (self.current_position % 8) + 1;
+
+            // Get the result at the updated position
+            let result = self.seq_at_position(self.current_position);
+
+	        if let Some((cell_id, second_seq)) = result {
+	            // Advance to the next position
+	            self.current_position += 8;
+	            return Some((cell_id, second_seq));
+	        } else {
+	        	// reset the iterator for the next use
+	        	self.current_position = 0;
+	            return None
+	        }
+        }
+    }
+}
 
 /// Here I have my accessorie functions that more or less any of the classes would have use of.
 /// I possibly learn a better way to have them...
@@ -73,6 +108,7 @@ impl IntToStr {
 			kmer_size,
 			checker,
 			mask,
+			current_position:0,
 		};
 
 		ret.regenerate();
@@ -153,61 +189,6 @@ impl IntToStr {
 
         return Ok( (short_seq.0 as u16, long_seq) )
 
-        // this was too crude!
-        /*
-        // if self.checker.len() < 2{
-        //     //println!( "kmer is too simple/not enough diff nucs" );
-        //     return Some(false);
-        // }
-        
-        for value in self.checker.values(){
-        	println!("the self.checker valuze: {value}");
-            if *value as f32 / (to-start) as f32 == 1.0 {
-                println!( "sequence from {start} to {to} is too simple/too many nucs same {value} {start} {to} {:?}", &self.storage[start..to ] );
-                return Some(false);
-            } 
-        }
-        
-        // and now check the rest, too
-        self.checker.clear();
-        start += 8;
-        to += self.kmer_size;
-        if to > self.storage.len(){
-			to = self.storage.len();
-        }
-
-        if to - start < (self.kmer_size /4) +1 {
-        	println!("left over sequence is too short... {:?}" , String::from_utf8_lossy(&self.storage[start..to ]));
-        	return None
-        }
-
-        for nuc in &self.storage[start..to ] {
-            match self.checker.get_mut( nuc ){
-                Some( count ) => *count += 1,
-                None => {
-                    if self.checker.insert( *nuc, 1).is_some(){};
-                }
-            };
-            if *nuc ==b'N'{
-                return Some(false);
-            }
-        }
-        if self.checker.len() < 3{
-            println!( "larger kmer is too simple/not enough diff nucs {:?}" , String::from_utf8_lossy(&self.storage[start..to ] ));
-            return Some(false);
-        }
-        
-        for value in self.checker.values(){
-            println!( "sequence from {start} to {to} is too simple/too many nucs same {:?}" , String::from_utf8_lossy(&self.storage[start..to ]));
-
-            if *value as f32 / (to-start) as f32 > 0.6 {
-                println!( "larger sequence from {start} to {to} is too simple/too many nucs same {:?}" , String::from_utf8_lossy(&self.storage[start..to ] ));
-                return Some(false);
-            } 
-        }
-        println!("Sequence is fine");
-        return Some(true)
-        */
     }
 
 
@@ -246,35 +227,80 @@ impl IntToStr {
         eprintln!("seq  {}-{}[{}] or {:?}-{:?}", &first, &second_seq.0, &second_seq.1, small_seq, large_seq);
     }
 
-    pub fn next(&mut self) -> Option<(u16, SecondSeq)> {
 
-    	match self.seq_ok( false ){ // not small only
-    		Ok((short,second) ) => {
-    			Some(( short , second) )
+    // This sfucntion returen sither a Some(CellId10x, SecondSeq) - an enhanced u16 and an enhanced u64
+    // or none if the u64 would only consist of less than 4 bytes as the remaining sequence is to short.
+    pub fn seq_at_position(&self, start:usize ) -> Option<( u16, SecondSeq )> {
+    	// Ensure the start position is within bounds
+	    if start >= self.storage.len() {
+	        return None;
+	    }
+    	
+    	// Determine the range of bytes to consider
+    	let start_id = start / 4;
+    	let mut stop:u8;
+    	let shift_amount = (start % 4) * 2;
+    	let stop_id = if start + 8 + self.kmer_size + shift_amount  < self.storage.len() {
+    		stop = self.kmer_size as u8;
+		    start_id + 2 + (self.kmer_size + 3 + shift_amount) / 4
+		} else {
+			//println!("{start} + 8 + {} +3 + {shift_amount}  < {}",self.kmer_size, self.storage.len() );
+			stop = (self.storage.len() - 8 - start) as u8;
+			//println!( "{stop} = ({} - 8 - {start}) as u8;", self.storage.len());
+		    self.u8_encoded.len()
+		};
+
+
+		/*
+    	let mut stop = 0_u8;
+
+    	let stop_id = if start_id + (self.kmer_size + 3) / 4 < self.u8_encoded.len() {
+		    start_id + (self.kmer_size + 3) / 4
+		} else {
+		    self.u8_encoded.len()
+		};
+    	
+    	let stop_id = match start_id +11 > self.u8_encoded.len() {
+    		true => {
+    			stop = (self.storage.len() - start - (start % 4) -8 ) as u8;
+    			self.u8_encoded.len()
     		},
-    		Err( SeqError::End ) => {
-    			if self.shifted < 15{
-    				match self.shift(){
-    					Some(_) => {
-    						println!("I shifted! {}", self.shifted);
-    						self.next()
-    					},
-    					None => { 
-    						println!("I have reached the end of this sequence!");
-    						None 
-    					},
-    				}
-    			}else {
-    				println!("I have reached the end of this sequence!");
-    				None
-    			}
-    		},
-    		Err(_)=>{
-    			//SeqError::Ns or SeqError::LowComplexity
-    			self.next()
-    		},
+    		false => {
+    			stop = 32_u8;
+    			start_id + 11
+    		}
+    	};
+    	*/
+
+    	if stop_id - start_id < self.kmer_size / 8  {
+    		return None
     	}
+
+    	//println!("I got start_id {start_id} and stop_id {stop_id}");
+    	// Create a u128 from the selected byte range
+	    let mut u128_value = 0u128;
+	    for byte in self.u8_encoded[start_id..stop_id].iter().rev() {
+	        u128_value <<= 8;
+	        u128_value |= *byte as u128;
+	    }
+
+	    //println!( "and I got the the u128 {u128_value:b}");
+	    // Shift the u128 value to the right position
+	    
+	    let shifted_value = u128_value >> shift_amount;
+	    
+	    //println!("I got the shift amount {shift_amount} [bits] and the u64 len {stop}");
+
+	    // Extract u16 and u64 values
+	    let u16_value = (shifted_value & u16::MAX as u128) as u16;
+	    let u64_value = (shifted_value >> 16) as u64;
+
+	    //println!("From that u128 I created \nu16: {u16_value:b} and\nu64 {u64_value:b}");
+
+	    // Return the result
+    	Some( (u16_value, SecondSeq(u64_value, stop)) )
     }
+
 
 	pub fn len(&self) -> usize{
 		self.u8_encoded.len()
@@ -421,6 +447,7 @@ impl IntToStr {
 		// 4 of the array u8 fit into one result u8
 		self.storage = array.iter().copied().collect();
 		self.long_term_storage = array.iter().copied().collect();
+		self.current_position=0;
 		self.regenerate();
 	}
 
@@ -521,10 +548,10 @@ impl IntToStr {
 		//println!("converting u8 {loc:b} to string with {kmer_size} bp.");
 		for _i in 0..kmer_size{
 			let ch = match loc & 0b11{
-	            0 => "A",
-	            1 => "C",
-	            2 => "G",
-	            3 => "T",
+	            0 => "A", //0b00
+	            1 => "C", // 0b01
+	            2 => "G", // 0b10
+	            3 => "T", // 0b11
 	            _ => "N",
 	       	};
 	       	*data += ch;

@@ -11,6 +11,58 @@ mod tests {
    use rustody::fast_mapper::mapper_entries::second_seq::SecondSeq;
    //use int_to_str::int_to_str::IntToStr;
 
+
+   #[test]
+    fn test_seq_at_position() {
+      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      if let Some( ( cellid, second_seq) ) = tool.seq_at_position(0){
+         let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
+         //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
+         assert_eq!( seq_u16, "ATGACTCT".to_string() );
+         let seq_u64 = tool.u64_to_string( 32, &second_seq.0 );
+         assert_eq!( seq_u64, "CAGCATGGAAGGACAGCAGAGACCAAGAGATC".to_string() );
+      }else {
+         panic!("seq_at_position did not return a value")
+      }
+   }
+
+   #[test]
+    fn test_seq_at_position_smaller_u64() {
+      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGA".to_vec(), 32);
+      if let Some( ( cellid, second_seq) ) = tool.seq_at_position(0){
+         let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
+         //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
+         assert_eq!( seq_u16, "ATGACTCT".to_string() );
+         let seq_u64 = tool.u64_to_string(second_seq.1 as usize , &second_seq.0 );
+         assert_eq!( seq_u64, "CAGCATGGAAGGACAGCAGAGACCAAGAGA".to_string() );
+      }else {
+         panic!("seq_at_position did not return a value")
+      }
+   }
+
+   #[test]
+    fn test_seq_at_position_start_3() {
+      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      if let Some( ( cellid, second_seq) ) = tool.seq_at_position(3){
+         let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
+         //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
+         assert_eq!( seq_u16, "ACTCTCAG".to_string() );
+         let seq_u64 = tool.u64_to_string( 32, &second_seq.0 );
+         assert_eq!( seq_u64, "CATGGAAGGACAGCAGAGACCAAGAGATCCTC".to_string() );
+      }else {
+         panic!("seq_at_position did not return a value")
+      }
+   }
+
+   #[test]
+    fn test_seq_at_position_out_of_range() {
+      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      match tool.seq_at_position(70){
+         Some( ( cellid, second_seq) ) => panic!("expected None for an out of range id!"),
+         None => assert!(true),
+      };
+   }
+
     #[test]
     fn test_u64_to_str(){
 
@@ -209,6 +261,8 @@ mod tests {
      assert_eq!( that.1.0, 55990_u64 );
      assert_eq!( that.1.1, 8_u8 );
 
+     //CTGGAAA AGCTGGGCTCCCGGCTGCATTGGGCTGGTCCG TGGGTT
+
      /*
      assert_eq!( left, Some( (173_u16, SecondSeq(55990_u64, 8_u8)) ) );
      assert_eq!( tool.next(), Some( (55990_u16, SecondSeq(46741_u64, 8)) ) );
@@ -289,8 +343,9 @@ mod tests {
 
    #[test]
     fn check_next() {
-      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
-
+      let mut tool = IntToStr::new(
+         b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+//          TGACTCTC       AAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACT
       let mut first = "".to_string();
       let mut second = "".to_string();
       let mut i = 0;
@@ -305,6 +360,7 @@ mod tests {
       }else {
          assert_eq!( 1,2, "there should be a first entry in the tool!")
       }
+      assert_eq!( tool.current_position, 8 ,"the iterator hoped 8bp" );
 
       if let Some(entries) = tool.next(){
          i+=1;
@@ -331,7 +387,7 @@ mod tests {
       }else {
          assert_eq!( 1,2, "there should be a second entry in the tool!")
       }
-
+      assert_eq!( tool.current_position, 24 ,"the iterator hoped 8bp" );
       if let Some(entries) = tool.next(){
          i+=1;
          first.clear();
@@ -400,7 +456,7 @@ mod tests {
       while let Some(_entries) = tool.next(){
          i+=1;
       }
-      assert_eq!( i,66, "A total of 54 fragments!")
+      assert_eq!( i,64, "A total of 54 fragments!")
    }
 
 }

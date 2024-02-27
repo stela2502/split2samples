@@ -26,7 +26,7 @@ impl MapperEntry{
 			map,
 			only :0,
 			hamming_cut :2,
-			needleman_wunsch_cut: 0.4 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
+			needleman_wunsch_cut: 0.35 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
 		}
 	}
 
@@ -151,7 +151,7 @@ impl MapperEntry{
 			if dist <= self.needleman_wunsch_cut {
 				// look at the matches that are almost rejected.
 				//if dist > self.needleman_wunsch_cut * 0.9 {
-					println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", name_entry.key, dist);
+					//println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", name_entry.key, dist);
 				//}
 				
 				ret.push( name_entry );

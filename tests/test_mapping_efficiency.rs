@@ -42,7 +42,7 @@ fn test_quantify_rhapsody_multi_bad_seq() {
 	
 	let is_release_mode = !cfg!(debug_assertions);
 
-	// this is mapping to Sry using BLASTN
+	// this is mapping to Washc1 using BLASTN
 	let seq1 = "AAGAAGCAGCAGTTCCATGACCACCACCACAGCAGCCGGCAGGAGACGAGGATGAGGAGGACTGGGAGTCCTA";
 
     // Execute the command with the provided arguments

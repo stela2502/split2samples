@@ -463,7 +463,7 @@ impl FastMapper{
             }
             
             if self.mapper[entries.0 as usize].add( entries.1, (gene_id, 0), classes.clone() ){
-                println!("Addin the id {} to this index!", self.tool.u64_to_string( 8,&(entries.0 as u64) ) );
+                //println!("Addin the id {} to this index!", self.tool.u64_to_string( 8,&(entries.0 as u64) ) );
                 self.pos += 1;
                 self.names_count[ gene_id] +=1;
                 if i < self.names_count[gene_id]{
@@ -601,14 +601,14 @@ impl FastMapper{
             eprintln!("I got this as most matches {most_matches} for that data {genes:?}");
         }*/
         
-        if most_matches < &2_usize {
+        if most_matches < &3_usize {
             return false
         }
         
         //eprintln!("    -> progressing");
         if genes.len() == 1 {
             if let Some((key, value)) = genes.iter().next() {
-                if value > &2 {
+                if value > &3 {
                     ret.push(key.0.clone());
                     return true
                 }else{
@@ -743,6 +743,10 @@ impl FastMapper{
         // entries is a Option<(u16, u64, usize)
         'main :while let Some(entries) = tool.next(){
 
+            if entries.0 == 65535{
+                continue;
+            }
+
             if na == 10 && matching_geneids.len() == 0{
                 return Err(MappingError::NoMatch)
             }
@@ -804,6 +808,8 @@ impl FastMapper{
             Err(_) => {}
         };
 
+        //println!("\n\nStart fast_mapper::get()");
+
         let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
@@ -816,7 +822,8 @@ impl FastMapper{
         let mut na = 0;
         // entries is a Option<(u16, u64, usize)
 
-        /*let mut i = 0;
+        let mut i = 0;
+        /*
         let mut small_seq :String = Default::default();
         let mut large_seq: String = Default::default();*/
 
@@ -826,23 +833,31 @@ impl FastMapper{
                 // This is obviousely not exisitingn in the index.
                 return Err(MappingError::NoMatch)
             }
+            if entries.0 == 65535{
+                continue;
+            }
 
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
-                println!("The first id {} is known to this index!", tool.u64_to_string( 8,&(entries.0 as u64) ) );
+                //println!("The first id {} is known to this index!", tool.u64_to_string( 8,&(entries.0 as u64) ) );
 
                 //eprintln!("We are at iteration {i}");
                 if &entries.1.1 < &20_u8{
                     //will never map as the mapper fails every sequence below 20 bp - too many false positives!
                     continue
                 }
+                i +=1;
 
+                if (i > 4) && genes.len() == 0 {
+                    //println!("First four matches have not given anything! breaking!");
+                    break;
+                }
                 /*small_seq.clear();
                 large_seq.clear();
                 tool.u16_to_str( 8, &entries.0, &mut small_seq);
                 tool.u64_to_str( entries.1.1.into(), &entries.1.0, &mut large_seq);
                 println!("We are on iteration {i} with seq {}-{} ( {}-{})", small_seq, large_seq, &entries.0, &entries.1);
-                i +=1;*/
+                */
                 
 
                 // if matching_geneids.len() == 1 && i > 3 {
@@ -879,10 +894,10 @@ impl FastMapper{
                     },
                     None => {
                         
-                        println!("Got no gene id in the first run get() run -> find() instead:");
+                        //println!("Got no gene id in the first run get() run -> find() instead:");
                         match self.mapper[entries.0 as usize].find(  &entries.1 ){
                             Some( gene_ids ) => {
-                                println!("But in the second I got one: {gene_ids:?}");
+                                //println!("But in the second I got one: {gene_ids:?}");
                                 for name_entry in &gene_ids{
                                     for gid in &name_entry.data{
                                         let ext_gid = self.get_extern_id_from_intern( gid.0 );
@@ -913,7 +928,7 @@ impl FastMapper{
                     },
                 }
             }else { // my mapper has no data!?
-                println!("The first id {} is not known to this index!", tool.u64_to_string( 8,&(entries.0 as u64) ) );
+               // println!("The first id {} is not known to this index!", tool.u64_to_string( 8,&(entries.0 as u64) ) );
             }
             // if self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids ){
             //     //eprintln!("We found a best gene!");
@@ -924,8 +939,10 @@ impl FastMapper{
             //     break 'main;
             // }
         }
+        //println!("I collected this info for the search: {genes:?}");
+
         if genes.len() == 0 {
-            println!("Nothing found - really nothing?!");
+            //println!("Nothing found - really nothing?!");
             return Err(MappingError::NoMatch)
         }
         

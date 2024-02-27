@@ -27,7 +27,7 @@ mod tests {
         let mut id = 1;
         for seq in sequences{
             //seq.reverse();
-            mapper.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+            mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
             id +=1;
         }
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
