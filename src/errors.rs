@@ -19,4 +19,11 @@ pub enum CellIdError {
     Ns,
 }
 
+#[derive(Debug)]
+pub enum SeqError {
+    Ns,
+    End,
+    LowComplexity,
+}
+
 

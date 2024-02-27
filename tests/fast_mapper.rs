@@ -37,10 +37,10 @@ mod tests {
         for (sequence, expected_result) in sequences.iter().zip(expected_results.iter()) {
             match mapper.get(*sequence, &mut tool) {
                 Ok(result) => {
-                    assert_eq!(result, *expected_result, "Unexpected result for sequence: {:?}", sequence);
+                    assert_eq!(result, *expected_result, "Unexpected result for sequence: {:?}", String::from_utf8_lossy(*sequence));
                 }
                 Err(err) => {
-                    panic!("Error occurred for sequence {:?}: {:?}", sequence, err);
+                    panic!("Error occurred for sequence {:?}: {:?}", String::from_utf8_lossy(*sequence), err);
                 }
             }
             

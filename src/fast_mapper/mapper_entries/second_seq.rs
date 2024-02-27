@@ -77,6 +77,48 @@ impl BinaryMatcher for SecondSeq {
         data
     }
 
+    fn tri_nuc_tab (&self ) -> Vec<i8>{
+        let mut sum = vec![0_i8;64];
+
+        for i in 0..(self.1-2){
+            let a = (self.0 >> (i * 2)) & 0b111111;
+            sum[a as usize] +=1;
+        }
+        sum
+    }
+    /// dnt will be a Vec usize, a table where the position of the vec represents the di-nucleotides from #b0000 to #b1111,
+    /// and the value the number of occurances in that u64.
+    fn di_nuc_tab (&self ) -> Vec<i8>{
+        let mut sum = vec![0_i8;16];
+
+        for i in 0..(self.1-1){
+            let a = (self.0 >> (i * 2)) & 0b1111;
+            sum[a as usize] +=1;
+        }
+        sum
+    }
+
+    fn tri_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
+        let mut size = self.min_length( other );
+        if size == 32{
+            size = 30
+        }
+        let mut a_sum = vec![0_i8;64];
+        let mut b_sum = vec![0_i8;64];
+
+        for i in 0..size{
+            let a = (self.0 >> (i * 2)) & 0b111111;
+            let b = (other.0 >> (i * 2)) & 0b111111;
+            a_sum[a as usize] +=1;
+            b_sum[b as usize] +=1;
+        }
+        let mut ret = 0;
+        for i in 0..64{
+            ret += a_sum[i].abs_diff(b_sum[i]) as usize
+        }
+        ret as f32 / 2.0 / size as f32
+    }
+
     fn di_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
         let mut size = self.min_length( other );
         if size == 32{
@@ -105,7 +147,7 @@ impl BinaryMatcher for SecondSeq {
 
         let size = self.min_length(other);
 
-        if size < 15  || self.di_nuc_abs_diff(other) > 0.3{
+        if size < 15  || self.tri_nuc_abs_diff(other) > 0.6{
             return 100.0
         }
 
@@ -160,8 +202,11 @@ impl BinaryMatcher for SecondSeq {
             println!();
         }*/
 
-        //println!("Can that be cut short: {self} vs {other} - abs_diff {} NW {}", self.di_nuc_abs_diff(other),  (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
-
+        /*println!("Can that be cut short(di_diff {}, tri_diff {}, NW {}) : \n{self} vs \n{other}", 
+            self.di_nuc_abs_diff(other),  
+            self.tri_nuc_abs_diff(other),  
+            (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
+        */
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
 
@@ -246,7 +291,7 @@ impl BinaryMatcher for SecondSeq {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for SecondSeq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SecondSeq (u64: {:b} or {}, u8: {})", self.0,  BinaryMatcher::to_string(self), self.1)
+        write!(f, "SecondSeq (u64: {} or {:b}, u8: {})", BinaryMatcher::to_string(self), self.0, self.1)
     }
 }
 

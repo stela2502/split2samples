@@ -216,6 +216,10 @@ impl NameEntry{
 		return false
 	}
 
+	pub fn same(&self, seq:&SecondSeq) -> bool{
+		self.key.same( seq )
+	}
+
 
 }
 

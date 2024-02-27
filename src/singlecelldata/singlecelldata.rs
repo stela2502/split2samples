@@ -471,7 +471,7 @@ impl SingleCellData{
         let ncell_and_entries = self.update_genes_to_print( &genes, &self.genes_to_print.clone() );
         self.passing = ncell_and_entries[0];
 
-        let ret = format!("{} {} {}", self.genes_to_print.len(), ncell_and_entries[0], ncell_and_entries[1] );
+        let ret = format!("{} {} {}", &self.genes_to_print.len(), ncell_and_entries[0], ncell_and_entries[1] );
         //println!("mtx_counts -> final return: mtx_counts: {}", ret );
         ret
     }

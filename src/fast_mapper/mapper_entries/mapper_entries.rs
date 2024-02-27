@@ -107,6 +107,19 @@ impl MapperEntry{
 		
 		let new_entry = NameEntry::new( *seq );
 
+		for (key, name_entry) in self.map.iter() {
+			if key.same( &seq ) {
+				//println!("the id {seq} has a 100% matching sequence: {key} ");
+				ret.push(name_entry);
+			}
+		}
+		if ret.len() == 1 {
+			Some(ret)
+		}
+		else {
+			None
+		}
+		/*
 		match &self.map.get( &new_entry.key ){
 			Some(entry) => {
 				ret.push(entry);
@@ -116,6 +129,7 @@ impl MapperEntry{
 				None
 			}
 		}
+		*/
 
 	}
 
@@ -128,7 +142,7 @@ impl MapperEntry{
 
 		let mut dists : Vec::<f32> = vec![];
 		let mut min_dist: f32 = f32::MAX;
-		for (_, name_entry) in self.map.iter() {
+		for (i, name_entry) in self.map.iter() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			//let dist = self.map[i].0.hamming_distance( seq );
 			let dist = name_entry.key.needleman_wunsch( seq );
@@ -136,9 +150,9 @@ impl MapperEntry{
 			//if dist <= self.hamming_cut {
 			if dist <= self.needleman_wunsch_cut {
 				// look at the matches that are almost rejected.
-				/*if dist > self.needleman_wunsch_cut * 0.9 {
-					println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", self.map[i].0, dist);
-				}*/
+				//if dist > self.needleman_wunsch_cut * 0.9 {
+					println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", name_entry.key, dist);
+				//}
 				
 				ret.push( name_entry );
 				dists.push( dist );

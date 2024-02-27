@@ -70,6 +70,44 @@ impl BinaryMatcher for CellId10x {
         data
     }
 
+    fn tri_nuc_tab (&self ) -> Vec<i8>{
+        let mut sum = vec![0_i8;64];
+
+        for i in 0..14{
+            let a = (self.0 >> (i * 2)) & 0b111111;
+            sum[a as usize] +=1;
+        }
+        sum
+    }
+
+    fn di_nuc_tab (&self ) -> Vec<i8>{
+        let mut sum = vec![0_i8;16];
+
+        for i in 0..15{
+            let a = (self.0 >> (i * 2)) & 0b1111;
+            sum[a as usize] +=1;
+        }
+        sum
+    }
+
+    fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32 {
+ 
+        let mut a_sum = vec![0_i8;64];
+        let mut b_sum = vec![0_i8;64];
+
+        for i in 0..14{
+            let a = (self.0 >> (i * 2)) & 0b111111;
+            let b = (other.0 >> (i * 2)) & 0b111111;
+            a_sum[a as usize] +=1;
+            b_sum[b as usize] +=1;
+        }
+        let mut ret = 0;
+        for i in 0..64{
+            ret += a_sum[i].abs_diff(b_sum[i]) as usize
+        }
+        ret as f32 / 2.0 / 16.0
+    }
+
 
     fn di_nuc_abs_diff( &self, other: &Self  ) -> f32 {
 
@@ -86,7 +124,7 @@ impl BinaryMatcher for CellId10x {
         for i in 0..16{
             ret += a_sum[i].abs_diff(b_sum[i]) as usize
         }
-        ret as f32 / 2.0 / 16 as f32
+        ret as f32 / 2.0 / 16.0
     }
 
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result

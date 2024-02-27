@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
-
-
+use crate::errors::SeqError;
+use crate::traits::BinaryMatcher;
 
 // logics copied from https://github.com/COMBINE-lab/kmers/
 pub type Base = u8;
@@ -87,7 +87,8 @@ impl IntToStr {
 
     /// returns true if the sequence passes, false if there is a problem like N nucleotides
     /// or too low sequences variability in the first 8bp
-    fn seq_ok(&mut self ) -> Option<bool> {
+    /// or None if the sequence is at it's end.
+    fn seq_ok(&mut self, short:bool ) -> Result<(u16, SecondSeq), SeqError > {
 
         let mut start = self.lost * 4;
 		let mut to = start + 8;
@@ -96,12 +97,9 @@ impl IntToStr {
 
         if self.storage.len() < to{
         	//println!("not enough data!");
-            return None
+            return Err(SeqError::End)
         }
-        
-        if self.storage.len()< to {
-            to = self.storage.len();
-        }
+
         // check the initial 8 bp as they will create a key
         for nuc in &self.storage[start..to ] {
             match self.checker.get_mut( nuc ){
@@ -112,17 +110,60 @@ impl IntToStr {
             };
             if *nuc ==b'N'{
             	//println!("N nucleotoides!");
-                return Some(false);
+                return Err(SeqError::Ns);
             }
         }
+
+        let short_seq = SecondSeq(self.into_u64_nbp( 8 ), 8_u8);
+
+   		let dnt_s = short_seq.di_nuc_tab();
+   		let max_s = dnt_s.iter().max().unwrap_or(&0);
+   		// 6 or 7 means two of the 8 nucl were not the same
+   		if max_s > &5_i8 {
+   			return Err(SeqError::LowComplexity)
+   		}
+   		if short {
+   			return Ok( (short_seq.0 as u16, SecondSeq( 0_u64, 32_u8)) )
+   		}
+
+        match self.drop_n(2){// shift 8 bp
+        	Some(_) => {},
+        	None => {
+        		return Err(SeqError::End);
+        	}
+        };
+        let mut sign:u8 = self.kmer_size.try_into().unwrap();
+        
+        // do we have some sequence left to create a SecondSeq object from?
+        // And if how much?
+		if self.shifted + self.lost *4 + self.kmer_size > self.storage.len(){
+			let missing = (self.shifted + self.lost *4 + self.kmer_size )- self.storage.len() ;
+			if missing >= self.kmer_size{
+				return Err(SeqError::End)
+			}
+        	sign = (self.kmer_size - missing).try_into().unwrap();
+        }
+        let long_seq = SecondSeq( self.into_u64_nbp( self.kmer_size ), sign);
+        let dnt_l = long_seq.di_nuc_tab();
+   		let max_l = dnt_l.iter().max().unwrap_or(&0);
+   		// 6 or 7 means two of the 8 nucl were not the same
+   		if *max_l as u8 > ( sign - 5_u8) {
+   			return Err(SeqError::LowComplexity)
+   		}
+
+        return Ok( (short_seq.0 as u16, long_seq) )
+
+        // this was too crude!
+        /*
         // if self.checker.len() < 2{
         //     //println!( "kmer is too simple/not enough diff nucs" );
         //     return Some(false);
         // }
         
         for value in self.checker.values(){
+        	println!("the self.checker valuze: {value}");
             if *value as f32 / (to-start) as f32 == 1.0 {
-                //println!( "sequence from {start} to {to} is too simple/too many nucs same {value} {start} {to}" );
+                println!( "sequence from {start} to {to} is too simple/too many nucs same {value} {start} {to} {:?}", &self.storage[start..to ] );
                 return Some(false);
             } 
         }
@@ -136,7 +177,7 @@ impl IntToStr {
         }
 
         if to - start < (self.kmer_size /4) +1 {
-        	//println!("left over sequence is too short...{}", to - start);
+        	println!("left over sequence is too short... {:?}" , String::from_utf8_lossy(&self.storage[start..to ]));
         	return None
         }
 
@@ -152,20 +193,21 @@ impl IntToStr {
             }
         }
         if self.checker.len() < 3{
-            //println!( "larger kmer is too simple/not enough diff nucs" );
+            println!( "larger kmer is too simple/not enough diff nucs {:?}" , String::from_utf8_lossy(&self.storage[start..to ] ));
             return Some(false);
         }
         
         for value in self.checker.values(){
-            //println!( "sequence from {start} to {to} is too simple/too many nucs same" );
+            println!( "sequence from {start} to {to} is too simple/too many nucs same {:?}" , String::from_utf8_lossy(&self.storage[start..to ]));
 
             if *value as f32 / (to-start) as f32 > 0.6 {
-                //println!( "larger sequence from {start} to {to} is too simple/too many nucs same" );
+                println!( "larger sequence from {start} to {to} is too simple/too many nucs same {:?}" , String::from_utf8_lossy(&self.storage[start..to ] ));
                 return Some(false);
             } 
         }
-        //println!("Sequence is fine");
+        println!("Sequence is fine");
         return Some(true)
+        */
     }
 
 
@@ -173,55 +215,27 @@ impl IntToStr {
 
     	//println!("Start with next");
 
-    	match self.seq_ok(){
-    		Some(true) => {//eprintln!("Seq OK") 
+    	match self.seq_ok( true ){ // only small!
+    		Ok((short,second) ) => {
+    			Some((short,second))
     		},
-    		Some(false) => {
-    			//eprintln!("useless oligos!");
-    			match self.drop_n(1){// shift 4 bp
-    				Some(_) => {
-    					return self.next()
-    				},
-    				None => {
-    					return None;
-    				}
-    			}; // shift 4 bp
-    		},
-    		None => {
+    		Err( SeqError::End ) => {
     			if self.shifted < 15{
-    				//eprintln!("I am shifting on bp");
     				match self.shift(){
-    					Some(_) => {},
-    					None => { return None },
+    					Some(_) => {
+    						self.next_small()
+    					},
+    					None => { None },
     				}
-    				//self.print();
-    				return self.next();
+    			}else {
+    				None
     			}
-    			return None
     		},
-    	};
-
-    	//println!("Start with next - test finished");
-        let short = self.into_u16().clone();
-        match self.drop_n(2){// shift 8 bp
-        	Some(_) => {},
-        	None => {
-        		return None;
-        	}
-        };
-        let long = self.into_u64_nbp( self.kmer_size ).clone();
-        let sign:u8;
-        //println!( "self.storage.len() {} - self.lost {} *4 >= self.kmer_size {} -> {}", self.storage.len(), self.lost,self.kmer_size ,self.storage.len() - self.lost *4 >= self.kmer_size);
-        if self.storage.len() - self.lost  >= self.kmer_size {
-        	sign = self.kmer_size as u8;
-        }else {
-        	sign = self.storage.len() as u8 - self.lost as u8 *4_u8;
-        	//eprintln!("next reporting a SHORTER VALUE! {sign}" );
-        }
-  
-        //eprintln!( "short {short}, long {long}, sign {sign}" );
-        let second = SecondSeq(long, sign  );
-        Some(( short , second  ))
+    		Err(_)=>{
+    			//SeqError::Ns or SeqError::LowComplexity
+    			self.next_small()
+    		},
+    	}
     }
 
     pub fn print_second_seq (&self, first:u16, second_seq: SecondSeq ){
@@ -234,56 +248,32 @@ impl IntToStr {
 
     pub fn next(&mut self) -> Option<(u16, SecondSeq)> {
 
-    	match self.seq_ok(){
-    		Some(true) => {
-    			let short = self.into_u16().clone();
-    			match self.drop_n(2){// shift 8 bp
-		        	Some(_) => {
-		        		let long = self.into_u64_nbp( self.kmer_size ).clone();
-		        		let sign:u8;
-		        		if self.lost *4 + self.kmer_size <= self.storage.len() {
-							sign = self.kmer_size.try_into().unwrap();
-				        }else {
-							let missing = ( self.lost *4 + self.kmer_size )- self.storage.len() ;
-							if missing >= self.kmer_size{
-								return None
-							}
-				        	sign = (self.kmer_size - missing).try_into().unwrap();
-				        }
-				        let second = SecondSeq(long, sign );
-
-				        //self.print_second_seq( short,  second );
-
-				        return Some(( short , second) )
-		        	},
-		        	None => {
-		        		eprintln!("This should not have happened after the check!");
-		        		return None;
-		        	}
-		        };
+    	match self.seq_ok( false ){ // not small only
+    		Ok((short,second) ) => {
+    			Some(( short , second) )
     		},
-    		Some(false) => {
-    			//eprintln!("useless oligos!");
-    			match self.drop_n(1){// shift 4 bp
-    				Some(_) => {
-    					return self.next()
-    				},
-    				None => {
-    					return None;
-    				}
-    			}; // shift 4 bp
-    		},
-    		None => {
-    			if self.shifted < 8{
-    				//println!("I am shifting on bp");
+    		Err( SeqError::End ) => {
+    			if self.shifted < 15{
     				match self.shift(){
-    					Some(_) => { return self.next() },
-    					None => { return None },
+    					Some(_) => {
+    						println!("I shifted! {}", self.shifted);
+    						self.next()
+    					},
+    					None => { 
+    						println!("I have reached the end of this sequence!");
+    						None 
+    					},
     				}
+    			}else {
+    				println!("I have reached the end of this sequence!");
+    				None
     			}
-    			return None
     		},
-    	}; 
+    		Err(_)=>{
+    			//SeqError::Ns or SeqError::LowComplexity
+    			self.next()
+    		},
+    	}
     }
 
 	pub fn len(&self) -> usize{

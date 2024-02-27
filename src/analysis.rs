@@ -353,6 +353,7 @@ impl Analysis{
 
         // lets tag this with the first gene I was interested in: Cd3e
         //let goi_id = self.genes.get_id("ADA".to_string());
+        let report_gid = self.genes.get_id( "Sry".to_string() );
 
         for i in 0..data.len() {
 
@@ -428,6 +429,9 @@ impl Analysis{
 	                	
 		                match &self.genes.get( &data[i].1,  &mut tool ){
 		                	Ok(gene_id) =>{
+		                		if report_gid == gene_id[0] {
+		                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
+		                    	}
 		                		report.iter_read_type( "expression reads" );
 
 		                    	let data = GeneUmiHash( gene_id[0], *umi);
@@ -680,7 +684,7 @@ impl Analysis{
         pb.set_style(spinner_style);
         //pb.set_prefix(format!("[{}/?]", i + 1));
 
-        //let report_gid = self.genes.get_id( "Sample1".to_string() );
+        //let report_gid = self.genes.get_id( "Sry".to_string() );
         'main: while let Some(record2) = readefile.next() {
         	if let Some(record1) = readereads.next() {
         		report.total += 1;
@@ -802,6 +806,9 @@ impl Analysis{
 		                	
 			                match &self.genes.get( &seqrec2.seq(),  &mut tool ){
 			                	Ok(gene_id) =>{
+			                		/*if report_gid == gene_id[0] {
+			                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );
+			                    	}*/
 			                		report.iter_read_type( "expression reads" );
 
 			                    	let data = GeneUmiHash( gene_id[0], *umi);
