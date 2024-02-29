@@ -158,7 +158,7 @@ impl Analysis{
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		//seq_temp = seqrec.seq().to_vec();
 		                		//seq_temp.reverse();
-			                    antibodies.add_small( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
+			                    antibodies.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
 		                    	//ab_names.push( id.to_string() );
 		                    	//gene_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
@@ -211,7 +211,7 @@ impl Analysis{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
-	        	samples.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_hs"),EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -240,7 +240,7 @@ impl Analysis{
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"),EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -257,6 +257,9 @@ impl Analysis{
 		samples.print();
 		println!("and the antibodies index:");
 		antibodies.print();
+		samples.make_index_te_ready();
+		genes.make_index_te_ready();
+		antibodies.make_index_te_ready();
 		let sample_names: Vec<String>  = samples.get_all_gene_names();
 		let gene_names: Vec<String>  = genes.get_all_gene_names();
 		let ab_names: Vec<String>  = antibodies.get_all_gene_names();
@@ -272,6 +275,14 @@ impl Analysis{
 			gene_names,
 			ab_names,
 			num_threads,
+		}
+	}
+
+	pub fn report4gname( &mut self, gname: &str ){
+		if let Some(gene_id) = self.antibodies.extern_id_for_gname( gname ){
+			self.antibodies.report4 = Some(gene_id)
+		}else if let Some(gene_id) = self.genes.extern_id_for_gname( gname ){
+			self.genes.report4 = Some(gene_id)
 		}
 	}
 
@@ -353,7 +364,6 @@ impl Analysis{
 
         // lets tag this with the first gene I was interested in: Cd3e
         //let goi_id = self.genes.get_id("ADA".to_string());
-        let report_gid = self.genes.get_id( "Sry".to_string() );
 
         for i in 0..data.len() {
 
@@ -371,8 +381,11 @@ impl Analysis{
 
 	            	ok = match &self.antibodies.get( &data[i].1, &mut tool ){
 	                    Ok(gene_id) =>{
-	                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-	                    	//eprintln!("I got an ab id {gene_id}");
+	                    	if let Some(report_gid) = self.antibodies.report4{
+	                			if report_gid  == gene_id[0] {
+	                    			println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
+	                    		}
+	                		}
 	                    	report.iter_read_type( "antibody reads" );
                     		
                     		let data = GeneUmiHash( gene_id[0], *umi);
@@ -429,9 +442,11 @@ impl Analysis{
 	                	
 		                match &self.genes.get( &data[i].1,  &mut tool ){
 		                	Ok(gene_id) =>{
-		                		if report_gid == gene_id[0] {
-		                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-		                    	}
+		                		if let Some(report_gid) = self.genes.report4{
+		                			if report_gid  == gene_id[0] {
+		                    			println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
+		                    		}
+		                		}
 		                		report.iter_read_type( "expression reads" );
 
 		                    	let data = GeneUmiHash( gene_id[0], *umi);

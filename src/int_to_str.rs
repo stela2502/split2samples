@@ -240,6 +240,12 @@ impl IntToStr {
     	let start_id = start / 4;
     	let mut stop:u8;
     	let shift_amount = (start % 4) * 2;
+
+    	// keep the later check from getting negative
+    	if self.storage.len() <= 8 + start {
+    		return None
+    	}
+
     	let stop_id = if start + 8 + self.kmer_size + shift_amount  < self.storage.len() {
     		stop = self.kmer_size as u8;
 		    start_id + 2 + (self.kmer_size + 3 + shift_amount) / 4
@@ -250,31 +256,13 @@ impl IntToStr {
 		    self.u8_encoded.len()
 		};
 
-
-		/*
-    	let mut stop = 0_u8;
-
-    	let stop_id = if start_id + (self.kmer_size + 3) / 4 < self.u8_encoded.len() {
-		    start_id + (self.kmer_size + 3) / 4
-		} else {
-		    self.u8_encoded.len()
-		};
-    	
-    	let stop_id = match start_id +11 > self.u8_encoded.len() {
-    		true => {
-    			stop = (self.storage.len() - start - (start % 4) -8 ) as u8;
-    			self.u8_encoded.len()
-    		},
-    		false => {
-    			stop = 32_u8;
-    			start_id + 11
-    		}
-    	};
-    	*/
-
-    	if stop_id - start_id < self.kmer_size / 8  {
+		let min_length = self.kmer_size.min(20);
+		
+    	if (stop as usize) < min_length  {
+    		//println!("seq_at_position - to small u64: {stop} < {min_length}");
     		return None
     	}
+
 
     	//println!("I got start_id {start_id} and stop_id {stop_id}");
     	// Create a u128 from the selected byte range

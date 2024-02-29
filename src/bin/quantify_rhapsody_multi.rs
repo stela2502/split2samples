@@ -70,6 +70,9 @@ struct Opts {
     /// how many sequences should be analyzed in one chunk
     #[clap(default_value_t=1_000_000, long)]
     chunk_size: usize,
+    /// report mappings to a specific gene?
+    #[clap(long)]
+    report4: Option<String>,
 }
 
 /*
@@ -165,6 +168,10 @@ fn main() {
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
         opts.antibody, opts.specie, opts.index, num_threads, &opts.exp);
+
+    if let Some(gname) = &opts.report4 {
+        worker.report4gname( gname )
+    }
 
     if save{
         worker.write_index( &opts.outpath );

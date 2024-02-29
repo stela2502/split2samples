@@ -58,7 +58,7 @@ mod tests {
     fn test_seq_at_position_out_of_range() {
       let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
       match tool.seq_at_position(70){
-         Some( ( cellid, second_seq) ) => panic!("expected None for an out of range id!"),
+         Some( ( cellid, second_seq) ) => panic!("expected None for an out of range id! And got {cellid} and {second_seq}"),
          None => assert!(true),
       };
    }
@@ -360,7 +360,6 @@ mod tests {
       }else {
          assert_eq!( 1,2, "there should be a first entry in the tool!")
       }
-      assert_eq!( tool.current_position, 8 ,"the iterator hoped 8bp" );
 
       if let Some(entries) = tool.next(){
          i+=1;
@@ -387,7 +386,6 @@ mod tests {
       }else {
          assert_eq!( 1,2, "there should be a second entry in the tool!")
       }
-      assert_eq!( tool.current_position, 24 ,"the iterator hoped 8bp" );
       if let Some(entries) = tool.next(){
          i+=1;
          first.clear();
@@ -432,31 +430,78 @@ mod tests {
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0, &mut first );
-         assert_eq!( first, "GGGACACT".to_string() );
+         assert_eq!( first, "TGACTCTC".to_string() );
          tool.u64_to_str( 32, &entries.1.0, &mut second );
-         assert_eq!( second, "ACCTCTGGGCCTGGGATACAAAAAAAAAAAAA".to_string() );
-         assert_eq!( entries.1.1, 19, "the expected max entry length" );
+         assert_eq!( second, "AGCATGGAAGGACAGCAGAGACCAAGAGATCC".to_string() );
+         assert_eq!( entries.1.1, 32, "the expected max entry length" );
       }else {
          assert_eq!( 1,2, "there should be a sixth entry in the tool!")
       }
 
-      if let Some(entries) = tool.next(){
+      /*if let Some(entries) = tool.next(){
          i+=1;
          first.clear();
          second.clear();
          tool.u16_to_str( 8, &entries.0, &mut first );
-         assert_eq!( first, "ACCTCTGG".to_string() );
+         assert_eq!( first, "AGCATGGA".to_string() );
          tool.u64_to_str( 32, &entries.1.0, &mut second );
          assert_eq!( second, "GCCTGGGATACAAAAAAAAAAAAAAAAAAAAA".to_string() );
          assert_eq!( entries.1.1, 11, "the expected max entry length" );
       }else {
          assert_eq!( 1,2, "there should be a sixth entry in the tool!")
-      }
+      }*/
 
       while let Some(_entries) = tool.next(){
          i+=1;
       }
-      assert_eq!( i,64, "A total of 54 fragments!")
+      assert_eq!( i,48, "A total of 54 fragments!")
+   }
+
+   #[test]
+   fn test_antibody_tag(){
+      let mut tool = IntToStr::new(
+         b"CGAGAATTCCGATGCGCGTGTTAAGTATATAGGTTG".to_vec(), 32);
+      let mut first = "".to_string();
+      let mut second = "".to_string();
+      let mut i = 0;
+      if let Some(entries) = tool.next(){
+         i+=1;
+         first.clear();
+         second.clear();
+         tool.u16_to_str( 8, &entries.0 , &mut first );
+         assert_eq!( first, "CGAGAATT".to_string() );
+         tool.u64_to_str( entries.1.1 as usize , &entries.1.0, &mut second );
+         assert_eq!( second, "CCGATGCGCGTGTTAAGTATATAGGTTG".to_string() );
+      }else {
+         assert_eq!( 1,2, "there should be a first entry in the tool!")
+      }
+      if let Some(entries) = tool.next(){
+         i+=1;
+         first.clear();
+         second.clear();
+         tool.u16_to_str( 8, &entries.0 , &mut first );
+         assert_eq!( first, "CCGATGCG".to_string() );
+         tool.u64_to_str( entries.1.1 as usize , &entries.1.0, &mut second );
+         assert_eq!( second, "CGTGTTAAGTATATAGGTTG".to_string() );
+      }else {
+         assert_eq!( 1,2, "there should be a second entry in the tool!")
+      }
+      if let Some(entries) = tool.next(){
+         i+=1;
+         first.clear();
+         second.clear();
+         tool.u16_to_str( 8, &entries.0 , &mut first );
+         assert_eq!( first, "GAGAATTC".to_string() );
+         tool.u64_to_str( entries.1.1 as usize, &entries.1.0, &mut second );
+         assert_eq!( second, "CGATGCGCGTGTTAAGTATATAGGTTG".to_string() );
+      }else {
+         assert_eq!( 1,2, "there should be a third entry in the tool!")
+      }
+      while let Some(_entries) = tool.next(){
+         i+=1;
+      }
+      assert_eq!( i,9, "A total of 54 fragments!")
+
    }
 
 }

@@ -70,6 +70,7 @@ pub struct FastMapper{
     But it will be totally transperent to the ouside world.
      */
     offset: usize, // the offset is to make a index report 'wrong' ids - say you want
+    pub report4: Option<usize>, // report for a gene?
 }
 
 // here the functions
@@ -120,6 +121,7 @@ impl FastMapper{
             pos,
             neg,
             offset: offset, // just to be on the save side here.
+            report4:None,
         }
     }
 
@@ -262,6 +264,13 @@ impl FastMapper{
             None => panic!("Gene {name} not defined in the GeneID object"),
         };
         id.clone()
+    }
+
+    pub fn extern_id_for_gname ( &self, name:&str ) -> Option<usize> {
+        match self.names.get( name )  {
+            Some(id) => Some(id + self.offset),
+            None => None
+        }
     }
 
     fn get_intern_id( &self, name: String ) -> usize{
@@ -419,9 +428,7 @@ impl FastMapper{
         let classes =  self.intern_ids_for_gene_names( &classes_vec );
         let gene_id = classes[0];
 
-        self.tool.from_vec_u8( seq.to_vec() );
-        let mut tmp = "".to_string();
-        self.tool.to_string( seq.len(), &mut tmp );
+        
 
         let mut i =0;
         //let mut n = 20;
@@ -429,8 +436,12 @@ impl FastMapper{
         // let mut short = String::from("");
         // let mut long = String::from("");
 
+        self.tool.from_vec_u8( seq.to_vec() );
         while let Some(entries) = self.tool.next(){
 
+            //println!("add -> I got the u16 {} and the u64 as {}",entries.0, entries.1);
+            //tmp = tmp + format!("it {i} ");
+            //i +=1;
             //n -=1;
             //if n == 0{
             //    break;
@@ -469,6 +480,7 @@ impl FastMapper{
                 if i < self.names_count[gene_id]{
                     i = self.names_count[gene_id];
                 }
+                i+=1;
             }else {
                 //println!("NOT added this sequence! {:#b}+{} -> {gene_id} & {classes:?} ",entries.0, entries.1);
                 self.neg +=1
@@ -481,7 +493,7 @@ impl FastMapper{
         //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
             //eprint!(".");
-            println!("gene {} ({:?}) does not get an entry in the fast_mapper object! - too short or a duplicate? {} bp", &name.as_str(), classes, seq.len() );
+            println!("add -> gene {} ({:?}) does not get an entry in the fast_mapper object! - too short or a duplicate? {} bp", &name.as_str(), classes, seq.len() );
         }
         /*else {
             println!("I added {i} mappper entries for gene {name}");
@@ -578,9 +590,15 @@ impl FastMapper{
         }
     }
 
-    
+    fn mean( numbers: &[f32] ) -> Option<f32>{
+        if numbers.len() == 0 {
+            None
+        }else {
+            Some(numbers.iter().sum::<f32>() / numbers.len() as f32)
+        }
+    }
 
-    fn get_best_gene( &self, genes:&HashMap::<(usize, usize), usize>, ret: &mut Vec::<usize> ) -> bool{
+    fn get_best_gene( &self, genes:&HashMap::<(usize, usize), Vec<f32> >, ret: &mut Vec::<usize> ) -> bool{
         ret.clear();
         if genes.is_empty(){
             return false
@@ -595,141 +613,54 @@ impl FastMapper{
             }
             eprint!("\n");
         }*/
+        let mut min_genes = Vec::new();
+        let mut mean_value: Option<f32> = None;
+        let mut most_matches = usize::MAX;
 
-        let most_matches = genes.values().max().unwrap_or(&0);
+        for ((gene, _class), vec) in genes {
+            if let Some(mean_val) = Self::mean(&vec) {
+                if mean_val < mean_value.unwrap_or(f32::INFINITY) {
+                    //println!("I got a new mean value: {mean_val} and gene {gene}");
+                    min_genes.clear(); // Clear the previous min_genes
+                    min_genes.push(*gene);
+                    mean_value = Some(mean_val);
+                    most_matches = vec.len();
+                } else if mean_val == mean_value.unwrap_or(f32::INFINITY) {
+                    //println!("more gene with the mean values!: {mean_val} and gene {gene}");
+                    min_genes.push(*gene);
+                }
+            }
+        }
+
+        //println!("I have some best gene(s): {min_genes:?} with a minimum mapping value of {mean_value:?} and a total of {most_matches} mapping events");
         /*if genes.len() > 1 {
             eprintln!("I got this as most matches {most_matches} for that data {genes:?}");
         }*/
         
-        if most_matches < &3_usize {
+        if most_matches < 3 {
             return false
         }
-        
-        //eprintln!("    -> progressing");
-        if genes.len() == 1 {
-            if let Some((key, value)) = genes.iter().next() {
-                if value > &3 {
-                    ret.push(key.0.clone());
-                    return true
-                }else{
-                    return false
-                }
-                
-            }
-        }
-        if genes.len() > 0{
-            let mut prob_level= usize::MAX;
-            for ( _gene_id, level ) in genes.keys(){
-                if level < &prob_level{
-                    prob_level = *level
-                }
-            }
-            let mut good = Vec::<usize>::with_capacity( genes.len() );
-            //let mut best_gene = 0; //otherwise this throws an error later
-            for ((gene_id, level ), matches) in genes{
-                if level == &prob_level && matches == most_matches {
-                    good.push( *gene_id );
-                }
-            }
 
-            if good.len() ==1 {
-                ret.push( good[0] );
-                // if report {
-                     //eprintln!("2 This was selected as good: {} or {}\n",good[0], self.names_store[good[0]] );
-                // }
-                return true
-            }
-
-            // now we have one possibility left -> As many int reads as there are normal reads.
-            // that is exactly what one would expect if it is actually a normal read
-            fn remove_suffix_string_int(s: &str) -> String {
-
-                if s.ends_with("_int") {
-                    return s[..s.len() - 4 ].to_string();
-                }
-
-                s.to_string()
-            }
-            if good.len() == 2{
-                if remove_suffix_string_int( &self.get_name(good[0]) ) == remove_suffix_string_int( &self.get_name(good[1]) ){
-                    ret.push( self.get_id(remove_suffix_string_int( &self.get_name(good[0]) ) ) );
-                    // if report {
-                         //eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1],  &self.names_store[ret[ret.len()-1]] );
-                    // }
-                    return true
-                }
-            }
-
-            let re = Regex::new(r"^G[mM]").unwrap();
-            let gene_names = self.gene_names_for_ids( &good );
-            let mut better = Vec::<String>::with_capacity( good.len());
-            let humt = Regex::new(r"^ENSG").unwrap();
-            let mouset = Regex::new(r"^ENSMUST").unwrap();
-            for name in &gene_names{
-                if ! re.is_match( name ) && ! humt.is_match( name)  && ! mouset.is_match( name) {
-                    better.push( name.to_string() );
-                }
-            }
-            if better.len() == 1 {
-                //eprintln!("Filtering G[mM] was sucessful!: {:?}", better);
-                ret.push( self.get_id( better[0].to_string() ));
-                return true;
-            }
-            if better.len() == 2{
-                if remove_suffix_string_int( &better[0] ) == remove_suffix_string_int( &better[1] ){
-                    ret.push( self.get_id(remove_suffix_string_int( &better[0] ) ) );
-                    // if report {
-                         //eprintln!("4 This was selected as good: {} or {}\n", ret[ret.len()-1] , &self.names_store[ret[ret.len()-1]] );
-                    // }
-                    return true
-                }
-            }
-            if most_matches < &5 {
+        if let Some(value) = mean_value{
+            if value > 0.2 {
                 return false
             }
-
-            let re2 = Regex::new(r"_int$").unwrap();
-            let mut no_int = Vec::<String>::with_capacity( better.len());
-            for name in &better{
-                if ! re2.is_match( name ){
-                    no_int.push( name.to_string() );
-                }
-            }
-
-            match no_int.len(){
-                0 => {
-                    return false
-                },
-                1 => {
-                    ret.push( self.get_id( no_int[0].to_string() ) );
-                    return true
-                }
-                _ => {
-                    for name in &no_int{
-                        ret.push( self.get_id( name.to_string() ) );
-                    }
-                    return false
-                }
-            }
-
-             // eprintln!("genes: {:?}\ngood: {:?}\nnames: {:?}\nNo good gene identified!\n", genes, good, gene_names );
-             // for  gene_id in good {
-             //     eprint!(" {}", self.names_store[ gene_id ] );
-             // }
-             // eprint!("\n");
+        }else {
+            return false
         }
-        //if report {
-            //eprintln!("! No good gene identified! {:?}\n", genes );
-        //}
-
-        return false
-
+                // Process min_genes as needed
+        for gene_id in min_genes {
+            //println!("I push the gene {gene_id}");
+            ret.push(gene_id);
+            
+        }
+        return true
     }
 
     pub fn get_strict(&self, seq: &[u8], tool: &mut IntToStr ) -> Result< Vec<usize>, MappingError >{ // gene_id, gene_level
         
         //let mut id:usize;
-        let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
+        let mut genes:HashMap::<(usize, usize), Vec<f32>>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
         //let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
@@ -747,7 +678,7 @@ impl FastMapper{
                 continue;
             }
 
-            if na == 10 && matching_geneids.len() == 0{
+            if na == 10 && genes.len() == 0{
                 return Err(MappingError::NoMatch)
             }
             if self.mapper[entries.0 as usize].has_data() {
@@ -756,27 +687,12 @@ impl FastMapper{
                 //println!("We are at iteration {i}");
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
-                    Some( gene_ids ) => {
+                    Some( (gene_ids, nw_value) ) => {
                         //println!("And we got a match! ({gene_id:?})");
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
                                 let ext_gid = self.get_extern_id_from_intern( gid.0 );
-                                /*if self.offset > 0 {
-                                    println!("get_strict got extern id {} from the intern id {} ({})", ext_gid, gid.0, self.offset );
-                                }*/
-                                match genes.get_mut( &(ext_gid, gid.1) ) {
-                                    Some(gene_count) => {
-                                        *gene_count +=1;
-                                        if *gene_count == 10 && genes.len() == 1 {
-                                            break 'main;
-                                        }
-                                    },
-                                    None => {
-                                        //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-                                        genes.insert( (ext_gid, gid.1), 1);
-                                    },
-                                };
-
+                                genes.entry( (ext_gid, gid.1) ).or_insert(Vec::with_capacity(10)).push(*nw_value);
                             }
                         }
                     },
@@ -793,7 +709,11 @@ impl FastMapper{
         // check if there is only one gene //
         if self.get_best_gene( &genes, &mut matching_geneids ){
             //println!("And I got a match! ({matching_geneids:?})");
-            return Ok( matching_geneids )
+            if matching_geneids.len() == 1 {
+                return Ok( matching_geneids )
+            }else {
+                return Err(MappingError::MultiMatch)
+            }
         }
         return Err(MappingError::NoMatch)
     }
@@ -810,7 +730,7 @@ impl FastMapper{
 
         //println!("\n\nStart fast_mapper::get()");
 
-        let mut genes:HashMap::<(usize, usize), usize>= HashMap::new();
+        let mut genes:HashMap::<(usize, usize), Vec<f32>>= HashMap::new();
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
@@ -823,17 +743,23 @@ impl FastMapper{
         // entries is a Option<(u16, u64, usize)
 
         let mut i = 0;
+        //let mut tmp = "".to_string();
         /*
         let mut small_seq :String = Default::default();
         let mut large_seq: String = Default::default();*/
 
         'main :while let Some(entries) = tool.next(){
 
+            //tmp = tmp + &format!("iteration {i} ");
+            //i +=1;
+
             if na == 10 && matching_geneids.len() == 0 {
                 // This is obviousely not exisitingn in the index.
+                //println!("{tmp} - stopped after 10 failed matches\n");
                 return Err(MappingError::NoMatch)
             }
             if entries.0 == 65535{
+                //tmp += "useless u16;\n";
                 continue;
             }
 
@@ -843,12 +769,14 @@ impl FastMapper{
 
                 //eprintln!("We are at iteration {i}");
                 if &entries.1.1 < &20_u8{
+                    //tmp += "too short u64;\n";
                     //will never map as the mapper fails every sequence below 20 bp - too many false positives!
                     continue
                 }
                 i +=1;
 
-                if (i > 4) && genes.len() == 0 {
+                if (i > 12) && genes.len() == 0 {
+                    //tmp += "failing after 4 failed matches and no match at all;\n";
                     //println!("First four matches have not given anything! breaking!");
                     break;
                 }
@@ -870,24 +798,13 @@ impl FastMapper{
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
 
-                    Some( gene_ids ) => {
+                    Some( (gene_ids, nw_value) ) => {
+                        //tmp += &format!("And we identified some gene(s): {gene_ids:?}\n");
                         //println!("Got some gene ids (one?): {:?}", gene_ids);
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
                                 let ext_gid = self.get_extern_id_from_intern( gid.0 );
-                                match genes.get_mut( &(ext_gid, gid.1) ) {
-                                    Some(gene_count) => {
-                                        //println!( "Adding to existsing {} with count {gene_count}+1", gid.0);
-                                        *gene_count +=1;
-                                        if *gene_count == 4 && genes.len() ==1 {
-                                            break 'main;
-                                        }
-                                    },
-                                    None => {
-                                        //println!( "Adding a new gene {} with count 1 here!", gid.0);
-                                        genes.insert( (ext_gid, gid.1), 1);
-                                    },
-                                };
+                                genes.entry( (ext_gid, gid.1) ).or_insert(Vec::with_capacity(10)).push(*nw_value);
                             }
                         }
                         
@@ -896,30 +813,19 @@ impl FastMapper{
                         
                         //println!("Got no gene id in the first run get() run -> find() instead:");
                         match self.mapper[entries.0 as usize].find(  &entries.1 ){
-                            Some( gene_ids ) => {
+                            Some( (gene_ids, nw_value) ) => {
                                 //println!("But in the second I got one: {gene_ids:?}");
+                                //tmp += &format!("And we identified some gene(s) with less stingency: {gene_ids:?}\n");
                                 for name_entry in &gene_ids{
                                     for gid in &name_entry.data{
                                         let ext_gid = self.get_extern_id_from_intern( gid.0 );
-                                        match genes.get_mut(&(ext_gid, gid.1)) {
-                                            Some(gene_count) => {
-                                                //eprintln!( "Second Adding to existsing {} with count {gene_count}+1", gid.0);
-                                                *gene_count +=1;
-                                                if *gene_count == 4 && genes.len() ==1 {
-                                                    break 'main;
-                                                }
-                                            },
-                                            None => {
-                                                //eprintln!( "Second Adding a new gene {} with count 1 here!", gid.0);
-                                                genes.insert( (ext_gid, gid.1), 1);
-                                                //eprintln!("I have finished with the indert");
-                                            },
-                                        };
+                                        genes.entry( (ext_gid, gid.1) ).or_insert(Vec::with_capacity(10)).push(nw_value);
                                     }
                                 }
                             },
                             None => {  
                                 na +=1;
+                                //tmp +="no gene detceted!\n";
                                 //eprintln!("And none in the find() either.");
                                 //no_32bp_match +=1;
                             },
@@ -928,6 +834,7 @@ impl FastMapper{
                     },
                 }
             }else { // my mapper has no data!?
+                //tmp += &format!("the mapper had not indexed that u16 {}\n ",entries.0);
                // println!("The first id {} is not known to this index!", tool.u64_to_string( 8,&(entries.0 as u64) ) );
             }
             // if self.get_best_gene( &genes, &possible_gene_levels, &mut matching_geneids ){
@@ -939,9 +846,13 @@ impl FastMapper{
             //     break 'main;
             // }
         }
+
+        //tmp += &format!("at the end we collected this gene info: {genes:?} ");
+
         //println!("I collected this info for the search: {genes:?}");
 
         if genes.len() == 0 {
+            //println!("{tmp} No gene found");
             //println!("Nothing found - really nothing?!");
             return Err(MappingError::NoMatch)
         }
@@ -956,10 +867,16 @@ impl FastMapper{
                 println!("read mapping to {} - should not happen here?: {:?}\n{:?}", bad_gene, self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
                 //println!("This is our total matching set: {:?}", genes);
             }*/
-            return Ok( matching_geneids )
+            //println!("gene {matching_geneids:?} detected");
+            if matching_geneids.len() == 1 {
+                return Ok( matching_geneids )
+            }else {
+                return Err(MappingError::MultiMatch)
+            }
+            
         }
         //eprintln!("We got a mutlimatcher?! {matching_geneids:?}, {genes:?}");
-
+        //println!("{tmp} multimapper?!");
         return Err(MappingError::MultiMatch)
     }
 

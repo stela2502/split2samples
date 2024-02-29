@@ -61,7 +61,7 @@ fn main() {
     	
     }
 
-    let mut gene_names = genes.get_all_gene_names();
+    
 
     let mut seq_temp:Vec::<u8>;
 
@@ -78,7 +78,6 @@ fn main() {
                 			seq_temp = seqrec.seq().to_vec();
                 			//seq_temp.reverse();
 	                    	genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
-                    		gene_names.push( id.to_string() );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -88,6 +87,8 @@ fn main() {
 	    	eprintln!("Expression file could not be read - ignoring")
 	    }
     }
+
+	let mut gene_names = genes.get_all_gene_names();
 
     eprintln!("Changing the expression start gene id to {}", genes.last_count );
 	antibodies.change_start_id( genes.last_count);
@@ -166,15 +167,21 @@ fn main() {
 	        std::process::exit(1)
 	    }
 
+		genes.make_index_te_ready();
+		antibodies.make_index_te_ready();
+		samples.make_index_te_ready();
+
 	// to understand the mapping a little better I now need the index written to a file
 	let _ = genes.write_index_txt(  format!("{}/genes_index", &opts.outpath) );
 	let _ = antibodies.write_index_txt(  format!("{}/antibodies_index", &opts.outpath) );
 	let _ = samples.write_index_txt(  format!("{}/samples_index", &opts.outpath) );
 
-	eprintln!("Ill check this dna: '{}'", &opts.dna );
+
+	println!("Ill check this dna: '{}'", &opts.dna );
 
 	let mut collected:HashMap::<usize, usize>= HashMap::new();
 
+	println!("\nChecking antibodies:");
 	let mut ok = match antibodies.get( &opts.dna.as_bytes(), &mut tool ){
 		Ok(gene_ids) =>{
         	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
@@ -200,6 +207,7 @@ fn main() {
 		}
 	};
 	if ! ok{
+		println!("\nChecking samples:");
 		ok = match samples.get( &opts.dna.as_bytes(),  &mut tool ){
 			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
@@ -227,6 +235,7 @@ fn main() {
 	}
 
 	if ! ok{
+		println!("\nChecking genes:");
 		let _ = match genes.get( &opts.dna.as_bytes(),  &mut tool ){
 			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );

@@ -64,6 +64,7 @@ mod tests {
     }
 
 
+
     #[test]
     fn check_integrate_repeats1() {
         let mut mapper = FastMapper::new( 32, 10, 0 );
@@ -79,7 +80,7 @@ mod tests {
             let mapper_obj = &mapper.mapper[ first as usize ];
             let matched = mapper_obj.get( &second );
             assert!(matched.is_some(), "found the object" );
-            if let Some(name_entry) = matched{
+            if let Some(( name_entry, nw_value)) = matched{
                 assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
                 assert_eq!( name_entry[0].get().len(), 2, "I have two gene names in one name_entry" );
             }
@@ -93,7 +94,7 @@ mod tests {
             let mapper_obj = &mapper.mapper[ first as usize ];
             let matched = mapper_obj.get( &second );
             assert!( matched.is_some(), "found a match using second next element" );
-            if let Some(name_entry) = matched{
+            if let Some((name_entry, nw_value)) = matched{
                 assert_eq!( name_entry[0].key, second, "not the right SecondSeq? {:?} != {:?}", name_entry[0].key, second );
                 assert_eq!( name_entry[0].get().len(), 1, "I have two gene names in one name_entry" );
                 assert_eq!( name_entry[0].get(), vec![(1,2)], "The famA is the tag for the collapsed name entry" );
@@ -128,7 +129,7 @@ mod tests {
         let mut tool = IntToStr::new(seq.to_vec(), 32);
         if let Some((first, second)) = tool.next(){
             let mapper_entry = &mapper.mapper[ first as usize ];
-            let name_entry = match mapper_entry.get( &second ) {
+            let (name_entry, nw_value) = match mapper_entry.get( &second ) {
                 Some(obj) => {
                      assert_eq!( 1,1, "found the object");
                      obj
@@ -177,7 +178,7 @@ mod tests {
         //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
         mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
 
-        match mapper.get( b"GTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTG", &mut tool ){
+        match mapper.get( b"GTTGTATTTTATTTGGTATTTTTTACTTACCTGTTTGAATACTTG", &mut tool ){
             Err(MappingError::MultiMatch) => {
                 assert_eq!( "NoMatch Error", "NoMatch Error", "expected error detected" )
             },

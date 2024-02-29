@@ -101,7 +101,7 @@ impl MapperEntry{
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
-	pub fn get( &self,seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
+	pub fn get( &self,seq:&SecondSeq ) -> Option<(Vec<&NameEntry>, f32)> {
 
 		let mut ret : Vec::<&NameEntry> = vec![];
 		
@@ -114,30 +114,17 @@ impl MapperEntry{
 			}
 		}
 		if ret.len() == 1 {
-			Some(ret)
+			Some((ret, 0.0))
 		}
 		else {
 			None
 		}
-		/*
-		match &self.map.get( &new_entry.key ){
-			Some(entry) => {
-				ret.push(entry);
-				Some(ret)
-			},
-			None => {
-				None
-			}
-		}
-		*/
-
 	}
 
 	/// finds the most likely matching entry in our set of sequences.
-	/// This now matches - if the u64 does not match in total the u8 4bp kmers instead.
-	/// But not continuousely as that would need me to convert them back to string.
-	/// If this becomes necessary it can be added later.
-	pub fn find (&self, seq:&SecondSeq ) -> Option<Vec<&NameEntry>> {
+	/// It returns the vector of matching gene ids and the needleman_wunsch
+	/// matching value it got for them.
+	pub fn find (&self, seq:&SecondSeq ) -> Option<(Vec<&NameEntry>, f32)> {
 		let mut ret : Vec::<&NameEntry> = vec![];
 
 		let mut dists : Vec::<f32> = vec![];
@@ -168,7 +155,7 @@ impl MapperEntry{
 			}
 			1 =>{
 				//eprintln!("I find exactly one!");
-				Some(ret)
+				Some((ret, min_dist))
 			},
 			len =>{
 				let mut ret2: Vec::<&NameEntry> = vec![];
@@ -179,7 +166,7 @@ impl MapperEntry{
 					
 				}
 				//eprintln!("I found multiple and {:?} with the lowest difference {}",ret2, min_dist );
-				Some(ret2)
+				Some((ret2, min_dist))
 			}
 		}
 
