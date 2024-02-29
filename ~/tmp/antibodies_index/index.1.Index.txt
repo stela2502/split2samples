@@ -1,3 +1,0 @@
-version: 6
-seq_len: 32
-with_data: 0

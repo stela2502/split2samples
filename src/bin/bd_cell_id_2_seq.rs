@@ -19,7 +19,7 @@ fn main() {
 	let cells = CellIds::new(&opts.version);
 	let seq: Vec<u64> = cells.to_sequence( opts.id );
 
-	let mut info = format!("The sequence is:\n");
+	let mut info = "The sequence is:\n".to_string();
 
 	let mut s = String::from("");
 	let tool = IntToStr::new( b"AAAAAAAAA".to_vec(), 9 );

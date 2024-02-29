@@ -69,19 +69,19 @@ impl GeneFamily{
 	                        },
 	                        None => {
 	                            //missing_chr.insert( gene.chrom.to_string() );
-	                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+	                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom );
 	                        }
 	                    }
 	                }else {
 	                    match seq_records.get( &format!("chr{}", &gene.chrom.to_string()) ){
-	                        Some(seq) => {
-	                            let _gene_id = gene.add_to_index( seq, index, max_area_loc);
-	                            
+	                        Some(_seq) => {
+	                            //let gene_id = gene.add_to_index( seq, index, max_area_loc);
+	                      
 	                            //println!("The genes detected: {:?}", index.names_store );
 	                        },
 	                        None => {
 	                            //missing_chr.insert( gene.chrom.to_string() );
-	                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+	                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom );
 	                        }
 	                    }
 	                }

@@ -14,7 +14,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position() {
-      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
       if let Some( ( cellid, second_seq) ) = tool.seq_at_position(0){
          let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
          //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
@@ -28,7 +28,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position_smaller_u64() {
-      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGA".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGA".to_vec(), 32);
       if let Some( ( cellid, second_seq) ) = tool.seq_at_position(0){
          let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
          //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
@@ -42,7 +42,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position_start_3() {
-      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
       if let Some( ( cellid, second_seq) ) = tool.seq_at_position(3){
          let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
          //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
@@ -56,7 +56,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position_out_of_range() {
-      let mut tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
       match tool.seq_at_position(70){
          Some( ( cellid, second_seq) ) => panic!("expected None for an out of range id! And got {cellid} and {second_seq}"),
          None => assert!(true),

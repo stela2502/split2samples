@@ -97,7 +97,7 @@ impl MappingInfo{
 	pub fn stop_ticker ( &mut self ) -> ( u128, u128, u128, u128 ) {
 		let ret = MappingInfo::split_duration( self.tmp_counter.unwrap_or( SystemTime::now() ).elapsed().unwrap() );
 		self.tmp_counter = Some( SystemTime::now() );
-		return ret
+		ret
 	}
 
 	pub fn stop_single_processor_time ( &mut self ) {
@@ -117,7 +117,7 @@ impl MappingInfo{
 
 	pub fn elapsed_time_split ( &self ) -> ( u128, u128, u128, u128 ){
 		let elapsed = self.absolute_start.elapsed().unwrap();
-		return MappingInfo::split_duration( elapsed )
+		MappingInfo::split_duration( elapsed )
 	}
 
 	pub fn now (&self) -> String{
@@ -140,7 +140,7 @@ impl MappingInfo{
         let min = milli % 60;
         milli= (milli -min) /60;
 
-        return (milli, min, sec, mil )
+        (milli, min, sec, mil )
 
     }
 
@@ -250,7 +250,7 @@ impl MappingInfo{
 	    	+format!(     "total      reads  : {} reads\n", self.total ).as_str()
 	    	+"\ncollected read counts:\n"
 	    	+self.read_types_to_string(vec!["expression reads", "antibody reads", "sample reads"]).as_str()
-	    	+format!(     "\nreported UMI counts:\n" ).as_str()
+	    	+"\nreported UMI counts:\n"
 	    	+format!(     "expression reads  : {} UMIs ({:.2}% of cellular)\n", reads_genes, (reads_genes as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "antibody reads    : {} UMIs ({:.2}% of cellular)\n", reads_ab, (reads_ab as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
 	    	+format!(     "sample reads      : {} UMIs ({:.2}% of cellular)\n", reads_samples, (reads_samples as f32 / self.cellular_reads as f32) * 100.0 ).as_str()
@@ -259,7 +259,7 @@ impl MappingInfo{
 	   		+"timings:\n";
 	   	result += &self.program_states_string();
 	   	self.write_to_log( result.clone() );
-        return result
+        result
 	}
 	
 }

@@ -54,11 +54,11 @@ impl Iterator for IntToStr {
         if let Some((cell_id, second_seq)) = result {
             // Advance to the next position
             self.current_position += 8;
-            return Some((cell_id, second_seq));
+            Some((cell_id, second_seq))
         } else {
             // If the shift is 7, stop the iteration - we reached the end
             if (self.current_position % 8) + self.step_size >= 8  {
-                return None;
+                return None
             }
             // Otherwise, move to the next position
             self.current_position = (self.current_position % 8) + self.step_size;
@@ -69,11 +69,11 @@ impl Iterator for IntToStr {
 	        if let Some((cell_id, second_seq)) = result {
 	            // Advance to the next position
 	            self.current_position += 8;
-	            return Some((cell_id, second_seq));
+	            Some((cell_id, second_seq))
 	        } else {
 	        	// reset the iterator for the next use
 	        	self.current_position = 0;
-	            return None
+	            None
 	        }
         }
     }
@@ -114,7 +114,7 @@ impl IntToStr {
 		};
 
 		ret.regenerate();
-		return ret
+		ret
 	}
 
 	pub fn step_size( &mut self, size:usize ) {
@@ -456,7 +456,7 @@ impl IntToStr {
 
 	/// regenerate from the long_term_storage
 	pub fn deep_refresh(&mut self ){
-		self.storage = self.long_term_storage.iter().copied().collect();
+		self.storage = self.long_term_storage.to_vec();
 		self.regenerate();
 	}
 
@@ -505,8 +505,8 @@ impl IntToStr {
 	    let array = km.to_le_bytes();
 	    let mut data: String = "".to_string();
 
-	    self.u8_array_to_str( kmer_size, (&array).to_vec(), &mut data);
-	    return data
+	    self.u8_array_to_str( kmer_size, array.to_vec(), &mut data);
+	    data
 	}
 
 	/// <unsigned_int>_to_str functions do exactly that.
@@ -516,13 +516,13 @@ impl IntToStr {
 
 	    let array = km.to_le_bytes();
 
-	    self.u8_array_to_str( kmer_size, (&array).to_vec(), data)
+	    self.u8_array_to_str( kmer_size, array.to_vec(), data)
 	}
 	pub fn u16_to_str ( &self, kmer_size:usize, km:&u16,  data:&mut String ){
 
 	    let array = km.to_le_bytes();
 
-	    self.u8_array_to_str( kmer_size, (&array).to_vec(), data)
+	    self.u8_array_to_str( kmer_size, array.to_vec(), data)
 	}
 
 
@@ -536,11 +536,11 @@ impl IntToStr {
 			i += 4;
 			if i >= bases {
 				//eprintln!("decoding {} bits of this number: {:b}", bases +4 - i, u8_4bp);
-				self.u8_to_str( bases +4 - i, &u8_4bp, data );
+				self.u8_to_str( bases +4 - i, u8_4bp, data );
 				break;
 			}else {
 				//println!("decoding 4 bits of this number: {:b}", u8_4bp);
-				self.u8_to_str( 4, &u8_4bp,  data );
+				self.u8_to_str( 4, u8_4bp,  data );
 			}
 		}
 	}
@@ -568,18 +568,16 @@ impl IntToStr {
 	pub fn u8_array_to_str ( &self, kmer_size:usize, u8_rep:Vec::<u8>,  data:&mut String ){
 
 		let mut i = 0;
-		let mut u8_4bp:u8;
 
-		for id in 0..u8_rep.len(){
+		for u8_4bp in &u8_rep {
 			i += 4;
-			u8_4bp =u8_rep[id];
 			if i >= kmer_size {
 				//println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);
-				self.u8_to_str( kmer_size +4 -i, &u8_4bp, data );
+				self.u8_to_str( kmer_size +4 -i, u8_4bp, data );
 				break;
 			}else {
 				//println!("decoding 4 bits of this number: {:b}", u8_4bp);
-				self.u8_to_str( 4, &u8_4bp,  data );
+				self.u8_to_str( 4, u8_4bp,  data );
 			}
 		}
 	}
@@ -589,7 +587,7 @@ impl IntToStr {
 	pub fn mask_u64( &self, seq:&u64 ) ->u64{
 		//let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_size )));
 		//println!("I have the mask {:b}", self.mask);
-        return seq & self.mask
+        seq & self.mask
 	}
 
 	/// This will mask the last bp by 'A' or #b00 and only return bp length usabel info.
@@ -598,7 +596,7 @@ impl IntToStr {
 			return *seq;
 		}
 		let mask = !0u64 >> ( (32 - bp )  * 2) as u32;
-		return seq & mask
+		seq & mask
 	}
 
 

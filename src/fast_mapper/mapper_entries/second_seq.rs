@@ -59,7 +59,7 @@ impl BinaryMatcher for SecondSeq {
     fn to_string(&self) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
-        for i in 0..self.1 {
+        for i in 0..self.1.min(32) {
             // Use a mask (0b11) to extract the least significant 2 bits
             let ch = match (self.0 >> (i * 2)) & 0b11 {
                 0b00 => "A",
@@ -80,7 +80,7 @@ impl BinaryMatcher for SecondSeq {
     fn tri_nuc_tab (&self ) -> Vec<i8>{
         let mut sum = vec![0_i8;64];
 
-        for i in 0..(self.1-2){
+        for i in 0..self.1.min(29){
             let a = (self.0 >> (i * 2)) & 0b111111;
             sum[a as usize] +=1;
         }
@@ -91,7 +91,7 @@ impl BinaryMatcher for SecondSeq {
     fn di_nuc_tab (&self ) -> Vec<i8>{
         let mut sum = vec![0_i8;16];
 
-        for i in 0..(self.1-1){
+        for i in 0..self.1.min(30){
             let a = (self.0 >> (i * 2)) & 0b1111;
             sum[a as usize] +=1;
         }
@@ -99,14 +99,12 @@ impl BinaryMatcher for SecondSeq {
     }
 
     fn tri_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
-        let mut size = self.min_length( other );
-        if size == 32{
-            size = 30
-        }
+        let size = self.min_length( other );
+
         let mut a_sum = vec![0_i8;64];
         let mut b_sum = vec![0_i8;64];
 
-        for i in 0..size{
+        for i in 0..size.min(29){
             let a = (self.0 >> (i * 2)) & 0b111111;
             let b = (other.0 >> (i * 2)) & 0b111111;
             a_sum[a as usize] +=1;
@@ -120,14 +118,12 @@ impl BinaryMatcher for SecondSeq {
     }
 
     fn di_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
-        let mut size = self.min_length( other );
-        if size == 32{
-            size = 31
-        }
+        let size = self.min_length( other );
+
         let mut a_sum = vec![0_i8;16];
         let mut b_sum = vec![0_i8;16];
 
-        for i in 0..size{
+        for i in 0..size.min(30){
             let a = (self.0 >> (i * 2)) & 0b1111;
             let b = (other.0 >> (i * 2)) & 0b1111;
             a_sum[a as usize] +=1;
@@ -145,7 +141,7 @@ impl BinaryMatcher for SecondSeq {
     /// for sequences shorter than 15 bp this fails and returns 100.0
     fn needleman_wunsch(&self, other: &SecondSeq ) -> f32 {
 
-        let size = self.min_length(other);
+        let size = self.min_length(other).min(33);
 
         if size < 15  || self.tri_nuc_abs_diff(other) > 0.6{
             return 100.0
@@ -331,15 +327,14 @@ impl SecondSeq {
     /// returns the minimal size the two SecondSeq obejcts are defined for
     /// Something between 32 and 0 bp.
     pub fn min_length( &self, other: &SecondSeq) -> usize {
-        let size:usize;
+
         if other.1 > self.1{
-            size = self.1 as usize;
+            self.1 as usize
             //mask = (1 << (self.1 as u64) *2 ) - 1;
         }else {
-            size = other.1 as usize;
+            other.1 as usize
             //mask = (1 << (other.1 as u64) *2 ) - 1;
         }
-        return size
     }
 
     
@@ -359,7 +354,7 @@ impl SecondSeq {
     pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
 
         //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
-        return self.needleman_wunsch( other ) <= max_dist.try_into().unwrap()
+        self.needleman_wunsch( other ) <= max_dist.try_into().unwrap()
     }
 
     

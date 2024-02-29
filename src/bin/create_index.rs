@@ -89,12 +89,12 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
 
 
     if ! gtf.ends_with(".gz") {
-        panic!("Please gzip your gtf file - thank you! {}", gtf.to_string());
+        panic!("Please gzip your gtf file - thank you! {}", gtf );
     }
 
-    let f1 = match File::open( &gtf ){
+    let f1 = match File::open( gtf ){
         Ok(file) => file,
-        Err(err) => panic!("The file {} does not exists: {err}", &gtf ),
+        Err(err) => panic!("The file {} does not exists: {err}", gtf ),
     };
     let file1 = GzDecoder::new(f1);
     let reader = BufReader::new( file1 );
@@ -107,7 +107,7 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
 
     for rec in reader.lines() {
 
-        let line = rec.ok().expect("Error reading record.");
+        let line = rec.expect("Error reading record.");
 
         let parts: Vec<String> = line.split('\t').map(|s| s.to_string()).collect();
         if parts.len() < 8{
@@ -118,14 +118,13 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
             // capture the parts I need using my regexp modules
             if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
                 gene_name = captures.get(1).unwrap().as_str().to_string();
-            }else {
-                if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
-                    continue; // this likely clutters up the data anyhow.
-                }
-                else {
-                    panic!("I could not identify a gene_name in the attributes {:?}", &parts[8].to_string() );
-                }
+            }else if let Some(_captures) = re_gene_id.captures( &parts[8].to_string() ){
+                continue; // this likely clutters up the data anyhow.
             }
+            else {
+                panic!("I could not identify a gene_name in the attributes {:?}", &parts[8] );
+            }
+            
             // if let Some(captures) = re_gene_id.captures( &parts[8].to_string() ){
             //     gene_id = captures.get(1).unwrap().as_str().to_string();
             // }else {
@@ -134,7 +133,7 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
             if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
                 transcript_id = captures.get(1).unwrap().as_str().to_string();
             }else {
-                panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8].to_string() );
+                panic!("I could not identify a transcript_id in the attributes {:?}", &parts[8] );
             }
             
             // and add a gene
@@ -149,13 +148,13 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
             if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
                 transcript_id = captures.get(1).unwrap().as_str().to_string();
             }else {
-                eprintln!("I could not identify a gene_id in the attributes {:?}", &parts[8].to_string() );
+                eprintln!("I could not identify a gene_id in the attributes {:?}", &parts[8] );
                 continue;
             }
             // and add an exon
             match genes.get_mut( &transcript_id.to_string() ){
                 Some(gene) => gene.add_exon( parts[3].to_string(), parts[4].to_string() ),
-                None => eprintln!( "ignoring transcript! ({})", transcript_id.to_string())
+                None => eprintln!( "ignoring transcript! ({})", transcript_id  )
             }
         }
 
@@ -192,17 +191,17 @@ fn process_genes_multi ( genes: &[Gene], index: &mut FastMapper ,
                             //eprintln!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
-                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom );
                         }
                     }
                 }else {
-                    match seq_records.get( &format!("chr{}", &gene.chrom.to_string()) ){
+                    match seq_records.get( &format!("chr{}", &gene.chrom ) ){
                         Some(seq) => {
                             gene.add_to_index( seq, index, COVERED_AREA );
                             //println!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
-                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom.to_string() );
+                            eprintln!("I do not have the sequence for the chromosome {}", gene.chrom );
                         }
                     }
 
@@ -216,7 +215,7 @@ fn process_genes_multi ( genes: &[Gene], index: &mut FastMapper ,
 
 // Function to check if a file exists
 fn check_file_existence(file_path: &str, option: &str, errors: &mut Vec<String>) {
-    if !fs::metadata(file_path).is_ok() {
+    if fs::metadata(file_path).is_err() {
         errors.push(format!("Option {option} - File not found: {file_path}"));
     }
 }
@@ -260,13 +259,11 @@ fn main() {
         } else {
             println!("New index directory created successfully!");
         }
-    }else {
-        if let Err(err) = fs::create_dir_all(&opts.outpath) {
-            eprintln!("Error creating directory: {}", err);
-            std::process::exit(1);
-        } else {
-            println!("New index directory created successfully!");
-        }
+    }else if let Err(err) = fs::create_dir_all(&opts.outpath) {
+        eprintln!("Error creating directory: {}", err);
+        std::process::exit(1);
+    } else {
+        println!("New index directory created successfully!");
     }
 
     let log_file_str = PathBuf::from(&opts.outpath).join(
@@ -325,7 +322,7 @@ fn main() {
         eprint!("'{}', ", std::str::from_utf8(id).unwrap() );
         seq_records.insert( std::str::from_utf8( id ).unwrap().to_string() , seqrec.seq().to_vec());
     }
-    eprint!("\n");
+    eprintln!();
 
 
 
@@ -469,7 +466,7 @@ fn main() {
 
     if opts.text{
         index.write_index_txt( opts.outpath.to_string() ).unwrap();
-        eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.",opts.outpath.to_string());
+        eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.",opts.outpath );
     }
 
     //index.write_index_txt( opts.outpath.to_string() ).unwrap();

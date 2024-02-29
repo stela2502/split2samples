@@ -48,7 +48,7 @@ pub struct GeneIds{
 
 impl Index for GeneIds {
 
-    fn add(&mut self, seq: &Vec<u8>, name: String, _class_ids: Vec<String>) -> usize {
+    fn add(&mut self, seq: &[u8], name: String, _class_ids: Vec<String>) -> usize {
         
         if seq.len() > self.seq_len{
             self.seq_len = seq.len() 
@@ -116,6 +116,7 @@ impl Index for GeneIds {
         //println!( "{} kmers for gene {}", total, name );
 
     }
+
 
     fn get(&self, seq: &[u8]) -> Option<usize> {        
         // let min_value = 2;
@@ -192,7 +193,7 @@ impl Index for GeneIds {
         self.names.keys().cloned().collect()
     }
 
-    fn to_header_n(&self, names: &Vec<String>) -> String {
+    fn to_header_n(&self, names: &[String]) -> String {
         let mut ret= Vec::<std::string::String>::with_capacity( names.len() +2 );
         //println!( "I get try to push into a {} sized vector", self.names.len());
         for name in names {

@@ -65,7 +65,7 @@ impl Hash for NameEntry {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for NameEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "NameEntry( key: {}, data len {} )", self.key, self.data.len() )
+        write!(f, "NameEntry linking to {} gene_ids: {:?}", self.data.len(), self.data )
     }
 }
 
@@ -208,9 +208,6 @@ impl NameEntry{
 		self.data.clone()
 	}
 
-	pub fn to_string( &self ) -> String {
-		format!("NameEntry linking to {} gene_ids: {:?}", self.data.len(), self.data )
-	}
 
 	pub fn contains(&self, gene_id:usize) -> bool{
 		for i in 0..self.data.len(){

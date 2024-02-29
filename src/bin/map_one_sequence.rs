@@ -185,7 +185,7 @@ fn main() {
 	let mut collected:HashMap::<usize, usize>= HashMap::new();
 
 	println!("\nChecking antibodies:");
-	let mut ok = match antibodies.get( &opts.dna.as_bytes(), &mut tool ){
+	let mut ok = match antibodies.get( opts.dna.as_bytes(), &mut tool ){
 		Ok(gene_ids) =>{
         	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
         	//eprintln!("I got an ab id {gene_id}");
@@ -199,7 +199,7 @@ fn main() {
         				},
         				None => {
 		                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-		                    collected.insert( gid.clone(), 1);
+		                    collected.insert( gid, 1);
 		                },
 		            };
 		    }
@@ -211,7 +211,7 @@ fn main() {
 	};
 	if ! ok{
 		println!("\nChecking samples:");
-		ok = match samples.get( &opts.dna.as_bytes(),  &mut tool ){
+		ok = match samples.get( opts.dna.as_bytes(),  &mut tool ){
 			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");
@@ -225,7 +225,7 @@ fn main() {
 	        				},
 	        				None => {
 			                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-			                    collected.insert( gid.clone(), 1);
+			                    collected.insert( gid, 1);
 			                },
 			            };
 			    }
@@ -239,7 +239,7 @@ fn main() {
 
 	if ! ok{
 		println!("\nChecking genes:");
-		let _ = match genes.get( &opts.dna.as_bytes(),  &mut tool ){
+		let _ = match genes.get( opts.dna.as_bytes(),  &mut tool ){
 			Ok(gene_ids) =>{
 	        	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	        	//eprintln!("I got an ab id {gene_id}");
@@ -253,7 +253,7 @@ fn main() {
 	        				},
 	        				None => {
 			                    //eprintln!( "Adding a new gene {} with count 1 here!", gid.0);
-			                    collected.insert( gid.clone(), 1);
+			                    collected.insert( gid, 1);
 			                },
 			            };
 			    }

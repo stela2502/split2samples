@@ -13,7 +13,6 @@ use std::time::SystemTime;
 use std::fs::File;
 
 use rustody::ofiles::Ofiles;
-use num_cpus;
 
 
 // use std::collections::HashSet;
@@ -96,7 +95,7 @@ fn main() {
     
     let opts: Opts = Opts::parse();
 
-    if ! fs::metadata(&opts.outpath).is_ok() {
+    if fs::metadata(&opts.outpath).is_err() {
         if let Err(err) = fs::create_dir_all(&opts.outpath) {
             eprintln!("Error creating directory {}: {}", &opts.outpath, err);
         } else {
