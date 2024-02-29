@@ -152,8 +152,8 @@ impl AnalysisTE{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
-	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	sample_names.push( format!("Sample{id}") );
+	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_hs"),EMPTY_VEC.clone() );
+	        	sample_names.push( format!("SampleTag{id:02}_hs") );
 	        	id +=1;
 	        }
 	    }
@@ -182,8 +182,8 @@ impl AnalysisTE{
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	sample_names.push( format!("Sample{id}") );
+	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"),EMPTY_VEC.clone() );
+	        	sample_names.push( format!("SampleTag{id:02}_mm") );
 	        	id +=1;
 	        }
 

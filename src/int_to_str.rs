@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
-use crate::cellids10x::cellid10x::CellId10x;
-use crate::errors::SeqError;
-use crate::traits::BinaryMatcher;
+//use crate::errors::SeqError;
+//use crate::traits::BinaryMatcher;
 
 // logics copied from https://github.com/COMBINE-lab/kmers/
 pub type Base = u8;
@@ -139,10 +138,10 @@ impl IntToStr {
     /// returns true if the sequence passes, false if there is a problem like N nucleotides
     /// or too low sequences variability in the first 8bp
     /// or None if the sequence is at it's end.
-    fn seq_ok(&mut self, short:bool ) -> Result<(u16, SecondSeq), SeqError > {
+   /* fn seq_ok(&mut self, short:bool ) -> Result<(u16, SecondSeq), SeqError > {
 
-        let mut start = self.lost * 4;
-		let mut to = start + 8;
+        let start = self.lost * 4;
+		let to = start + 8;
 
         self.checker.clear();
 
@@ -233,6 +232,7 @@ impl IntToStr {
     		},
     	}
     }
+    */
 
     pub fn print_second_seq (&self, first:u16, second_seq: SecondSeq ){
     	let mut small_seq :String = Default::default();
@@ -253,7 +253,7 @@ impl IntToStr {
     	
     	// Determine the range of bytes to consider
     	let start_id = start / 4;
-    	let mut stop:u8;
+    	let stop:u8;
     	let shift_amount = (start % 4) * 2;
 
     	// keep the later check from getting negative

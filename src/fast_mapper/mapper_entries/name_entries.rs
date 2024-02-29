@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use core::fmt;
-use std::mem;
+//use std::mem;
 
 use crate::fast_mapper::mapper_entries::SecondSeq;
 

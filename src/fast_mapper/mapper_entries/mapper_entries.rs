@@ -102,17 +102,26 @@ impl MapperEntry{
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
 	pub fn get( &self,seq:&SecondSeq ) -> Option<(Vec<&NameEntry>, f32)> {
-
-		let mut ret : Vec::<&NameEntry> = vec![];
 		
-		let new_entry = NameEntry::new( *seq );
-
+		
+		let ret:Vec::<&NameEntry> = self.map.iter().filter_map( |(key, name_entry)| 
+				if key.same( &seq ){
+					Some(name_entry)
+				}
+				else {
+					None
+				} 
+			).collect();
+		
+		/*
+		let mut ret : Vec::<&NameEntry> = vec![];
 		for (key, name_entry) in self.map.iter() {
 			if key.same( &seq ) {
 				//println!("the id {seq} has a 100% matching sequence: {key} ");
 				ret.push(name_entry);
 			}
 		}
+		*/
 		if ret.len() == 1 {
 			Some((ret, 0.0))
 		}
@@ -129,7 +138,7 @@ impl MapperEntry{
 
 		let mut dists : Vec::<f32> = vec![];
 		let mut min_dist: f32 = f32::MAX;
-		for (i, name_entry) in self.map.iter() {
+		for (_i, name_entry) in self.map.iter() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			//let dist = self.map[i].0.hamming_distance( seq );
 			let dist = name_entry.key.needleman_wunsch( seq );

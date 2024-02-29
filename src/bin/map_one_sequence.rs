@@ -91,7 +91,7 @@ fn main() {
 	    }
     }
 
-	let mut gene_names = genes.get_all_gene_names();
+	//let gene_names = genes.get_all_gene_names();
 
     eprintln!("Changing the expression start gene id to {}", genes.last_count );
 	antibodies.change_start_id( genes.last_count);
@@ -109,7 +109,7 @@ fn main() {
 	                	if let Some(id) = st.to_string().split('|').next(){
 	                		seq_temp = seqrec.seq().to_vec();
 	                		//seq_temp.reverse();
-		                    antibodies.add_small( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
+		                    antibodies.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
 	                    	//gene_names.push( id.to_string() );
 	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 	                	};
@@ -141,7 +141,7 @@ fn main() {
 	        	//seq.reverse();
 	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	seq_ext.extend_from_slice( seq );
-	        	samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq_ext, format!("SampleTag{id:02}_hs"),EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -160,7 +160,7 @@ fn main() {
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add_small( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"),EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }

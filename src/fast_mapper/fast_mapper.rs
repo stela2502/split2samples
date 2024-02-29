@@ -15,8 +15,6 @@ use rayon::prelude::*; // for the make_index_te_ready
 
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 
-use regex::Regex;
-
 use crate::ofiles::Ofilesr;
 use crate::ifiles::Ifilesr;
 use crate::fast_mapper::mapper_entries::MapperEntry;
@@ -343,7 +341,7 @@ impl FastMapper{
     }
 
 
-    pub fn add_small(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
+    /*pub fn add_small(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
 
 
         let mut classes_vec = vec![name.clone()];
@@ -425,7 +423,7 @@ impl FastMapper{
         //self.with_data += i;
         //println!( "{} kmers for gene {} ({})", total, &name.to_string(), gene_id );
         gene_id
-    }
+    }*/
 
 
     /// The add function returns the intern id. 
@@ -682,7 +680,7 @@ impl FastMapper{
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
 
         // entries is a Option<(u16, u64, usize)
-        'main :while let Some(entries) = tool.next(){
+        while let Some(entries) = tool.next(){
             if entries.0 == 65535{
                 continue;
             }
@@ -770,7 +768,7 @@ impl FastMapper{
         let mut small_seq :String = Default::default();
         let mut large_seq: String = Default::default();*/
 
-        'main :while let Some(entries) = tool.next(){
+        while let Some(entries) = tool.next(){
 
             //tmp = tmp + &format!("iteration {i} ");
             //i +=1;

@@ -81,12 +81,12 @@ struct Opts {
     umi_count: u8,
 */
 
-// Function to check if a file exists
+/*// Function to check if a file exists
 fn check_file_existence(file_path: &str, option: &str, errors: &mut Vec<String>) {
     if !fs::metadata(file_path).is_ok() {
         errors.push(format!("Option {option} - File not found: {file_path}"));
     }
-}
+}*/
 
 // the main function nowadays just calls the other data handling functions
 fn main() {
