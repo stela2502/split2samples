@@ -642,7 +642,7 @@ impl FastMapper{
         }
 
         if let Some(value) = mean_value{
-            if value > 0.2 {
+            if value > 0.4 {
                 return false
             }
         }else {
