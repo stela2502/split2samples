@@ -93,7 +93,7 @@ impl Gene{
 	/// to fill in the FastMapper index.
 	/// the [u8] we get here has to be utf8 encoded!
 	/// not 2bit binaries!
-	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper, covered_area:usize ){
+	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper, covered_area:usize, print: bool ){
 
 
 		if let Some(mrna) = self.to_mrna(seq.to_owned()) {
@@ -106,12 +106,16 @@ impl Gene{
 		    if mrna.len() > covered_area{
 				//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna[ 0..100]).expect("Invalid UTF-8") );
 				index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string(), self.ids.clone() );
-				//println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
+				if print {
+					println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
+				}
 			}
 			else {
 				//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna).expect("Invalid UTF-8") );
 				index.add( &mrna , self.name.to_string(), self.ids.clone() );
-				//println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
+				if print {
+					println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
+				}
 			}
 		} else {
 		    eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name, self.ids );
@@ -127,11 +131,15 @@ impl Gene{
 					if nascent.len() > covered_area{
 						//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent[ 0..100]).expect("Invalid UTF-8") );
 						index.add( &nascent[ nascent.len()-covered_area..].to_owned() , self.name.to_string() + &addon, self.ids.clone() );
-						//println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent[ nascent.len()-covered_area.. ].to_owned()  ).unwrap() );
+						if print {
+							println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent[ nascent.len()-covered_area.. ].to_owned()  ).unwrap() );
+						}
 					}else{
 						//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent).expect("Invalid UTF-8") );
 						index.add( nascent , self.name.to_string() + &addon, self.ids.clone()  );
-						//println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent.to_owned()  ).unwrap() );
+						if print {
+							println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent.to_owned()  ).unwrap() );
+						}
 					}
 				},
 				None=> {

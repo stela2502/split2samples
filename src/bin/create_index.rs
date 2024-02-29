@@ -22,7 +22,7 @@ use std::io::BufRead;
 
 use flate2::read::GzDecoder;
 use std::collections::HashMap;
-//use std::collections::HashSet;
+use std::collections::HashSet;
 
 use rustody::mapping_info::MappingInfo;
 use rustody::ofiles::Ofiles;
@@ -73,6 +73,9 @@ struct Opts {
     /// the string to check for transcript levels names (transcript_id)
     #[clap(default_value="gene_name", long)]
     transcript: String,
+    /// report the expression for a set of genes?
+    #[clap(long)]
+    report4genes: Option<Vec<String>>,
 }
 
 /*
@@ -174,20 +177,21 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
 
 
 fn process_genes_multi ( genes: &[Gene], index: &mut FastMapper ,
-    seq_records: &HashMap< String, Vec<u8>>, chr:&Regex ){
+    seq_records: &HashMap< String, Vec<u8>>, chr:&Regex, genes2print: &HashSet<String> ){
     const COVERED_AREA:usize = 400; // cover 400 bp of the transcript
     for gene in genes {
+        let gene_name: String = gene.name.to_string();
         // Do something with the gene, e.g. remove it
         match seq_records.get( &gene.chrom.to_string() ){
             Some(seq) => {
-                gene.add_to_index( seq, index, COVERED_AREA );
+                gene.add_to_index( seq, index, COVERED_AREA, genes2print.contains( &gene_name ) );
                 //println!("The genes detected: {:?}", index.names_store );
             },
             None => {
                 if chr.is_match ( &gene.chrom.to_string() ){
                     match seq_records.get( &gene.chrom.to_string()[3..] ){
                         Some(seq) => {
-                            gene.add_to_index( seq, index, COVERED_AREA );
+                            gene.add_to_index( seq, index, COVERED_AREA, genes2print.contains( &gene_name ) );
                             //eprintln!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
@@ -197,7 +201,7 @@ fn process_genes_multi ( genes: &[Gene], index: &mut FastMapper ,
                 }else {
                     match seq_records.get( &format!("chr{}", &gene.chrom ) ){
                         Some(seq) => {
-                            gene.add_to_index( seq, index, COVERED_AREA );
+                            gene.add_to_index( seq, index, COVERED_AREA, genes2print.contains( &gene_name ) );
                             //println!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
@@ -305,6 +309,13 @@ fn main() {
     //         panic!("Error: {err:#?}" );
     //     }
     // };
+
+    let mut genes2print = HashSet::<String>::new();
+    if let Some(genes) = opts.report4genes {
+        for gene in genes{
+            genes2print.insert( gene.to_string() );
+        }
+    }
 
 
     // read the fasta data in!
@@ -434,7 +445,7 @@ fn main() {
             let mut idx = FastMapper::new( kmer_size,  reads_per_chunk, 0 );
             idx.tool.step_size(4);
             // Clone or create a new thread-specific report for each task      
-            process_genes_multi( data_split, &mut idx, &seq_records, &chr );
+            process_genes_multi( data_split, &mut idx, &seq_records, &chr, &genes2print );
             idx
 
         }) // Analyze each chunk in parallel

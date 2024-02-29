@@ -120,7 +120,7 @@ impl Analysis{
 	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
 
 	    let mut seq_temp:Vec::<u8>;*/
-
+	    genes.tool.step_size(3);
 	    if let Some(ex) = expression {
 	    	if Path::new(&ex).exists(){
 

@@ -32,7 +32,7 @@ impl MapperEntry{
 			map,
 			only :0,
 			hamming_cut :2,
-			needleman_wunsch_cut: 0.3 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
+			needleman_wunsch_cut: 0.25 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
 		}
 	}
 

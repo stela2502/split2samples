@@ -57,14 +57,14 @@ impl GeneFamily{
 	            Some(seq) => {
 	            	//println!( "Trying to add a gene to the index with a total seq length of {} and name {}", seq.len(), gene.name );
 	            	//println!( "gene start {} and end {}", gene.start, gene.end );
-	                gene.add_to_index( seq, index, max_area_loc );
+	                gene.add_to_index( seq, index, max_area_loc, false );
 	                //println!("The genes detected: {:?}", index.names_store );
 	            },
 	            None => {
 	                if chr.is_match ( &gene.chrom.to_string() ){
 	                    match seq_records.get( &gene.chrom.to_string()[3..] ){
 	                        Some(seq) => {
-	                            gene.add_to_index( seq, index, max_area_loc );
+	                            gene.add_to_index( seq, index, max_area_loc, false );
 	                            //println!("The genes detected: {:?}", index.names_store );
 	                        },
 	                        None => {
