@@ -76,7 +76,7 @@ impl SingleCellData{
 
     fn to_key(&self, name: &u64 ) -> usize{
         // 48 = 64 -16
-        return (*name >> 54) as usize;
+        (*name >> 54) as usize
     }
 
     fn values(&self) -> impl Iterator<Item = &CellData> {
@@ -369,7 +369,7 @@ impl SingleCellData{
                     }
                     for (id, int_id) in gene_ids.iter().enumerate() {
                     //for name in names {
-                        n = *cell_obj.total_reads.get( &int_id  ).unwrap_or(&0);
+                        n = *cell_obj.total_reads.get( int_id  ).unwrap_or(&0);
                         if n > 0{
                             entry +=1;
                             if ! names4sparse.contains_key ( &names[id] ){
@@ -442,10 +442,10 @@ impl SingleCellData{
                 for key in chunk {
                     if let Some(cell_obj) = &self.get(key) {
                         let n = cell_obj.n_umi( genes, &self.genes_to_print );
-                        ret.push( (key.clone(), n >= min_count) );
+                        ret.push( (*key, n >= min_count) );
                     }
                 }
-                return ret
+                ret
             })
             .collect();
 
@@ -468,7 +468,7 @@ impl SingleCellData{
 
         }
         
-        let ncell_and_entries = self.update_genes_to_print( &genes, &self.genes_to_print.clone() );
+        let ncell_and_entries = self.update_genes_to_print( genes, &self.genes_to_print.clone() );
         self.passing = ncell_and_entries[0];
 
         let ret = format!("{} {} {}", &self.genes_to_print.len(), ncell_and_entries[0], ncell_and_entries[1] );
@@ -480,7 +480,7 @@ impl SingleCellData{
         let mut count = 0;
 
         for cell_obj in self.values() {
-            count += cell_obj.n_reads( &genes, names )
+            count += cell_obj.n_reads( genes, names )
         }
         count
     }

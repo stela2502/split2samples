@@ -120,7 +120,7 @@ impl FastMapper{
             mask,
             pos,
             neg,
-            offset: offset, // just to be on the save side here.
+            offset, // just to be on the save side here.
             report4:None,
         }
     }
@@ -241,7 +241,7 @@ impl FastMapper{
                 self.names_count.push( 0 );
                 self.last_count += 1;
             }
-            let id = self.get_id( name.to_string() ).clone();
+            let id = self.get_id( name.to_string() );
             ret.push( id  );
         }
         ret
@@ -256,7 +256,7 @@ impl FastMapper{
                 self.names_count.push( 0 );
                 self.last_count += 1;
             }
-            let id = self.get_intern_id( name.to_string() ).clone();
+            let id = self.get_intern_id( name.to_string() );
             ret.push( id );
         }
         ret
@@ -271,14 +271,11 @@ impl FastMapper{
             Some( id ) => id + self.offset,
             None => panic!("Gene {name} not defined in the GeneID object"),
         };
-        id.clone()
+        id
     }
 
     pub fn extern_id_for_gname ( &self, name:&str ) -> Option<usize> {
-        match self.names.get( name )  {
-            Some(id) => Some(id + self.offset),
-            None => None
-        }
+        self.names.get( name ).map(|id| id + self.offset)
     }
 
     fn get_intern_id( &self, name: String ) -> usize{
@@ -286,7 +283,7 @@ impl FastMapper{
             Some( id ) => id ,
             None => panic!("Gene {name} not defined in the GeneID object"),
         };
-        id.clone()
+        *id
     }
 
     pub fn get_name( &self, id:usize) -> String{
@@ -319,7 +316,7 @@ impl FastMapper{
             //println!("fast_mapper: I have {} -> {}",  name, self.names.len()-1);
 
         }
-        let gene_id = self.get_id( name.to_string() ).clone();
+        let gene_id = self.get_id( name.to_string() );
         let classes =  self.ids_for_gene_names_mut( &ids );
 
         if ! self.mapper[initial_match].has_data() {
@@ -328,7 +325,6 @@ impl FastMapper{
         }
         if self.mapper[initial_match].add( secondary_match, ( gene_id, 0), classes ){
             self.pos += 1
-        }else{
         }
 
 
@@ -336,8 +332,8 @@ impl FastMapper{
     }
 
     pub fn fill_sequence_with_a( self, seq:&u64 ) -> u64{
-        let filled_sed = seq | (!self.mask & (0b11 << (2 * self.kmer_len )));
-        return filled_sed
+        
+        seq | (!self.mask & (0b11 << (2 * self.kmer_len )))
     }
 
 
@@ -445,7 +441,7 @@ impl FastMapper{
         // let mut long = String::from("");
 
         self.tool.from_vec_u8( seq.to_vec() );
-        while let Some(entries) = self.tool.next(){
+        for entries in self.tool.by_ref(){
 
             //println!("add -> I got the u16 {} and the u64 as {}",entries.0, entries.1);
             //tmp = tmp + format!("it {i} ");
@@ -579,7 +575,7 @@ impl FastMapper{
     }
 
     pub fn print( &self ){
-        if self.names.len() > 0 {
+        if !self.names.is_empty() {
             println!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
             println!("gene names like '{}'", self.names_store[self.names_store.len()-1]);
             println!("gene_ids range from {:?} to {:?}\n", self.names.values().min(), self.names.values().max());
@@ -589,7 +585,7 @@ impl FastMapper{
     }
 
     pub fn eprint( &self ){
-        if self.names.len() > 0 {
+        if !self.names.is_empty() {
             eprintln!("I have {} kmers for {} genes with {}% duplicate entries", self.with_data, self.names.len(), self.neg as f32 / (self.pos + self.neg) as f32 );
             eprintln!("gene names like '{}'", self.names_store[self.names_store.len()-1]);
             eprintln!("gene_ids range from {:?} to {:?}\n", self.names.values().min(), self.names.values().max());
@@ -599,7 +595,7 @@ impl FastMapper{
     }
 
     fn mean( numbers: &[f32] ) -> Option<f32>{
-        if numbers.len() == 0 {
+        if numbers.is_empty() {
             None
         }else {
             Some(numbers.iter().sum::<f32>() / numbers.len() as f32)
@@ -626,7 +622,7 @@ impl FastMapper{
         let mut most_matches = usize::MAX;
 
         for ((gene, _class), vec) in genes {
-            if let Some(mean_val) = Self::mean(&vec) {
+            if let Some(mean_val) = Self::mean(vec) {
                 if mean_val < mean_value.unwrap_or(f32::INFINITY) {
                     //println!("I got a new mean value: {mean_val} and gene {gene}");
                     min_genes.clear(); // Clear the previous min_genes
@@ -662,7 +658,7 @@ impl FastMapper{
             ret.push(gene_id);
             
         }
-        return true
+        true
     }
 
     pub fn get_strict(&self, seq: &[u8], tool: &mut IntToStr ) -> Result< Vec<usize>, MappingError >{ // gene_id, gene_level
@@ -680,12 +676,12 @@ impl FastMapper{
         let mut matching_geneids = Vec::<usize>::with_capacity(10);
 
         // entries is a Option<(u16, u64, usize)
-        while let Some(entries) = tool.next(){
+        for entries in tool.by_ref(){
             if entries.0 == 65535{
                 continue;
             }
 
-            if na == 10 && genes.len() == 0{
+            if na == 10 && genes.is_empty(){
                 match self.debug {
                     true => println!("get - I have no match after 10 oligo pairs - giving up"),
                     false => (),
@@ -723,7 +719,7 @@ impl FastMapper{
             },
             false => (),
         };
-        if genes.len() == 0 {
+        if genes.is_empty() {
             return Err(MappingError::NoMatch)
         }
         // check if there is only one gene //
@@ -735,7 +731,7 @@ impl FastMapper{
                 return Err(MappingError::MultiMatch)
             }
         }
-        return Err(MappingError::NoMatch)
+        Err(MappingError::NoMatch)
     }
 
 
@@ -768,12 +764,12 @@ impl FastMapper{
         let mut small_seq :String = Default::default();
         let mut large_seq: String = Default::default();*/
 
-        while let Some(entries) = tool.next(){
+        for entries in tool.by_ref(){
 
             //tmp = tmp + &format!("iteration {i} ");
             //i +=1;
 
-            if na == 10 && matching_geneids.len() == 0 {
+            if na == 10 && matching_geneids.is_empty() {
                 // This is obviousely not exisitingn in the index.
                 //println!("{tmp} - stopped after 10 failed matches\n");
                 match self.debug {
@@ -799,7 +795,7 @@ impl FastMapper{
                 }
                 i +=1;
 
-                if (i > 12) && genes.len() == 0 {
+                if (i > 12) && genes.is_empty() {
                     //tmp += "failing after 4 failed matches and no match at all;\n";
                     //println!("First four matches have not given anything! breaking!");
                     break;
@@ -883,7 +879,7 @@ impl FastMapper{
         };
         
 
-        if genes.len() == 0 {
+        if genes.is_empty() {
             //println!("{tmp} No gene found");
             //println!("Nothing found - really nothing?!");
             return Err(MappingError::NoMatch)
@@ -909,7 +905,7 @@ impl FastMapper{
         }
         //eprintln!("We got a mutlimatcher?! {matching_geneids:?}, {genes:?}");
         //println!("{tmp} multimapper?!");
-        return Err(MappingError::MultiMatch)
+        Err(MappingError::MultiMatch)
     }
 
     pub fn to_header( &self ) -> std::string::String {
@@ -1188,19 +1184,19 @@ impl FastMapper{
         let mut idx:usize;
 
         let version:u64 = self.version as u64;
-        match write!( ofile.buff1, "version: {}\n", version ){
+        match writeln!( ofile.buff1, "version: {}", version ){
             Ok(_) => (),
             Err(_err) => return Err::<(), &str>("version could not be written"),
         };
 
         let seq_len:u64 = self.kmer_len as u64;
-        match write!( ofile.buff1, "seq_len: {}\n", seq_len ){
+        match writeln!( ofile.buff1, "seq_len: {}", seq_len ){
             Ok(_) => (),
             Err(_err) => return Err::<(), &str>("seq_len could not be written"),
         };
 
         let with_data:u64 = self.with_data as u64;
-        match write!( ofile.buff1, "with_data: {}\n", with_data ){
+        match writeln!( ofile.buff1, "with_data: {}", with_data ){
             Ok(_) => (),
             Err(_err) => return Err::<(), &str>("with_data could not be written"),
         };

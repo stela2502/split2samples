@@ -40,7 +40,7 @@ impl CellIndex for CellIds10x{
             return Ok( (checked_cell, umi) )
         }
         //println!("We found a cellid {} and an umi {}", cell, umi);
-        return Err( CellIdError::NoMatch )
+        Err( CellIdError::NoMatch )
 
     }
 
@@ -64,7 +64,7 @@ impl  CellIds10x{
         9K-LT-march-2021.txt.gz     Single Cell 3' LT
         737k-fixed-rna-profiling.txt.gz     Fixed RNA Profiling (Present starting from Cell Ranger v7.0)
         */
-        let filename = match &*ver{
+        let filename = match ver{
             "Single Cell 3' v3" => "3M-febrary-2018.txt.gz",
             "Single Cell 3' v3.1" => "3M-febrary-2018.txt.gz",
             "Single Cell 3' HT v3.1" => "3M-febrary-2018.txt.gz",
@@ -133,14 +133,7 @@ impl  CellIds10x{
         }*/
 
         // Check if the sequence matches any possible cell tag
-        if let Some(cell_id) = self.possible.iter().find(|&&cell| cell.0 == sequence) {
-            // Add the detected cell ID to the detected set
-            //self.detected.insert(*cell_id);
-            // Return the sequence as u64
-            Some(cell_id.0)
-        } else {
-            None
-        }
+        self.possible.iter().find(|&&cell| cell.0 == sequence).map(|cell_id| cell_id.0)
     }
 
     fn read_sequences<R: BufRead>(reader: R, sequences: &mut Vec<CellId10x>, tool: &mut IntToStr) -> usize {

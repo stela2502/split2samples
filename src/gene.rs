@@ -114,7 +114,7 @@ impl Gene{
 				//println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
 			}
 		} else {
-		    eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name.to_string(), self.ids );
+		    eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name, self.ids );
 		}
 		let last_exon = match self.sense_strand{
 			true => self.exons.len()-1,
@@ -130,15 +130,14 @@ impl Gene{
 						//println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent[ nascent.len()-covered_area.. ].to_owned()  ).unwrap() );
 					}else{
 						//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent).expect("Invalid UTF-8") );
-						index.add( &nascent , self.name.to_string() + &addon, self.ids.clone()  );
+						index.add( nascent , self.name.to_string() + &addon, self.ids.clone()  );
 						//println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent.to_owned()  ).unwrap() );
 					}
 				},
 				None=> {
-					eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name.to_string(), self.ids );
-					return
+					eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name, self.ids );
 				}
-			};
+			}
 		}
 	}
 

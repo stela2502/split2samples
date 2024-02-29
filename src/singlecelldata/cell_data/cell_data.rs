@@ -14,6 +14,7 @@ use crate::fast_mapper::FastMapper;
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
 /// But I do not correct the UMIs here - even with sequencing errors 
 /// we should get a relatively correct picture as these folow normal distribution.
+#[derive(Default)]
 pub struct CellData{
     //pub kmer_size: usize,
     pub name: u64,
@@ -30,19 +31,7 @@ pub struct CellData{
     pub multimapper: BTreeMap<u64, (HashSet<u64>, Vec<usize>) >,
 }
 
-impl Default for CellData {
-    fn default() -> Self {
-        CellData {
-            name: 0,
-            genes: BTreeMap::new(),
-            genes_with_data: HashSet::new(),
-            total_reads: BTreeMap::new(),
-            passing: false,
-            total_umis: 0,
-            multimapper:BTreeMap::new(),
-        }
-    }
-}
+
 
 impl CellData{
     pub fn new(  name: u64 ) -> Self{
@@ -64,8 +53,8 @@ impl CellData{
     }
 
     pub fn split_ambient( &self, ambient:&AmbientRnaDetect ) -> (Self, Self){
-        let mut non_ambient_data = Self::new(self.name.clone());
-        let mut ambient_data = Self::new(self.name.clone());
+        let mut non_ambient_data = Self::new(self.name);
+        let mut ambient_data = Self::new(self.name);
 
         for (gene_hash, count) in &self.genes {
             if ambient.is_ambient(gene_hash) {
@@ -92,7 +81,7 @@ impl CellData{
         let cloned_genes: BTreeMap<GeneUmiHash , usize> = self
             .genes
             .iter()
-            .map(|(k, v)| (*k, v.clone())) // Clone each HashSet within the BTreeMap
+            .map(|(k, v)| (*k, *v)) // Clone each HashSet within the BTreeMap
             .collect();
 
         let cloned_genes_with_data: HashSet<String> = self.genes_with_data.clone();
@@ -222,7 +211,7 @@ impl CellData{
     }*/
 
     pub fn n_umi( &self, _gene_info:&FastMapper, _gnames: &Vec<String> ) -> usize {
-        return self.total_umis;
+        self.total_umis
 
         // let mut n = 0;
 
@@ -354,7 +343,7 @@ impl CellData{
         let gene_ids = gene_info.ids_for_gene_names( names );
         let mut dist2max = usize::MAX;
         for (i, id) in gene_ids.iter().enumerate(){
-            let n = *self.total_reads.get( &id  ).unwrap_or(&0);
+            let n = *self.total_reads.get( id  ).unwrap_or(&0);
             //println!("I collected expression for gene {}: n={}", name, n);
             if max < n {
                 max_name = names[i].to_string();

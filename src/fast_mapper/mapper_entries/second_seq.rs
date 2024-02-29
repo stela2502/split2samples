@@ -35,7 +35,7 @@ impl PartialEq for SecondSeq {
             mask = u64::MAX;
             // Rest of your code using the mask
         } else {
-            mask = (1 << (length as u64) *2 ) - 1;
+            mask = (1 << ((length as u64) *2) ) - 1;
         }
         //eprintln!("I'll compare {:b} to {:b}", (self.0 & mask) , (other.0 & mask));
         (self.0 & mask) == (other.0 & mask)
@@ -101,8 +101,8 @@ impl BinaryMatcher for SecondSeq {
     fn tri_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
         let size = self.min_length( other );
 
-        let mut a_sum = vec![0_i8;64];
-        let mut b_sum = vec![0_i8;64];
+        let mut a_sum = [0_i8; 64];
+        let mut b_sum = [0_i8; 64];
 
         for i in 0..size.min(29){
             let a = (self.0 >> (i * 2)) & 0b111111;
@@ -120,8 +120,8 @@ impl BinaryMatcher for SecondSeq {
     fn di_nuc_abs_diff( &self, other: &SecondSeq  ) -> f32 {
         let size = self.min_length( other );
 
-        let mut a_sum = vec![0_i8;16];
-        let mut b_sum = vec![0_i8;16];
+        let mut a_sum = [0_i8; 16];
+        let mut b_sum = [0_i8; 16];
 
         for i in 0..size.min(30){
             let a = (self.0 >> (i * 2)) & 0b1111;
@@ -228,7 +228,7 @@ impl BinaryMatcher for SecondSeq {
             }
         }
         //println!("hamming dist was {ret}");
-        return ret
+        ret
         
         /*
         // quite much slower!

@@ -407,7 +407,7 @@ impl AnalysisTE{
 	            },
 	            Err(_err) => {
 	            	// this is fucked up - the ids are changed!
-	            	let _ =report.write_to_ofile( Fspot::Buff1, 
+	            	report.write_to_ofile( Fspot::Buff1, 
 	            		format!(">No Cell detected\n{:?}\n{:?}\n{:?}\n{:?}\n", 
 	            			&data[i].0, 
 	            			&data[i].0[pos[0]..pos[1]],
@@ -443,13 +443,13 @@ impl AnalysisTE{
 
         // need better error handling here too    
         // for now, we're assuming FASTQ and not FASTA.
-        let mut readereads = match parse_fastx_file(&f1) {
+        let mut readereads = match parse_fastx_file(f1) {
         	Ok(reader) => reader,
         	Err(err) => {
             	panic!("File 'reads' {f1} Error: {}", err);
         	}
    		};
-        let mut readefile = match parse_fastx_file(&f2) {
+        let mut readefile = match parse_fastx_file(f2) {
         	Ok(reader) => reader,
         	Err(err) => {
             	panic!("File 'file' {f2} Error: {}", err);
@@ -485,7 +485,7 @@ impl AnalysisTE{
 	                }
 	            };
 
-        		match Self::quality_control( &read1, &read2, report.min_quality, pos, min_sizes){
+        		match Self::quality_control( read1, read2, report.min_quality, pos, min_sizes){
         			Ok(()) => {
         				good_read_count +=1;
         				good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
@@ -539,7 +539,7 @@ impl AnalysisTE{
 			    		let mut rep = MappingInfo::new( Some(log_file), report.min_quality, report.max_reads, Some(ofile) );
 			    		rep.write_to_log( format!("I am processing {} lines of data", data_split.len() ));
 			            // Clone or create a new thread-specific report for each task
-			    	    let res = self.analyze_paralel(&data_split, &mut rep, pos );
+			    	    let res = self.analyze_paralel(data_split, &mut rep, pos );
 			    	    (res, rep)
 
 		    	    }) // Analyze each chunk in parallel
@@ -825,7 +825,7 @@ impl AnalysisTE{
 	    results.stop_multi_processor_time();
 	    println!("writing expression sets:");
 
-	    if self.gene_names.len() > 0{ 
+	    if !self.gene_names.is_empty(){ 
 		    println!("writing gene expression");
 
 		    match self.gex.write_sparse_sub ( file_path_sp, &mut self.expr_index_obj , &self.gene_names, min_umi ) {

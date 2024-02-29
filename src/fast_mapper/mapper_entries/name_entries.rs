@@ -34,7 +34,7 @@ pub struct NameEntry{
 impl Clone for NameEntry {
     fn clone(&self) -> Self {
         Self {
-        	key: self.key.clone(),
+        	key: self.key,
             data: self.data.clone(),
             classes: self.classes.clone(),
             hashes: self.hashes.clone(),
@@ -90,7 +90,7 @@ impl NameEntry{
 
 	// Method to calculate memory size
     pub fn memory_size(&self) -> usize {
-    	return 0
+    	0
         /*let size = mem::size_of::<SecondSeq>() // Size of SecondSeq field 
                  + mem::size_of::<usize>() *3 // Size of usize fields (length, min_level and pos)
                  + self.data.capacity() * mem::size_of::<(usize, usize)>() // Size of data vector's elements
@@ -116,7 +116,7 @@ impl NameEntry{
 		//	println!("I am returning a map for {} {} -> {}",self.significant_bp[self.pos], significant_bp ,self.significant_bp[self.pos].min(*significant_bp));
 		//}
 		//println!( "NameEntry::next() - I have {} significant bits for the iteration {}",self.significant_bp[self.pos]*2, self.pos);
-		let mask: u64 = (1 << 32.min(*significant_bp) *2) -1;
+		let mask: u64 = (1 << (32.min(*significant_bp) *2)) -1;
 		// println!("the returned map {mask:b}");
         self.pos += 1;
         Some(mask)
@@ -215,7 +215,7 @@ impl NameEntry{
 				return true
 			}
 		}
-		return false
+		false
 	}
 
 	pub fn same(&self, seq:&SecondSeq) -> bool{

@@ -96,7 +96,7 @@ impl CellIndex for CellIds{
                     let mut good = Vec::<(usize, f32)>::with_capacity(self.c1s.len());
                     for i in 0..self.c1s.len(){ 
                         let dist = self.c1s[i].needleman_wunsch( &km1 );
-                        good.push( (i, dist as f32 ) );
+                        good.push( (i, dist ) );
                     }
                     if let Some(c1) = Self::best_entry( good ){
                         ok = c1.1 < fuzziness;
@@ -125,7 +125,7 @@ impl CellIndex for CellIds{
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c2s.len());
                     for i in 0..self.c2s.len(){
                         let dist = self.c2s[i].needleman_wunsch( &km2 );
-                        good.push( (i, dist as f32)  );
+                        good.push( (i, dist)  );
                     }
                     if let Some(c2) = Self::best_entry( good ){
                         ok =  c2.1 < fuzziness;
@@ -153,7 +153,7 @@ impl CellIndex for CellIds{
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c3s.len());
                     for i in 0..self.c3s.len(){
                         let dist = self.c3s[i].needleman_wunsch( &km3 );
-                        good.push( (i, dist as f32) );
+                        good.push( (i, dist) );
                     }
                     if let Some(c3) = Self::best_entry( good ){
                         ok = c3.1 < fuzziness;
@@ -188,7 +188,7 @@ impl CellIndex for CellIds{
         println!("c2:                  {}", self.c1s[matches[1].0] );
         println!("c3:                                        {}", self.c1s[matches[2].0] );
         */
-        return  Err( CellIdError::NoMatch )
+        Err( CellIdError::NoMatch )
     }
 
 }
@@ -203,7 +203,7 @@ impl CellIds{
         let larger_seq:u64 = (seqs[0] << 18) | (seqs[1] << 9) | seqs[2];
         let ret = SecondSeq( larger_seq, 27 );
         println!("I created a seq {ret}");
-        return Some(ret)
+        Some(ret)
     }
 
     /// calculate the base flips between two u64 sequences
@@ -228,7 +228,7 @@ impl CellIds{
             }
         }
         //println!("hamming dist was {ret}");
-        return ret
+        ret
     }
 
 
@@ -613,7 +613,7 @@ impl CellIds{
         let mut tool: IntToStr;
         for seq in seq_a {
             tool = IntToStr::new(seq.to_vec(), 9);
-            ret.push( SecondSeq(tool.into_u64().clone(), 9_u8 ) );
+            ret.push( SecondSeq(tool.into_u64(), 9_u8 ) );
         }
         ret
     }
@@ -624,7 +624,7 @@ impl CellIds{
         let mut tool: IntToStr;
         for seq in seq_a {
             tool = IntToStr::new(seq.to_vec(), 9);
-            ret.push( tool.into_u64().clone() );
+            ret.push( tool.into_u64() );
         }
         ret
     }

@@ -92,8 +92,8 @@ impl BinaryMatcher for CellId10x {
 
     fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32 {
  
-        let mut a_sum = vec![0_i8;64];
-        let mut b_sum = vec![0_i8;64];
+        let mut a_sum = [0_i8; 64];
+        let mut b_sum = [0_i8; 64];
 
         for i in 0..14{
             let a = (self.0 >> (i * 2)) & 0b111111;
@@ -111,8 +111,8 @@ impl BinaryMatcher for CellId10x {
 
     fn di_nuc_abs_diff( &self, other: &Self  ) -> f32 {
 
-        let mut a_sum = vec![0_i8;16];
-        let mut b_sum = vec![0_i8;16];
+        let mut a_sum = [0_i8; 16];
+        let mut b_sum = [0_i8; 16];
 
         for i in 0..15{
             let a = (self.0 >> (i * 2)) & 0b1111;
@@ -208,7 +208,7 @@ impl BinaryMatcher for CellId10x {
             }
         }
         //println!("hamming dist was {ret}");
-        return ret
+        ret
     }
 
     fn table(&self) -> std::collections::HashMap<char, u32> {

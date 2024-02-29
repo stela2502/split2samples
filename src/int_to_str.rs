@@ -32,7 +32,7 @@ impl Index<usize> for IntToStr {
     type Output = u8;
 
     fn index(&self, index: usize) -> &Self::Output {
-        &self.u8_encoded.get(index).unwrap_or(&0_u8)
+        self.u8_encoded.get(index).unwrap_or(&0_u8)
     }
 }
 
@@ -86,8 +86,8 @@ impl IntToStr {
 	pub fn new(seq:Vec::<u8>, kmer_size:usize) -> Self{
 		// 4 of the array u8 fit into one result u8
 		//eprintln!("Somtimes I die?! -> processed seq: {:?}", seq);
-		let storage:Vec::<u8> = seq.iter().copied().collect();
-		let long_term_storage = seq.iter().copied().collect();
+		let storage:Vec::<u8> = seq.to_vec();
+		let long_term_storage = seq.to_vec();
 
 		let u8_encoded = Vec::<u8>::with_capacity( storage.len()/4 +1);
 		let lost = 0;
@@ -367,11 +367,11 @@ impl IntToStr {
 
         if residual != 0 {
         	if self.u8_encoded.len() <= target {
-        		ret = (ret << 8) | 0b0 as u64;
+        		ret = ret << 8;
         	}
         	else {
         		//println!( "have {} and want {}", self.u8_encoded.len() , target);
-        		let mut loc = self.u8_encoded[target].clone() as u8;
+        		let mut loc = self.u8_encoded[target];
 	        	//println!("\nGet the loc from self.u8_encoded[{}].clone()", target );
 	        	//println!("I got this u64 for my u8: {loc:b}, {:b}", self.u8_encoded[target]);
 	        	match residual{
@@ -448,8 +448,8 @@ impl IntToStr {
 	/// regenerates the complete object with a new Vec::<u8> utf8 encoded
 	pub fn from_vec_u8( &mut self, array:Vec::<u8> ) {
 		// 4 of the array u8 fit into one result u8
-		self.storage = array.iter().copied().collect();
-		self.long_term_storage = array.iter().copied().collect();
+		self.storage = array.to_vec();
+		self.long_term_storage = array.to_vec();
 		self.current_position=0;
 		self.regenerate();
 	}

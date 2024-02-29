@@ -242,9 +242,9 @@ impl Index for GeneIds {
                 Err(_err) => return Err::<(), &str>("kmer could not be written"),
             };
 
-            match self.names_store.get( &gene_id ){
+            match self.names_store.get( gene_id ){
                 Some(name) => {
-                    write!(ofile.buff2,"{name}\n" ).unwrap();
+                    writeln!(ofile.buff2,"{name}" ).unwrap();
                 },
                 None => panic!("Gene id {gene_id} not found in this object!"),
             };

@@ -6,7 +6,7 @@ use std::cmp::Ord;
 pub struct GeneUmiHash( pub usize, pub u64);
 impl PartialEq for GeneUmiHash {
     fn eq(&self, other: &Self) -> bool {
-    	return (self.0 == other.0) && (self.1 == other.1)
+    	(self.0 == other.0) && (self.1 == other.1)
     }
 }
 

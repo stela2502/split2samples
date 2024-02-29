@@ -105,7 +105,7 @@ impl MapperEntry{
 		
 		
 		let ret:Vec::<&NameEntry> = self.map.iter().filter_map( |(key, name_entry)| 
-				if key.same( &seq ){
+				if key.same( seq ){
 					Some(name_entry)
 				}
 				else {
@@ -157,7 +157,7 @@ impl MapperEntry{
 				}
 			}
 		}
-		return match ret.len() {
+		match ret.len() {
 			0 =>{
 				//eprintln!("I find nothing here!");
 				None
@@ -185,7 +185,7 @@ impl MapperEntry{
 		if  self.has_data() {
 			println!("I have {} u64 matching sequences:", self.map.len() );
 			for (_, entry) in &self.map{
-				println!( "\tThe sequence {} links to the {}", entry.key, entry.to_string() );
+				println!( "\tThe sequence {} links to the {}", entry.key, entry );
 			}
 		}
 	}
@@ -210,7 +210,7 @@ impl MapperEntry{
 				with_data +=1 
 			}
 		}
-		return with_data
+		with_data
 	}
 	/// first - how many entries
 	/// second how many entries with one gene
