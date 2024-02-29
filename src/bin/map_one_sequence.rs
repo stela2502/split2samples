@@ -48,6 +48,9 @@ fn main() {
     let mut genes :FastMapper = FastMapper::new( 32, 100_000, 0 ); // split them into 9 bp kmers
     let mut samples :FastMapper = FastMapper::new( 32, 10_000 , 0 );
     let mut antibodies :FastMapper = FastMapper::new( 32, 10_000, 0  );
+    genes.debug( Some(true) );
+    samples.debug( Some(true) );
+    antibodies.debug( Some(true) );
     
     let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 

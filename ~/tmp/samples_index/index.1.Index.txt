@@ -1,0 +1,28 @@
+version: 6
+seq_len: 32
+with_data: 12
+
+i: 9487 (0010010100001111) TTAACCGA count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 3 resp Sample3 gene level: 0  
+i: 15508 (0011110010010100) ACCGATTA count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 1 resp Sample1 gene level: 0  
+i: 18086 (0100011010100110) GCGGGCAC count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 5 resp Sample5 gene level: 0  
+i: 21718 (0101010011010110) GCCTACCC count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 8 resp Sample8 gene level: 0  
+i: 23080 (0101101000101000) AGGAGGCC count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 2 resp Sample2 gene level: 0  
+i: 23399 (0101101101100111) TCGCTGCC count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 7 resp Sample7 gene level: 0  
+i: 28333 (0110111010101101) CTGGGTGC count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 11 resp Sample11 gene level: 0  
+i: 31831 (0111110001010111) TCCCATTC count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 9 resp Sample9 gene level: 0  
+i: 40480 (1001111000100000) AAGAGTCG count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 0 resp Sample0 gene level: 0  
+i: 41620 (1010001010010100) ACCGGAGG count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 6 resp Sample6 gene level: 0  
+i: 56058 (1101101011111010) GGTTGGCT count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 10 resp Sample10 gene level: 0  
+i: 59418 (1110100000011010) GGCAAGGT count 1 
+		0: SecondSeq (u64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA or 0, u8: 32) n genes: 1 gene id: 4 resp Sample4 gene level: 0  

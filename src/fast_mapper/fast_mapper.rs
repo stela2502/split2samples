@@ -49,6 +49,7 @@ static EMPTY_VEC: Vec<usize> = Vec::new();
 pub struct FastMapper{
     pub kmer_len:usize, // how long should the second entries be (up to 32 bp + 8bp initial map) 
     spacer:usize,
+    debug: bool, //write detailed info for a mapping SLOW
     pub mapper: Vec<MapperEntry>, // the position is the sequence!
     names : BTreeMap<std::string::String, usize>, // gene name and gene id
     pub names4sparse:  BTreeMap<std::string::String, usize>, // gene name and gene id
@@ -107,6 +108,7 @@ impl FastMapper{
         Self {
             kmer_len,
             spacer,
+            debug: false,
             mapper,
             names,
             names4sparse,
@@ -178,6 +180,14 @@ impl FastMapper{
             }
         }
 
+    }
+
+    pub fn debug(&mut self, dbg: Option<bool>) -> bool{
+        match dbg {
+            Some(val) => self.debug = val,
+            None => (),
+        };
+        self.debug
     }
 
 
@@ -664,7 +674,7 @@ impl FastMapper{
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
         //let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
-        //let mut i = 0;
+        let mut i = 0;
         tool.from_vec_u8( seq.to_vec() );
         let mut na = 0;
         //let mut item = self.tool.next();
@@ -673,17 +683,20 @@ impl FastMapper{
 
         // entries is a Option<(u16, u64, usize)
         'main :while let Some(entries) = tool.next(){
-
             if entries.0 == 65535{
                 continue;
             }
 
             if na == 10 && genes.len() == 0{
+                match self.debug {
+                    true => println!("get - I have no match after 10 oligo pairs - giving up"),
+                    false => (),
+                };
                 return Err(MappingError::NoMatch)
             }
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
-                //i +=1;
+                i +=1;
                 //println!("We are at iteration {i}");
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
@@ -703,6 +716,15 @@ impl FastMapper{
             }
 
         }
+        match self.debug {
+            true => {
+                let names: Vec<String> = genes.keys()
+                    .map(|&(id, _)| self.get_name(id) )
+                    .collect();
+                println!("get - testing {i} oligos I collected these genes: {genes:?} with these names: {names:?}")
+            },
+            false => (),
+        };
         if genes.len() == 0 {
             return Err(MappingError::NoMatch)
         }
@@ -756,6 +778,10 @@ impl FastMapper{
             if na == 10 && matching_geneids.len() == 0 {
                 // This is obviousely not exisitingn in the index.
                 //println!("{tmp} - stopped after 10 failed matches\n");
+                match self.debug {
+                    true => println!("get - I have no match after 10 oligo pairs - giving up"),
+                    false => (),
+                };
                 return Err(MappingError::NoMatch)
             }
             if entries.0 == 65535{
@@ -848,8 +874,16 @@ impl FastMapper{
         }
 
         //tmp += &format!("at the end we collected this gene info: {genes:?} ");
-
-        //println!("I collected this info for the search: {genes:?}");
+        match self.debug {
+            true => {
+                let names: Vec<String> = genes.keys()
+                    .map(|&(id, _)| self.get_name(id) )
+                    .collect();
+                println!("get - testing {i} oligos I collected these genes: {genes:?} with these names: {names:?}")
+            },
+            false => (),
+        };
+        
 
         if genes.len() == 0 {
             //println!("{tmp} No gene found");

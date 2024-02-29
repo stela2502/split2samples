@@ -257,9 +257,10 @@ impl Analysis{
 		samples.print();
 		println!("and the antibodies index:");
 		antibodies.print();
-		samples.make_index_te_ready();
-		genes.make_index_te_ready();
-		antibodies.make_index_te_ready();
+		//this is problematic as it does not work with a genomic index! 
+		//samples.make_index_te_ready();
+		//genes.make_index_te_ready();
+		//antibodies.make_index_te_ready();
 		let sample_names: Vec<String>  = samples.get_all_gene_names();
 		let gene_names: Vec<String>  = genes.get_all_gene_names();
 		let ab_names: Vec<String>  = antibodies.get_all_gene_names();

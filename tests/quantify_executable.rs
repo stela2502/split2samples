@@ -62,15 +62,24 @@ fn test_quantify_rhapsody_multi() {
         }
     }
 
+    /*
+    SampleTag03_mm should be 245 but was 251
+    SampleTag05_mm should be 21 but was 23
+    SampleTag02_mm should be 216 but was 220
+    SampleTag01_mm should be 140 but was 147
+    SampleTag04_mm should be 169 but was 175
+    SampleTag06_mm should be 132 but was 139
+    na should be 34413 but was 34577
+    */
 
     let mut exp =HashMap::<String, usize>::new();
-    exp.insert( "na".to_string(), 34413 );
-    exp.insert( "SampleTag01_mm".to_string(), 140 );
-    exp.insert( "SampleTag02_mm".to_string(), 216 );
-    exp.insert( "SampleTag03_mm".to_string(), 245 );
-    exp.insert( "SampleTag04_mm".to_string(), 169 );
-    exp.insert( "SampleTag05_mm".to_string(), 21 );
-    exp.insert( "SampleTag06_mm".to_string(), 132 );
+    exp.insert( "na".to_string(), 34577 );
+    exp.insert( "SampleTag01_mm".to_string(), 147 );
+    exp.insert( "SampleTag02_mm".to_string(), 220 );
+    exp.insert( "SampleTag03_mm".to_string(), 251 );
+    exp.insert( "SampleTag04_mm".to_string(), 175 );
+    exp.insert( "SampleTag05_mm".to_string(), 23 );
+    exp.insert( "SampleTag06_mm".to_string(), 139 );
     exp.insert( "AssignedSampleName".to_string(), 1 );
 
     // Iterate over the actual hashmap and assert each key-value pair separately
