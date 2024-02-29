@@ -91,6 +91,10 @@ impl SingleCellData{
         all_keys
     }
 
+    pub fn is_empty(&self) -> bool{
+        self.data.is_empty()
+    }
+
     pub fn len(&self) -> usize {
         let mut size = 0;
         for map in &self.data {

@@ -852,9 +852,9 @@ impl AnalysisTE{
 	    };
 
 	    
-	    let reads_expr_index_obj = self.gex.n_reads( &mut self.expr_index_obj , &self.gene_names );
-	    let reads_ab = self.gex.n_reads( &mut self.te_index_obj , &self.te_names );
-	    let reads_samples = self.gex.n_reads( &mut self.samples , &self.sample_names );
+	    let reads_expr_index_obj = self.gex.n_reads( &self.expr_index_obj , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( &self.te_index_obj , &self.te_names );
+	    let reads_samples = self.gex.n_reads( &self.samples , &self.sample_names );
 
 	    println!( "{}",results.summary( reads_expr_index_obj, reads_ab, reads_samples) );
 

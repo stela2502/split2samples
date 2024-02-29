@@ -181,10 +181,9 @@ impl FastMapper{
     }
 
     pub fn debug(&mut self, dbg: Option<bool>) -> bool{
-        match dbg {
-            Some(val) => self.debug = val,
-            None => (),
-        };
+        if let Some(val) = dbg { 
+            self.debug = val 
+        }
         self.debug
     }
 
@@ -739,10 +738,9 @@ impl FastMapper{
         
         //let mut id:usize;
 
-        match self.get_strict( seq, tool ){
-            Ok(gene_id) => return Ok(gene_id),
-            Err(_) => {}
-        };
+        if let Ok(gene_id) = self.get_strict( seq, tool ) { 
+            return Ok(gene_id) 
+        }
 
         //println!("\n\nStart fast_mapper::get()");
 
@@ -788,7 +786,7 @@ impl FastMapper{
                 //println!("The first id {} is known to this index!", tool.u64_to_string( 8,&(entries.0 as u64) ) );
 
                 //eprintln!("We are at iteration {i}");
-                if &entries.1.1 < &20_u8{
+                if entries.1.1 < 20_u8{
                     //tmp += "too short u64;\n";
                     //will never map as the mapper fails every sequence below 20 bp - too many false positives!
                     continue

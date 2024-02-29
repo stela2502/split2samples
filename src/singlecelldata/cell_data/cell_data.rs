@@ -210,7 +210,7 @@ impl CellData{
         }
     }*/
 
-    pub fn n_umi( &self, _gene_info:&FastMapper, _gnames: &Vec<String> ) -> usize {
+    pub fn n_umi( &self, _gene_info:&FastMapper, _gnames: &[String] ) -> usize {
         self.total_umis
 
         // let mut n = 0;

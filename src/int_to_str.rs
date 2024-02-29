@@ -304,6 +304,9 @@ impl IntToStr {
     	Some( (u16_value, SecondSeq(u64_value, stop)) )
     }
 
+    pub fn is_empty(&self) -> bool{
+    	self.u8_encoded.is_empty()
+    }
 
 	pub fn len(&self) -> usize{
 		self.u8_encoded.len()
@@ -367,7 +370,7 @@ impl IntToStr {
 
         if residual != 0 {
         	if self.u8_encoded.len() <= target {
-        		ret = ret << 8;
+        		ret <<= 8;
         	}
         	else {
         		//println!( "have {} and want {}", self.u8_encoded.len() , target);

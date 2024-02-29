@@ -934,9 +934,9 @@ impl Analysis{
 	    };
 
 	    
-	    let reads_genes = self.gex.n_reads( &mut self.genes , &self.gene_names );
-	    let reads_ab = self.gex.n_reads( &mut self.antibodies , &self.ab_names );
-	    let reads_samples = self.gex.n_reads( &mut self.samples , &self.sample_names );
+	    let reads_genes = self.gex.n_reads( &self.genes , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( &self.antibodies , &self.ab_names );
+	    let reads_samples = self.gex.n_reads( &self.samples , &self.sample_names );
 
 	    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
 

@@ -15,6 +15,12 @@ pub struct MapperEntry{
 	needleman_wunsch_cut: f32,
 }
 
+impl Default for MapperEntry {
+    fn default() -> Self {
+        Self::new()
+    }
+ }
+
 impl MapperEntry{
 	pub fn new( ) -> Self{
 		/*let mut all = allocate;
@@ -35,7 +41,7 @@ impl MapperEntry{
         let mut size = mem::size_of::<HashMap<SecondSeq, NameEntry>>(); // Size of HashMap<SecondSeq, NameEntry>
         
         // Iterate over each entry in the map and sum up the memory size of NameEntry instances
-        for (_, name_entry) in &self.map {
+        for name_entry in self.map.values() {
             size += name_entry.memory_size();
         }
         
@@ -73,7 +79,7 @@ impl MapperEntry{
 
 	pub fn possible_ids(&self) -> Vec<(usize, usize)>{
 		let mut ids = HashSet::<(usize, usize)>::with_capacity(5);
-		for (_, entry) in &self.map {
+		for entry in self.map.values() {
 			for gid in &entry.data{
 				ids.insert( *gid);
 			}
@@ -184,7 +190,7 @@ impl MapperEntry{
 	pub fn print(&self) {
 		if  self.has_data() {
 			println!("I have {} u64 matching sequences:", self.map.len() );
-			for (_, entry) in &self.map{
+			for entry in self.map.values(){
 				println!( "\tThe sequence {} links to the {}", entry.key, entry );
 			}
 		}
@@ -194,7 +200,7 @@ impl MapperEntry{
 
 	pub fn has_data(&self) -> bool{
 		let mut ok = false;
-		for (_, name_entry) in &self.map {
+		for name_entry in self.map.values() {
 			if name_entry.keep {
 				ok = true;
 				break
@@ -205,7 +211,7 @@ impl MapperEntry{
 
 	pub fn with_data( &self) -> usize{
 		let mut with_data = 0;
-		for (_ , name_entry ) in &self.map{
+		for name_entry in self.map.values(){
 			if name_entry.keep {
 				with_data +=1 
 			}
@@ -217,7 +223,7 @@ impl MapperEntry{
 	/// third how many entries with more than one gene
 	pub fn info (&self) -> [usize;3] {
 		let mut ret: [usize;3] = [0,0,0];
-		for (_, entry) in &self.map{
+		for entry in self.map.values(){
 			ret[0] +=1;
 			ret[1+ (entry.data.len() > 1) as usize] += 1;
 		}

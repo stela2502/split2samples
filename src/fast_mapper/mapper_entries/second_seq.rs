@@ -20,23 +20,24 @@ pub struct SecondSeq( pub u64, pub u8);
 
 impl PartialEq for SecondSeq {
     fn eq(&self, other: &Self) -> bool {
-        let mask: u64;
-        let length:u8;
-        if other.1 > self.1{
-            length =  self.1
+        
+        let length:u8 = if other.1 > self.1{
+            self.1
         }else {
-            length = other.1;
-        }
+            other.1
+        };
+
         if length < 20 {
             return false
         }
 
-        if length >= 32 {
-            mask = u64::MAX;
+        let mask: u64 = if length >= 32 {
+            u64::MAX
             // Rest of your code using the mask
         } else {
-            mask = (1 << ((length as u64) *2) ) - 1;
-        }
+            (1 << ((length as u64) *2) ) - 1
+        };
+
         //eprintln!("I'll compare {:b} to {:b}", (self.0 & mask) , (other.0 & mask));
         (self.0 & mask) == (other.0 & mask)
     }
@@ -354,7 +355,7 @@ impl SecondSeq {
     pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
 
         //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
-        self.needleman_wunsch( other ) <= max_dist.try_into().unwrap()
+        self.needleman_wunsch( other ) <= max_dist
     }
 
     

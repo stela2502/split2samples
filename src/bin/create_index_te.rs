@@ -98,7 +98,9 @@ re_class_id = Regex::new(r#"class_id "([\(\)/\w\d\-\._\?]*)";"#).unwrap();
 */
 
 
-fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashMap< String, Vec<u8>>, max_length:usize, re_class_id: &Regex, re_family_name: &Regex, re_gene_id: &Regex, re_transcript_id: &Regex){
+fn process_lines ( lines:&&[String], index: &mut FastMapper ,
+    seq_records: &HashMap< String, Vec<u8>>, max_length:usize, 
+    re_class_id: &Regex, re_family_name: &Regex, re_gene_id: &Regex, re_transcript_id: &Regex){
 
     let mut families = HashMap::<String, GeneFamily>::new();
 
@@ -177,9 +179,9 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,seq_records: &HashM
         }
     }
 
-    for (_, family) in &families {
+    for family in families.values() {
         // Do something with the gene, e.g. remove it
-        family.index( index, max_length , &seq_records );
+        family.index( index, max_length , seq_records );
     }
 
 }
@@ -206,15 +208,15 @@ fn process_batch(
         .par_chunks(lines.len() / num_threads + 1)
         .map(|data_split| {
             let mut idx = FastMapper::new(32, 10, 0 );
-            let _res = process_lines(
+            process_lines(
                 &data_split,
                 &mut idx,
-                &seq_records,
+                seq_records,
                 opts.max_length,
-                &re_class_id,
-                &re_family_name,
-                &re_gene_id,
-                &re_transcript_id,
+                re_class_id,
+                re_family_name,
+                re_gene_id,
+                re_transcript_id,
             );
             idx.make_index_te_ready_single();
             idx
@@ -232,7 +234,7 @@ fn process_batch(
 
 // Function to check if a file exists
 fn check_file_existence(file_path: &str, option: &str, errors: &mut Vec<String>) {
-    if !fs::metadata(file_path).is_ok() {
+    if fs::metadata(file_path).is_err() {
         errors.push(format!("Option {option} - File not found: {file_path}"));
     }
 }
@@ -272,12 +274,10 @@ fn main() {
         } else {
             println!("New index directory created successfully!");
         }
-    }else {
-        if let Err(err) = fs::create_dir_all(&opts.outpath) {
-            eprintln!("Error creating directory: {}", err);
-        } else {
-            println!("New index directory created successfully!");
-        }
+    }else if let Err(err) = fs::create_dir_all(&opts.outpath) {
+        eprintln!("Error creating directory: {}", err);
+    } else {
+        println!("New index directory created successfully!");
     }
 
     let mut kmer_size = opts.gene_kmers;
@@ -402,7 +402,7 @@ fn main() {
     // if there is a splice entry in that area we need to create a spliced and an unspliced entry
 
     if ! opts.gtf.ends_with(".gz") {
-        panic!("Please gzip your gtf file - thank you! {}", opts.gtf.to_string());
+        panic!("Please gzip your gtf file - thank you! {}", opts.gtf);
     }
 
     let f1 = match File::open( &opts.gtf ){
@@ -436,10 +436,10 @@ fn main() {
     let mut partial_index = FastMapper::new( kmer_size, 900_000,0 );
     report.start_ticker();
     for line in reader.lines() {
-        let rec = line.ok().expect("Error reading record.");
+        let rec = line.expect("Error reading record.");
         let parts: Vec<&str> = rec.split('\t').collect();
 
-        if last_chr != parts[0].to_string() {
+        if last_chr != *parts[0] {
             if good_read_count > 1 {
                 
                 process_batch(

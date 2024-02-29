@@ -72,12 +72,11 @@ impl CellIndex for CellIds{
 
         let mut ok:bool;
         // the ids seam to be VERY unstable in the read! So lets try the same pattern with up to 5 bp shifts
-        let hops:Vec::<usize>;
-        if self.version == "v1"{
-            hops = vec![0]
+        let hops:Vec::<usize> = if self.version == "v1"{
+            vec![0]
         }else {
-            hops = vec![0,1,2,3,4]
-        }
+            vec![0,1,2,3,4]
+        };
         //let mut matches = Vec::<(usize, f32)>::with_capacity(3);
 
         for add in hops {
@@ -136,7 +135,7 @@ impl CellIndex for CellIds{
                         ok = false;
                         0
                     }
-                }.try_into().unwrap(),
+                },
             };
             if ! ok{
                 continue;
@@ -164,7 +163,7 @@ impl CellIndex for CellIds{
                         ok = false;
                         0
                     }
-                }.try_into().unwrap(),
+                },
             };
 
             if ok {
