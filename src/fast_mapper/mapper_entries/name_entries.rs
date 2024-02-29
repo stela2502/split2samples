@@ -166,7 +166,11 @@ impl NameEntry{
 			return None
 		}
 		if self.classes[0].is_empty(){
-			panic!("This function can only be used while creating an index - I am missing the gene classes info here!")
+			if self.data.len() == 1{
+				return Some( (self.data[0], vec![self.data[0].0] ) )
+			}else {
+				return None
+			}
 		}
 
 		// if this 40bp mapper links to only one gene the most likely return value is this gene_id
