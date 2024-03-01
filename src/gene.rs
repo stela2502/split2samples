@@ -124,7 +124,7 @@ impl Gene{
 			true => self.exons.len()-1,
 			false => 0,
 		};
-		if self.exons[last_exon][1]- self.exons[last_exon][0] > 100 && self.exons.len() > 1{
+		if self.exons[last_exon][1]- self.exons[last_exon][0] < 100 && self.exons.len() > 1{
 			let addon = "_int".to_string();
 			match &self.to_nascent( seq.to_owned()){
 				Some( nascent ) => {
