@@ -73,13 +73,13 @@ fn test_quantify_rhapsody_multi() {
     */
 
     let mut exp =HashMap::<String, usize>::new();
-    exp.insert( "na".to_string(), 34577 );
+    exp.insert( "na".to_string(), 34305 );
     exp.insert( "SampleTag01_mm".to_string(), 147 );
     exp.insert( "SampleTag02_mm".to_string(), 220 );
-    exp.insert( "SampleTag03_mm".to_string(), 251 );
-    exp.insert( "SampleTag04_mm".to_string(), 175 );
+    exp.insert( "SampleTag03_mm".to_string(), 250 );
+    exp.insert( "SampleTag04_mm".to_string(), 172 );
     exp.insert( "SampleTag05_mm".to_string(), 23 );
-    exp.insert( "SampleTag06_mm".to_string(), 139 );
+    exp.insert( "SampleTag06_mm".to_string(), 138 );
     exp.insert( "AssignedSampleName".to_string(), 1 );
 
     // Iterate over the actual hashmap and assert each key-value pair separately

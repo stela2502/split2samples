@@ -73,9 +73,9 @@ struct Opts {
     /// the string to check for transcript levels names (transcript_id)
     #[clap(default_value="gene_name", long)]
     transcript: String,
-    /// report the expression for a set of genes?
+    /// report the expression for a set of genes ("g1 g2 g3")?
     #[clap(long)]
-    report4genes: Option<Vec<String>>,
+    report4genes: Option<String>,
 }
 
 /*
@@ -312,7 +312,7 @@ fn main() {
 
     let mut genes2print = HashSet::<String>::new();
     if let Some(genes) = opts.report4genes {
-        for gene in genes{
+        for gene in genes.split_whitespace(){
             genes2print.insert( gene.to_string() );
         }
     }

@@ -279,12 +279,11 @@ impl Analysis{
 		}
 	}
 
-	pub fn report4gname( &mut self, gname: &str ){
-		if let Some(gene_id) = self.antibodies.extern_id_for_gname( gname ){
-			self.antibodies.report4 = Some(gene_id)
-		}else if let Some(gene_id) = self.genes.extern_id_for_gname( gname ){
-			self.genes.report4 = Some(gene_id)
-		}
+	pub fn report4gname( &mut self, gname: &[&str] ){
+
+		self.antibodies.report4(gname);
+		self.genes.report4(gname);
+
 	}
 
 	pub fn write_index(&mut self, path:&String ){
@@ -382,11 +381,10 @@ impl Analysis{
 
 	            	ok = match &self.antibodies.get( &data[i].1, &mut tool ){
 	                    Ok(gene_id) =>{
-	                    	if let Some(report_gid) = self.antibodies.report4{
-	                			if report_gid  == gene_id[0] {
-	                    			println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-	                    		}
+	                    	if self.antibodies.report4gene(gene_id){
+	                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 	                		}
+
 	                    	report.iter_read_type( "antibody reads" );
                     		
                     		let data = GeneUmiHash( gene_id[0], *umi);
@@ -443,10 +441,8 @@ impl Analysis{
 	                	
 		                match &self.genes.get( &data[i].1,  &mut tool ){
 		                	Ok(gene_id) =>{
-		                		if let Some(report_gid) = self.genes.report4{
-		                			if report_gid  == gene_id[0] {
-		                    			println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-		                    		}
+		                		if self.genes.report4gene(gene_id){
+		                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
 		                		}
 		                		report.iter_read_type( "expression reads" );
 

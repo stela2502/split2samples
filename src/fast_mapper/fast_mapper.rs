@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 //use needletail::bitkmer::BitKmer;
 use crate::int_to_str::IntToStr;
 use std::collections::HashMap;
-//use std::collections::HashSet;
+use std::collections::HashSet;
 use crate::errors::MappingError; // not really errors but enums!
 use std::mem;
 
@@ -69,7 +69,7 @@ pub struct FastMapper{
     But it will be totally transperent to the ouside world.
      */
     offset: usize, // the offset is to make a index report 'wrong' ids - say you want
-    pub report4: Option<usize>, // report for a gene?
+    pub report4: Option<HashSet<usize>>, // report for a gene?
 }
 
 // here the functions
@@ -178,6 +178,35 @@ impl FastMapper{
             }
         }
 
+    }
+
+    pub fn report4( &mut self, genes: &[&str]) {
+        let mut hash = HashSet::<usize>::new();
+        let mut added = false;
+        for gname in genes{
+            if let Some(gene_id) = self.extern_id_for_gname( gname ){
+                hash.insert(gene_id);
+                added = true;
+            }
+        }
+        if added {
+            self.report4 = Some( hash );
+        }else {
+            self.report4 = None;
+        }
+    }
+
+    pub fn report4gene( &self, geneid:&[usize] ) -> bool {
+        if let Some(hash) = &self.report4{
+            for gid in geneid{
+                if hash.contains(gid){
+                    return true
+                }
+            }
+            false
+        }else {
+            false
+        }
     }
 
     pub fn debug(&mut self, dbg: Option<bool>) -> bool{

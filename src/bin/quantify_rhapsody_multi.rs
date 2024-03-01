@@ -22,7 +22,7 @@ use rustody::ofiles::Ofiles;
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
-#[clap(version = "1.2.5", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
@@ -69,9 +69,9 @@ struct Opts {
     /// how many sequences should be analyzed in one chunk
     #[clap(default_value_t=1_000_000, long)]
     chunk_size: usize,
-    /// report mappings to a specific gene?
+    /// report the reads matching to a set of genes?
     #[clap(long)]
-    report4: Option<String>,
+    report4genes: Option<String>,
 }
 
 /*
@@ -168,9 +168,11 @@ fn main() {
     let mut worker = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
         opts.antibody, opts.specie, opts.index, num_threads, &opts.exp);
 
-    if let Some(gname) = &opts.report4 {
-        worker.report4gname( gname )
+    if let Some(genes) = opts.report4genes{
+        let slice_str: Vec<&str> = genes.split_whitespace().collect();
+        worker.report4gname( &slice_str )
     }
+
 
     if save{
         worker.write_index( &opts.outpath );
