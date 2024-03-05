@@ -1,3 +1,13 @@
+# 2.1.0
+
+I finally found fishy reads and had to further improve on the mapping.
+Quantify_rhapsody_multi now gives the user access to these new options:
+
+``--min-matches 1`` I one 8bp intitial match (100% identity) and one 32 bp relaxed match of at least 5 tries identify exactly one gene this read will be tagged as coming from that gene. This value is also used to filter if multiple genes are detected, but there the nw-val is more important.
+``--highest-humming-val 0.9`` The humming value is used for a quick filtering of really useless reads. It is calculated as absolute difference between all trimers of both the target and the search 32bp fragment. This value is divided by the total length of the comparison. 0.9 is the default value and is very inclusive.
+``--highest-nw-val 0.3`` The nw value is a Needleman-Wunsch inspired value. All 32bp fragments that pass the humming test, the initial table of the Needleman Wunsch algorithm is calculated and the final value from that comparison is again divided by the total length of the initial (max) 32bp fragments. In the end both the amount of passing matches as well as the mean nw value of a read will be used to identify the matching gene.
+Values above 0.3 will lead to a lot of false postives.
+
 # 2.0.0
 
 This is a huge update. The mapper has become even better. Is is almost as fast as before the huge update, but finds lots more genes now.

@@ -250,6 +250,10 @@ impl Analysis{
 	        std::process::exit(1)
 	    }
 
+	    samples.set_min_matches(2);
+	    samples.set_highest_nw_val(0.2);
+	    samples.set_highest_humming_val(0.4);
+
 	    println!("After indexing all fastq files we have the following indices:");
 		println!("the mRNA index:");
 		genes.print();
@@ -285,6 +289,24 @@ impl Analysis{
 		self.genes.report4(gname);
 
 	}
+
+	// Function to set min_matches
+    pub fn set_min_matches(&mut self, value: usize) {
+    	self.antibodies.set_min_matches(value);
+		self.genes.set_min_matches(value);
+    }
+
+    // Function to set highest_nw_val
+    pub fn set_highest_nw_val(&mut self, value: f32) {
+        self.antibodies.set_highest_nw_val(value);
+		self.genes.set_highest_nw_val(value);
+    }
+
+    // Function to set highest_humming_val
+    pub fn set_highest_humming_val(&mut self, value: f32) {
+        self.antibodies.set_highest_humming_val(value);
+		self.genes.set_highest_humming_val(value);
+    }
 
 	pub fn write_index(&mut self, path:&String ){
 		self.genes.write_index( path.to_string() ).unwrap();

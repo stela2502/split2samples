@@ -94,7 +94,7 @@ impl CellIndex for CellIds{
                 None => {
                     let mut good = Vec::<(usize, f32)>::with_capacity(self.c1s.len());
                     for i in 0..self.c1s.len(){ 
-                        let dist = self.c1s[i].needleman_wunsch( &km1 );
+                        let dist = self.c1s[i].needleman_wunsch( &km1, 0.4 );
                         good.push( (i, dist ) );
                     }
                     if let Some(c1) = Self::best_entry( good ){
@@ -123,7 +123,7 @@ impl CellIndex for CellIds{
                 None => {
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c2s.len());
                     for i in 0..self.c2s.len(){
-                        let dist = self.c2s[i].needleman_wunsch( &km2 );
+                        let dist = self.c2s[i].needleman_wunsch( &km2, 0.4 );
                         good.push( (i, dist)  );
                     }
                     if let Some(c2) = Self::best_entry( good ){
@@ -151,7 +151,7 @@ impl CellIndex for CellIds{
                 None => {
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c3s.len());
                     for i in 0..self.c3s.len(){
-                        let dist = self.c3s[i].needleman_wunsch( &km3 );
+                        let dist = self.c3s[i].needleman_wunsch( &km3, 0.4 );
                         good.push( (i, dist) );
                     }
                     if let Some(c3) = Self::best_entry( good ){

@@ -11,8 +11,8 @@ pub struct MapperEntry{
 	//pub map:Vec::<(SecondSeq, NameEntry)>, // the old data storage 
 	pub map: HashMap<SecondSeq, NameEntry>, // to speed up the fast_mapper merge function
 	only:usize,
-	hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
-	needleman_wunsch_cut: f32,
+	//hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
+	//needleman_wunsch_cut: f32,
 }
 
 impl Default for MapperEntry {
@@ -31,8 +31,8 @@ impl MapperEntry{
 		Self{
 			map,
 			only :0,
-			hamming_cut :2,
-			needleman_wunsch_cut: 0.25 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
+			//hamming_cut :2,
+			//needleman_wunsch_cut: 0.25 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
 		}
 	}
 
@@ -107,14 +107,16 @@ impl MapperEntry{
 
 	/// get is the exact match whereas find is a somewhat fuzzy match.
 	/// So if get does not find anything at all - try find instead.
-	pub fn get( &self,seq:&SecondSeq ) -> Option<(Vec<&NameEntry>, f32)> {
+	pub fn get( &self,seq:&SecondSeq) -> Option<(Vec<&NameEntry>, f32)> {
 		
 		
 		let ret:Vec::<&NameEntry> = self.map.iter().filter_map( |(key, name_entry)| 
 				if key.same( seq ){
+					//println!("Match in mapper_entry!");
 					Some(name_entry)
 				}
 				else {
+					//println!("No match in mapper_entry!");
 					None
 				} 
 			).collect();
@@ -139,7 +141,7 @@ impl MapperEntry{
 	/// finds the most likely matching entry in our set of sequences.
 	/// It returns the vector of matching gene ids and the needleman_wunsch
 	/// matching value it got for them.
-	pub fn find (&self, seq:&SecondSeq ) -> Option<(Vec<&NameEntry>, f32)> {
+	pub fn find (&self, seq:&SecondSeq, nw_cut:f32, humming_cut:f32  ) -> Option<(Vec<&NameEntry>, f32)> {
 		let mut ret : Vec::<&NameEntry> = vec![];
 
 		let mut dists : Vec::<f32> = vec![];
@@ -147,10 +149,10 @@ impl MapperEntry{
 		for (_i, name_entry) in self.map.iter() {
 			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
 			//let dist = self.map[i].0.hamming_distance( seq );
-			let dist = name_entry.key.needleman_wunsch( seq );
+			let dist = name_entry.key.needleman_wunsch( seq, humming_cut );
 			//eprintln!("Distance is {dist}");
 			//if dist <= self.hamming_cut {
-			if dist <= self.needleman_wunsch_cut {
+			if dist <= nw_cut {
 				// look at the matches that are almost rejected.
 				//if dist > self.needleman_wunsch_cut * 0.9 {
 					//println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", name_entry.key, dist);

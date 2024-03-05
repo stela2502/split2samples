@@ -38,7 +38,7 @@ impl PartialEq for SecondSeq {
             (1 << ((length as u64) *2) ) - 1
         };
 
-        //eprintln!("I'll compare {:b} to {:b}", (self.0 & mask) , (other.0 & mask));
+        //eprintln!("I'll compare \n{:b} to \n{:b}", (self.0 & mask) , (other.0 & mask));
         (self.0 & mask) == (other.0 & mask)
     }
 }
@@ -140,11 +140,11 @@ impl BinaryMatcher for SecondSeq {
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
     /// for sequences shorter than 15 bp this fails and returns 100.0
-    fn needleman_wunsch(&self, other: &SecondSeq ) -> f32 {
+    fn needleman_wunsch(&self, other: &SecondSeq, humming_cut:f32 ) -> f32 {
 
         let size = self.min_length(other).min(33);
 
-        if size < 15  || self.tri_nuc_abs_diff(other) > 0.6{
+        if size < 15  || self.tri_nuc_abs_diff(other) > humming_cut{
             return 100.0
         }
 
@@ -199,7 +199,8 @@ impl BinaryMatcher for SecondSeq {
             println!();
         }*/
 
-        /*println!("Can that be cut short(di_diff {}, tri_diff {}, NW {}) : \n{self} vs \n{other}", 
+        /*
+        println!("Can that be cut short(di_diff {}, tri_diff {}, NW {}) : \n{self} vs \n{other}", 
             self.di_nuc_abs_diff(other),  
             self.tri_nuc_abs_diff(other),  
             (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
@@ -355,7 +356,7 @@ impl SecondSeq {
     pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
 
         //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
-        self.needleman_wunsch( other ) <= max_dist
+        self.needleman_wunsch( other, max_dist ) <= max_dist
     }
 
     

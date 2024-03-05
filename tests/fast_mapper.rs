@@ -228,13 +228,13 @@ mod tests {
     #[test]
     fn check_write_index() {
         let mut mapper = FastMapper::new( 16, 10, 0 );
-
+        mapper.debug(Some(true));
         //log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles
 
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
         let mut geneid = 0;
         
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGAATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(),

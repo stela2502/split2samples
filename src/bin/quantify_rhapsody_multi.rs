@@ -22,7 +22,7 @@ use rustody::ofiles::Ofiles;
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
-#[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "1.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
@@ -69,6 +69,15 @@ struct Opts {
     /// how many sequences should be analyzed in one chunk
     #[clap(default_value_t=1_000_000, long)]
     chunk_size: usize,
+    /// Mapper how many times does a 40bp read combo need to match to any given gene to be reported (default=1)
+    #[clap( long)]
+    min_matches: Option<usize>,
+    /// What is the highest acceptable needleman wush inspired cut off (default 0.5)
+    #[clap( long)]
+    highest_nw_val: Option<f32>,
+    /// What is the highest acceptable humming distance to even run NW (default 0.6)
+    #[clap( long)]
+    highest_humming_val: Option<f32>,
     /// report the reads matching to a set of genes?
     #[clap(long)]
     report4genes: Option<String>,
@@ -171,6 +180,18 @@ fn main() {
     if let Some(genes) = opts.report4genes{
         let slice_str: Vec<&str> = genes.split_whitespace().collect();
         worker.report4gname( &slice_str )
+    }
+    if let Some(min_matches) = opts.min_matches{
+        worker.set_min_matches( min_matches );
+        println!("Setting the mapper min_matches to {min_matches}")
+    }
+    if let Some(highest_nw_val) = opts.highest_nw_val{
+       worker.set_highest_nw_val( highest_nw_val );
+       println!("Setting the mapper highest_nw_val to {highest_nw_val}")
+    }
+    if let Some(highest_humming_val) = opts.highest_humming_val{
+         worker.set_highest_humming_val( highest_humming_val);
+         println!("Setting the mapper highest_humming_val to {highest_humming_val}")
     }
 
 

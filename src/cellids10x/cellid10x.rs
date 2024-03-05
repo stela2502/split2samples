@@ -130,7 +130,7 @@ impl BinaryMatcher for CellId10x {
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
     /// for sequences shorter than 15 bp this fails and returns 100.0
-    fn needleman_wunsch(&self, other: &Self ) -> f32 {
+    fn needleman_wunsch(&self, other: &Self, _humming_cut:f32 ) -> f32 {
 
         let rows: usize = 16;
         let cols: usize = 16;

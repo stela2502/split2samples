@@ -70,6 +70,11 @@ pub struct FastMapper{
      */
     offset: usize, // the offset is to make a index report 'wrong' ids - say you want
     pub report4: Option<HashSet<usize>>, // report for a gene?
+    // variables for the gene matching
+    min_matches: usize, //how many times must one gene be detected before a read matches
+    highest_nw_val: f32,
+    highest_humming_val: f32,
+
 }
 
 // here the functions
@@ -122,7 +127,25 @@ impl FastMapper{
             neg,
             offset, // just to be on the save side here.
             report4:None,
+            min_matches: 1,
+            highest_nw_val: 0.6,
+            highest_humming_val: 0.3,
         }
+    }
+
+    // Function to set min_matches
+    pub fn set_min_matches(&mut self, value: usize) {
+        self.min_matches = value;
+    }
+
+    // Function to set highest_nw_val
+    pub fn set_highest_nw_val(&mut self, value: f32) {
+        self.highest_nw_val = value;
+    }
+
+    // Function to set highest_humming_val
+    pub fn set_highest_humming_val(&mut self, value: f32) {
+        self.highest_humming_val = value;
     }
 
     // Method to calculate memory size
@@ -449,6 +472,16 @@ impl FastMapper{
         gene_id
     }*/
 
+    /// how divers is the oligo - count the kinds of di nucleotides in the oligo
+    fn di_nuc_kinds ( val:u64, len:usize ) -> usize{
+        let mut sum = vec![0_i8;16];
+
+        for i in 0..len.min(30){
+            let a = (val >> (i * 2)) & 0b1111;
+            sum[a as usize] +=1;
+        }
+        sum.iter().filter(|&v| *v > 0).count()
+    }
 
     /// The add function returns the intern id. 
     pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
@@ -465,8 +498,9 @@ impl FastMapper{
         let mut i =0;
         //let mut n = 20;
 
-        // let mut short = String::from("");
-        // let mut long = String::from("");
+        let mut short = String::from("");
+        let mut long = String::from("");
+        let tool = IntToStr::new(b"AAAAA".to_vec(), 32);
 
         self.tool.from_vec_u8( seq.to_vec() );
         for entries in self.tool.by_ref(){
@@ -491,8 +525,28 @@ impl FastMapper{
                 //eprintln!("Too small sequence {}",entries.1.1 );
                 continue;
             }
+
+            if Self::di_nuc_kinds( entries.0 as u64, 6) < 3 && Self::di_nuc_kinds( entries.1.0, entries.1.1 as usize) < 9{
+                // here we only have a combo of only two bases - that is not worth to be stored in the index!
+                if self.debug{
+                    short.clear();
+                    long.clear();
+                    tool.u16_to_str( 8, &entries.0, &mut short);
+                    tool.u64_to_str( entries.1.1.into(), &entries.1.0, &mut long);
+                    println!("Useless oligo(s) detected! {short}, {long} for gene {name}");
+                }
+                
+                continue;
+            }
+
             if entries.0 > 65534{
                 continue; // this would be TTTTTTTT and hence not use that!
+            }
+
+            if entries.1.0 < 219902325556{
+                //CCCCCCCCCCCCCCCAAAAAAAAAAAAAA #15xC 15x #b01.
+                //println!("rejected! {}",entries.1);
+                continue; 
             }
 
             //println!("Added?!");
@@ -669,12 +723,12 @@ impl FastMapper{
             eprintln!("I got this as most matches {most_matches} for that data {genes:?}");
         }*/
         
-        if most_matches < 3 {
+        if most_matches < self.min_matches {
             return false
         }
 
         if let Some(value) = mean_value{
-            if value > 0.4 {
+            if value > self.highest_nw_val {
                 return false
             }
         }else {
@@ -711,10 +765,10 @@ impl FastMapper{
 
             if na == 10 && genes.is_empty(){
                 match self.debug {
-                    true => println!("get - I have no match after 10 oligo pairs - giving up"),
+                    true => println!("get_strict - I have no match after 10 oligo pairs - giving up"),
                     false => (),
                 };
-                return Err(MappingError::NoMatch)
+                break
             }
             if self.mapper[entries.0 as usize].has_data() {
                 // the 8bp bit is a match
@@ -723,7 +777,9 @@ impl FastMapper{
 
                 match &self.mapper[entries.0 as usize].get( &entries.1 ){
                     Some( (gene_ids, nw_value) ) => {
-                        //println!("And we got a match! ({gene_id:?})");
+                        // if self.debug{
+                        //     println!("And we got a perfect match! ({gene_ids:?}; {nw_value:?})");
+                        // }
                         for name_entry in gene_ids {
                             for gid in &name_entry.data{
                                 let ext_gid = self.get_extern_id_from_intern( gid.0 );
@@ -735,6 +791,14 @@ impl FastMapper{
                         na +=1;
                     },
                 }
+                if genes.len() == 1{
+                    if let Some((gene_id, vec)) =  genes.iter().next() {
+                        if vec.len() == 4 {
+                            return Ok( vec![gene_id.0] );
+                        }
+
+                    }
+                }
             }
 
         }
@@ -743,11 +807,13 @@ impl FastMapper{
                 let names: Vec<String> = genes.keys()
                     .map(|&(id, _)| self.get_name(id) )
                     .collect();
-                println!("get - testing {i} oligos I collected these genes: {genes:?} with these names: {names:?}")
+                println!("get_strict - testing {i} oligos I collected these genes: {genes:?} with these names: {names:?}");
+                println!("Did we find something? {}", ! genes.is_empty() );
             },
             false => (),
         };
         if genes.is_empty() {
+            //println!("get_strict - I have no gene to send back!");
             return Err(MappingError::NoMatch)
         }
         // check if there is only one gene //
@@ -761,6 +827,8 @@ impl FastMapper{
         }
         Err(MappingError::NoMatch)
     }
+
+    
 
 
     pub fn get(&self, seq: &[u8], tool: &mut IntToStr  ) -> Result< Vec<usize>, MappingError >{ // gene_id, gene_level
@@ -786,7 +854,7 @@ impl FastMapper{
         // entries is a Option<(u16, u64, usize)
 
         let mut i = 0;
-        //let mut tmp = "".to_string();
+        let mut tmp = "".to_string();
         /*
         let mut small_seq :String = Default::default();
         let mut large_seq: String = Default::default();*/
@@ -803,8 +871,10 @@ impl FastMapper{
                     true => println!("get - I have no match after 10 oligo pairs - giving up"),
                     false => (),
                 };
-                return Err(MappingError::NoMatch)
+                break;
             }
+            
+
             if entries.0 == 65535{
                 //tmp += "useless u16;\n";
                 continue;
@@ -859,8 +929,11 @@ impl FastMapper{
                     None => {
                         
                         //println!("Got no gene id in the first run get() run -> find() instead:");
-                        match self.mapper[entries.0 as usize].find(  &entries.1 ){
+                        match self.mapper[entries.0 as usize].find(  &entries.1, self.highest_nw_val, self.highest_humming_val ){
                             Some( (gene_ids, nw_value) ) => {
+                                if self.debug {
+                                    tmp += &format!("genes {:?} detceted! for pair {} and {}\n", gene_ids, entries.0, entries.1);
+                                }
                                 //println!("But in the second I got one: {gene_ids:?}");
                                 //tmp += &format!("And we identified some gene(s) with less stingency: {gene_ids:?}\n");
                                 for name_entry in &gene_ids{
@@ -872,13 +945,25 @@ impl FastMapper{
                             },
                             None => {  
                                 na +=1;
-                                //tmp +="no gene detceted!\n";
+                                if self.debug {
+                                    tmp += &format!("no gene detceted! for pair {} and {}\n", entries.0, entries.1);
+                                }
                                 //eprintln!("And none in the find() either.");
                                 //no_32bp_match +=1;
                             },
                         }
                         
                     },
+                };
+
+                if genes.len() == 1{
+                    if let Some((_gene_id, vec)) =  genes.iter().next() {
+                        if vec.len() == 4 {
+                            break;
+                            //return Ok( vec![gene_id.0] );
+                        }
+
+                    }
                 }
             }else { // my mapper has no data!?
                 //tmp += &format!("the mapper had not indexed that u16 {}\n ",entries.0);
@@ -900,7 +985,11 @@ impl FastMapper{
                 let names: Vec<String> = genes.keys()
                     .map(|&(id, _)| self.get_name(id) )
                     .collect();
-                println!("get - testing {i} oligos I collected these genes: {genes:?} with these names: {names:?}")
+                println!("get        - testing {i} oligos I collected these genes: {genes:?} with these names: {names:?}");
+                println!("Did we find something? {}", ! genes.is_empty() );
+                if genes.is_empty(){
+                    println!("I have tried these oligos: \n{tmp}")
+                } 
             },
             false => (),
         };
@@ -922,7 +1011,7 @@ impl FastMapper{
                 println!("read mapping to {} - should not happen here?: {:?}\n{:?}", bad_gene, self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
                 //println!("This is our total matching set: {:?}", genes);
             }*/
-            //println!("gene {matching_geneids:?} detected");
+            println!("gene {matching_geneids:?} detected");
             if matching_geneids.len() == 1 {
                 return Ok( matching_geneids )
             }else {

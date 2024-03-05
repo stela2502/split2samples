@@ -653,6 +653,110 @@ Cell->Sample table written to "/mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_te
 quantify_rhapsody finished in 0h 1min 30 sec 662milli sec
 ```
 
+## New version with updated mapper is way faster - still
+
+The new version has the first time some control over the mapping process:
+
+``--min-matches 1`` I one 8bp intitial match (100% identity) and one 32 bp relaxed match of at least 5 tries identify exactly one gene this read will be tagged as coming from that gene.
+``--highest-humming-val 0.9`` The humming value is used for a quick filtering of really useless reads. It is calculated as absolute difference between all trimers of both the target and the search 32bp fragment. This value is divided by the total length of the comparison. 0.9 is the default value and is very inclusive.
+``--highest-nw-val 0.5`` The nw value is a Needleman-Wunsch inspired value. All 32bp fragments that pass the humming test, the initial table of the Needleman Wunsch algorithm is calculated and the final value from that comparison is again divided by the total length of the initial (max) 32bp fragments. In the end both the amount of pssing matches as well as the mean nw value of a read will be used to identify the matching gene.
+
+The new version also is more restrictive with index creation. It does not allow for too simple 8bp + 32bp combinations like these:
+```
+Useless oligo(s) detected! TGTGTGTG, AGTGTGAGTGTGAGCGAGAGGGTGAGTGTGGT for gene CCL19
+Useless oligo(s) detected! TTTTTTGT, TTGTTTGTTTTGTTTTGTTTGTTGTTTGTTGT for gene CD9
+Useless oligo(s) detected! TATATATT, TATATTTTTAAAATATTTATTTATTTATTTAT for gene CSF2
+Useless oligo(s) detected! GTGTGTGT, GTGTGTGTGTGTGTGTGTGTGTGTATGACTAA for gene FASLG
+Useless oligo(s) detected! TTTTTTAA, GTCTATGTTTTAAAATAATATGTAAATTTTTC for gene FLT3
+Useless oligo(s) detected! AAAAAATA, AAATAAATAAATAAACAAATAAAAAATT for gene IL18
+Useless oligo(s) detected! CTTTTTTA, AATATAAAAATGGGTGTTATTTT for gene LAMP1
+Useless oligo(s) detected! TTTTTTTA, AGAAAAAAAAGAGAAATGAATAAAGAATCTAC for gene LIF
+Useless oligo(s) detected! TTTTTTTT, TAAGAAAAAAAAGAGAAATGAATAAAGAATCT for gene LIF
+Useless oligo(s) detected! CAAAAAAA, TTAAATTATTTATTTATGGAGGATGGAGAGAG for gene LTA
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAAAAAAAAAATTTAT for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAATTTATGTATATAA for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAATTTATGTATATAAAAGTTGCA for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAAAAAAATTTATGTA for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAATTTATGTATATAAAAG for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAAAAAAAAAAAATTT for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAAAAAAAAAATTTATGTATAT for gene SLC25A37
+Useless oligo(s) detected! AAAAAAAA, AAAAAAAAAAAAATTTATGTATATAAAAGTTG for gene SLC25A37
+Useless oligo(s) detected! TGTGTGTT, TTTTCTTTTTCTTTCTTTTTATTTTTTTTGAA for gene TBX21
+Useless oligo(s) detected! GTTTTTTC, TTTTTTTTGTTTTGTTTTTTTTTTTTTTTTTT for gene THBS1
+Useless oligo(s) detected! TTTTTTTT, GTTTTGTTTTTTTTTTTTTTTTTTTTTGCTTT for gene THBS1
+Useless oligo(s) detected! ACACACAC, AACATCACAATGACACACACATCACACACACA for gene TNFSF14
+Useless oligo(s) detected! ACACACAT, TACACACACATCACAATGACAAACACAACATT for gene TNFSF14
+Useless oligo(s) detected! ACACACAC, ACAACATCACAATGACACACACATCACACACA for gene TNFSF14
+Useless oligo(s) detected! ACACACAT, CACACACACATCACAATGACAAACACACAACA for gene TNFSF14
+Useless oligo(s) detected! TGTGTGTA, TATATATATATATATGTTTATGTATATATGTG for gene VEGFA
+Useless oligo(s) detected! TATATATA, TATATATGTTTATGTATATATGTGATTCTGAT for gene VEGFA
+```
+
+You can check that using the map_one_sequence tool as it will also index your fastq files and report the dropped fragments.
+
+
+For this comparison we set the default value to a little more restrictive values (nw value of 0.5 leads to really useless matches!).
+
+Of casue all paths need to be changed to accomodate your situation.
+```
+ /home/med-sal/git_Projects/Rustody/target/release/quantify_rhapsody_multi -r /mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L004_R1_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L003_R1_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L001_R1_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L002_R1_001.fastq.gz  -f /mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L004_R2_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L002_R2_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L001_R2_001.fastq.gz,/mnt/data2/RhapsodyTest/VDJ_v1_example/RhapVDJDemo-mRNA_S5_L003_R2_001.fastq.gz -o /mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result -s human -e /mnt/data2/RhapsodyTest/VDJ_v1_example/BD_Rhapsody_Immune_Response_Panel_Hs.fasta -m 200 -v 'v1' --min-matches 2 --highest-humming-val 0.6 --highest-nw-val 0.2
+```
+
+And here comes the result using my (old) 12 core AMD machine.
+
+```
+Writing outfiles ...
+filtering cells
+Dropping cell with too little counts (n=143818)
+2767 cells have passed the cutoff of 200 umi counts per cell.
+
+
+writing gene expression
+sparse Matrix: 2767 cell(s), 368 gene(s) and 418656 entries written to path Ok("/mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result/BD_Rhapsody_expression"); 
+Writing Antibody counts
+No genes to report on - no data written to path Some("/mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result/BD_Rhapsody_antibodies")
+Writing samples table
+dense matrix: 2767 cell written
+
+Summary:
+cellular   reads  : 4832305 reads (62.61% of total)
+no cell ID reads  : 2371673 reads (30.73% of total)
+no gene ID reads  : 0 reads (0.00% of total)
+filtered   reads  : 514614 reads (6.67% of total)
+ ->  multimapper  : 0 reads (0.00% of total)
+ -> bad qualiity  : 511637 reads (6.63% of total)
+ ->    too short  : 1009 reads (0.01% of total)
+ ->          N's  : 1968 reads (0.03% of total)
+
+total      reads  : 7718592 reads
+
+collected read counts:
+expression reads  : 4745007 reads (98.19% of cellular)
+antibody reads    : 0 reads (0.00% of cellular)
+sample reads      : 0 reads (0.00% of cellular)
+
+reported UMI counts:
+expression reads  : 2761260 UMIs (57.14% of cellular)
+antibody reads    : 0 UMIs (0.00% of cellular)
+sample reads      : 0 UMIs (0.00% of cellular)
+
+PCR duplicates or bad cells: 2071045 reads (42.86% of cellular)
+
+timings:
+   overall run time 0 h 0 min 33 sec 738 millisec
+   file-io run time 0 h 0 min 15 sec 103 millisec
+single-cpu run time 0 h 0 min 1 sec 584 millisec
+ multi-cpu run time 0 h 0 min 16 sec 124 millisec
+
+
+Cell->Sample table written to "/mnt/data2/RhapsodyTest/VDJ_v1_example/rustify_testData_result/SampleCounts.tsv"
+
+quantify_rhapsody finished in 0h 0min 33 sec 739milli sec
+```
+
 ```
 cp target/release/split2samples ~/sens05_home/bin
 cp target/release/quantify_rhapsody ~/sens05_home/bin

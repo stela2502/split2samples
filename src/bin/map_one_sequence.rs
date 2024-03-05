@@ -12,7 +12,7 @@ static EMPTY_VEC: Vec<String> = Vec::new();
 
 
 #[derive(Parser)]
-#[clap(version = "0.0.3", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the dna to seach for
     #[clap(short, long)]
@@ -32,6 +32,15 @@ struct Opts {
     /// the path to write the text index to
     #[clap(short, long)]
     outpath: String,
+    /// Mapper how many times does a 40bp read combo need to match to any given gene to be reported (default=1)
+    #[clap( long)]
+    min_matches: Option<usize>,
+    /// What is the highest acceptable needleman wush inspired cut off (default 0.5)
+    #[clap( long)]
+    highest_nw_val: Option<f32>,
+    /// What is the highest acceptable humming distance to even run NW (default 0.6)
+    #[clap( long)]
+    highest_humming_val: Option<f32>,
     
 }
 
@@ -51,6 +60,25 @@ fn main() {
     genes.debug( Some(true) );
     samples.debug( Some(true) );
     antibodies.debug( Some(true) );
+
+    if let Some(min_matches) = opts.min_matches{
+        genes.set_min_matches( min_matches );
+        samples.set_min_matches( min_matches );
+        antibodies.set_min_matches( min_matches );
+        println!("Setting the mapper min_matches to {min_matches}")
+    }
+    if let Some(highest_nw_val) = opts.highest_nw_val{
+       genes.set_highest_nw_val( highest_nw_val );
+       samples.set_highest_nw_val( highest_nw_val );
+       antibodies.set_highest_nw_val( highest_nw_val );
+       println!("Setting the mapper highest_nw_val to {highest_nw_val}")
+    }
+    if let Some(highest_humming_val) = opts.highest_humming_val{
+    	genes.set_highest_humming_val( highest_humming_val);
+    	samples.set_highest_humming_val( highest_humming_val);
+        antibodies.set_highest_humming_val( highest_humming_val);
+        println!("Setting the mapper highest_humming_val to {highest_humming_val}")
+    }
     
     let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
@@ -209,6 +237,7 @@ fn main() {
 			false
 		}
 	};
+	println!("I have collected these genes: {collected:?}" );
 	if ! ok{
 		println!("\nChecking samples:");
 		ok = match samples.get( opts.dna.as_bytes(),  &mut tool ){
@@ -236,6 +265,7 @@ fn main() {
 			}
 		};
 	}
+	println!("I have collected these genes: {collected:?}" );
 
 	if ! ok{
 		println!("\nChecking genes:");
