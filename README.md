@@ -14,7 +14,21 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
-Transpsable elements like Sine and Line repeats can not be indexed and mapped - both in BD Rhapsody as well as in 10X expression datasets. Analysis of 10x data is very slow at the moment. Problem is currently (08.02.2024) worked on. 
+### 2.1.0
+
+I finally found fishy reads and had to further improve on the mapping.
+Quantify_rhapsody_multi now gives the user access to these new options:
+
+``--min-matches 1`` I one 8bp intitial match (100% identity) and one 32 bp relaxed match of at least 5 tries identify exactly one gene this read will be tagged as coming from that gene. This value is also used to filter if multiple genes are detected, but there the nw-val is more important.
+``--highest-humming-val 0.9`` The humming value is used for a quick filtering of really useless reads. It is calculated as absolute difference between all trimers of both the target and the search 32bp fragment. This value is divided by the total length of the comparison. 0.9 is the default value and is very inclusive.
+``--highest-nw-val 0.3`` The nw value is a Needleman-Wunsch inspired value. All 32bp fragments that pass the humming test, the initial table of the Needleman Wunsch algorithm is calculated and the final value from that comparison is again divided by the total length of the initial (max) 32bp fragments. In the end both the amount of passing matches as well as the mean nw value of a read will be used to identify the matching gene.
+Values above 0.3 will lead to a lot of false postives.
+
+In addition simple DNA fragments are now excluded from the index - like simple repeats or long stretches of one base. They did lead to mapping of really shady reads e.g. containing polA sequences from some random genes (NCBI blastn confirmed).
+
+### 2.0.0
+
+Transposable elements like Sine and Line repeats can now be indexed and mapped - both in BD Rhapsody as well as in 10X expression datasets. Analysis of 10x data is very slow at the moment. Problem is currently (08.02.2024) worked on. 
 
 Mapper has significantly improved: both the false positive as well as false negative rate had improved.
 The improvement was possible by using a needleman-wunsch inspired algorithm.

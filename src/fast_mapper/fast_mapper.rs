@@ -1011,7 +1011,7 @@ impl FastMapper{
                 println!("read mapping to {} - should not happen here?: {:?}\n{:?}", bad_gene, self.gene_names_for_ids( &matching_geneids ),String::from_utf8_lossy(seq) );
                 //println!("This is our total matching set: {:?}", genes);
             }*/
-            println!("gene {matching_geneids:?} detected");
+            //println!("gene {matching_geneids:?} detected");
             if matching_geneids.len() == 1 {
                 return Ok( matching_geneids )
             }else {
