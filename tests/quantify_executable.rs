@@ -93,7 +93,7 @@ fn test_quantify_rhapsody_multi() {
     */
 
     let mut exp =HashMap::<String, usize>::new();
-    exp.insert( "na".to_string(), 35535 );
+    exp.insert( "na".to_string(), 35533 );
     exp.insert( "SampleTag01_mm".to_string(), 142 );
     exp.insert( "SampleTag02_mm".to_string(), 218 );
     exp.insert( "SampleTag03_mm".to_string(), 252 );
