@@ -146,24 +146,21 @@ impl MapperEntry{
 
 		let mut dists : Vec::<f32> = vec![];
 		let mut min_dist: f32 = f32::MAX;
-		for (_i, name_entry) in self.map.iter() {
-			//eprintln!("Hamming distance below {} - returning {:?}", self.hamming_cut, self.map[i].1.data );
-			//let dist = self.map[i].0.hamming_distance( seq );
-			let dist = name_entry.key.needleman_wunsch( seq, humming_cut );
-			//eprintln!("Distance is {dist}");
-			//if dist <= self.hamming_cut {
-			if dist <= nw_cut {
-				// look at the matches that are almost rejected.
-				//if dist > self.needleman_wunsch_cut * 0.9 {
-					//println!( "{seq} fastq did match to \n{} database with {} - should that be right?\n", name_entry.key, dist);
-				//}
-				
-				ret.push( name_entry );
-				dists.push( dist );
-				if dist < min_dist{
-					min_dist = dist
-				}
-			}
+		for name_entry in self.map.values().filter_map(| name_entry | {
+		    if name_entry.key.tri_nuc_abs_diff(seq) < humming_cut {
+		        Some(name_entry)
+		    } else {
+		        None
+		    }
+		}) {
+		    let dist = name_entry.key.needleman_wunsch(seq, nw_cut);
+		    if dist <= nw_cut {
+		        ret.push(name_entry);
+		        dists.push(dist);
+		        if dist < min_dist {
+		            min_dist = dist;
+		        }
+		    }
 		}
 		match ret.len() {
 			0 =>{

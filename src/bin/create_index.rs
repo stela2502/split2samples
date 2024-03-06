@@ -45,16 +45,14 @@ use indicatif::{ProgressStyle, ProgressBar, MultiProgress};
 #[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the gff/gtf gene information table (ONE gzipped stream - do NOT cat these files!)
-    #[clap(default_value= "testData/testGenes.gtf.gz",short, long)]
+    #[clap(short, long)]
     gtf: String,
     /// the fasta genome data
-    #[clap( default_value=  "testData/testGenes.fa.gz",short, long)]
+    #[clap(short, long)]
     file: String,
     /// the outpath
-    #[clap(default_value=  "testData/mapperTest",short, long)]
+    #[clap(short, long)]
     outpath: String,
-    #[clap(default_value= "testData/MyAbSeqPanel.fasta", short, long)]
-    antibody: String,
     /// the mapping kmer length
     #[clap(default_value_t=32, long)]
     gene_kmers: usize,
@@ -238,7 +236,6 @@ fn main() {
     let mut errors = Vec::new();
     check_file_existence(&opts.gtf, "gtf", &mut errors);
     check_file_existence(&opts.file, "file", &mut errors);
-    check_file_existence(&opts.antibody, "antibody", &mut errors);
 
     // If there are errors, print them and exit
     if !errors.is_empty() {

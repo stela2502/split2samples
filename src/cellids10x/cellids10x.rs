@@ -80,8 +80,22 @@ impl  CellIds10x{
             //"Fixed RNA Profiling" => "737k-fixed-rna-profiling.txt.gz",
             _ => {
 
+                let mapping = r#"
+                version         =>  file to load
+            "Single Cell 3' v3" => "3M-febrary-2018.txt.gz",
+            "Single Cell 3' v3.1" => "3M-febrary-2018.txt.gz",
+            "Single Cell 3' HT v3.1" => "3M-febrary-2018.txt.gz",
+            "Single Cell 3' v2" => "737k-august-2016.txt.gz",
+            "Single Cell 5' v1 and v2" => "737k-august-2016.txt.gz",
+            "Single Cell 5' v1" => "737k-august-2016.txt.gz",
+            "Single Cell 5' v2" => "737k-august-2016.txt.gz",
+            "Single Cell 5' HT v2" => "737k-august-2016.txt.gz",
+            "Single Cell 3' v1" => "737k-april-2014_rc.txt.gz",
+            "Single Cell Multiome (ATAC+GEX) v1" => "737k-arc-v1.txt.gz",
+            "Single Cell ATAC" => "737k-arc-v1.txt.gz",
+"#;           
                 eprintln!("CellId10x does not supprt the 10x version {ver}!");
-                eprintln!("All/Only versions supported by CellRanger 6.0 are available here.");
+                eprintln!("All/Only versions supported by CellRanger 6.0 are also available here:\n{mapping}");
                 process::exit(0);   
             }
         };
