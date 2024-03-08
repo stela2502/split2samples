@@ -10,7 +10,6 @@ use crate::fast_mapper::mapper_entries::NameEntry;
 pub struct MapperEntry{
 	//pub map:Vec::<(SecondSeq, NameEntry)>, // the old data storage 
 	pub map: HashMap<SecondSeq, NameEntry>, // to speed up the fast_mapper merge function
-	only:usize,
 	//hamming_cut: u32, // the bit difference up to which a match between two 32bp regions would still be acceptable.
 	//needleman_wunsch_cut: f32,
 }
@@ -30,9 +29,6 @@ impl MapperEntry{
 		let map = HashMap::new();
 		Self{
 			map,
-			only :0,
-			//hamming_cut :2,
-			//needleman_wunsch_cut: 0.25 // you want 0.3 there to not get a lot of crap - but I need more values - I need to try this.
 		}
 	}
 
@@ -46,8 +42,7 @@ impl MapperEntry{
         }
         
         // Add the size of other fields in MapperEntry
-        size += mem::size_of::<usize>() // Size of usize field (only)
-              + mem::size_of::<u32>() // Size of u32 field (hamming_cut)
+        size += mem::size_of::<u32>() // Size of u32 field (hamming_cut)
               + mem::size_of::<f32>(); // Size of f32 field (needleman_wunsch_cut)
         
         size

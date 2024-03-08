@@ -89,6 +89,10 @@ impl Gene{
 		self.exons.sort_by(|a, b| a[0].cmp(&b[0]));
 	}
 
+	pub fn exon_length(&self) -> usize{
+		self.exons.len()
+	}
+
 	/// Select the correct regions from the gene and underlying sequences
 	/// to fill in the FastMapper index.
 	/// the [u8] we get here has to be utf8 encoded!
@@ -152,56 +156,41 @@ impl Gene{
 	/// get the mRNA sequence of the transcript in sense orientation.
 	/// Fails if any other base than AGCT is in the sequence
 	/// This returns the revers complement if on the opposite starnd
-	fn to_mrna(&self, seq:Vec<u8> ) -> Option<Vec<u8>>{
-		
-		let size = self.exons.iter().map(|reg| reg[1] - reg[0] + 1).sum();
-		let mut mrna = Vec::<u8>::with_capacity(size);
+	pub fn to_mrna(&self, seq: Vec<u8>) -> Option<Vec<u8>> {
 
-		let mut sorted_exons = self.exons.clone();
+	    let mut mrna = Vec::<u8>::with_capacity(seq.len() ); // Allocate more space for potential additions
 
-		sorted_exons.sort_by(|a, b| a[0].cmp(&b[0]));
-		let mut lc = false;
-		for reg in &sorted_exons{
-			if reg[0] > seq.len() || reg[1] > seq.len() {
-				eprintln!("The exon positions exeed the seq length!");
-				return None;
+	    let mut sorted_exons = self.exons.clone();
+	    sorted_exons.sort_by_key(|a| a[0]);
+
+	    // exons upper/lower case iterations to see the breaks
+	    let mut lc = false;
+	    for reg in &sorted_exons {
+	        if reg[0] > seq.len() || reg[1] > seq.len() {
+	            eprintln!("The exon positions exceed the sequence length!");
+	            return None;
 	        }
-	        if lc {
-	        	let inverted_slice: Vec<u8> = seq[reg[0] - 1..reg[1]]
-				    .iter()
-				    .map(|&c| {
-				    	c.to_ascii_lowercase()
-				    })
-				    .collect();
-				mrna.extend_from_slice(&inverted_slice );
-	        }else {
-	        	let inverted_slice: Vec<u8> = seq[reg[0] - 1..reg[1]]
-				    .iter()
-				    .map(|&c| {
-				    	c.to_ascii_uppercase()
-				    })
-				    .collect();
-				mrna.extend_from_slice(&inverted_slice );
+	        let exon_slice = &seq[reg[0] - 1..reg[1]];
 
-	        }
-	        lc = ! lc;
-			//println!( "gene {} exon start {} and end {}", self.name,reg[0]-1, reg[1]);
-			//mrna.extend_from_slice(&seq[reg[0]-1..reg[1]]);
-			//mrna.push(b'\n');
-		}
-		// // convert to 2bit
-		// for &b in mrna.iter() {
-    	// 	let _entr = match CHECK[b as usize] {
-    	// 		Some(val) => val,
-    	// 		None => return None,
-		// 	};
-		// }
-		//println!(">{}\n{}", self.id.to_string() + " " + &self.name + " " + &self.chrom , std::str::from_utf8( &mrna ).unwrap() );
-		if ! self.sense_strand{
-			return Some ( Self::rev_compl( mrna ))
-		}
-		Some(mrna)
+	        // Convert characters to uppercase or lowercase based on `lc`
+	        let exon_mrna: Vec<u8> = exon_slice
+	            .iter()
+	            .map(|&c| if lc { c.to_ascii_lowercase() } else { c.to_ascii_uppercase() })
+	            .collect();
+
+	        mrna.extend_from_slice(&exon_mrna);
+
+	        lc = !lc;
+	    }
+
+	    if !self.sense_strand {
+	        return Some(Self::rev_compl(mrna));
+	    }
+
+	    Some(mrna)
 	}
+	
+	
 
 	/// get the nascent RNA for this transcript (including introns).
 	/// Fails if any other base than AGCT is in the sequence
