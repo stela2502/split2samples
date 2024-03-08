@@ -43,6 +43,4 @@ pub trait BinaryMatcher : Sync{
 	fn di_nuc_tab (&self ) -> Vec<i8>;
 	fn tri_nuc_tab (&self ) -> Vec<i8>;
 	fn needleman_wunsch(&self, other: &Self, humming_cut: f32 ) -> f32;
-	fn hamming_distance(self, other: &Self) -> u32;
-	fn table(&self) -> std::collections::HashMap<char, u32>;
 }

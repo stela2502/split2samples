@@ -243,8 +243,8 @@ impl IntToStr {
     }
 
 
-    // This sfucntion returen sither a Some(CellId10x, SecondSeq) - an enhanced u16 and an enhanced u64
-    // or none if the u64 would only consist of less than 4 bytes as the remaining sequence is to short.
+    // This function retures a Option<( u16, SecondSeq )> - an enhanced u16 and an enhanced u64
+    // or None if the u64 would only consist of less than 4 bytes as the remaining sequence is to short.
     pub fn seq_at_position(&self, start:usize ) -> Option<( u16, SecondSeq )> {
     	// Ensure the start position is within bounds
 	    if start >= self.storage.len() {

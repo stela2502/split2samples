@@ -208,80 +208,81 @@ impl BinaryMatcher for SecondSeq {
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
 
+    /*
     /// calculate the base flips between two u64 sequences
     /// stops after having detected 4 different bases.
-    fn hamming_distance(self, other: &SecondSeq) -> u32 {
+    // fn hamming_distance(self, other: &SecondSeq) -> u32 {
         
-        //let mask:u64;
-        let size = self.min_length(other);
+    //     //let mask:u64;
+    //     let size = self.min_length(other);
 
-        let mut a: u64;
-        let mut b: u64;
-        let mut ret: u32 = 0;
-        for i in 0..size{
-            a = (self.0 >> (i * 2)) & 0b11;
-            b = (other.0 >> (i * 2)) & 0b11;
-            if a != b {
-                ret +=1;
-            }
-            //ret += HAMMING_LOOKUP[(a ^ b) as usize];
-            if ret == 4{
-                 break;
-            }
-        }
-        //println!("hamming dist was {ret}");
-        ret
+    //     let mut a: u64;
+    //     let mut b: u64;
+    //     let mut ret: u32 = 0;
+    //     for i in 0..size{
+    //         a = (self.0 >> (i * 2)) & 0b11;
+    //         b = (other.0 >> (i * 2)) & 0b11;
+    //         if a != b {
+    //             ret +=1;
+    //         }
+    //         //ret += HAMMING_LOOKUP[(a ^ b) as usize];
+    //         if ret == 4{
+    //              break;
+    //         }
+    //     }
+    //     //println!("hamming dist was {ret}");
+    //     ret
         
-        /*
-        // quite much slower!
-        let size = usize::min(self.1 as usize, other.1 as usize);
+    //     /*
+    //     // quite much slower!
+    //     let size = usize::min(self.1 as usize, other.1 as usize);
 
-        let mut a_shifted = self.0;
-        let mut b_shifted = other.0;
+    //     let mut a_shifted = self.0;
+    //     let mut b_shifted = other.0;
         
-        let mut ret: u32 = 0;
+    //     let mut ret: u32 = 0;
 
-        for _ in 0..size {
-            let a_value = a_shifted & 0b11;
-            let b_value = b_shifted & 0b11;
-            if a_value != b_value {
-                ret +=1;
-            }
-            a_shifted >>= 2;
-            b_shifted >>= 2;
-        }
+    //     for _ in 0..size {
+    //         let a_value = a_shifted & 0b11;
+    //         let b_value = b_shifted & 0b11;
+    //         if a_value != b_value {
+    //             ret +=1;
+    //         }
+    //         a_shifted >>= 2;
+    //         b_shifted >>= 2;
+    //     }
 
-        ret
-        */
-    }
+    //     ret
+    //     */
+    // }
 
-    fn table(&self) -> std::collections::HashMap<char, u32> {
-        let mut a_cnt = 0;
-        let mut c_cnt = 0;
-        let mut g_cnt = 0;
-        let mut t_cnt = 0;
-        let sequence = self.0;
+    // fn table(&self) -> std::collections::HashMap<char, u32> {
+    //     let mut a_cnt = 0;
+    //     let mut c_cnt = 0;
+    //     let mut g_cnt = 0;
+    //     let mut t_cnt = 0;
+    //     let sequence = self.0;
 
-        for i in 0..self.1 {
-            let pair = (sequence >> (i * 2)) & 0b11;
-            match pair {
-                0b00 => a_cnt += 1,
-                0b01 => c_cnt += 1,
-                0b10 => g_cnt += 1,
-                0b11 => t_cnt += 1,
-                _ => {} // Handle invalid pairs if needed
-            }
-        }
+    //     for i in 0..self.1 {
+    //         let pair = (sequence >> (i * 2)) & 0b11;
+    //         match pair {
+    //             0b00 => a_cnt += 1,
+    //             0b01 => c_cnt += 1,
+    //             0b10 => g_cnt += 1,
+    //             0b11 => t_cnt += 1,
+    //             _ => {} // Handle invalid pairs if needed
+    //         }
+    //     }
 
-        let mut counts = std::collections::HashMap::new();
-        counts.insert('A', a_cnt);
-        counts.insert('C', c_cnt);
-        counts.insert('G', g_cnt);
-        counts.insert('T', t_cnt);
+    //     let mut counts = std::collections::HashMap::new();
+    //     counts.insert('A', a_cnt);
+    //     counts.insert('C', c_cnt);
+    //     counts.insert('G', g_cnt);
+    //     counts.insert('T', t_cnt);
 
-        counts
-    }
-
+    //     counts
+    // }
+    */
 
 }
 
@@ -379,17 +380,17 @@ mod tests {
         assert_eq!(seq1, seq4,  "same, but one is longer");
     }
 
-    #[test]
-    fn test_second_table() {
-        let seq1 = SecondSeq(0b1010101011010101, 32);
-        let mut exp = std::collections::HashMap::new();
-        exp.insert('A', 24);
-        exp.insert('C', 3);
-        exp.insert('G', 4);
-        exp.insert('T', 1);
+    // #[test]
+    // fn test_second_table() {
+    //     let seq1 = SecondSeq(0b1010101011010101, 32);
+    //     let mut exp = std::collections::HashMap::new();
+    //     exp.insert('A', 24);
+    //     exp.insert('C', 3);
+    //     exp.insert('G', 4);
+    //     exp.insert('T', 1);
 
-        assert_eq!(seq1.table() , exp,  "table did return the right counts");
-    }
+    //     assert_eq!(seq1.table() , exp,  "table did return the right counts");
+    // }
 
     #[test]
     fn test_second_seq_hashing() {
@@ -403,20 +404,20 @@ mod tests {
         assert_eq!(map.get(&seq2), None); // Test retrieval by different key
     }
 
-    #[test]
-    fn test_humming2() {
-        let seq1 = SecondSeq(0b101010, 20);
-        let seq2 = SecondSeq(0b101010, 20);
-        assert_eq!( seq1.hamming_distance( &seq2 ), 0 );
-        let seq3 = SecondSeq(0b011010, 20);
-        assert_eq!( seq1.hamming_distance( &seq3 ), 1 );
-        let seq4 = SecondSeq(0b001010, 20);
-        assert_eq!( seq1.hamming_distance( &seq4 ), 1 );
-        let seq5 = SecondSeq(0b011001, 20);
-        assert_eq!( seq1.hamming_distance( &seq5 ), 2 );
-        let seq6 = SecondSeq(0b0, 20);
-        assert_eq!( seq1.hamming_distance( &seq6 ), 3 );
-    }
+    // #[test]
+    // fn test_humming2() {
+    //     let seq1 = SecondSeq(0b101010, 20);
+    //     let seq2 = SecondSeq(0b101010, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq2 ), 0 );
+    //     let seq3 = SecondSeq(0b011010, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq3 ), 1 );
+    //     let seq4 = SecondSeq(0b001010, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq4 ), 1 );
+    //     let seq5 = SecondSeq(0b011001, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq5 ), 2 );
+    //     let seq6 = SecondSeq(0b0, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq6 ), 3 );
+    // }
 
     #[test]
     fn test_di_nuc_abs_diff() {

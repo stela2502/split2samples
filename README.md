@@ -14,6 +14,11 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
+### 2.2.0
+
+Implemeting a new mapping strategy. Instead of storing all the 8+32bp combinations for the transcripts, just store a transcript_id and a position in the transcript and store all transcripts in the index.
+Work in progress!
+
 ### 2.1.0
 
 I finally found fishy reads and had to further improve on the mapping.

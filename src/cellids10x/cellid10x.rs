@@ -188,6 +188,7 @@ impl BinaryMatcher for CellId10x {
         (16.0 - (matrix[rows - 1][cols - 1].score).abs() as f32) / 16.0
     }
 
+    /*
     /// calculate the base flips between two u32 sequences
     /// stops after having detected 4 different bases.
     fn hamming_distance(self, other: &Self) -> u32 {
@@ -238,5 +239,5 @@ impl BinaryMatcher for CellId10x {
         counts
     }
 
-
+    */
 }
