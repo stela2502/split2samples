@@ -36,12 +36,17 @@ pub mod ofiles;
 pub mod ifiles;
 pub mod analysis;
 pub mod analysis_te;
+pub mod analysis_genemapper;
 pub mod last5;
+
 pub mod fast_mapper;
+pub mod genes_mapper;
 //pub mod fast_mapper::mapper_entries;
 pub mod gene;
+
 pub mod int_to_str;
 pub mod mapping_info;
 pub mod gene_family;
+
 
 pub mod traits;

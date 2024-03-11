@@ -5,7 +5,7 @@ use needletail::parser::SequenceRecord;
 use crate::singlecelldata::SingleCellData;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
-use crate::fast_mapper::FastMapper;
+use crate::genes_mapper::GenesMapper;
 use crate::int_to_str::IntToStr;
 //use crate::traits::Index;
 use crate::errors::MappingError;
@@ -66,12 +66,12 @@ fn mean_u8( data:&[u8] ) -> f32 {
     sum as f32 / total as f32
 }
 
-/// the analysis calss is a wrapper around my 'old' quantify_rhapsody main funtion.
+/// the AnalysisGeneMapper cals is a wrapper around my 'old' quantify_rhapsody main funtion.
 /// I started it to easily process multiple fastq files in a row.
-pub struct Analysis{
-	genes: FastMapper,
-	samples: FastMapper,
-	antibodies: FastMapper,
+pub struct AnalysisGeneMapper{
+	genes: GenesMapper,
+	samples: GenesMapper,
+	antibodies: GenesMapper,
 	cells: Box<dyn CellIndex + Sync>,
 	gex: SingleCellData,
 	sample_names:Vec<String>,
@@ -81,7 +81,7 @@ pub struct Analysis{
 }
 
 
-impl Analysis{
+impl AnalysisGeneMapper{
 
 
 	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 
@@ -92,22 +92,22 @@ impl Analysis{
 
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
-	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000, 0 ); // split them into 9 bp kmers
+	    let mut genes :GenesMapper = GenesMapper::new( 0 ); // split them into 9 bp kmers
 
 	    //let mut gene_count = 0;
 	    
 	    if let Some(i) = index {
-	    	println!("Loading index from path {i}");
+	    	panic!("This is not implemented up to now!");
+	    	/*println!("Loading index from path {i}");
 	    	match genes.load_index( i ){
 	    		Ok(_r) => (),
 	    		Err(e) => panic!("Failed to load the index {e:?}")
 	    	}
 	    	genes.print();
 	    	//gene_count = genes.names.len();
-	    	
+	    	*/
 	    }
 
-	    genes.tool.step_size(3);
 	    if let Some(ex) = expression {
 	    	if Path::new(&ex).exists(){
 
@@ -118,7 +118,7 @@ impl Analysis{
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
-			                    genes.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
+			                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
 		                	}
 		            	},
 		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -130,7 +130,7 @@ impl Analysis{
 	    }
 
 	    eprintln!("Changing the expression start gene id to {}", genes.get_gene_count() );
-	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000, genes.get_gene_count()  );
+	    let mut antibodies :GenesMapper = GenesMapper::new( genes.get_gene_count()  );
 
 	    if let Some(ab) = antibody {
 
@@ -145,7 +145,7 @@ impl Analysis{
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		//seq_temp = seqrec.seq().to_vec();
 		                		//seq_temp.reverse();
-			                    antibodies.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
+			                    antibodies.add( &seqrec.seq().to_vec(), id.to_string(), "antibody_tag".to_string(), 0 );
 		                    	//ab_names.push( id.to_string() );
 		                    	//gene_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
@@ -177,7 +177,7 @@ impl Analysis{
 	    let gex = SingleCellData::new( num_threads );
 
 	    //panic!("Antibody count {} and expression count {}", antibodies.get_gene_count(), genes.get_gene_count());
-	    let mut samples= FastMapper::new( gene_kmers, 10_000, antibodies.get_gene_count() + genes.get_gene_count() );
+	    let mut samples= GenesMapper::new( antibodies.get_gene_count() + genes.get_gene_count() );
 	    //let mut sample_names:Vec<String> = Vec::with_capacity(12);
 
 	    let mut id = 1;
@@ -198,7 +198,7 @@ impl Analysis{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_hs"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_hs"), "human_sample".to_string(), 0 );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -227,7 +227,7 @@ impl Analysis{
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"), "mouse_sample".to_string(), 0 );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -237,9 +237,9 @@ impl Analysis{
 	        std::process::exit(1)
 	    }
 
-	    samples.set_min_matches(2);
+	    //samples.set_min_matches(2);
 	    samples.set_highest_nw_val(0.2);
-	    samples.set_highest_humming_val(0.4);
+	    //samples.set_highest_humming_val(0.4);
 
 	    println!("After indexing all fastq files we have the following indices:");
 		println!("the mRNA index:");
@@ -271,16 +271,17 @@ impl Analysis{
 	}
 
 	pub fn report4gname( &mut self, gname: &[&str] ){
-
-		self.antibodies.report4(gname);
-		self.genes.report4(gname);
+		eprintln!("report4gname - Not supported at the moment");
+		/*self.antibodies.report4(gname);
+		self.genes.report4(gname);*/
 
 	}
 
 	// Function to set min_matches
     pub fn set_min_matches(&mut self, value: usize) {
-    	self.antibodies.set_min_matches(value);
-		self.genes.set_min_matches(value);
+    	eprintln!("set_min_matches - Not supported at the moment");
+    	/*self.antibodies.set_min_matches(value);
+		self.genes.set_min_matches(value);*/
     }
 
     // Function to set highest_nw_val
@@ -291,8 +292,9 @@ impl Analysis{
 
     // Function to set highest_humming_val
     pub fn set_highest_humming_val(&mut self, value: f32) {
-        self.antibodies.set_highest_humming_val(value);
-		self.genes.set_highest_humming_val(value);
+    	eprintln!("set_highest_humming_val - Not supported at the moment");
+        /*self.antibodies.set_highest_humming_val(value);
+		self.genes.set_highest_humming_val(value);*/
     }
 
 	pub fn write_index(&mut self, path:&String ){
@@ -388,7 +390,7 @@ impl Analysis{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get( &data[i].1, &mut tool ){
+	            	ok = match &self.antibodies.get( &data[i].1 ){
 	                    Ok(gene_id) =>{
 	                    	if self.antibodies.report4gene(gene_id){
 	                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
@@ -418,7 +420,7 @@ impl Analysis{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
+	                	ok = match &self.samples.get( &data[i].1 ){
 		                    Ok(gene_id) =>{
 		                    	//println!("sample ({:?} and ids {gene_id:?}) with {:?}",self.samples.gene_names_for_ids( gene_id ), String::from_utf8_lossy(&data[i].1) );
 		                    	//eprintln!("I got a sample umi id {umi}");
@@ -448,7 +450,7 @@ impl Analysis{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get( &data[i].1,  &mut tool ){
+		                match &self.genes.get( &data[i].1 ){
 		                	Ok(gene_id) =>{
 		                		if self.genes.report4gene(gene_id){
 		                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
@@ -767,7 +769,7 @@ impl Analysis{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec2.seq(), &mut tool ){
+		            	ok = match &self.antibodies.get_strict( &seqrec2.seq() ){
 		                    Ok(gene_id) =>{
 		                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );
 		                    	//eprintln!("I got an ab id {gene_id}");
@@ -795,7 +797,7 @@ impl Analysis{
 		                };
 
 		                if ! ok{
-		                	ok = match &self.samples.get_strict( &seqrec2.seq(),  &mut tool ){
+		                	ok = match &self.samples.get_strict( &seqrec2.seq() ){
 			                    Ok(gene_id) =>{
 			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 			                    	//eprintln!("I got a sample umi id {umi}");
@@ -825,7 +827,7 @@ impl Analysis{
 
 		                if ! ok{
 		                	
-			                match &self.genes.get( &seqrec2.seq(),  &mut tool ){
+			                match &self.genes.get( &seqrec2.seq() ){
 			                	Ok(gene_id) =>{
 			                		/*if report_gid == gene_id[0] {
 			                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );

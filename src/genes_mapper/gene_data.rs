@@ -4,6 +4,8 @@ use crate::traits::BinaryMatcher ;
 use crate::traits::Direction;
 use crate::traits::Cell;
 use core::cmp::max;
+use std::hash::{Hash, Hasher};
+use core::fmt;
 
 // logics copied from https://github.com/COMBINE-lab/kmers/
 pub type Base = u8;
@@ -16,8 +18,8 @@ const MATCH_SCORE: i32 = 1;
 const MISMATCH_SCORE: i32 = -1;
 const GAP_PENALTY: i32 = -2;
 
-#[derive(Debug,PartialEq)]
-pub struct GenesData {
+#[derive(Debug, Clone)]
+pub struct GeneData {
 	/// The data storage - we will never store any seq other than a 2bit encoded one.
 	u8_encoded: Vec::<u8>,
 	/// store the encoded length of the sequence (needed for subset of matching)
@@ -25,9 +27,45 @@ pub struct GenesData {
 	name: String,
 	chr: String,
 	start: usize,
+	current_position: usize,
 }
 
-impl GenesData{
+impl Hash for GeneData {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+    	for val in &self.u8_encoded{
+    		val.hash(state);
+    	}
+    }
+}
+
+impl PartialEq for GeneData {
+    fn eq(&self, other: &Self) -> bool {
+        (self.len() == other.len()) && (self.equal_entries( other) == self.len() / 4)
+    }
+}
+
+
+impl Iterator for GeneData {
+    type Item = (u16, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+
+        let result = self.key_at_position(self.current_position );
+        self.current_position += 1;
+        return result
+    }
+}
+
+
+
+// Implementing Display trait for SecondSeq
+impl fmt::Display for GeneData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "GeneData with {} entries", self.len() )
+    }
+}
+
+impl GeneData{
 	pub fn new( seq: &[u8], name:&str, chr:&str, start:usize )-> Self{
 		let u8_encoded = Self::encode( seq );
 		Self{
@@ -36,7 +74,19 @@ impl GenesData{
 			name: name.to_string(),
 			chr: chr.to_string(),
 			start,
+			current_position:0,
 		}
+	}
+
+	// get the number of equal 4bp stretches over the whole length of the element
+	pub fn equal_entries(&self, other: &Self ) -> usize{
+		let mut ret  = 0;
+		for (item1, item2) in self.u8_encoded.iter().zip(other.u8_encoded.iter()) {
+			if item1 == item2 {
+				ret += 1;
+			}
+		}
+		ret
 	}
 
 	pub fn len( &self ) -> usize{
@@ -69,6 +119,20 @@ impl GenesData{
         self.start = start;
     }
 
+    /// the start here is relative to this DNA fragment, not relative to the source sequence
+    /// that the objects start points to.
+    pub fn key_at( &self, start:usize) -> u16 {
+    	let from = start / 4;
+    	let to = (start +3 +8) / 4;
+    	let mut u32_value = 0u32;
+	    for byte in self.u8_encoded[from..to].iter().rev() {
+	        u32_value <<= 8;
+	        u32_value |= *byte as u32;
+	    }
+	    let off = start % 4;
+	    (u32_value >> off*2) as u16
+    }
+
 
 	pub fn from_bytes( seq: &[u8] ) -> Self{
 		let u8_encoded = Self::encode( seq );
@@ -78,32 +142,37 @@ impl GenesData{
 			name: "unnamed".to_string(),
 			chr: "unknown".to_string(),
 			start:0,
+			current_position:0,
 		}
 	}
 
+	pub fn encode_binary(  base:u8) -> Base {
+		match base {
+	        b'A' | b'a' => A,
+	        b'C' | b'c' => C,
+	        b'G' | b'g' => G,
+	        b'T' | b't' => T,
+	        _ => panic!("cannot encode {base} into 2-bit encoding"),
+	    }
+	}
+
 	pub fn encode(decoded: &[u8]) -> Vec<u8> {
-	    let mut encoded = Vec::<u8>::with_capacity((decoded.len() + 3) / 4);
-	    let mut count = 0;
-	    let mut byte = 0;
-	    for &base in decoded {
-	        byte |= match base {
-	            b'A' | b'a' => 0b00,
-	            b'C' | b'c' => 0b01,
-	            b'G' | b'g' => 0b10,
-	            b'T' | b't' => 0b11,
-	            _ => panic!("cannot encode {base} into 2-bit encoding"),
-	        } << (6 - 2 * count); // Shift the nucleotide bits to the correct position in the byte
-	        count += 1;
-	        if count == 4 {
-	            encoded.push(byte);
-	            byte = 0;
-	            count = 0;
+
+		let mut encoded = Vec::<u8>::with_capacity((decoded.len() + 3) / 4);
+
+	    for id in 0..((decoded.len()+3) / 4) {
+	        encoded.push(0_u8);
+	        for add in (0..4).rev() {
+	            encoded[id] <<= 2;
+	            let current_byte_id = id * 4 + add;
+	            if current_byte_id < decoded.len() {
+	                encoded[id] |= Self::encode_binary(decoded[current_byte_id]);
+	            } else {
+	                encoded[id] |= Self::encode_binary(b'A'); // If sequence is shorter, pad with 'A'
+	            }
 	        }
 	    }
-	    if count != 0 {
-	    //   encoded.push(byte << (6 - 2 * count)); // Pad the remaining bits and add the final byte
-	    	encoded.push(byte)
-	    }
+
 	    encoded
 	}
 
@@ -116,11 +185,12 @@ impl GenesData{
 		if len > encoded.len() *4{
 			return None
 		}
-	    let mut decoded = Vec::<u8>::with_capacity(encoded.len() * 4);
+	    let mut decoded = Vec::<u8>::with_capacity(len);
 	    let mut enc_nuc = 0;
+
 	    for &byte in encoded {
-	        for i in 0..4 {
-	            let two_bits = (byte >> (6- 2 * i)) & 0b11; // Extract 2 bits at a time
+	        for add in 0..4 {
+	            let two_bits = (byte >> (add * 2)) & 0b11; // Extract 2 bits at a time, starting from the least significant bits
 	            let nucleotide = match two_bits {
 	                0b00 => b'A',
 	                0b01 => b'C',
@@ -130,10 +200,10 @@ impl GenesData{
 	            };
 
 	            decoded.push(nucleotide);
-	            // check if we have encoded enough!
 	            enc_nuc += 1;
+
 	            if enc_nuc == len {
-	            	return Some(decoded) 
+	                return Some(decoded);
 	            }
 	        }
 	    }
@@ -142,7 +212,13 @@ impl GenesData{
 	}
 
 	/// Slice the sequence of 2-bit representations
-    pub fn slice(&self, start: usize, end: usize) -> Self {
+    pub fn slice(&self, start: usize, end: usize) -> Option<Self> {
+    	if start > self.len(){
+    		return None
+    	}
+    	if start + end > self.len(){
+    		eprintln!("You have requested more than I have - filling in with A's!");
+    	}
         let mut sliced_data = Vec::with_capacity((end +3 - start) / 4 );
         let mut current_byte = 0;
         let mut bit_position = 0;
@@ -151,8 +227,10 @@ impl GenesData{
             let byte_index = i / 4;
             let bit_index = i % 4;
 
-            let value = (self.u8_encoded[byte_index] >> (6 - 2 * bit_index)) & 0b11;
-            current_byte |= value << (6 - 2 * bit_position);
+            let value = (self.u8_encoded[byte_index] >> ( 2 * bit_index)) & 0b11;
+            println!("I got {value:b} out of the array at self.u8_encoded[{byte_index}] and bit_index {bit_index}");
+            current_byte |= value <<  (2 * bit_position); // Corrected bit shifting
+            println!("and my current value looks now like that {current_byte:b} ");
 
             if bit_position == 3 {
                 sliced_data.push(current_byte);
@@ -167,13 +245,35 @@ impl GenesData{
             sliced_data.push(current_byte);
         }
 
-        Self {
+        Some(Self {
             u8_encoded: sliced_data,
             length: end - start,
             name: (self.name.to_string() + " slice").to_string(),
             chr : self.chr.to_string(),
             start : self.start + start,
-        }
+            current_position:0,
+        })
+    }
+
+    /// This function returns the 8bp following the start (0 indexed).
+    pub fn key_at_position(&self, start:usize ) -> Option<(u16, usize)> {
+
+    	// Ensure the start position is within bounds
+	    if start + 8 > self.len() {
+	        return None;
+	    }
+    	
+    	// Determine the range of bytes to consider
+    	let start_id = start / 4;
+    	let shift_amount = (start % 4) * 2;
+    	let mut u32_value = 0_u32;
+    	for byte in self.u8_encoded[start_id..(start_id +1)].iter().rev() {
+	        u32_value <<= 8;
+	        u32_value |= *byte as u32;
+	    }
+	    let shifted_value = u32_value >> shift_amount;
+	    let u16_value = (shifted_value & u16::MAX as u32) as u16;
+	    Some( (u16_value, start) )
     }
 
     pub fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
@@ -184,7 +284,7 @@ impl GenesData{
 	    let byte_idx = pos / 4;
 	    let bit_offset = pos % 4;
 
-	    Some((self.u8_encoded[byte_idx] >> (6 - bit_offset * 2)) & 0b11)
+	    Some((self.u8_encoded[byte_idx] >> ( bit_offset * 2)) & 0b11)
 	}
 
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
@@ -193,7 +293,7 @@ impl GenesData{
 
 }
 
-impl BinaryMatcher for GenesData{
+impl BinaryMatcher for GeneData{
 	fn to_string(&self) -> String {
 		if let Some(decoded) = self.to_bytes( self.len() ){
 			String::from_utf8_lossy(&decoded).into_owned()
@@ -235,13 +335,16 @@ impl BinaryMatcher for GenesData{
 		let order= vec![2,1,0,3];
         for i in 0..self.length-1 {
         	let id = i / 4;
-        	let off = order[i % 4];
+        	let off =  i % 4;
+        	//let off = order[i % 4];
         	if off < 3{
         		let acc = (self.u8_encoded[id] >> (off * 2)) & 0b1111;
+        		//println!("I try to do a {id} {off} merge and get that 'index' {acc} or {acc:b} ");
         		sum[ acc as usize] +=1;
         	}else {
-        		let acc = ((self.u8_encoded[id] & 0b11) << 2) | ((self.u8_encoded[id + 1] >> 6) & 0b11);
-        		//let acc = (self.u8_encoded[id] & 0b11) | ((self.u8_encoded[id + 1] >> 6) & 0b11)  ;
+        		//let acc = ((self.u8_encoded[id] & 0b11) << 2) | ((self.u8_encoded[id + 1] >> 6) & 0b11);
+        		//let acc = (((self.u8_encoded[id] >> (off * 2)) & 0b11)<<2) | (self.u8_encoded[id + 1] & 0b11) ;
+        		let acc = ((self.u8_encoded[id] >> 6 & 0b11) <<2) | (self.u8_encoded[id + 1] & 0b11) ;
         		//println!("-äI try to do a {id} {off} merge and get that 'index' {acc} or {acc:b} ");
         		sum[acc as usize] +=1;
         	}
@@ -251,21 +354,22 @@ impl BinaryMatcher for GenesData{
 
 	fn tri_nuc_tab(&self) -> Vec<i8> {
 	    let mut sum = vec![0_i8; 64];
-	    let order = vec![ 1, 0, 2, 3];
+	    //let order = vec![ 1, 0, 2, 3];
 
 	    for i in 0..self.length - 2 {
 	        let id = i / 4;
-	        let off = order[i % 4];
+	        //let off = order[i % 4];
+	        let off = i % 4;
 	        if off < 2 {
 	            let acc = (self.u8_encoded[id] >> (off * 2)) & 0b111111;
 	            //println!("I try to do a {id} {off} merge and get that 'index' {acc} or {acc:b} ");
 	            sum[acc as usize] += 1;
 	        } else if off == 2 {
-	            let acc = ((self.u8_encoded[id] & 0b1111) << 2) | ((self.u8_encoded[id + 1] >> 6) & 0b11);
+	        	let acc = (self.u8_encoded[id] >> 4 & 0b1111) | ((self.u8_encoded[id + 1] & 0b11) << 4);
 	            //println!("-I try to do a {id} {off} merge and get that 'index' {acc} or {acc:b} ");
 	            sum[acc as usize] += 1;
 	        } else {
-	            let acc = ((self.u8_encoded[id] & 0b11) << 4) | ((self.u8_encoded[id + 1] >> 4) & 0b1111);
+	        	let acc = (self.u8_encoded[id] >> 6 & 0b11) | ((self.u8_encoded[id + 1] & 0b1111) << 2) ;
 	            //println!("--I try to do a {id} {off} merge and get that 'index' {acc} or {acc:b} ");
 	            sum[acc as usize] += 1;
 	        }
