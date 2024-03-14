@@ -61,7 +61,8 @@ impl Iterator for GeneData {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for GeneData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "GeneData with {} entries", self.len() )
+        write!(f, "GeneData name {} on chr {} at position {} with {} entries:\n{}",
+        	self.name, self.chr, self.start, self.len(), self.to_dna_string() )
     }
 }
 
@@ -152,6 +153,7 @@ impl GeneData{
 	        b'C' | b'c' => C,
 	        b'G' | b'g' => G,
 	        b'T' | b't' => T,
+	        b'N' | b'n' => A,
 	        _ => panic!("cannot encode {base} into 2-bit encoding"),
 	    }
 	}
@@ -213,11 +215,14 @@ impl GeneData{
 
 	/// Slice the sequence of 2-bit representations
     pub fn slice(&self, start: usize, end: usize) -> Option<Self> {
-    	if start > self.len(){
+    	if start >= self.len(){
     		return None
     	}
-    	if start + end > self.len(){
-    		eprintln!("You have requested more than I have - filling in with A's!");
+    	if start > end {
+    		panic!("ther is a library error - why do you want to get the area {start} - {end} when start is bigger that end?!!?\n{self}");
+    	}
+    	if end -start > self.len(){
+    		eprintln!("You have requested more than I have ({end} - {start} > {} ) - filling in with A's! {self}", self.len());
     	}
         let mut sliced_data = Vec::with_capacity((end +3 - start) / 4 );
         let mut current_byte = 0;
@@ -226,11 +231,14 @@ impl GeneData{
         for i in start..end {
             let byte_index = i / 4;
             let bit_index = i % 4;
+            if byte_index >= self.u8_encoded.len(){
+            	panic!("WHAAAT? subset {start} to {end} on {self} leeds to an out of range {byte_index}");
+            }
 
             let value = (self.u8_encoded[byte_index] >> ( 2 * bit_index)) & 0b11;
-            println!("I got {value:b} out of the array at self.u8_encoded[{byte_index}] and bit_index {bit_index}");
+            //println!("I got {value:b} out of the array at self.u8_encoded[{byte_index}] and bit_index {bit_index}");
             current_byte |= value <<  (2 * bit_position); // Corrected bit shifting
-            println!("and my current value looks now like that {current_byte:b} ");
+            //println!("and my current value looks now like that {current_byte:b} ");
 
             if bit_position == 3 {
                 sliced_data.push(current_byte);
@@ -267,12 +275,22 @@ impl GeneData{
     	let start_id = start / 4;
     	let shift_amount = (start % 4) * 2;
     	let mut u32_value = 0_u32;
-    	for byte in self.u8_encoded[start_id..(start_id +1)].iter().rev() {
+    	let to = if shift_amount > 0 {
+    		3
+    	}else {
+    		2
+    	};
+    	for byte in self.u8_encoded[start_id..(start_id +to)].iter().rev() {
+    		//println!("Bytes before <<=8 {u32_value:b}");
 	        u32_value <<= 8;
+	        //println!("Bytes before |= {u32_value:b}");
 	        u32_value |= *byte as u32;
+	        //println!("Bytes after both steps {u32_value:b}");
 	    }
+
 	    let shifted_value = u32_value >> shift_amount;
 	    let u16_value = (shifted_value & u16::MAX as u32) as u16;
+	    //println!("next returns a u16 value: {u16_value:b}");
 	    Some( (u16_value, start) )
     }
 
@@ -294,7 +312,7 @@ impl GeneData{
 }
 
 impl BinaryMatcher for GeneData{
-	fn to_string(&self) -> String {
+	fn to_dna_string(&self) -> String {
 		if let Some(decoded) = self.to_bytes( self.len() ){
 			String::from_utf8_lossy(&decoded).into_owned()
 		}else {
@@ -303,7 +321,7 @@ impl BinaryMatcher for GeneData{
 	}
 
 	fn di_nuc_abs_diff( &self, other: &Self  ) -> f32 {
-		if (self.len() > 100) | ( other.len() > 100) {
+		if (self.len() > 500) | ( other.len() > 500) {
 			panic!("Please do not do that with large sequences!")
 		}
 
@@ -317,7 +335,7 @@ impl BinaryMatcher for GeneData{
 	}
 
 	fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32 { 
-		if (self.len() > 100) | ( other.len() > 100) {
+		if (self.len() > 500) | ( other.len() > 500) {
 			panic!("Please do not do that with large sequences!")
 		}
 

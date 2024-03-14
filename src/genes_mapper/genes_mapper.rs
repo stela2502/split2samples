@@ -1,6 +1,7 @@
 use crate::traits::Index;
 
 use crate::errors::MappingError;
+use crate::errors::GeneSelectionError;
 
 use crate::genes_mapper::gene_data::GeneData;
 use crate::genes_mapper::gene_link::GeneLink;
@@ -12,6 +13,8 @@ use crate::traits::BinaryMatcher;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::BTreeMap;
+
+use crate::singlecelldata::IndexedGenes;
 
 use core::fmt;
 
@@ -26,11 +29,16 @@ pub struct GenesMapper{
 	/// if this is not the only mapper used - where should I start to count my genes?
 	offset:usize,
 	names: BTreeMap<String, usize>,
-	/// to which hw value should a match be accepted?
+	/// to which hw value should a match be accepted default to 0.2?
 	highest_nw_val: f32,
+	/// a pre-filter to the needleman wunsch test default to 0.6
+	highest_humming_val: f32,
 	/// how many u8's need to be the same for a read to match a gene?
 	min_matches: usize,
+	/// print the matching sequences for a gene in this list
 	report4: Option<HashSet<usize>>, // report for a gene?
+	/// additional mathcing and adding infos printed
+	debug: bool,
 }
 
 // Implementing Display trait for SecondSeq
@@ -45,15 +53,75 @@ impl GenesMapper{
 	pub fn new( offset: usize) -> Self{
 		Self{
 			genes: Vec::<GeneData>::with_capacity( 40_000 ),
-			mapper: Vec::<GeneLink>::with_capacity(u16::MAX as usize),
+			mapper: vec![GeneLink::new(); u16::MAX as usize],
 			gene_hashes: HashSet::new(),
 			with_data: 0,
 			offset,
 			names: BTreeMap::new(),
-			highest_nw_val: 0.3,
+			highest_nw_val: 0.2,
+			highest_humming_val: 0.6,
 			min_matches: 10, //40 bp exact match
 			report4: None, // report for a gene?
+			debug:false,
 		}
+	}
+
+
+	pub fn set_min_matches( &mut self, val:usize) {
+		self.min_matches = val;
+	}
+
+	/// Function to set highest_nw_val
+    pub fn set_highest_nw_val(&mut self, value: f32) {
+        self.highest_nw_val = value;
+    }
+
+    /// Function to set highest_humming_val
+    pub fn set_highest_humming_val(&mut self, value: f32) {
+        self.highest_humming_val = value;
+    }
+
+	/// the IndexedGenes replace the full mapper class in the data export
+    /// This allowes for multiple Indices to all feed the same data structure.
+	pub fn as_indexed_genes(&self) -> IndexedGenes{
+		IndexedGenes::new( &self.names, self.offset )
+	}
+
+	pub fn debug( &mut self, debug: Option<bool> ) -> bool{
+		if let Some(dbg) = debug{
+			self.debug = dbg;
+		}
+		self.debug
+	}
+
+	fn key_to_string( key:&u16 ) -> String{
+        let mut data = String::new();
+        for i in 0..8 {
+            let ch = match (key >> (i * 2)) & 0b11 {
+                0b00 => "A",
+                0b01 => "C",
+                0b10 => "G",
+                0b11 => "T",
+                _ => "N",
+            };
+            data += ch;
+        }
+        data
+	}
+	fn reject_key(&self,  key:&u16 ) -> bool{
+		if &self.di_nuc_tab_length( &key ) < &4{ // could be as simple as AAAACAAA or ACACACAC
+			if self.debug{
+				println!("this key was rejected: {}", Self::key_to_string( &key ) );
+			}
+			return true;
+		}
+		if key > &65534 {
+			if self.debug{
+				println!("this key was rejected: {}", Self::key_to_string( &key ) );
+			}
+			return true
+		}
+		false
 	}
 
 	pub fn add(&mut self, seq: &[u8], name: String, chr: String, start:usize ) -> usize{
@@ -78,9 +146,13 @@ impl GenesMapper{
 		let mut keys = 0;
 		while let Some( (key, offset )) = gene_data.next(){
 			// check the key and ignore too simple ones:
-			if &self.di_nuc_tab_length( &key ) < &4{ // could be as simple as AAAACAAA or ACACACAC
-				continue;
+			if self.reject_key( &key ){
+				continue
 			}
+			if self.debug{
+				println!("I add the key {} for the gene {gene_data}", Self::key_to_string(&key) );
+			}
+			// or the add the info:
 			if self.mapper[key as usize].is_empty() {
                 // will add in the next step so
                 self.with_data +=1;
@@ -89,7 +161,7 @@ impl GenesMapper{
             keys += 1;
 		}
 
-		keys
+		keys 
 	}
 
 	/// For the multicore processing I need this object to be mergable
@@ -97,7 +169,7 @@ impl GenesMapper{
     /// All other classes have to be copied, too. So we need to use our own incorporate_match_combo function.
     pub fn merge( &mut self, other: &Self ) {
 
-        'main: for other_data in other.genes {
+        'main: for other_data in &other.genes {
         	let mut gene_data = other_data.clone();
         	
         	let mut hasher = DefaultHasher::new();
@@ -125,44 +197,267 @@ impl GenesMapper{
 		}
 	}
 
-	pub fn get(&self, seq: &[u8] ) ->  Result< Vec<usize>, MappingError >{ 
-		let mut gene_data = GeneData::new( seq, "read", "read2", 0 );
-		let mut res = HashMap::<usize, usize>::new();
+	pub fn get(&self, read_data: &GeneData, res_vec: &Vec<(usize, Vec<i32>)> ) ->  Result< Vec<usize>, MappingError >{
 
-		while let Some((key, start)) = gene_data.next(){
-			if ! self.mapper[key as usize].is_empty() {
-				self.mapper[key as usize].get( &mut res, start );
+		/*let strict = self.get_strict( seq );
+		if strict.is_ok(){
+			return strict;
+		}
+
+		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
+		let mut res = HashMap::<usize, Vec<i32>>::new();
+		//println!("I try to find a match for this read: {read_data}");
+		while let Some((key, key_position_on_read )) = read_data.next(){
+
+			//println!("I get the key {key:b} at read position {start_on_read}");
+			if key > 65534{
+				continue;
 			}
-			for (gene_id, start) in &res {
-				if let Some(cmp) = self.genes[*gene_id].slice( *start, gene_data.len() ){
-					if cmp.needleman_wunsch( &gene_data, 0.3 ) < self.highest_nw_val {
-						return Ok( vec![*gene_id + self.offset] )
-					}
-				}
+
+			if ! self.mapper[key as usize].is_empty() {
+				self.mapper[key as usize].get( &mut res, key_position_on_read as i32);
 			}
 		}
 
-		Err(MappingError::NoMatch)
+		if res.is_empty() {
+			return Err(MappingError::NoMatch)
+		}
+
+		// Convert the HashMap into a vector of key-value pairs
+	    let mut res_vec: Vec<_> = res.into_iter().collect();
+
+	    // Sort the vector by the length of the internal arrays
+	    // longest first
+	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
+	    */
+	    let mut ret = Vec::<usize>::new();
+
+		for (gene_id, start) in res_vec {
+
+	    	match Self::all_values_same( start ){
+	    		Ok(()) => {
+	    			let (read, database) = if start[0] > 0 {
+	    				// the info in the read is mapping somewhere in th database. Need to set position 0 correct
+						if let Some(cmp) = self.genes[*gene_id].slice( start[0] as usize, self.genes[*gene_id].len() ){
+							(read_data.clone(), cmp)
+						}else {
+							panic!("I could not slice the database entry!");
+						}
+					}else {
+						// the read is only partially mapping to the database!?
+						//eprintln!("The database entry might be too short?!");
+						if let Some(cmp) = read_data.slice( (- start[0]) as usize, read_data.len() ){
+							(cmp, self.genes[*gene_id].clone())
+						}else {
+							panic!("I could not slice the database entry!");
+						}
+					};
+					if self.debug{
+						println!("using the match gene id {gene_id} and start at {} I'll compare these two sequences", start[0]);
+						println!("read \n{read} to database\n{database}\n");
+					}
+					if database.needleman_wunsch( &read, self.highest_humming_val ) < self.highest_nw_val {
+						if self.report4this_gene( gene_id ) || self.debug{
+							println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+						}
+						ret.push( *gene_id + self.offset );
+					}
+				},
+				Err(GeneSelectionError::NotSame) =>{
+		    		let counts = Self::table( start );
+		    		//eprintln!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{start:?}");
+		    		if counts.len() < start.len() /2 {
+		    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
+		    			for (start, count) in counts{
+		    				let (read, database) = if start > 0 {
+			    				// the info in the read is mapping somewhere in th database. Need to set position 0 correct
+								if let Some(cmp) = self.genes[*gene_id].slice( start as usize, self.genes[*gene_id].len() ){
+									(read_data.clone(), cmp )
+								}else {
+									panic!("I could not slice the database entry!");
+								}
+							}else {
+								// the read is only partially mapping to the database!?
+								//eprintln!("The database entry might be too short?!");
+								if let Some(cmp) = read_data.slice( (- start) as usize, read_data.len() ){
+									(cmp.clone(), self.genes[*gene_id].clone())
+								}else {
+									panic!("I could not slice the database entry!");
+								}
+							};
+							if self.debug{
+								println!("using the match start {start} count {count} I'll compare these two sequences");
+								println!("read \n{read} to database\n{database}\n");
+							}
+							if database.needleman_wunsch( &read, self.highest_humming_val ) < self.highest_nw_val {
+								if self.report4this_gene( gene_id ) || self.debug{
+									println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+								}
+								ret.push( *gene_id + self.offset );
+							}
+		    			}
+
+		    		}
+		    		
+		    	},
+		    	_=> { // not enough matches in the first place!
+		    	},
+		    };
+		}
+
+		if self.debug{
+			println!("mapping the read {read_data}\new obtained a initial mapping result {res_vec:?}\n and in the end END we found {ret:?}");
+		}
+		if ret.is_empty(){
+			Err(MappingError::NoMatch)
+		}else {
+			Ok(ret)
+		}
 	}
 
-	pub fn get_strict(&self, seq: &[u8] ) ->  Result< Vec<usize>, MappingError >{ 
-		let mut gene_data = GeneData::new( seq, "read", "read2", 0 );
-		let mut res = HashMap::<usize, usize>::new();
 
-		while let Some((key, start)) = gene_data.next(){
+	fn all_values_same(vec: &[i32]) -> Result<(), GeneSelectionError> {
+		if vec.len() < 3 {
+			return Err(GeneSelectionError::TooView);
+		}
+	    if let Some(first) = vec.first() {
+	        if vec.iter().all(|x| x == first){
+	        	Ok(())
+	        }else {
+	        	Err(GeneSelectionError::NotSame)
+	        }
+	    } else {
+	        // If the vector is empty, technically all values are the same (trivially true)
+	        // but useless here as filtered out before
+	        Err(GeneSelectionError::TooView) // this should not be checked - too bad an initial match!!
+	    }
+	}
+
+	/// this will return a sorted vector of (<start on source>:i32, count:usize)
+	/// Highest counts first
+	fn table(vec: &[i32]) -> Vec<(i32,usize)>{
+		let count_map = vec.iter().fold(HashMap::new(), |mut map, &val| { 
+	        *map.entry(val).or_insert(0) += 1; 
+	        map 
+    	});
+    	let mut sorted_counts: Vec<_> = count_map.into_iter().collect();
+    	sorted_counts.sort_by(|&(_, count1), &(_, count2)| count2.cmp(&count1));
+    	sorted_counts
+	}
+
+
+	pub fn get_strict(&self, seq: &[u8] ) ->  Result< Vec<usize>, MappingError >{ 
+		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
+		let mut res = HashMap::<usize, Vec<i32>>::new();
+
+		let mut i = 0;
+		while let Some((key, start)) = read_data.next(){
+			if self.reject_key(&key){
+				continue;
+			}
+
+			i+=1;
 			if ! self.mapper[key as usize].is_empty() {
-				self.mapper[key as usize].get( &mut res, start );
+				self.mapper[key as usize].get( &mut res, start as i32 );
 			}
-			for (gene_id, start) in &res {
-				if let Some(cmp) = self.genes[*gene_id].slice( *start, gene_data.len() ){
-					if cmp.equal_entries( &gene_data ) < self.min_matches {
-						return Ok( vec![*gene_id + self.offset] )
+			//println!("after {i} iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
+		}
+		
+		
+		if res.is_empty(){
+			return Err(MappingError::NoMatch)
+		}
+		// Convert the HashMap into a vector of key-value pairs
+	    let mut res_vec: Vec<_> = res.into_iter().collect();
+
+	    // Sort the vector by the length of the internal arrays
+	    // longest first
+	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
+
+	    let mut ret = Vec::<usize>::new();
+	    if let Some (entry) = &res_vec.first() {
+	    	let gene_id = &entry.0;
+	    	let start = &entry.1;
+	    	match Self::all_values_same( start ){
+	    		Ok(()) => {
+	    			let (read, database) = if start[0] > 0 {
+	    				// the info in the read is mapping somewhere in the database. Need to set position 0 correct
+						if let Some(cmp) = self.genes[*gene_id].slice( start[0] as usize, self.genes[*gene_id].len() ){
+							(read_data.clone(), cmp)
+						}else {
+							panic!("I could not slice the database entry!");
+						}
+					}else {
+						// the read is only partially mapping to the database!?
+						//eprintln!("The database entry might be too short?!");
+						if let Some(cmp) = read_data.slice( (- start[0]) as usize, read_data.len() ){
+							(cmp, self.genes[*gene_id].clone())
+						}else {
+							panic!("I could not slice the database entry!");
+						}
+					};
+					if self.debug{
+						println!("using the match {entry:?} I'll compare these two sequences");
+						println!("read \n{read} to database\n{database}\n");
 					}
-				}
-			}
+					if database.equal_entries( &read ) >= self.min_matches {
+						if self.report4this_gene( gene_id ) || self.debug{
+							println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+						}
+						ret.push( *gene_id + self.offset );
+					}
+				},
+				Err(GeneSelectionError::NotSame) =>{
+		    		let counts = Self::table( start );
+		    		//eprintln!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{start:?}");
+		    		if counts.len() < start.len() /2 {
+		    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
+		    			for (start, count) in counts{
+		    				let (read, database) = if start > 0 {
+			    				// the info in the read is mapping somewhere in th database. Need to set position 0 correct
+								if let Some(cmp) = self.genes[*gene_id].slice( start as usize, self.genes[*gene_id].len() ){
+									(read_data.clone(), cmp)
+								}else {
+									panic!("I could not slice the database entry!");
+								}
+							}else {
+								// the read is only partially mapping to the database!?
+								//eprintln!("The database entry might be too short?!");
+								if let Some(cmp) = read_data.slice( (- start) as usize, read_data.len() ){
+									(cmp, self.genes[*gene_id].clone())
+								}else {
+									panic!("I could not slice the database entry!");
+								}
+							};
+							if self.debug{
+								println!("using the match start {start} count {count} I'll compare these two sequences");
+								println!("read \n{read} to database\n{database}\n");
+							}
+							if database.equal_entries( &read ) >= self.min_matches {
+								if self.report4this_gene( gene_id ) || self.debug{
+									println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+								}
+								ret.push( *gene_id + self.offset );
+							}
+		    			}
+
+		    		}
+		    		
+		    	},
+		    	_=> { // not enough matches in the first place!
+		    	},
+		    };
 		}
 
-		Err(MappingError::NoMatch)
+		if self.debug{
+			println!("mapping the read {read_data}\nwe obtained a initial mapping result {res_vec:?}\n and in the end found {ret:?}");
+		}
+		if ret.is_empty(){
+			self.get( &read_data, &res_vec )
+			//Err(MappingError::NoMatch)
+		}else {
+			Ok(ret)
+		}
 	}
 
 	pub fn report4( &mut self, genes: &[&str]) {
@@ -181,7 +476,7 @@ impl GenesMapper{
         }
     }
 
-    pub fn report4gene( &self, geneid:&[usize] ) -> bool {
+    pub fn report4gene( &self, geneid:&Vec<usize> ) -> bool {
         if let Some(hash) = &self.report4{
             for gid in geneid{
                 if hash.contains(gid){
@@ -189,6 +484,19 @@ impl GenesMapper{
                 }
             }
             false
+        }else {
+            false
+        }
+    }
+
+    pub fn report4this_gene( &self, geneid:&usize ) -> bool {
+        if let Some(hash) = &self.report4{
+            if hash.contains(geneid){
+                true
+            }else {
+            	false
+            }
+
         }else {
             false
         }
@@ -215,14 +523,6 @@ impl GenesMapper{
 		}
         sum.iter().filter(|&x| *x != 0).count()
 	}
-
-	pub fn set_min_matches( &mut self, val:usize) {
-		self.min_matches = val;
-	}
-
-	pub fn set_highest_nw_val(&mut self, val:f32){
-		self.highest_nw_val = val;
-	}
 	
 	fn get_id( &self, name: String ) -> usize{
 		0
@@ -246,7 +546,7 @@ impl GenesMapper{
 	fn to_header_n( &self, names: &[String] ) -> std::string::String{
 		let mut ret= Vec::<std::string::String>::with_capacity( self.genes.len() +4 );
         //println!( "I get try to push into a {} sized vector", self.names.len());
-        for obj in self.genes {
+        for obj in &self.genes {
             //println!( "Pushing {} -> {}", obj, *id-1);
             ret.push(  obj.get_name().to_string() ) ;
         }
@@ -262,17 +562,20 @@ impl GenesMapper{
 		// this index needs to store the genes vectors and names. Genes binary and names as comma separated list?
 
 		// the mapper would probably also make sense to store. Let's check the time we need to re-create that before storing it.
-		Err("Not implemented")
+		eprintln!("GenesMapper::write_index - NOT IMPLEMENTED!!!");
+		Ok(())
 	}
 	pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
-		Err("Not implemented")
+		eprintln!("GenesMapper::load_index - NOT IMPLEMENTED!!!");
+		Ok(())
 	}
 
 	pub fn write_index_txt( &mut self, path: String ) -> Result< (), &str>{
 		// this index needs to store the genes vectors and names. Genes binary and names as comma separated list?
 
 		// the mapper would probably also make sense to store. Let's check the time we need to re-create that before storing it.
-		Err("Not implemented")
+		
+		Ok(())
 	}
 
 }

@@ -49,7 +49,7 @@ impl CellId10x {
 
 impl BinaryMatcher for CellId10x {
 
-	fn to_string(&self) -> String {
+	fn to_dna_string(&self) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
         for i in 0..16 {

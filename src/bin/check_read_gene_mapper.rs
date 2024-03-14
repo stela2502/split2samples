@@ -24,51 +24,27 @@ use rustody::ofiles::Ofiles;
 #[derive(Parser)]
 #[clap(version = "1.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
-    /// the input R1 reads file
+    /// the dna you want to match
     #[clap(short, long)]
-    reads: String,
-    /// the input R2 samples file
-    #[clap(short, long)]
-    file: String,
+    dna: String,
     /// a pre-defined index folder produced by the cerateIndex scipt
     #[clap(short, long)]
     index: Option<String>,
-    /// the specie of the library [mouse, human]
-    #[clap(short, long)]
-    specie: String,
     /// the outpath
     #[clap(short, long)]
     outpath: String,
+    /// the specie of the library [mouse, human]
+    #[clap(short, long)]
+    specie: String,
     /// the fasta database containing the genes
     #[clap(short, long)]
     expression: Option<String>,
     /// the fasta database containing the antibody tags
     #[clap(short, long)]
     antibody: Option<String>,
-    /// the minimum (UMI) reads per cell (sample + genes + antibody combined)
-    #[clap(short, long)]
-    min_umi: usize,
-    /// the version of beads you used v1, v2.96 or v2.384
-    #[clap(short, long)]
-    version: String,
-    /// Optional: end the analysis after processing <max_reads> cell fastq entries 
-    #[clap(default_value_t=usize::MAX, long)]
-    max_reads: usize,
-    /// minimal sequencing quality 
-    #[clap(default_value_t=25.0, long)]
-    min_quality: f32,
-    /// minimal sequencing quality 
-    #[clap(default_value_t=32, long)]
-    gene_kmers: usize,
     /// how many threads to use to analyze this (default max available)
     #[clap(short, long)]
     num_threads: Option<usize>,
-    /// this is a BD rhapsody or a 10x expression experiment? 
-    #[clap(default_value="bd", long)]
-    exp: String,
-    /// how many sequences should be analyzed in one chunk
-    #[clap(default_value_t=1_000_000, long)]
-    chunk_size: usize,
     /// Mapper how many times does a 40bp read combo need to match to any given gene to be reported (default=1)
     #[clap( long)]
     min_matches: Option<usize>,
@@ -82,19 +58,6 @@ struct Opts {
     #[clap(long)]
     report4genes: Option<String>,
 }
-
-/*
-    /// UMI min count - use every umi (per gene; 1) or only reoccuring ones (>1)
-    #[clap(default_value_t=1,short, long)]
-    umi_count: u8,
-*/
-
-/*// Function to check if a file exists
-fn check_file_existence(file_path: &str, option: &str, errors: &mut Vec<String>) {
-    if !fs::metadata(file_path).is_ok() {
-        errors.push(format!("Option {option} - File not found: {file_path}"));
-    }
-}*/
 
 // the main function nowadays just calls the other data handling functions
 fn main() {
@@ -111,13 +74,6 @@ fn main() {
             println!("New output directory created successfully!");
         }
     }
-
-    // let max_reads = match &opts.max_reads {
-    //     Some(val) => val,
-    //     None => &usize::MAX,
-    // };
-
-    println!("Analysis will stop after having processed {} fastq entries containing a cell info\n", opts.max_reads);
 
 
     println!("init models");    
@@ -137,25 +93,10 @@ fn main() {
     let ofile = Ofiles::new( 1, "Umapped_with_cellID", "R2.fastq.gz", "R1.fastq.gz",  opts.outpath.as_str() );
     
     // needs log_writer:BufWriter<File>, min_quality:f32, max_reads:usize, ofile:Ofiles
-    let mut results = MappingInfo::new( Some(log_file), opts.min_quality, opts.max_reads, Some(ofile) );
+    let mut results = MappingInfo::new( Some(log_file), 20.0, 10, Some(ofile) );
     
 
-    let pos:&[usize;8];
-    let min_sizes:&[usize;2];
-    
-
-    if &opts.exp =="10x" {
-        min_sizes = &[ 20, 20 ];
-        pos = &[0,1, 2,3, 4,5, 6,7 ];
-    }
-    else if &opts.version == "v1"{
-        pos = &[0,9, 21,30, 43,52, 52,60 ];
-        min_sizes = &[ 66, 60 ];
-    }
-    else {
-        pos = &[0,9, 13,22, 26,35 , 36,42 ];
-        min_sizes = &[ 51, 51 ];
-    }
+    let pos = &[0,9, 21,30, 43,52, 52,60 ];
 
 
     let num_threads = match opts.num_threads{
@@ -170,12 +111,10 @@ fn main() {
         None => num_cpus::get(),
     };
     
-    let save= opts.index.is_none();
-
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
-    let mut worker = AnalysisGeneMapper::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie, opts.index, num_threads, &opts.exp);
+    let mut worker = AnalysisGeneMapper::new( 32, "v1".to_string(), opts.expression,
+        opts.antibody, opts.specie, opts.index, num_threads, "bd");
 
     if let Some(genes) = opts.report4genes{
         let slice_str: Vec<&str> = genes.split_whitespace().collect();
@@ -194,28 +133,16 @@ fn main() {
          println!("Setting the mapper highest_humming_val to {highest_humming_val}")
     }
 
-
-    if save{
-        worker.write_index( &opts.outpath );
-    }
-
-    let mut split1 = opts.reads.split(',');
-    let mut split2 = opts.file.split(',');
-    let mut id = 0;
-    for f1 in split1.by_ref(){
-        if let Some(f2) = split2.next(){
-            id += 1;
-            println!("\nParsing file pair {id}\n");
-            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath, opts.max_reads ,opts.chunk_size );
-        }
-        
-    }
+    worker.debug( Some(true) );
+    // data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8]
+    let data= vec![ (b"AGGAGATTAACTGGCCTGCGAGCCTGTTCAGGTAGCGGTGACGACTACATATGCTGCACATTTTTT".to_vec(), opts.dna.as_bytes().to_vec() )];
+    worker.analyze_paralel( &data, &mut results, pos );
 
     //worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );
 
     println!("\n\nWriting outfiles ...");
 
-    worker.write_data( opts.outpath, &mut results, opts.min_umi );
+    //worker.write_data( opts.outpath, &mut results, opts.min_umi );
 
 
 

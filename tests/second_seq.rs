@@ -80,7 +80,7 @@ mod tests {
         let seq_u64 = 13632604658164817131_u64;
         let obj = SecondSeq(seq_u64, 32);
 
-        assert_eq!( BinaryMatcher::to_string(&obj), seq );
+        assert_eq!( BinaryMatcher::to_dna_string(&obj), seq );
         
     }
     

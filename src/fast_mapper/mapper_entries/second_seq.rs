@@ -57,7 +57,7 @@ impl Hash for SecondSeq {
 
 impl BinaryMatcher for SecondSeq {
 
-    fn to_string(&self) -> String {
+    fn to_dna_string(&self) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
         for i in 0..self.1.min(32) {
@@ -290,7 +290,7 @@ impl BinaryMatcher for SecondSeq {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for SecondSeq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SecondSeq (u64: {} or {:b}, u8: {})", BinaryMatcher::to_string(self), self.0, self.1)
+        write!(f, "SecondSeq (u64: {} or {:b}, u8: {})", BinaryMatcher::to_dna_string(self), self.0, self.1)
     }
 }
 
@@ -350,7 +350,7 @@ impl SecondSeq {
 
     pub fn print_second_seq(&self) {
         println!("Contents of SecondSeq:");
-        println!("u64: {:b} or {:?}", self.0, BinaryMatcher::to_string(self) );
+        println!("u64: {:b} or {:?}", self.0, BinaryMatcher::to_dna_string(self) );
         println!("{} sig bp", self.1);
     }
 

@@ -238,7 +238,11 @@ impl AnalysisGeneMapper{
 	    }
 
 	    //samples.set_min_matches(2);
-	    samples.set_highest_nw_val(0.2);
+	    samples.set_highest_nw_val(0.1);
+	    genes.set_min_matches( 8 );
+	    samples.set_min_matches( 5 );
+
+
 	    //samples.set_highest_humming_val(0.4);
 
 	    println!("After indexing all fastq files we have the following indices:");
@@ -271,17 +275,18 @@ impl AnalysisGeneMapper{
 	}
 
 	pub fn report4gname( &mut self, gname: &[&str] ){
-		eprintln!("report4gname - Not supported at the moment");
-		/*self.antibodies.report4(gname);
-		self.genes.report4(gname);*/
+		//eprintln!("report4gname - Not supported at the moment");
+		self.antibodies.report4(gname);
+		self.genes.report4(gname);
+		self.samples.report4(gname);
 
 	}
 
 	// Function to set min_matches
     pub fn set_min_matches(&mut self, value: usize) {
-    	eprintln!("set_min_matches - Not supported at the moment");
-    	/*self.antibodies.set_min_matches(value);
-		self.genes.set_min_matches(value);*/
+    	//eprintln!("set_min_matches - Not supported at the moment");
+    	self.antibodies.set_min_matches(value);
+		//self.genes.set_min_matches(value);
     }
 
     // Function to set highest_nw_val
@@ -292,9 +297,15 @@ impl AnalysisGeneMapper{
 
     // Function to set highest_humming_val
     pub fn set_highest_humming_val(&mut self, value: f32) {
-    	eprintln!("set_highest_humming_val - Not supported at the moment");
-        /*self.antibodies.set_highest_humming_val(value);
-		self.genes.set_highest_humming_val(value);*/
+    	//eprintln!("set_highest_humming_val - Not supported at the moment");
+        self.antibodies.set_highest_humming_val(value);
+		self.genes.set_highest_humming_val(value);
+    }
+
+    pub fn debug( &mut self, value:Option<bool> ) {
+    	self.antibodies.debug(value);
+		self.genes.debug(value);
+		self.samples.debug(value);
     }
 
 	pub fn write_index(&mut self, path:&String ){
@@ -362,7 +373,7 @@ impl AnalysisGeneMapper{
         Ok(())
     }
 
-    fn analyze_paralel( &self, data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
+    pub fn analyze_paralel( &self, data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
     	
 
 
@@ -380,6 +391,7 @@ impl AnalysisGeneMapper{
 
         	match &self.cells.to_cellid( &data[i].0 ){
 	            Ok( (cell_id, umi) ) => {
+	            	//println!("cell {cell_id}: {}", String::from_utf8_lossy(&data[i].0).into_owned() );
 	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
 	            	report.cellular_reads +=1;
 
@@ -390,11 +402,8 @@ impl AnalysisGeneMapper{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get( &data[i].1 ){
+	            	ok = match &self.antibodies.get_strict( &data[i].1 ){
 	                    Ok(gene_id) =>{
-	                    	if self.antibodies.report4gene(gene_id){
-	                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-	                		}
 
 	                    	report.iter_read_type( "antibody reads" );
                     		
@@ -420,10 +429,8 @@ impl AnalysisGeneMapper{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1 ){
+	                	ok = match &self.samples.get_strict( &data[i].1 ){
 		                    Ok(gene_id) =>{
-		                    	//println!("sample ({:?} and ids {gene_id:?}) with {:?}",self.samples.gene_names_for_ids( gene_id ), String::from_utf8_lossy(&data[i].1) );
-		                    	//eprintln!("I got a sample umi id {umi}");
 		                    	report.iter_read_type( "sample reads" );
 		                    	
 	                    		let data = GeneUmiHash( gene_id[0], *umi);
@@ -450,11 +457,8 @@ impl AnalysisGeneMapper{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get( &data[i].1 ){
+		                match &self.genes.get_strict( &data[i].1 ){
 		                	Ok(gene_id) =>{
-		                		if self.genes.report4gene(gene_id){
-		                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-		                		}
 		                		report.iter_read_type( "expression reads" );
 
 		                    	let data = GeneUmiHash( gene_id[0], *umi);
@@ -827,7 +831,7 @@ impl AnalysisGeneMapper{
 
 		                if ! ok{
 		                	
-			                match &self.genes.get( &seqrec2.seq() ){
+			                match &self.genes.get_strict( &seqrec2.seq() ){
 			                	Ok(gene_id) =>{
 			                		/*if report_gid == gene_id[0] {
 			                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );
@@ -910,15 +914,19 @@ impl AnalysisGeneMapper{
 
 	    // this always first as this will decide which cells are OK ones!
 	    results.stop_file_io_time();
+
+	    let genes_idx = &self.genes.as_indexed_genes();
+	    let ab_idx = &self.antibodies.as_indexed_genes();
+	    let samples_idx = &self.samples.as_indexed_genes();
 	    
 	    println!("filtering cells");
-	    self.gex.update_genes_to_print( &self.genes, &self.gene_names );
-	    self.gex.mtx_counts( &mut self.genes, min_umi, self.gex.num_threads ) ;
+	    self.gex.update_genes_to_print( genes_idx, &self.gene_names );
+	    self.gex.mtx_counts( genes_idx, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
 	    println!("writing gene expression");
 
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, genes_idx , &self.gene_names, min_umi ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
@@ -928,22 +936,22 @@ impl AnalysisGeneMapper{
 	    	);
 
 	    println!("Writing Antibody counts");
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.antibodies, &self.ab_names, 0 ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, ab_idx, &self.ab_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
 
 	    println!("Writing samples table");
 
-	    match self.gex.write_sub ( file_path, &mut self.samples, &self.sample_names, 0 ) {
+	    match self.gex.write_sub ( file_path, samples_idx, &self.sample_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}" )
 	    };
 
 	    
-	    let reads_genes = self.gex.n_reads( &self.genes , &self.gene_names );
-	    let reads_ab = self.gex.n_reads( &self.antibodies , &self.ab_names );
-	    let reads_samples = self.gex.n_reads( &self.samples , &self.sample_names );
+	    let reads_genes = self.gex.n_reads( genes_idx , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( ab_idx , &self.ab_names );
+	    let reads_samples = self.gex.n_reads( samples_idx , &self.sample_names );
 
 	    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
 

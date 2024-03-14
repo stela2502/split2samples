@@ -2,16 +2,22 @@
 use std::collections::HashMap;
 
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct GeneLink {
 	// store all chr position combos for this u16 8bp area.
-	data: Vec< (usize, usize)>,
+	data: Vec<(usize, usize)>,
 }
 
 impl GeneLink{
 	pub fn new()->Self {
 		Self{
 			data: Vec::with_capacity(10),
+		}
+	}
+
+	pub fn clone( &self ) -> Self {
+		Self{
+			data: self.data.clone()
 		}
 	}
 
@@ -23,13 +29,22 @@ impl GeneLink{
 		self.data.push( ( gene_id, start) );
 	}
 
-	pub fn get( &self, res:&mut HashMap<usize, usize>, pos:usize ) {
-		for entry in &self.data {
-			let value = res.entry(entry.0).or_insert(entry.1 - pos );
-			if *value != entry.1 - pos {
-				eprintln!("Re-match a gene, but with a fifferent start value! {} + {} and new {}  ",entry.0, value, entry.1 - pos);
+	pub fn get( &self, res:&mut HashMap<usize, Vec<i32>>, pos:i32 ) {
+		for (gene_id, start_on_gene) in &self.data {
+			match res.get_mut(&gene_id){
+				Some( pos_vec ) => {
+					pos_vec.push( *start_on_gene as i32 - pos )
+				},
+				None =>{
+					let mut pos_vec = Vec::<i32>::with_capacity(10);
+					pos_vec.push( *start_on_gene as i32 - pos );
+					res.insert( *gene_id, pos_vec );
+				}
 			}
 		}
+	}
+	pub fn data(&self) -> std::slice::Iter<(usize, usize)>{
+		self.data.iter()
 	}
 
 }

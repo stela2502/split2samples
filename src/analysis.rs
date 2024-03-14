@@ -274,6 +274,7 @@ impl Analysis{
 
 		self.antibodies.report4(gname);
 		self.genes.report4(gname);
+		self.samples.report4(gname);
 
 	}
 
@@ -908,15 +909,19 @@ impl Analysis{
 
 	    // this always first as this will decide which cells are OK ones!
 	    results.stop_file_io_time();
+
+	    let genes_idx = &self.genes.as_indexed_genes();
+	    let ab_idx = &self.antibodies.as_indexed_genes();
+	    let samples_idx = &self.samples.as_indexed_genes();
 	    
 	    println!("filtering cells");
-	    self.gex.update_genes_to_print( &self.genes, &self.gene_names );
-	    self.gex.mtx_counts( &mut self.genes, min_umi, self.gex.num_threads ) ;
+	    self.gex.update_genes_to_print( genes_idx, &self.gene_names );
+	    self.gex.mtx_counts( genes_idx, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
 	    println!("writing gene expression");
 
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, genes_idx , &self.gene_names, min_umi ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
@@ -926,22 +931,22 @@ impl Analysis{
 	    	);
 
 	    println!("Writing Antibody counts");
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.antibodies, &self.ab_names, 0 ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, ab_idx, &self.ab_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
 
 	    println!("Writing samples table");
 
-	    match self.gex.write_sub ( file_path, &mut self.samples, &self.sample_names, 0 ) {
+	    match self.gex.write_sub ( file_path, samples_idx, &self.sample_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}" )
 	    };
 
 	    
-	    let reads_genes = self.gex.n_reads( &self.genes , &self.gene_names );
-	    let reads_ab = self.gex.n_reads( &self.antibodies , &self.ab_names );
-	    let reads_samples = self.gex.n_reads( &self.samples , &self.sample_names );
+	    let reads_genes = self.gex.n_reads( genes_idx , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( ab_idx , &self.ab_names );
+	    let reads_samples = self.gex.n_reads( samples_idx , &self.sample_names );
 
 	    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
 

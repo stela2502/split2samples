@@ -37,7 +37,7 @@ pub enum Direction {
 }
 
 pub trait BinaryMatcher : Sync{
-	fn to_string(&self) -> String ;
+	fn to_dna_string(&self) -> String ;
 	fn di_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn di_nuc_tab (&self ) -> Vec<i8>;

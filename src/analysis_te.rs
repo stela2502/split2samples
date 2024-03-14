@@ -817,10 +817,14 @@ impl AnalysisTE{
 
 	    // this always first as this will decide which cells are OK ones!
 	    results.stop_file_io_time();
+
+	    let genes_idx = &self.expr_index_obj.as_indexed_genes();
+	    let te_idx = &self.te_index_obj.as_indexed_genes();
+	    let samples_idx = &self.samples.as_indexed_genes();
 	    
 	    println!("filtering cells");
-	    self.gex.update_genes_to_print( &self.te_index_obj, &self.te_names );
-	    self.gex.mtx_counts( &mut self.te_index_obj, min_umi, self.gex.num_threads ) ;
+	    self.gex.update_genes_to_print( te_idx, &self.te_names );
+	    self.gex.mtx_counts( te_idx, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
 	    println!("writing expression sets:");
@@ -828,7 +832,7 @@ impl AnalysisTE{
 	    if !self.gene_names.is_empty(){ 
 		    println!("writing gene expression");
 
-		    match self.gex.write_sparse_sub ( file_path_sp, &mut self.expr_index_obj , &self.gene_names, min_umi ) {
+		    match self.gex.write_sparse_sub ( file_path_sp, genes_idx, &self.gene_names, min_umi ) {
 		    	Ok(_) => (),
 		    	Err(err) => panic!("Error in the data write: {err}")
 		    };
@@ -839,22 +843,22 @@ impl AnalysisTE{
 	    	);
 
 	    println!("Writing TE counts");
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.te_index_obj, &self.te_names, 0 ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, te_idx, &self.te_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
 
 	    println!("Writing samples table");
 
-	    match self.gex.write_sub ( file_path, &mut self.samples, &self.sample_names, 0 ) {
+	    match self.gex.write_sub ( file_path, samples_idx, &self.sample_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}" )
 	    };
 
 	    
-	    let reads_expr_index_obj = self.gex.n_reads( &self.expr_index_obj , &self.gene_names );
-	    let reads_ab = self.gex.n_reads( &self.te_index_obj , &self.te_names );
-	    let reads_samples = self.gex.n_reads( &self.samples , &self.sample_names );
+	    let reads_expr_index_obj = self.gex.n_reads( genes_idx , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( te_idx , &self.te_names );
+	    let reads_samples = self.gex.n_reads( samples_idx , &self.sample_names );
 
 	    println!( "{}",results.summary( reads_expr_index_obj, reads_ab, reads_samples) );
 

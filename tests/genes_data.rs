@@ -62,6 +62,45 @@ mod tests {
 		assert_eq!( di, exp, "di_nuc_tab as expected {di:?}?" );
 	}
 
+	#[test]
+	fn test_key_at_position(){
+		//          0000111122
+		let seq = b"CGTGTGTGGCGTCGTG";
+		println!("CGTGTGTGGCGTCGTG");
+		let obj = GeneData::from_bytes( seq );
+		assert_eq!( obj.to_dna_string(), "CGTGTGTGGCGTCGTG".to_string(), "sequence correct");
+
+		fn key_to_string( key:&u16 ) -> String{
+	        let mut data = String::new();
+	        for i in 0..8 {
+	            let ch = match (key >> (i * 2)) & 0b11 {
+	                0b00 => "A",
+	                0b01 => "C",
+	                0b10 => "G",
+	                0b11 => "T",
+	                _ => "N",
+	            };
+	            data += ch;
+	        }
+	        data
+		}
+
+		let kmers = vec![ "CGTGTGTG", "GTGTGTGG", "TGTGTGGC", "GTGTGGCG",
+			"TGTGGCGT", "GTGGCGTC", "TGGCGTCG", "GGCGTCGT" ];
+
+		for (id, kmer) in kmers.iter().enumerate() {
+			match obj.key_at_position(id){
+				Some( (key, start) ) => {
+					assert_eq!( key_to_string(&key), kmer.to_string(), "key {}",kmer);
+					assert_eq!( start, id, "start key 0");
+				},
+				None=> {
+					panic!("iteration {id} - no kmer/key available!?");
+				}
+			}
+		}
+	}
+
 
 	#[test]
 	fn test_tri_nuc_tab(){

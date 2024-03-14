@@ -1,3 +1,8 @@
+#[derive(Debug)]
+pub enum GeneSelectionError {
+    NotSame,
+    TooView,
+}
 
 #[derive(Debug)]
 pub enum FilterError {
