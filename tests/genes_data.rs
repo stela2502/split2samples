@@ -166,7 +166,7 @@ mod tests {
 		
 		println!("Next");
 
-		if let Some(b_s) = obj.slice(5,15){
+		if let Some(b_s) = obj.slice(5,10){
 			if let Some(content) = b_s.to_bytes(10){
 				//println!("I got something here: {a_content:?}");
 				assert!( content.len() == 10, "exactly 10 bp ({})", content.len());
@@ -181,7 +181,7 @@ mod tests {
 
 		println!("Next");
 
-		if let Some(b_s) = obj.slice(20,30){
+		if let Some(b_s) = obj.slice(20,10){
 			if let Some(content) = b_s.to_bytes(10){
 				//println!("I got something here: {a_content:?}");
 				assert!( content.len() == 10, "exactly 10 bp ({})", content.len());

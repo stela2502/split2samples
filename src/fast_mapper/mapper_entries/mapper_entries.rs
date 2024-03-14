@@ -148,7 +148,7 @@ impl MapperEntry{
 		        None
 		    }
 		}) {
-		    let dist = name_entry.key.needleman_wunsch(seq, nw_cut);
+		    let dist = name_entry.key.needleman_wunsch(seq, nw_cut, None);
 		    if dist <= nw_cut {
 		        ret.push(name_entry);
 		        dists.push(dist);

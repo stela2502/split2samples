@@ -214,17 +214,17 @@ impl GeneData{
 	}
 
 	/// Slice the sequence of 2-bit representations
-    pub fn slice(&self, start: usize, end: usize) -> Option<Self> {
+    pub fn slice(&self, start: usize, length: usize) -> Option<Self> {
     	if start >= self.len(){
     		return None
     	}
-    	if start > end {
-    		panic!("ther is a library error - why do you want to get the area {start} - {end} when start is bigger that end?!!?\n{self}");
+    	let mut end =start + length;
+
+    	if end > self.len(){
+    		//eprintln!("You have requested more than I have ({end} > {} ) - giving you only {}! {self}", self.len(), self.len());
+    		end = self.len();
     	}
-    	if end -start > self.len(){
-    		eprintln!("You have requested more than I have ({end} - {start} > {} ) - filling in with A's! {self}", self.len());
-    	}
-        let mut sliced_data = Vec::with_capacity((end +3 - start) / 4 );
+        let mut sliced_data = Vec::with_capacity( (length +3) / 4 );
         let mut current_byte = 0;
         let mut bit_position = 0;
 
@@ -395,7 +395,41 @@ impl BinaryMatcher for GeneData{
 	    sum
 	}
 
-	fn needleman_wunsch(&self, other: &Self, humming_cut: f32 ) -> f32 { 
+	fn convert_to_cigar(path: &[Direction], cigar: &mut String ) {
+	    cigar.clear();
+	    let mut count = 0;
+	    let mut last_direction = None;
+
+	    for &direction in path.iter() {
+	        if Some(direction) == last_direction {
+	            count += 1;
+	        } else {
+	            if count > 0 {
+	                cigar.push_str(&count.to_string());
+	                match last_direction {
+	                    Some(Direction::Diagonal) => cigar.push('M'),
+	                    Some(Direction::Up) => cigar.push('D'),
+	                    Some(Direction::Left) => cigar.push('I'),
+	                    None => unreachable!(), // There should always be a last_direction at this point
+	                }
+	            }
+	            count = 1;
+	            last_direction = Some(direction);
+	        }
+	    }
+
+	    if count > 0 {
+	        cigar.push_str(&count.to_string());
+	        match last_direction {
+	            Some(Direction::Diagonal) => cigar.push('M'),
+	            Some(Direction::Up) => cigar.push('D'),
+	            Some(Direction::Left) => cigar.push('I'),
+	            None => unreachable!(), // There should always be a last_direction at this point
+	        }
+	    }
+	}
+
+	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut String> ) -> f32 { 
 		let size = self.len().min(other.len());
 
         if size < 15  || self.tri_nuc_abs_diff(other) > humming_cut{
@@ -442,20 +476,36 @@ impl BinaryMatcher for GeneData{
 	        }
 	    }
 
-        // Uncomment the following lines to print the alignment matrix
-        /*for i in 0..rows {
-            for j in 0..cols {
-                print!("{:4} ", matrix[i][j].score);
-            }
-            println!();
-        }*/
+        // Trace back the alignment path
+        if let Some( cig ) = cigar{
+		    let mut path = Vec::new();
+		    let mut i = rows - 1;
+		    let mut j = cols - 1;
 
-        /*
-        println!("Can that be cut short(di_diff {}, tri_diff {}, NW {}) : \n{self} vs \n{other}", 
-            self.di_nuc_abs_diff(other),  
-            self.tri_nuc_abs_diff(other),  
-            (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
-        */
+		    while i > 0 && j > 0 {
+		        let direction = matrix[i][j].direction;
+		        path.push(direction);
+
+		        match direction {
+		            Direction::Diagonal => {
+		                i -= 1;
+		                j -= 1;
+		            }
+		            Direction::Up => {
+		                i -= 1;
+		            }
+		            Direction::Left => {
+		                j -= 1;
+		            }
+		        }
+		    }
+
+		    path.reverse();
+
+		    // Convert the alignment path to CIGAR string
+		    Self::convert_to_cigar(&path, cig );
+		};
+
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
 	}
 

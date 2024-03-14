@@ -402,7 +402,7 @@ impl AnalysisGeneMapper{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get_strict( &data[i].1 ){
+	            	ok = match &self.antibodies.get_strict( &data[i].1, *cell_id ){
 	                    Ok(gene_id) =>{
 
 	                    	report.iter_read_type( "antibody reads" );
@@ -429,7 +429,7 @@ impl AnalysisGeneMapper{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get_strict( &data[i].1 ){
+	                	ok = match &self.samples.get_strict( &data[i].1, *cell_id ){
 		                    Ok(gene_id) =>{
 		                    	report.iter_read_type( "sample reads" );
 		                    	
@@ -457,7 +457,7 @@ impl AnalysisGeneMapper{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get_strict( &data[i].1 ){
+		                match &self.genes.get_strict( &data[i].1, *cell_id){
 		                	Ok(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
 
@@ -773,7 +773,7 @@ impl AnalysisGeneMapper{
 		            	// or a mRNA match
 		            	// And of casue not a match at all
 
-		            	ok = match &self.antibodies.get_strict( &seqrec2.seq() ){
+		            	ok = match &self.antibodies.get_strict( &seqrec2.seq(), *cell_id ){
 		                    Ok(gene_id) =>{
 		                    	//eprintln!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );
 		                    	//eprintln!("I got an ab id {gene_id}");
@@ -801,7 +801,7 @@ impl AnalysisGeneMapper{
 		                };
 
 		                if ! ok{
-		                	ok = match &self.samples.get_strict( &seqrec2.seq() ){
+		                	ok = match &self.samples.get_strict( &seqrec2.seq(), *cell_id ){
 			                    Ok(gene_id) =>{
 			                    	//println!("sample ({gene_id:?}) with {:?}",String::from_utf8_lossy(&data[i].1) );
 			                    	//eprintln!("I got a sample umi id {umi}");
@@ -831,7 +831,7 @@ impl AnalysisGeneMapper{
 
 		                if ! ok{
 		                	
-			                match &self.genes.get_strict( &seqrec2.seq() ){
+			                match &self.genes.get_strict( &seqrec2.seq(), *cell_id ){
 			                	Ok(gene_id) =>{
 			                		/*if report_gid == gene_id[0] {
 			                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&seqrec2.seq()) );

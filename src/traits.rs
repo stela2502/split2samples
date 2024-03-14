@@ -37,10 +37,11 @@ pub enum Direction {
 }
 
 pub trait BinaryMatcher : Sync{
+	fn convert_to_cigar(path: &[Direction], cigar: &mut String );
 	fn to_dna_string(&self) -> String ;
 	fn di_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn di_nuc_tab (&self ) -> Vec<i8>;
 	fn tri_nuc_tab (&self ) -> Vec<i8>;
-	fn needleman_wunsch(&self, other: &Self, humming_cut: f32 ) -> f32;
+	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut String> ) -> f32;
 }

@@ -66,10 +66,12 @@ cargo build --release
 cp target/release/split2samples /usr/bin
 cp target/release/quantify_rhapsody /usr/bin
 cp target/release/quantify_rhapsody_multi /usr/bin
+cp target/release/quantify_gene_mapper /usr/bin
 cp target/release/bd_cell_id_2_seq /usr/bin
 cp target/release/bd_get_single_cell /usr/bin
 cp target/release/get_n_cell_reads /usr/bin
 cp target/release/int_2_seq /usr/bin
+cp target/release/check_read_gene_mapper /usr/bin
 cp target/release/create_index /usr/bin
 cp target/release/create_index_te /usr/bin
 cp target/release/te_analysis /usr/bin

@@ -197,7 +197,30 @@ impl GenesMapper{
 		}
 	}
 
-	pub fn get(&self, read_data: &GeneData, res_vec: &Vec<(usize, Vec<i32>)> ) ->  Result< Vec<usize>, MappingError >{
+	fn slice_objects ( &self, start:usize, change_start: &GeneData, change_end: &GeneData, reverse:bool ) -> Option<( GeneData, GeneData )> {
+		let obj_a = match change_start.slice( start, (change_start.len() - start ).min( change_end.len() )){
+			Some(val) => val,
+			None => {
+				eprintln!("I could not slice change_start start {start} length {} and seq {change_start}", (change_start.len() - start ).min( change_end.len() ));
+				return None
+			},
+		};
+		let obj_b = match change_end.slice( 0, obj_a.len() ){
+			Some(val) => val,
+			None => {
+				eprintln!("I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
+				return None
+			},
+		};
+		if reverse {
+			Some((obj_b, obj_a))
+		}else {
+			Some((obj_a, obj_b))
+		}
+		
+	}
+
+	pub fn get(&self, read_data: &GeneData, res_vec: &Vec<(usize, Vec<i32>)>, cellid:u32 ) ->  Result< Vec<usize>, MappingError >{
 
 		/*let strict = self.get_strict( seq );
 		if strict.is_ok(){
@@ -231,75 +254,61 @@ impl GenesMapper{
 	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
 	    */
 	    let mut ret = Vec::<usize>::new();
-
+	    let mut cigar = "".to_string();
 		for (gene_id, start) in res_vec {
 
 	    	match Self::all_values_same( start ){
 	    		Ok(()) => {
-	    			let (read, database) = if start[0] > 0 {
-	    				// the info in the read is mapping somewhere in th database. Need to set position 0 correct
-						if let Some(cmp) = self.genes[*gene_id].slice( start[0] as usize, self.genes[*gene_id].len() ){
-							(read_data.clone(), cmp)
-						}else {
-							panic!("I could not slice the database entry!");
-						}
+	    			if let Some((read, database)) = if start[0] > 0 {
+	    				// slice_objects( start, change_start, change_end, reverse)
+	    				self.slice_objects( start[0] as usize, &self.genes[*gene_id], &read_data, true)
 					}else {
-						// the read is only partially mapping to the database!?
-						//eprintln!("The database entry might be too short?!");
-						if let Some(cmp) = read_data.slice( (- start[0]) as usize, read_data.len() ){
-							(cmp, self.genes[*gene_id].clone())
-						}else {
-							panic!("I could not slice the database entry!");
+						self.slice_objects( (-start[0]) as usize, &read_data, &self.genes[*gene_id], false )
+					} {
+						if self.debug{
+							println!("using the match gene id {gene_id} and start at {} I'll compare these two sequences", start[0]);
+							println!("read \n{read} to database\n{database}\n");
 						}
-					};
-					if self.debug{
-						println!("using the match gene id {gene_id} and start at {} I'll compare these two sequences", start[0]);
-						println!("read \n{read} to database\n{database}\n");
-					}
-					if database.needleman_wunsch( &read, self.highest_humming_val ) < self.highest_nw_val {
-						if self.report4this_gene( gene_id ) || self.debug{
-							println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+						if database.needleman_wunsch( &read, self.highest_humming_val, None ) < self.highest_nw_val {
+							if self.report4this_gene( gene_id ) || self.debug{
+								database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
+								println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+									self.genes[*gene_id].get_name(), start[0], read_data.to_dna_string() );
+							}
+							ret.push( *gene_id + self.offset );
 						}
-						ret.push( *gene_id + self.offset );
 					}
+					
 				},
 				Err(GeneSelectionError::NotSame) =>{
 		    		let counts = Self::table( start );
 		    		//eprintln!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{start:?}");
-		    		if counts.len() < start.len() /2 {
-		    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
-		    			for (start, count) in counts{
-		    				let (read, database) = if start > 0 {
-			    				// the info in the read is mapping somewhere in th database. Need to set position 0 correct
-								if let Some(cmp) = self.genes[*gene_id].slice( start as usize, self.genes[*gene_id].len() ){
-									(read_data.clone(), cmp )
-								}else {
-									panic!("I could not slice the database entry!");
-								}
-							}else {
-								// the read is only partially mapping to the database!?
-								//eprintln!("The database entry might be too short?!");
-								if let Some(cmp) = read_data.slice( (- start) as usize, read_data.len() ){
-									(cmp.clone(), self.genes[*gene_id].clone())
-								}else {
-									panic!("I could not slice the database entry!");
-								}
-							};
+		    		for (start, count) in counts{
+		    			if count < 3 {
+	    					break;
+	    				}
+	    				// if the objects are slicable and depending whether start > 0 or not we need to slice them differently
+	    				if let Some((read, database)) = if start > 0 {
+	    					self.slice_objects( start as usize, &self.genes[*gene_id], &read_data, true)
+						}else {
+							self.slice_objects( (-start) as usize, &read_data, &self.genes[*gene_id], false )
+						}{
 							if self.debug{
 								println!("using the match start {start} count {count} I'll compare these two sequences");
 								println!("read \n{read} to database\n{database}\n");
 							}
-							if database.needleman_wunsch( &read, self.highest_humming_val ) < self.highest_nw_val {
+							if database.needleman_wunsch( &read, self.highest_humming_val, None ) < self.highest_nw_val {
 								if self.report4this_gene( gene_id ) || self.debug{
-									println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+									// need to get the cigar string
+									database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
+									println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+										self.genes[*gene_id].get_name(), start, read_data.to_dna_string() );
 								}
 								ret.push( *gene_id + self.offset );
 							}
-		    			}
-
-		    		}
-		    		
-		    	},
+						}	
+	    			}
+	    		},
 		    	_=> { // not enough matches in the first place!
 		    	},
 		    };
@@ -346,7 +355,7 @@ impl GenesMapper{
 	}
 
 
-	pub fn get_strict(&self, seq: &[u8] ) ->  Result< Vec<usize>, MappingError >{ 
+	pub fn get_strict(&self, seq: &[u8], cellid:u32 ) ->  Result< Vec<usize>, MappingError >{ 
 		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
 		let mut res = HashMap::<usize, Vec<i32>>::new();
 
@@ -375,72 +384,67 @@ impl GenesMapper{
 	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
 
 	    let mut ret = Vec::<usize>::new();
+	    let mut cigar= "".to_string();
+
 	    if let Some (entry) = &res_vec.first() {
 	    	let gene_id = &entry.0;
 	    	let start = &entry.1;
 	    	match Self::all_values_same( start ){
 	    		Ok(()) => {
-	    			let (read, database) = if start[0] > 0 {
-	    				// the info in the read is mapping somewhere in the database. Need to set position 0 correct
-						if let Some(cmp) = self.genes[*gene_id].slice( start[0] as usize, self.genes[*gene_id].len() ){
-							(read_data.clone(), cmp)
-						}else {
-							panic!("I could not slice the database entry!");
-						}
+	    			if let Some((read, database)) = if start[0] > 0 {
+	    				self.slice_objects( (start[0]) as usize, &self.genes[*gene_id], &read_data, true )
 					}else {
-						// the read is only partially mapping to the database!?
-						//eprintln!("The database entry might be too short?!");
-						if let Some(cmp) = read_data.slice( (- start[0]) as usize, read_data.len() ){
-							(cmp, self.genes[*gene_id].clone())
-						}else {
-							panic!("I could not slice the database entry!");
+						self.slice_objects( (-start[0]) as usize, &read_data, &self.genes[*gene_id], false )
+					}{
+						if self.debug{
+							println!("using the match {entry:?} I'll compare these two sequences");
+							println!("read \n{read} to database\n{database}\n");
 						}
-					};
-					if self.debug{
-						println!("using the match {entry:?} I'll compare these two sequences");
-						println!("read \n{read} to database\n{database}\n");
-					}
-					if database.equal_entries( &read ) >= self.min_matches {
-						if self.report4this_gene( gene_id ) || self.debug{
-							println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+						if database.equal_entries( &read ) >= self.min_matches {
+							if self.report4this_gene( gene_id ) || self.debug{
+								database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
+								println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+									self.genes[*gene_id].get_name(), start[0], read_data.to_dna_string() );
+
+							}
+							ret.push( *gene_id + self.offset );
 						}
-						ret.push( *gene_id + self.offset );
-					}
+					};			
 				},
 				Err(GeneSelectionError::NotSame) =>{
 		    		let counts = Self::table( start );
-		    		//eprintln!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{start:?}");
-		    		if counts.len() < start.len() /2 {
-		    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
-		    			for (start, count) in counts{
-		    				let (read, database) = if start > 0 {
-			    				// the info in the read is mapping somewhere in th database. Need to set position 0 correct
-								if let Some(cmp) = self.genes[*gene_id].slice( start as usize, self.genes[*gene_id].len() ){
-									(read_data.clone(), cmp)
-								}else {
-									panic!("I could not slice the database entry!");
-								}
-							}else {
-								// the read is only partially mapping to the database!?
-								//eprintln!("The database entry might be too short?!");
-								if let Some(cmp) = read_data.slice( (- start) as usize, read_data.len() ){
-									(cmp, self.genes[*gene_id].clone())
-								}else {
-									panic!("I could not slice the database entry!");
-								}
-							};
+		    		if self.debug{
+		    			println!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{counts:?}");
+		    		}
+		    	
+	    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
+	    			for (start, count) in counts{
+	    				if count < 3 {
+	    					break;
+	    				}
+	    				if let Some((read, database)) = if start > 0 {
+							self.slice_objects( (start) as usize, &self.genes[*gene_id], &read_data, true )
+						}else {
+							self.slice_objects( (-start) as usize, &read_data, &self.genes[*gene_id], false )
+						}{
 							if self.debug{
 								println!("using the match start {start} count {count} I'll compare these two sequences");
 								println!("read \n{read} to database\n{database}\n");
 							}
 							if database.equal_entries( &read ) >= self.min_matches {
 								if self.report4this_gene( gene_id ) || self.debug{
-									println!("get_strict got gene_id {gene_id} or {} for the read {}", self.genes[*gene_id].get_name(), read_data.to_dna_string() );
+									database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
+									println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+										self.genes[*gene_id].get_name(), start, read_data.to_dna_string() );
 								}
 								ret.push( *gene_id + self.offset );
+							}	
+						}else {
+							// I could not slice?!
+							if self.debug{
+								println!("I could not slice using {start} and read\n{read_data} and database\n{}",self.genes[*gene_id]);
 							}
-		    			}
-
+						}
 		    		}
 		    		
 		    	},
@@ -453,7 +457,7 @@ impl GenesMapper{
 			println!("mapping the read {read_data}\nwe obtained a initial mapping result {res_vec:?}\n and in the end found {ret:?}");
 		}
 		if ret.is_empty(){
-			self.get( &read_data, &res_vec )
+			self.get( &read_data, &res_vec, cellid )
 			//Err(MappingError::NoMatch)
 		}else {
 			Ok(ret)

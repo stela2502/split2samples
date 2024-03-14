@@ -137,10 +137,44 @@ impl BinaryMatcher for SecondSeq {
         ret as f32 / 2.0 / size as f32
     }
 
+    fn convert_to_cigar(path: &[Direction], cigar: &mut String ) {
+        cigar.clear();
+        let mut count = 0;
+        let mut last_direction = None;
+
+        for &direction in path.iter() {
+            if Some(direction) == last_direction {
+                count += 1;
+            } else {
+                if count > 0 {
+                    cigar.push_str(&count.to_string());
+                    match last_direction {
+                        Some(Direction::Diagonal) => cigar.push('M'),
+                        Some(Direction::Up) => cigar.push('D'),
+                        Some(Direction::Left) => cigar.push('I'),
+                        None => unreachable!(), // There should always be a last_direction at this point
+                    }
+                }
+                count = 1;
+                last_direction = Some(direction);
+            }
+        }
+
+        if count > 0 {
+            cigar.push_str(&count.to_string());
+            match last_direction {
+                Some(Direction::Diagonal) => cigar.push('M'),
+                Some(Direction::Up) => cigar.push('D'),
+                Some(Direction::Left) => cigar.push('I'),
+                None => unreachable!(), // There should always be a last_direction at this point
+            }
+        }
+    }
+
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
     /// for sequences shorter than 15 bp this fails and returns 100.0
-    fn needleman_wunsch(&self, other: &SecondSeq, humming_cut:f32 ) -> f32 {
+    fn needleman_wunsch(&self, other: &SecondSeq, humming_cut:f32, cigar: Option<&mut String> ) -> f32 {
 
         let size = self.min_length(other).min(33);
 
@@ -191,20 +225,36 @@ impl BinaryMatcher for SecondSeq {
             }
         }
 
-        // Uncomment the following lines to print the alignment matrix
-        /*for i in 0..rows {
-            for j in 0..cols {
-                print!("{:4} ", matrix[i][j].score);
-            }
-            println!();
-        }*/
+        // Trace back the alignment path
+        if let Some( cig ) = cigar{
+            let mut path = Vec::new();
+            let mut i = rows - 1;
+            let mut j = cols - 1;
 
-        /*
-        println!("Can that be cut short(di_diff {}, tri_diff {}, NW {}) : \n{self} vs \n{other}", 
-            self.di_nuc_abs_diff(other),  
-            self.tri_nuc_abs_diff(other),  
-            (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
-        */
+            while i > 0 && j > 0 {
+                let direction = matrix[i][j].direction;
+                path.push(direction);
+
+                match direction {
+                    Direction::Diagonal => {
+                        i -= 1;
+                        j -= 1;
+                    }
+                    Direction::Up => {
+                        i -= 1;
+                    }
+                    Direction::Left => {
+                        j -= 1;
+                    }
+                }
+            }
+
+            path.reverse();
+
+            // Convert the alignment path to CIGAR string
+            Self::convert_to_cigar(&path, cig );
+        };
+
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
 
@@ -357,7 +407,7 @@ impl SecondSeq {
     pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
 
         //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
-        self.needleman_wunsch( other, max_dist ) <= max_dist
+        self.needleman_wunsch( other, max_dist, None ) <= max_dist
     }
 
     
