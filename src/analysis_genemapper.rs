@@ -6,6 +6,8 @@ use crate::singlecelldata::SingleCellData;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::genes_mapper::GenesMapper;
+use crate::genes_mapper::sequence_record::SeqRec;
+
 use crate::int_to_str::IntToStr;
 //use crate::traits::Index;
 use crate::errors::MappingError;
@@ -36,6 +38,13 @@ use rayon::slice::ParallelSlice;
 
 use crate::ofiles::{Ofiles, Fspot};
 //use std::fs::write;
+
+use noodles::bam;
+use noodles::bam::header::Header;
+use noodles::bam::record::Record;
+use noodles::bam::writer::{self, Writer};
+use noodles::sam;
+
 
 
 static EMPTY_VEC: Vec<String> = Vec::new();
@@ -373,9 +382,139 @@ impl AnalysisGeneMapper{
         Ok(())
     }
 
-    pub fn analyze_paralel( &self, data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
-    	
+    fn build_bam_record ( &self, read1:&SeqRec, read2:&SeqReq, gene_id:&Vec<MapperResult>, umi:&str ) -> noodles::bam::record::Record{
+    	/*Certainly! Here's an explanation of each 10x Genomics specific tag mentioned in your example:
 
+	    
+
+	    
+	    
+	    
+	    
+
+	    
+	    BC:Z:GCCATTCC: Barcode sequence.
+	        BC: Tag identifier, stands for "Barcode sequence."
+	        Z: Tag data type, denotes a string.
+	        GCCATTCC: Value associated with the tag, representing the barcode sequence assigned to the read.
+
+	    QT:Z:AAAAAEEE: Quality tags.
+	        QT: Tag identifier, stands for "Quality tags."
+	        Z: Tag data type, denotes a string.
+	        AAAAAEEE: Value associated with the tag, representing the quality scores of the read bases.
+
+	    CR:Z:CTCCTTTCATACTGTG: Chromium cellular barcode sequence.
+	        CR: Tag identifier, stands for "Chromium cellular barcode sequence."
+	        Z: Tag data type, denotes a string.
+	        CTCCTTTCATACTGTG: Value associated with the tag, representing the cellular barcode sequence assigned by the Chromium platform.
+
+	    CY:Z:AAAAAEEEEEEEEEEE: Chromium cellular quality scores.
+	        CY: Tag identifier, stands for "Chromium cellular quality scores."
+	        Z: Tag data type, denotes a string.
+	        AAAAAEEEEEEEEEEE: Value associated with the tag, representing the quality scores of the cellular barcode bases.
+
+	    CB:Z:CTCCTTTCATACTGTG-1: Chromium gem group barcode sequence.
+	        CB: Tag identifier, stands for "Chromium gem group barcode sequence."
+	        Z: Tag data type, denotes a string.
+	        CTCCTTTCATACTGTG-1: Value associated with the tag, representing the gem group barcode sequence assigned by the Chromium platform.
+
+	    UR:Z:TTTAGGTCTTGG: Chromium UMI sequence.
+	        UR: Tag identifier, stands for "Chromium UMI sequence."
+	        Z: Tag data type, denotes a string.
+	        TTTAGGTCTTGG: Value associated with the tag, representing the unique molecular identifier (UMI) sequence assigned by the Chromium platform.
+
+	    UY:Z:EEEEEEEEEEEE: Chromium UMI quality scores.
+	        UY: Tag identifier, stands for "Chromium UMI quality scores."
+	        Z: Tag data type, denotes a string.
+	        EEEEEEEEEEEE: Value associated with the tag, representing the quality scores of the UMI bases.
+
+	    UB:Z:TTTAGGTCTTGG: Chromium corrected UMI sequence.
+	        UB: Tag identifier, stands for "Chromium corrected UMI sequence."
+	        Z: Tag data type, denotes a string.
+
+		*/	
+
+
+    	let record = Record::builder()
+		    .set_read_name(data[i].1.id())
+		    //.set_flags(bam::record::Flags::UNMAPPED)
+			/*
+                0x1 (1): PAIRED - Read is paired in sequencing.
+			    0x2 (2): PROPER_PAIR - Read is mapped in a proper pair.
+			    0x4 (4): UNMAPPED - Read is unmapped.
+			    0x8 (8): MATE_UNMAPPED - Mate is unmapped.
+			    0x10 (16): REVERSE_STRAND - Read is mapped to the reverse strand.
+			    0x20 (32): MATE_REVERSE_STRAND - Mate is mapped to the reverse strand.
+			    0x40 (64): READ1 - Read is the first read in a pair.
+			    0x80 (128): READ2 - Read is the second read in a pair.
+			    0x100 (256): SECONDARY - Secondary alignment.
+			    0x200 (512): QC_FAIL - Read fails quality checks.
+			    0x400 (1024): DUPLICATE - PCR or optical duplicate.
+			 */
+		    .set_position(gene_id[0].start())
+	        .set_mapq( gene_id[0].mapq() )
+	        .set_cigar(&gene_id[0].cigar().as_bytes() )
+	        //.set_flags(bam::record::Flags::MATE_UNMAPPED)
+	        //.set_template_length(0) //  the length of the DNA fragment from the start of the first read to the end of the second read in a paired-end sequencing
+	        .set_sequence( &data[i].1.seq() )
+	        .set_base_qualities(&data[i].1.qual())
+	        .build();
+	    // Add 10x Genomics specific tags and values
+	    record.insert("NH", record::data::Field::Int(gene_id.len())); // NH:i:9
+	    /*NH:i:9: Number of reported alignments.
+	        NH: Tag identifier, stands for "Number of reported alignments."
+	        i: Tag data type, denotes a 32-bit signed integer.
+	        9: Value associated with the tag, indicating the number of reported alignments for the read.*/
+	    record.insert("HI", record::data::Field::Int(gene_id.len())); // HI:i:2
+		/*HI:i:2: Alignment hit index.
+	        HI: Tag identifier, stands for "Alignment hit index."
+	        i: Tag data type, denotes a 32-bit signed integer.
+	        2: Value associated with the tag, representing the alignment hit index for the read. This index is typically used to distinguish between multiple hits for the same query in the SAM/BAM file.
+		*/
+	    record.insert("AS", record::data::Field::Int(gene_id[0].mapq() )); // AS:i:89
+	    /*AS:i:89: Alignment score.
+	        AS: Tag identifier, stands for "Alignment score."
+	        i: Tag data type, denotes a 32-bit signed integer.
+	        89: Value associated with the tag, indicating the alignment score for the read. The alignment score represents the quality or confidence of the alignment.
+		*/
+	    record.insert("nM", record::data::Field::Int(gene_id[0].edit_dist() )); // nM:i:0
+	    /*nM:i:0: Edit distance.
+	        nM: Tag identifier, stands for "Edit distance."
+	        i: Tag data type, denotes a 32-bit signed integer.
+	        0: Value associated with the tag, representing the edit distance between the read and the reference sequence. The edit distance is the number of mismatches and gaps (insertions and deletions) between the read and the reference sequence.
+		*/
+	    record.insert("RE", record::data::Field::Char(b'I')); // RE:A:I
+	    /*
+	    RE:A:I: Read extension.
+	        RE: Tag identifier, stands for "Read extension."
+	        A: Tag data type, denotes a single character (ASCII).
+	        I: Value associated with the tag, indicating the type of read extension. In this case, I represents an insert read extension.
+	    Possible values:
+	    1. Insert Read Extension (RE:A:I): Indicates that the read is an insert read, meaning it is derived from the original DNA fragment without any modifications or rearrangements.
+	    2. Long Fragment Read Extension (RE:A:L): Indicates that the read is a long fragment read, suggesting that it spans a longer portion of the original DNA fragment compared to other reads.
+	    3. Linked Read Extension (RE:A:Q): Indicates that the read is a linked read, meaning it is part of a set of reads that are linked together, typically by sharing a common barcode or unique molecular identifier (UMI).
+	    4. Chimeric Read Extension (RE:A:C): Indicates that the read is a chimeric read, meaning it contains sequences from two or more distinct DNA molecules or genomic regions.
+	    */
+	    record.insert("li", record::data::Field::Int(0)); // li:i:0 // not linked
+	    /*li:i:0: Linked-read identifier.
+	        li: Tag identifier, stands for "Linked-read identifier."
+	        i: Tag data type, denotes a 32-bit signed integer.
+	        0: Value associated with the tag, representing the linked-read identifier for the read. Linked-reads are reads that are part of the same molecule or DNA fragment.
+		*/
+	    record.insert("BC", record::data::Field::String("GCCATTCC".into())); // BC:Z:GCCATTCC
+	    record.insert("QT", record::data::Field::String("AAAAAEEE".into())); // QT:Z:AAAAAEEE
+	    record.insert("CR", record::data::Field::String("CTCCTTTCATACTGTG".into())); // CR:Z:CTCCTTTCATACTGTG
+	    record.insert("CY", record::data::Field::String("AAAAAEEEEEEEEEEE".into())); // CY:Z:AAAAAEEEEEEEEEEE
+	    record.insert("CB", record::data::Field::String("CTCCTTTCATACTGTG-1".into())); // CB:Z:CTCCTTTCATACTGTG-1
+	    record.insert("UR", record::data::Field::String("TTTAGGTCTTGG".into())); // UR:Z:TTTAGGTCTTGG
+	    record.insert("UY", record::data::Field::String("EEEEEEEEEEEE".into())); // UY:Z:EEEEEEEEEEEE
+	    record.insert("UB", record::data::Field::String("TTTAGGTCTTGG".into())); // UB:Z:TTTAGGTCTTGG
+	    record.insert("RG", record::data::Field::String("Sample4:0:1:HN2CKBGX9:1".into())); // RG:Z:Sample4:0:1:HN2CKBGX9:1
+	    record
+    }
+
+    pub fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, pos: &[usize;8] ) -> (SingleCellData, Vec<noodles::bam::record::Record>){
+    	
 
         // first match the cell id - if that does not work the read is unusable
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
@@ -384,12 +523,14 @@ impl AnalysisGeneMapper{
 
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
+        let mut bam = Vec::<Record>::with_capacity(10_00);
+
         // lets tag this with the first gene I was interested in: Cd3e
         //let goi_id = self.genes.get_id("ADA".to_string());
 
         for i in 0..data.len() {
 
-        	match &self.cells.to_cellid( &data[i].0 ){
+        	match &self.cells.to_cellid( &data[i].0.seq().to_vec() ){
 	            Ok( (cell_id, umi) ) => {
 	            	//println!("cell {cell_id}: {}", String::from_utf8_lossy(&data[i].0).into_owned() );
 	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
@@ -402,12 +543,12 @@ impl AnalysisGeneMapper{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get_strict( &data[i].1, *cell_id ){
+	            	ok = match &self.antibodies.get_strict( &data[i].1.seq().to_vec(), *cell_id ){
 	                    Ok(gene_id) =>{
 
 	                    	report.iter_read_type( "antibody reads" );
                     		
-                    		let data = GeneUmiHash( gene_id[0], *umi);
+                    		let data = GeneUmiHash( gene_id[0].gene_id(), *umi);
 	                    	if ! gex.try_insert( 
 	                        	&(*cell_id as u64),
 	                        	data,
@@ -415,6 +556,13 @@ impl AnalysisGeneMapper{
 	                        ){
 	                        	report.pcr_duplicates += 1 
 	                        }
+
+
+	                        if gene_id.save(){
+	                        	
+							    bam.push(self.build_bam_record( &data[i].1,  ));
+	                        }
+							
 	                        true
 	                    },
 	                    Err(MappingError::NoMatch) => {
@@ -429,11 +577,11 @@ impl AnalysisGeneMapper{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get_strict( &data[i].1, *cell_id ){
+	                	ok = match &self.samples.get_strict( &data[i].1.seq().to_vec(), *cell_id ){
 		                    Ok(gene_id) =>{
 		                    	report.iter_read_type( "sample reads" );
 		                    	
-	                    		let data = GeneUmiHash( gene_id[0], *umi);
+	                    		let data = GeneUmiHash( gene_id[0].gene_id(), *umi);
 		                        if ! gex.try_insert( 
 		                        	&(*cell_id as u64),
 		                        	data,
@@ -457,11 +605,11 @@ impl AnalysisGeneMapper{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get_strict( &data[i].1, *cell_id){
+		                match &self.genes.get_strict( &data[i].1.seq().to_vec(), *cell_id){
 		                	Ok(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
 
-		                    	let data = GeneUmiHash( gene_id[0], *umi);
+		                    	let data = GeneUmiHash( gene_id[0].gene_id(), *umi);
 		                        if ! gex.try_insert( 
 		                        	&(*cell_id as u64),
 		                        	data,
@@ -491,6 +639,7 @@ impl AnalysisGeneMapper{
 	            },
 	            Err(_err) => {
 	            	// this is fucked up - the ids are changed!
+	            	/*
 	            	report.write_to_ofile( Fspot::Buff1, 
 	            		format!(">No Cell detected\n{:?}\n{:?}\n{:?}\n{:?}\n", 
 	            			&data[i].0, 
@@ -503,13 +652,13 @@ impl AnalysisGeneMapper{
                 	report.write_to_ofile( Fspot::Buff2, 
                 		format!(">No Cell detected\n{:?}\n", &data[i].1 )
                 	);
-
+					*/
 	                report.no_sample +=1;
 	                continue
 	            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
        		};
     	}
-        gex
+        (gex, bam)
     }
 
 
@@ -545,7 +694,7 @@ impl AnalysisGeneMapper{
 
         //let reads_perl_chunk = 1_000_000;
         //eprintln!("Starting with data collection");
-        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( chunk_size * self.num_threads );
+        let mut good_reads: Vec<(SeqRec, SeqRec)> = Vec::with_capacity( chunk_size * self.num_threads );
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
@@ -572,7 +721,10 @@ impl AnalysisGeneMapper{
         		match Self::quality_control( read1, read2, report.min_quality, pos, min_sizes){
         			Ok(()) => {
         				good_read_count +=1;
-        				good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
+        				let r1 = SeqRec::new( read1.id(), &read1.seq(), read1.qual().unwrap() );
+        				let r2 = SeqRec::new( read2.id(), &read2.seq(), read2.qual().unwrap() );
+        				good_reads.push( (r1, r2 ) );
+        				//good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
         			},
         			/*Err(FilterError::PolyA)=> {
         				report.poly_a +=1;
@@ -779,7 +931,7 @@ impl AnalysisGeneMapper{
 		                    	//eprintln!("I got an ab id {gene_id}");
 		                    	report.iter_read_type( "antibody reads" );
 	                    		
-	                    		let data = GeneUmiHash( gene_id[0], *umi);
+	                    		let data = GeneUmiHash( gene_id[0].gene_id(), *umi);
 		                    	if ! self.gex.try_insert( 
 		                        	&(*cell_id as u64),
 		                        	data,
@@ -807,7 +959,7 @@ impl AnalysisGeneMapper{
 			                    	//eprintln!("I got a sample umi id {umi}");
 			                    	report.iter_read_type( "sample reads" );
 			                    	
-		                    		let data = GeneUmiHash( gene_id[0], *umi);
+		                    		let data = GeneUmiHash( gene_id[0].gene_id(), *umi);
 			                        if ! self.gex.try_insert( 
 			                        	&(*cell_id as u64),
 			                        	data,
@@ -838,7 +990,7 @@ impl AnalysisGeneMapper{
 			                    	}*/
 			                		report.iter_read_type( "expression reads" );
 
-			                    	let data = GeneUmiHash( gene_id[0], *umi);
+			                    	let data = GeneUmiHash( gene_id[0].gene_id(), *umi);
 			                        if ! self.gex.try_insert( 
 			                        	&(*cell_id as u64),
 			                        	data,

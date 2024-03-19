@@ -1,5 +1,8 @@
 /// here I plann to define all my traits - or the one I have planned for now :-D
 use crate::errors::CellIdError;
+use crate::genes_mapper::Cigar;
+
+use core::fmt;
 
 
 pub trait Index : Sync{
@@ -36,12 +39,26 @@ pub enum Direction {
     Left,
 }
 
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let direction_str = match self {
+            Direction::Diagonal => "Diagonal",
+            Direction::Up => "Up",
+            Direction::Left => "Left",
+        };
+        write!(f, "{}", direction_str)
+    }
+}
+
+
+
 pub trait BinaryMatcher : Sync{
-	fn convert_to_cigar(path: &[Direction], cigar: &mut String );
+	fn max3<T: Ord>(a: T, b: T, c: T) -> T;
+	fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8>;
 	fn to_dna_string(&self) -> String ;
 	fn di_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn di_nuc_tab (&self ) -> Vec<i8>;
 	fn tri_nuc_tab (&self ) -> Vec<i8>;
-	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut String> ) -> f32;
+	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut Cigar> ) -> f32;
 }

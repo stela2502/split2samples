@@ -1,11 +1,15 @@
 //fast_mapper/genes_data.rs
 use std::collections::HashMap;
-use crate::traits::BinaryMatcher ;
-use crate::traits::Direction;
-use crate::traits::Cell;
+use crate::traits::{ BinaryMatcher, Direction, Cell};
+use crate::genes_mapper::Cigar;
 use core::cmp::max;
 use std::hash::{Hash, Hasher};
 use core::fmt;
+
+
+use std::fs::File;
+use std::io::prelude::*;
+use std::io;
 
 // logics copied from https://github.com/COMBINE-lab/kmers/
 pub type Base = u8;
@@ -292,26 +296,31 @@ impl GeneData{
 	    let u16_value = (shifted_value & u16::MAX as u32) as u16;
 	    //println!("next returns a u16 value: {u16_value:b}");
 	    Some( (u16_value, start) )
+    } 
+
+	
+
+}
+
+impl BinaryMatcher for GeneData{
+
+	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
+        max(a, max(b, c))
     }
 
-    pub fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
+	fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
 	    if pos > self.len() {
 	        return None; // Position exceeds the length of the encoded sequence
 	    }
 
 	    let byte_idx = pos / 4;
 	    let bit_offset = pos % 4;
-
+	    //println!("Byte idx {byte_idx}, bit_offset {bit_offset}");
 	    Some((self.u8_encoded[byte_idx] >> ( bit_offset * 2)) & 0b11)
 	}
 
-	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
-        max(a, max(b, c))
-    }
 
-}
 
-impl BinaryMatcher for GeneData{
 	fn to_dna_string(&self) -> String {
 		if let Some(decoded) = self.to_bytes( self.len() ){
 			String::from_utf8_lossy(&decoded).into_owned()
@@ -395,49 +404,16 @@ impl BinaryMatcher for GeneData{
 	    sum
 	}
 
-	fn convert_to_cigar(path: &[Direction], cigar: &mut String ) {
-	    cigar.clear();
-	    let mut count = 0;
-	    let mut last_direction = None;
 
-	    for &direction in path.iter() {
-	        if Some(direction) == last_direction {
-	            count += 1;
-	        } else {
-	            if count > 0 {
-	                cigar.push_str(&count.to_string());
-	                match last_direction {
-	                    Some(Direction::Diagonal) => cigar.push('M'),
-	                    Some(Direction::Up) => cigar.push('D'),
-	                    Some(Direction::Left) => cigar.push('I'),
-	                    None => unreachable!(), // There should always be a last_direction at this point
-	                }
-	            }
-	            count = 1;
-	            last_direction = Some(direction);
-	        }
-	    }
-
-	    if count > 0 {
-	        cigar.push_str(&count.to_string());
-	        match last_direction {
-	            Some(Direction::Diagonal) => cigar.push('M'),
-	            Some(Direction::Up) => cigar.push('D'),
-	            Some(Direction::Left) => cigar.push('I'),
-	            None => unreachable!(), // There should always be a last_direction at this point
-	        }
-	    }
-	}
-
-	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut String> ) -> f32 { 
+	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut Cigar> ) -> f32 { 
 		let size = self.len().min(other.len());
 
         if size < 15  || self.tri_nuc_abs_diff(other) > humming_cut{
             return 100.0
         }
 
-        let rows: usize = size;
-        let cols: usize = size;
+        let rows: usize = self.len();
+        let cols: usize = other.len();
 
         let mut matrix = vec![vec![Cell { score: 0, direction: Direction::Diagonal }; cols]; rows];
 
@@ -455,56 +431,34 @@ impl BinaryMatcher for GeneData{
         // Fill in the matrix
         for i in 1..rows {
 	        for j in 1..cols {
-	            let a = self.get_nucleotide_2bit(i-1);
-	            let b = other.get_nucleotide_2bit(j - 1);
-	            let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
+	            if let ( Some(a), Some(b) ) = ( self.get_nucleotide_2bit(i-1), other.get_nucleotide_2bit(j-1) ) {
 
-	            let diagonal_score = matrix[i - 1][j - 1].score + match_score;
-	            let up_score = matrix[i - 1][j].score + GAP_PENALTY;
-	            let left_score = matrix[i][j - 1].score + GAP_PENALTY;
+                    let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
 
-	            let max_score = Self::max3(diagonal_score, up_score, left_score);
+                    let diagonal_score = matrix[i - 1][j - 1].score + match_score;
+                    let up_score = matrix[i - 1][j].score + GAP_PENALTY;
+                    let left_score = matrix[i][j - 1].score + GAP_PENALTY;
 
-	            matrix[i][j].score = max_score;
+                    let max_score = Self::max3(diagonal_score, up_score, left_score);
 
-	            matrix[i][j].direction = match max_score {
-	                _ if max_score == diagonal_score => Direction::Diagonal,
-	                _ if max_score == up_score => Direction::Up,
-	                _ if max_score == left_score => Direction::Left,
-	                _ => unreachable!(),
-	            };
+                    matrix[i][j].score = max_score;
+
+                    matrix[i][j].direction = match max_score {
+                        _ if max_score == diagonal_score => Direction::Diagonal,
+                        _ if max_score == up_score => Direction::Up,
+                        _ if max_score == left_score => Direction::Left,
+                        _ => unreachable!(),
+                    };
+                }else {
+                    panic!("positions not reachable: {i}/{j} ({:?}/{:?})",  self.get_nucleotide_2bit(i-1), self.get_nucleotide_2bit(j-1));
+                }
 	        }
 	    }
 
-        // Trace back the alignment path
-        if let Some( cig ) = cigar{
-		    let mut path = Vec::new();
-		    let mut i = rows - 1;
-		    let mut j = cols - 1;
-
-		    while i > 0 && j > 0 {
-		        let direction = matrix[i][j].direction;
-		        path.push(direction);
-
-		        match direction {
-		            Direction::Diagonal => {
-		                i -= 1;
-		                j -= 1;
-		            }
-		            Direction::Up => {
-		                i -= 1;
-		            }
-		            Direction::Left => {
-		                j -= 1;
-		            }
-		        }
-		    }
-
-		    path.reverse();
-
-		    // Convert the alignment path to CIGAR string
-		    Self::convert_to_cigar(&path, cig );
-		};
+	    if let Some(cig) = cigar {
+	    	cig.calculate_cigar( &matrix );
+	    	cig.clean_up_cigar( self, other);
+	    }
 
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
 	}

@@ -3,6 +3,7 @@ use clap::Parser;
 //use this::sampleids::SampleIds;
 use rustody::mapping_info::MappingInfo;
 use rustody::analysis_genemapper::AnalysisGeneMapper;
+use rustody::genes_mapper::sequence_record::SeqRec;
 //use this::last5::Last5;
 
 use std::path::PathBuf;
@@ -135,7 +136,11 @@ fn main() {
 
     worker.debug( Some(true) );
     // data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8]
-    let data= vec![ (b"AGGAGATTAACTGGCCTGCGAGCCTGTTCAGGTAGCGGTGACGACTACATATGCTGCACATTTTTT".to_vec(), opts.dna.as_bytes().to_vec() )];
+    //                                      FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+    let r1 = SeqRec::new( b"SomeRead1", b"AGGAGATTAACTGGCCTGCGAGCCTGTTCAGGTAGCGGTGACGACTACATATGCTGCACATTTTTT", b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" );
+    let qual: Vec<u8>  = vec![b'F'; opts.dna.len()];
+    let r2 = SeqRec::new( b"SomeRead2", &opts.dna.as_bytes(), qual.as_slice() );
+    let data= vec![ (r1, r2 )];
     worker.analyze_paralel( &data, &mut results, pos );
 
     //worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );

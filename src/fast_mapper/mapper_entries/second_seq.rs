@@ -2,8 +2,8 @@
 use std::hash::{Hash, Hasher};
 use core::fmt;
 
-use crate::traits::{ BinaryMatcher, Cell, Direction};
-
+use crate::traits::{ BinaryMatcher, Cell, Direction };
+use crate::genes_mapper::Cigar;
 use std::cmp::{max, Ord};
 
 const MATCH_SCORE: i32 = 1;
@@ -56,6 +56,10 @@ impl Hash for SecondSeq {
 
 
 impl BinaryMatcher for SecondSeq {
+
+    fn max3<T: Ord>(a: T, b: T, c: T) -> T {
+        max(a, max(b, c))
+    }
 
     fn to_dna_string(&self) -> String {
         let mut data = String::new();
@@ -137,44 +141,18 @@ impl BinaryMatcher for SecondSeq {
         ret as f32 / 2.0 / size as f32
     }
 
-    fn convert_to_cigar(path: &[Direction], cigar: &mut String ) {
-        cigar.clear();
-        let mut count = 0;
-        let mut last_direction = None;
-
-        for &direction in path.iter() {
-            if Some(direction) == last_direction {
-                count += 1;
-            } else {
-                if count > 0 {
-                    cigar.push_str(&count.to_string());
-                    match last_direction {
-                        Some(Direction::Diagonal) => cigar.push('M'),
-                        Some(Direction::Up) => cigar.push('D'),
-                        Some(Direction::Left) => cigar.push('I'),
-                        None => unreachable!(), // There should always be a last_direction at this point
-                    }
-                }
-                count = 1;
-                last_direction = Some(direction);
-            }
+    fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
+        if pos > self.1 as usize {
+            return None; // Position exceeds the length of the encoded sequence
         }
-
-        if count > 0 {
-            cigar.push_str(&count.to_string());
-            match last_direction {
-                Some(Direction::Diagonal) => cigar.push('M'),
-                Some(Direction::Up) => cigar.push('D'),
-                Some(Direction::Left) => cigar.push('I'),
-                None => unreachable!(), // There should always be a last_direction at this point
-            }
-        }
+        //println!("Byte idx {byte_idx}, bit_offset {bit_offset}");
+        Some(((self.0 >> (pos * 2)) & 0b11) as u8)
     }
 
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
     /// for sequences shorter than 15 bp this fails and returns 100.0
-    fn needleman_wunsch(&self, other: &SecondSeq, humming_cut:f32, cigar: Option<&mut String> ) -> f32 {
+    fn needleman_wunsch(&self, other: &SecondSeq, humming_cut:f32, cigar: Option<&mut Cigar> ) -> f32 {
 
         let size = self.min_length(other).min(33);
 
@@ -199,141 +177,42 @@ impl BinaryMatcher for SecondSeq {
         }
 
         // Fill in the matrix
-        let mut a: u64;
-        let mut b: u64;
+
 
         for i in 1..rows {
             for j in 1..cols {
-                a = (self.0 >> ((i-1) * 2)) & 0b11;
-                b = (other.0 >> ((j-1) * 2)) & 0b11;
-                let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
+                if let (Some(a), Some(b)) = ( self.get_nucleotide_2bit(j-1), other.get_nucleotide_2bit(i-1)){
+                    let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
 
-                let diagonal_score = matrix[i - 1][j - 1].score + match_score;
-                let up_score = matrix[i - 1][j].score + GAP_PENALTY;
-                let left_score = matrix[i][j - 1].score + GAP_PENALTY;
+                    let diagonal_score = matrix[i - 1][j - 1].score + match_score;
+                    let up_score = matrix[i - 1][j].score + GAP_PENALTY;
+                    let left_score = matrix[i][j - 1].score + GAP_PENALTY;
 
-                let max_score = Self::max3(diagonal_score, up_score, left_score);
+                    let max_score = Self::max3(diagonal_score, up_score, left_score);
 
-                matrix[i][j].score = max_score;
+                    matrix[i][j].score = max_score;
 
-                matrix[i][j].direction = match max_score {
-                    _ if max_score == diagonal_score => Direction::Diagonal,
-                    _ if max_score == up_score => Direction::Up,
-                    _ if max_score == left_score => Direction::Left,
-                    _ => unreachable!(),
-                };
+                    matrix[i][j].direction = match max_score {
+                        _ if max_score == diagonal_score => Direction::Diagonal,
+                        _ if max_score == up_score => Direction::Up,
+                        _ if max_score == left_score => Direction::Left,
+                        _ => unreachable!(),
+                    };
+                }else {
+                    panic!("Sequence not defined {i}/{j} self: {self}\nother: {other}");
+                }
+                
             }
         }
 
         // Trace back the alignment path
         if let Some( cig ) = cigar{
-            let mut path = Vec::new();
-            let mut i = rows - 1;
-            let mut j = cols - 1;
-
-            while i > 0 && j > 0 {
-                let direction = matrix[i][j].direction;
-                path.push(direction);
-
-                match direction {
-                    Direction::Diagonal => {
-                        i -= 1;
-                        j -= 1;
-                    }
-                    Direction::Up => {
-                        i -= 1;
-                    }
-                    Direction::Left => {
-                        j -= 1;
-                    }
-                }
-            }
-
-            path.reverse();
-
-            // Convert the alignment path to CIGAR string
-            Self::convert_to_cigar(&path, cig );
+            cig.calculate_cigar( &matrix );
+            cig.clean_up_cigar( self, other);
         };
 
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
-
-    /*
-    /// calculate the base flips between two u64 sequences
-    /// stops after having detected 4 different bases.
-    // fn hamming_distance(self, other: &SecondSeq) -> u32 {
-        
-    //     //let mask:u64;
-    //     let size = self.min_length(other);
-
-    //     let mut a: u64;
-    //     let mut b: u64;
-    //     let mut ret: u32 = 0;
-    //     for i in 0..size{
-    //         a = (self.0 >> (i * 2)) & 0b11;
-    //         b = (other.0 >> (i * 2)) & 0b11;
-    //         if a != b {
-    //             ret +=1;
-    //         }
-    //         //ret += HAMMING_LOOKUP[(a ^ b) as usize];
-    //         if ret == 4{
-    //              break;
-    //         }
-    //     }
-    //     //println!("hamming dist was {ret}");
-    //     ret
-        
-    //     /*
-    //     // quite much slower!
-    //     let size = usize::min(self.1 as usize, other.1 as usize);
-
-    //     let mut a_shifted = self.0;
-    //     let mut b_shifted = other.0;
-        
-    //     let mut ret: u32 = 0;
-
-    //     for _ in 0..size {
-    //         let a_value = a_shifted & 0b11;
-    //         let b_value = b_shifted & 0b11;
-    //         if a_value != b_value {
-    //             ret +=1;
-    //         }
-    //         a_shifted >>= 2;
-    //         b_shifted >>= 2;
-    //     }
-
-    //     ret
-    //     */
-    // }
-
-    // fn table(&self) -> std::collections::HashMap<char, u32> {
-    //     let mut a_cnt = 0;
-    //     let mut c_cnt = 0;
-    //     let mut g_cnt = 0;
-    //     let mut t_cnt = 0;
-    //     let sequence = self.0;
-
-    //     for i in 0..self.1 {
-    //         let pair = (sequence >> (i * 2)) & 0b11;
-    //         match pair {
-    //             0b00 => a_cnt += 1,
-    //             0b01 => c_cnt += 1,
-    //             0b10 => g_cnt += 1,
-    //             0b11 => t_cnt += 1,
-    //             _ => {} // Handle invalid pairs if needed
-    //         }
-    //     }
-
-    //     let mut counts = std::collections::HashMap::new();
-    //     counts.insert('A', a_cnt);
-    //     counts.insert('C', c_cnt);
-    //     counts.insert('G', g_cnt);
-    //     counts.insert('T', t_cnt);
-
-    //     counts
-    // }
-    */
-
 }
 
 

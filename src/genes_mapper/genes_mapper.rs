@@ -5,16 +5,21 @@ use crate::errors::GeneSelectionError;
 
 use crate::genes_mapper::gene_data::GeneData;
 use crate::genes_mapper::gene_link::GeneLink;
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
+use crate::genes_mapper::Cigar;
+use crate::genes_mapper::MapperResult;
 
+use crate::singlecelldata::IndexedGenes;
 use crate::traits::BinaryMatcher;
 
+
+use std::hash::{Hash, Hasher};
+
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::BTreeMap;
 
-use crate::singlecelldata::IndexedGenes;
+use regex::Regex;
 
 use core::fmt;
 
@@ -197,85 +202,97 @@ impl GenesMapper{
 		}
 	}
 
-	fn slice_objects ( &self, start:usize, change_start: &GeneData, change_end: &GeneData, reverse:bool ) -> Option<( GeneData, GeneData )> {
-		let obj_a = match change_start.slice( start, (change_start.len() - start ).min( change_end.len() )){
-			Some(val) => val,
-			None => {
-				eprintln!("I could not slice change_start start {start} length {} and seq {change_start}", (change_start.len() - start ).min( change_end.len() ));
-				return None
-			},
-		};
-		let obj_b = match change_end.slice( 0, obj_a.len() ){
-			Some(val) => val,
-			None => {
-				eprintln!("I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
-				return None
-			},
-		};
-		if reverse {
-			Some((obj_b, obj_a))
-		}else {
-			Some((obj_a, obj_b))
-		}
+	fn slice_objects ( &self, start:i32, change_start: &GeneData, change_end: &GeneData ) -> Option<( GeneData, GeneData )> {
 		
+		let abs_start = start.abs() as usize;
+		match start < 0{
+			true => {
+				let obj_a = match change_end.slice( abs_start, (change_end.len() - abs_start ).min( change_start.len() )){
+					Some(val) => val,
+					None => {
+						eprintln!("I could not slice change_start start {start} length {} and seq {change_start}", (change_end.len() - abs_start ).min( change_start.len() ));
+						return None
+					},
+				};
+				let obj_b = match change_start.slice( 0, obj_a.len() ){
+					Some(val) => val,
+					None => {
+						eprintln!("I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
+						return None
+					},
+				};
+				Some((obj_b, obj_a))
+			},
+			false => {
+				let obj_a = match change_start.slice( abs_start, (change_start.len() - abs_start ).min( change_end.len() )){
+					Some(val) => val,
+					None => {
+						eprintln!("I could not slice change_start start {start} length {} and seq {change_start}", (change_start.len() - abs_start ).min( change_end.len() ));
+						return None
+					},
+				};
+				let obj_b = match change_end.slice( 0, obj_a.len() ){
+					Some(val) => val,
+					None => {
+						eprintln!("I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
+						return None
+					},
+				};
+				Some((obj_a, obj_b))
+			}
+		}	
 	}
 
-	pub fn get(&self, read_data: &GeneData, res_vec: &Vec<(usize, Vec<i32>)>, cellid:u32 ) ->  Result< Vec<usize>, MappingError >{
+	/// this function adjusts the GeneData objects to get rid of terminal I's.
+	fn fix_database_4_cigar( &self, gene_id:&usize, database: &GeneData, read: &GeneData, cigar: &mut Cigar, match_length_problems:&Regex ){
 
-		/*let strict = self.get_strict( seq );
-		if strict.is_ok(){
-			return strict;
+		if let Some(capture) = match_length_problems.captures( &cigar.cigar ) {
+			let num_bp: usize = capture[1].parse().unwrap();
+			eprintln!("updateing the cigar string {cigar}");
+			match &capture[2] {
+				"I" => {
+					// the database was num_bp too large
+					let adjusted_db = database.slice(0, database.len() - num_bp ).unwrap();
+					let uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
+					eprintln!("Type I: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
+				},
+				"D" => {
+					// the database was num_bp too short
+					let adjusted_db = &self.genes[*gene_id].slice( database.get_start() - self.genes[*gene_id].get_start() , database.len() + num_bp ).unwrap();
+					let uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
+					eprintln!("Type D: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
+				},
+				&_ => (),
+			};
+			eprintln!("updataed cigar string   = '{cigar}'");
 		}
+	}
 
-		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
-		let mut res = HashMap::<usize, Vec<i32>>::new();
-		//println!("I try to find a match for this read: {read_data}");
-		while let Some((key, key_position_on_read )) = read_data.next(){
+	pub fn get(&self, read_data: &GeneData, res_vec: &Vec<(usize, Vec<i32>)>, cellid:u32 ) ->  Result< Vec<MapperResult>, MappingError >{
 
-			//println!("I get the key {key:b} at read position {start_on_read}");
-			if key > 65534{
-				continue;
-			}
-
-			if ! self.mapper[key as usize].is_empty() {
-				self.mapper[key as usize].get( &mut res, key_position_on_read as i32);
-			}
-		}
-
-		if res.is_empty() {
-			return Err(MappingError::NoMatch)
-		}
-
-		// Convert the HashMap into a vector of key-value pairs
-	    let mut res_vec: Vec<_> = res.into_iter().collect();
-
-	    // Sort the vector by the length of the internal arrays
-	    // longest first
-	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
-	    */
-	    let mut ret = Vec::<usize>::new();
-	    let mut cigar = "".to_string();
+	    let mut ret = Vec::<MapperResult>::new();
+	    let mut cigar = Cigar::new("");
 		for (gene_id, start) in res_vec {
 
 	    	match Self::all_values_same( start ){
 	    		Ok(()) => {
-	    			if let Some((read, database)) = if start[0] > 0 {
-	    				// slice_objects( start, change_start, change_end, reverse)
-	    				self.slice_objects( start[0] as usize, &self.genes[*gene_id], &read_data, true)
-					}else {
-						self.slice_objects( (-start[0]) as usize, &read_data, &self.genes[*gene_id], false )
-					} {
+	    			if let Some((read, database)) = self.slice_objects( start[0] , &self.genes[*gene_id], &read_data){
 						if self.debug{
 							println!("using the match gene id {gene_id} and start at {} I'll compare these two sequences", start[0]);
 							println!("read \n{read} to database\n{database}\n");
 						}
-						if database.needleman_wunsch( &read, self.highest_humming_val, None ) < self.highest_nw_val {
+						if read.needleman_wunsch( &database, self.highest_humming_val, None ) < self.highest_nw_val {
 							if self.report4this_gene( gene_id ) || self.debug{
-								database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
-								println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+								let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
+								println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 									self.genes[*gene_id].get_name(), start[0], read_data.to_dna_string() );
+								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)),
+									 cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+							}else {
+								// 
+								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0 ) );
 							}
-							ret.push( *gene_id + self.offset );
+							
 						}
 					}
 					
@@ -288,23 +305,24 @@ impl GenesMapper{
 	    					break;
 	    				}
 	    				// if the objects are slicable and depending whether start > 0 or not we need to slice them differently
-	    				if let Some((read, database)) = if start > 0 {
-	    					self.slice_objects( start as usize, &self.genes[*gene_id], &read_data, true)
-						}else {
-							self.slice_objects( (-start) as usize, &read_data, &self.genes[*gene_id], false )
-						}{
+	    				if let Some((read, database)) = self.slice_objects( start , &self.genes[*gene_id], &read_data){
+
 							if self.debug{
 								println!("using the match start {start} count {count} I'll compare these two sequences");
 								println!("read \n{read} to database\n{database}\n");
 							}
-							if database.needleman_wunsch( &read, self.highest_humming_val, None ) < self.highest_nw_val {
+							if read.needleman_wunsch( &database, self.highest_humming_val, None ) < self.highest_nw_val {
 								if self.report4this_gene( gene_id ) || self.debug{
 									// need to get the cigar string
-									database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
-									println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+									let nw= read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
+									println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 										self.genes[*gene_id].get_name(), start, read_data.to_dna_string() );
+									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, true, Some(format!("{}",cigar)), 
+										cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+								}else {
+									// 
+									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None ,0, 0, 0 ) );
 								}
-								ret.push( *gene_id + self.offset );
 							}
 						}	
 	    			}
@@ -355,7 +373,7 @@ impl GenesMapper{
 	}
 
 
-	pub fn get_strict(&self, seq: &[u8], cellid:u32 ) ->  Result< Vec<usize>, MappingError >{ 
+	pub fn get_strict(&self, seq: &[u8], cellid:u32 ) ->  Result< Vec<MapperResult>, MappingError >{ 
 		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
 		let mut res = HashMap::<usize, Vec<i32>>::new();
 
@@ -383,31 +401,34 @@ impl GenesMapper{
 	    // longest first
 	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
 
-	    let mut ret = Vec::<usize>::new();
-	    let mut cigar= "".to_string();
+	    let mut ret = Vec::<MapperResult>::new();
+	    let mut cigar= Cigar::new("");
+	    let match_length_problems = Regex::new(r"(\d+)(D|I)$").unwrap();
 
 	    if let Some (entry) = &res_vec.first() {
 	    	let gene_id = &entry.0;
 	    	let start = &entry.1;
 	    	match Self::all_values_same( start ){
 	    		Ok(()) => {
-	    			if let Some((read, database)) = if start[0] > 0 {
-	    				self.slice_objects( (start[0]) as usize, &self.genes[*gene_id], &read_data, true )
-					}else {
-						self.slice_objects( (-start[0]) as usize, &read_data, &self.genes[*gene_id], false )
-					}{
+	    			if let Some((read, database)) = self.slice_objects( start[0], &self.genes[*gene_id], &read_data ){
 						if self.debug{
 							println!("using the match {entry:?} I'll compare these two sequences");
 							println!("read \n{read} to database\n{database}\n");
 						}
 						if database.equal_entries( &read ) >= self.min_matches {
 							if self.report4this_gene( gene_id ) || self.debug{
-								database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
-								println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+								let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
+								// gene_id:usize, databsase: &GeneData, read: &GeneData, cigar: &mut Cigar, match_length_problems:Regex
+								self.fix_database_4_cigar( gene_id, &database, &read, &mut cigar, &match_length_problems );
+							
+								println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 									self.genes[*gene_id].get_name(), start[0], read_data.to_dna_string() );
-
+								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)), 
+									cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+							}else {
+								// 
+								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0 ) );
 							}
-							ret.push( *gene_id + self.offset );
 						}
 					};			
 				},
@@ -422,22 +443,24 @@ impl GenesMapper{
 	    				if count < 3 {
 	    					break;
 	    				}
-	    				if let Some((read, database)) = if start > 0 {
-							self.slice_objects( (start) as usize, &self.genes[*gene_id], &read_data, true )
-						}else {
-							self.slice_objects( (-start) as usize, &read_data, &self.genes[*gene_id], false )
-						}{
+	    				if let Some((read, database)) = self.slice_objects( start, &self.genes[*gene_id], &read_data ){
 							if self.debug{
 								println!("using the match start {start} count {count} I'll compare these two sequences");
 								println!("read \n{read} to database\n{database}\n");
 							}
 							if database.equal_entries( &read ) >= self.min_matches {
 								if self.report4this_gene( gene_id ) || self.debug{
-									database.needleman_wunsch( &read, self.highest_humming_val, Some(&mut cigar) );
-									println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {} and the read {}", 
+									let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
+									self.fix_database_4_cigar( gene_id, &database, &read, &mut cigar, &match_length_problems );
+									
+									println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 										self.genes[*gene_id].get_name(), start, read_data.to_dna_string() );
+									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, true, Some(format!("{}",cigar)), 
+										cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+								}else {
+									// 
+									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None, 0 ,0, 0 ) );
 								}
-								ret.push( *gene_id + self.offset );
 							}	
 						}else {
 							// I could not slice?!

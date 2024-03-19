@@ -7,6 +7,7 @@ mod tests {
 	use rustody::genes_mapper::gene_data::GeneData;
 	use rustody::traits::BinaryMatcher;
 	use rustody::int_to_str::IntToStr;
+	use rustody::genes_mapper::Cigar;
 
 	#[test]
 	fn test_encode_decode(){
@@ -101,6 +102,26 @@ mod tests {
 		}
 	}
 
+	#[test]
+	fn test_get_nucleotide_2bit(){
+		let seq = b"CATGTATGGCGTCGTG";
+		let obj = GeneData::from_bytes( seq );
+		println!("testing this DNA seq: CATGTATGGCGTCGTG");
+		//               0123 4567 8901 2345
+		//               CGTG TGTG GCGT CGTG
+		for (i, exp) in "CATGTATGGCGTCGTG".chars().enumerate(){
+			let ch = match obj.get_nucleotide_2bit(i) {
+	                Some(0b00) => 'A',
+	                Some(0b01) => 'C',
+	                Some(0b10) => 'G',
+	                Some(0b11) => 'T',
+	                Some(4_u8..=u8::MAX) => panic!("All those values must not be returned here!"),
+	                None => 'N',
+	    	};
+	    	assert_eq!( ch, exp , "sequence at position {i} is expecetedd to be {}", exp );
+		}
+		
+	}
 
 	#[test]
 	fn test_tri_nuc_tab(){
@@ -205,8 +226,64 @@ mod tests {
 		let obj = GeneData::from_bytes( seq );
 		let obj2 = GeneData::from_bytes( seq2 );
 
-		let val =  obj.needleman_wunsch( &obj2, 0.6);
+		let val =  obj.needleman_wunsch( &obj2, 0.6, None);
 		assert!( ((val > 0.40) & ( val < 0.41 ) ), "Val close enough at 0.40625 ({val})" );
+		
+	}
+
+	#[test]
+	fn test_cigar(){
+		//                          ***
+		//           012345678901234567890123456789012345678901234
+		let seq  = b"TGGTATCTTTTACTTACCTGCTTGAATACTTG";
+		let seq2 = b"TGGTATCTTTTACTTTGCTTGAATACTTG";
+		let obj  = GeneData::from_bytes( seq  );
+		let obj2 = GeneData::from_bytes( seq2 );
+		let mut cigar = Cigar::new("");
+		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		//assert_eq!( cigar, "15M1X3D12M", "Cigar string was created correctly!" );
+
+		//let mut cig = Cigar::new( "15M1X3D12M" );
+
+		//cig.clean_up_cigar( &obj, &obj2 );
+
+
+		assert_eq!( cigar.cigar, "15M3D13M", "Cigar string was created correctly!" );
+
+
+	}
+
+	#[test]
+	fn test_needleman_wunsch_cigar(){
+		// to bp each                   ***
+		//           012345678901234567890123456789012345678901234
+		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGA";
+		let seq2 = b"TTCATATCGACAATTAGGGACGACCTCGATGTTGGATCAGGA"; //missing three T-s in the middle.
+		let obj = GeneData::from_bytes( seq );
+		let obj2 = GeneData::from_bytes( seq2 );
+		let mut cigar = Cigar::new("");
+		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		assert_eq!( cigar.cigar, "19M3D22M", "Cigar string was created correctly!" );
+		
+	}
+
+
+	#[test]
+	fn test_needleman_wunsch_cigar_insertion(){
+		// to bp each                      *** insertion
+		//           01234567890123456789012345678901234567890123456789
+		//           TTCATATCGACAATTAGGGTTT   ACGACCTCGATGTTGGATCAGGA
+		//           TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGA
+		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGA";
+		let seq2 = b"TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGA"; //missing three T-s in the middle.
+		let obj = GeneData::from_bytes( seq );
+		let obj2 = GeneData::from_bytes( seq2 );
+		let mut cigar = Cigar::new("");
+		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		assert_eq!( cigar.cigar, "22M3I22M", "Cigar string was created correctly!" );
 		
 	}
 
@@ -217,5 +294,31 @@ mod tests {
 		let first = obj.key_at(0);
 		assert_eq!(first, 56555_u16,  "key was expecetd {first}" );
 	}
+
+	
+	#[test]
+	fn test_slicing_2(){
+		let seq = b"GTTCTACATTCTTCATGGCTACTGGATTCCATGGACTCCATGTAATTATTGGATCAACATTCCTTATTGTTTGCCTACTACGACAACTAA";
+		let obj = GeneData::from_bytes( seq );
+		assert_eq!( obj.get_start(), 0 ,"Start is 0");
+
+		let slice = if let Some(slice) = obj.slice(15,20) {
+			assert_eq!( slice.get_start(), 15 ,"Start is 15");
+			assert_eq!( slice.len(), 20 ,"Length is 20");
+			slice
+		}else {
+			panic!("I could not get the slice!");
+		};
+
+		if let Some(slice_2) = slice.slice(5,10){
+			assert_eq!( slice_2.get_start(), 20 ,"Start is 20");
+			assert_eq!( slice_2.len(), 10 ,"Start is 0");
+		}
+
+		
+	}
+
+
+
 
 }

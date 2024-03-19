@@ -19,6 +19,7 @@ glob = "0.3.0"
 indicatif = {version = "*", features = ["rayon"]}
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
 needletail = "0.5.1"
+noodles = "0.26.0"
 num_cpus = "1.14"
 rayon = "1.5"
 regex = "1"

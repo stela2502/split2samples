@@ -60,17 +60,17 @@ mod tests {
     fn test_needleman_wunsch() {
         let seq1 = SecondSeq(0b101010, 20);
         let seq2 = SecondSeq(0b101010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq2, 0.8 ), 1.0/20.0 );
+        assert_eq!( seq1.needleman_wunsch( &seq2, 0.8, None ), 1.0/20.0 );
         let seq3 = SecondSeq(0b011010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq3, 0.8 ), 3.0/20.0 );
+        assert_eq!( seq1.needleman_wunsch( &seq3, 0.8, None ), 3.0/20.0 );
         let seq4 = SecondSeq(0b001010, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq4, 0.8 ), 3.0/20.0 );
+        assert_eq!( seq1.needleman_wunsch( &seq4, 0.8, None ), 3.0/20.0 );
         let seq5 = SecondSeq(0b011001, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq5, 0.8 ), 5.0/20.0 );
+        assert_eq!( seq1.needleman_wunsch( &seq5, 0.8, None ), 5.0/20.0 );
         let seq6 = SecondSeq(0b0, 20);
-        assert_eq!( seq1.needleman_wunsch( &seq6, 0.8 ), 7.0/20.0 );
+        assert_eq!( seq1.needleman_wunsch( &seq6, 0.8, None ), 7.0/20.0 );
         let seq7 = SecondSeq(0b101010, 15);
-        assert_eq!( seq1.needleman_wunsch( &seq7, 0.8 ), 1.0/15.0 );
+        assert_eq!( seq1.needleman_wunsch( &seq7, 0.8, None ), 1.0/15.0 );
     }
 
     #[test]
