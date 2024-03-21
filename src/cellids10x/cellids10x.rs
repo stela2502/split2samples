@@ -59,7 +59,7 @@ impl CellIds10x{
         //println!("Yes you initialized a cellIds10x object!");
 
         /*
-        3M-febrary-2018.txt.gz  Single Cell 3' v3, Single Cell 3' v3.1, Single Cell 3' HT v3.1
+        3M-february-2018.txt.gz  Single Cell 3' v3, Single Cell 3' v3.1, Single Cell 3' HT v3.1
         737k-august-2016.txt    Single Cell 3' v2, Single Cell 5' v1 and v2, Single Cell 5' HT v2
         737k-april-2014_rc.txt  Single Cell 3' v1 
         737k-arc-v1.txt.gz  Single Cell Multiome (ATAC+GEX) v1
@@ -69,9 +69,9 @@ impl CellIds10x{
         737k-fixed-rna-profiling.txt.gz     Fixed RNA Profiling (Present starting from Cell Ranger v7.0)
         */
         let filename = match ver{
-            "Single Cell 3' v3" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' v3.1" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' HT v3.1" => "3M-febrary-2018.txt.gz",
+            "Single Cell 3' v3" => "3M-february-2018.txt.gz",
+            "Single Cell 3' v3.1" => "3M-february-2018.txt.gz",
+            "Single Cell 3' HT v3.1" => "3M-february-2018.txt.gz",
             "Single Cell 3' v2" => "737k-august-2016.txt.gz",
             "Single Cell 5' v1 and v2" => "737k-august-2016.txt.gz",
             "Single Cell 5' v1" => "737k-august-2016.txt.gz",
@@ -86,9 +86,9 @@ impl CellIds10x{
 
                 let mapping = r#"
                 version         =>  file to load
-            "Single Cell 3' v3" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' v3.1" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' HT v3.1" => "3M-febrary-2018.txt.gz",
+            "Single Cell 3' v3" => "3M-february-2018.txt.gz",
+            "Single Cell 3' v3.1" => "3M-february-2018.txt.gz",
+            "Single Cell 3' HT v3.1" => "3M-february-2018.txt.gz",
             "Single Cell 3' v2" => "737k-august-2016.txt.gz",
             "Single Cell 5' v1 and v2" => "737k-august-2016.txt.gz",
             "Single Cell 5' v1" => "737k-august-2016.txt.gz",
