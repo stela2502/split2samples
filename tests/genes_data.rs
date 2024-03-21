@@ -69,7 +69,7 @@ mod tests {
 		let seq = b"CGTGTGTGGCGTCGTG";
 		println!("CGTGTGTGGCGTCGTG");
 		let obj = GeneData::from_bytes( seq );
-		assert_eq!( obj.to_dna_string(), "CGTGTGTGGCGTCGTG".to_string(), "sequence correct");
+		assert_eq!( obj.as_dna_string(), "CGTGTGTGGCGTCGTG".to_string(), "sequence correct");
 
 		fn key_to_string( key:&u16 ) -> String{
 	        let mut data = String::new();

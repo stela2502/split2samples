@@ -3,6 +3,7 @@ use needletail::parse_fastx_file;
 use rustody::cellids::CellIds;
 use rustody::ofiles::Ofiles;
 use rustody::traits::CellIndex;
+use rustody::genes_mapper::SeqRec;
 
 use std::collections::HashSet;
 
@@ -243,8 +244,9 @@ fn main() {
 
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                match cells.to_cellid( &seqrec1.seq() ){
-                    Ok( ( cell_id, _add ) ) => {
+                let r1 = SeqRec::new( seqrec1.id(), &seqrec1.seq(), seqrec1.qual().unwrap() );
+                match cells.to_cellid( &r1 ){
+                    Ok( ( cell_id, _add,_,_ ) ) => {
                         // this is removing complexity from the data - in the test dataset 111 reads are ignored.
                         // let cell_id_umi:u128 = read_be_u128(  [ umi.to_be_bytes() , (cell_id as u64).to_be_bytes() ].concat().as_slice() );
                         // if ! cell_umi.insert( cell_id_umi ){

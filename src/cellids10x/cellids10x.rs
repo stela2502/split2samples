@@ -5,6 +5,9 @@
 use crate::traits::CellIndex;
 use crate::int_to_str::IntToStr;
 use crate::cellids10x::CellId10x;
+use crate::genes_mapper::SeqRec;
+
+use std::collections::HashSet;
 
 use std::path::PathBuf;
 use std::fs::File;
@@ -22,35 +25,36 @@ use std::process;
 pub struct CellIds10x{
     pub ver: String,
     possible: Vec<CellId10x>, // all possible cell tags
+    search: HashSet<u32>,
     //detected: HashSet<CellId10x>, // those that we already saw in this analysis
     size: usize, // how long are the sequences normally?
 }
 
 impl CellIndex for CellIds10x{
 
-    fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64 ), CellIdError >{
+    fn to_cellid (&self, r1: &SeqRec )-> Result<( u32, u64, SeqRec, SeqRec ), CellIdError >{
 
-        let mut tool = IntToStr::new( r1[..self.size].to_vec(), 9);
+        let cell = match  r1.slice(0, self.size ){
+            Some(c) => c,
+            None => return Err(CellIdError::TooShort),
+        };
+        let umi = match r1.slice( self.size, r1.seq().len() - self.size ){
+            Some(c) => c,
+            None => return Err(CellIdError::TooShort),
+        };
 
-        let cell:u32 = tool.into_u32();
-        tool.from_vec_u8 ( r1[self.size..].to_vec());
-        let umi:u64  = tool.into_u64();
-
-        if let Some(checked_cell) = self.process_sequence( cell ){
-            return Ok( (checked_cell, umi) )
+        if let Some(checked_cell) = self.process_sequence( cell.to_u32() ){
+            return Ok( (checked_cell, umi.to_u64(), cell, umi ) )
         }
-        //println!("We found a cellid {} and an umi {}", cell, umi);
+
         Err( CellIdError::NoMatch )
-
     }
-
-
 }
 
 
 
 
-impl  CellIds10x{
+impl CellIds10x{
     pub fn new(ver:&str )-> Self {
         //println!("Yes you initialized a cellIds10x object!");
 
@@ -132,10 +136,12 @@ impl  CellIds10x{
             process::exit(0);   
         }
 
+        let search: HashSet<u32> = possible.clone().into_iter().map(|c| c.0).collect();
+
         Self {
             ver: ver.to_string(),
             possible,
-            //detected: HashSet::new(),
+            search,
             size,
         }
     }
@@ -147,6 +153,11 @@ impl  CellIds10x{
         }*/
 
         // Check if the sequence matches any possible cell tag
+
+        if self.search.contains( &sequence ){
+            //println!("Fast find!");
+            return Some( sequence )
+        }
         self.possible.iter().find(|&&cell| cell.0 == sequence).map(|cell_id| cell_id.0)
     }
 

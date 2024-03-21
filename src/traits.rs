@@ -1,6 +1,7 @@
 /// here I plann to define all my traits - or the one I have planned for now :-D
 use crate::errors::CellIdError;
 use crate::genes_mapper::Cigar;
+use crate::genes_mapper::SeqRec;
 
 use core::fmt;
 
@@ -21,7 +22,8 @@ pub trait Index : Sync{
 }
 
 pub trait CellIndex: Sync{
-	fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), CellIdError>;
+	//                                    former u32   , u64
+	fn to_cellid (&self, r1: &SeqRec  )-> Result<( u32, u64, SeqRec, SeqRec ), CellIdError>;
 }
 
 
@@ -55,7 +57,7 @@ impl fmt::Display for Direction {
 pub trait BinaryMatcher : Sync{
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T;
 	fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8>;
-	fn to_dna_string(&self) -> String ;
+	fn as_dna_string(&self) -> String ;
 	fn di_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32;
 	fn di_nuc_tab (&self ) -> Vec<i8>;

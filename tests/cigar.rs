@@ -29,6 +29,6 @@ mod tests {
 	#[test]
 	fn test_quality(){
 		let obj = Cigar::new("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
-		assert_eq!( obj.mapping_quality(), 20 )
+		assert_eq!( obj.mapping_quality(), 13 )
 	}
 }

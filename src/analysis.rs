@@ -15,6 +15,8 @@ use crate::cellids10x::CellIds10x;
 use crate::traits::CellIndex;
 
 use crate::mapping_info::MappingInfo;
+use crate::genes_mapper::SeqRec;
+
 //use std::io::BufReader;
 //use flate2::write::GzDecoder;
 
@@ -361,10 +363,8 @@ impl Analysis{
         Ok(())
     }
 
-    fn analyze_paralel( &self, data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
+    fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
     	
-
-
         // first match the cell id - if that does not work the read is unusable
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
         let mut gex = SingleCellData::new( self.num_threads );
@@ -378,7 +378,7 @@ impl Analysis{
         for i in 0..data.len() {
 
         	match &self.cells.to_cellid( &data[i].0 ){
-	            Ok( (cell_id, umi) ) => {
+	            Ok( (cell_id, umi, cell_seq,_) ) => {
 	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
 	            	report.cellular_reads +=1;
 
@@ -389,11 +389,8 @@ impl Analysis{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get( &data[i].1, &mut tool ){
+	            	ok = match &self.antibodies.get( &data[i].1.seq(), &mut tool ){
 	                    Ok(gene_id) =>{
-	                    	if self.antibodies.report4gene(gene_id){
-	                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-	                		}
 
 	                    	report.iter_read_type( "antibody reads" );
                     		
@@ -419,10 +416,9 @@ impl Analysis{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
+	                	ok = match &self.samples.get( &data[i].1.seq(),  &mut tool ){
 		                    Ok(gene_id) =>{
-		                    	//println!("sample ({:?} and ids {gene_id:?}) with {:?}",self.samples.gene_names_for_ids( gene_id ), String::from_utf8_lossy(&data[i].1) );
-		                    	//eprintln!("I got a sample umi id {umi}");
+
 		                    	report.iter_read_type( "sample reads" );
 		                    	
 	                    		let data = GeneUmiHash( gene_id[0], *umi);
@@ -449,11 +445,8 @@ impl Analysis{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get( &data[i].1,  &mut tool ){
+		                match &self.genes.get( &data[i].1.seq(),  &mut tool ){
 		                	Ok(gene_id) =>{
-		                		if self.genes.report4gene(gene_id){
-		                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-		                		}
 		                		report.iter_read_type( "expression reads" );
 
 		                    	let data = GeneUmiHash( gene_id[0], *umi);
@@ -468,11 +461,11 @@ impl Analysis{
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
 		                    	report.write_to_ofile( Fspot::Buff1, 
-		                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].1) 
+		                    		format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].1.as_dna_string() ) 
 		                    	);
 								
 								report.write_to_ofile( Fspot::Buff2, 
-									format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].0 ) 
+									format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].0.as_dna_string() ) 
 								);
 		                    	report.no_data +=1;
 		                    },
@@ -485,20 +478,18 @@ impl Analysis{
 		            }
 	            },
 	            Err(_err) => {
+	            	/* 
 	            	// this is fucked up - the ids are changed!
 	            	report.write_to_ofile( Fspot::Buff1, 
-	            		format!(">No Cell detected\n{:?}\n{:?}\n{:?}\n{:?}\n", 
-	            			&data[i].0, 
-	            			&data[i].0[pos[0]..pos[1]],
-	            			&data[i].0[pos[2]..pos[3]],
-	            			&data[i].0[pos[4]..pos[5]],
+	            		format!(">No Cell detected\n{:?}\n", 
+	            			&data[i].0
 	            		)
 	            	);
 
                 	report.write_to_ofile( Fspot::Buff2, 
                 		format!(">No Cell detected\n{:?}\n", &data[i].1 )
                 	);
-
+					*/
 	                report.no_sample +=1;
 	                continue
 	            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
@@ -540,7 +531,7 @@ impl Analysis{
 
         //let reads_perl_chunk = 1_000_000;
         //eprintln!("Starting with data collection");
-        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( chunk_size * self.num_threads );
+        let mut good_reads: Vec<(SeqRec, SeqRec)> = Vec::with_capacity( chunk_size * self.num_threads );
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
@@ -567,7 +558,9 @@ impl Analysis{
         		match Self::quality_control( read1, read2, report.min_quality, pos, min_sizes){
         			Ok(()) => {
         				good_read_count +=1;
-        				good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
+        				let r1 = SeqRec::new( read1.id(), &read1.seq(), read1.qual().unwrap() );
+        				let r2 = SeqRec::new( read2.id(), &read2.seq(), read2.qual().unwrap() );
+        				good_reads.push( (r1, r2 ) );
         			},
         			/*Err(FilterError::PolyA)=> {
         				report.poly_a +=1;
@@ -758,8 +751,10 @@ impl Analysis{
                 let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                match &self.cells.to_cellid( &seqrec1.seq() ){
-                	Ok( (cell_id, umi) ) => {
+
+        		let r1 = SeqRec::new( seqrec2.id(), &seqrec2.seq(), seqrec2.qual().unwrap() );
+                match &self.cells.to_cellid( &r1 ){
+                	Ok( (cell_id, umi,_,_) ) => {
 		            	report.cellular_reads +=1;
 
 		            	// now I have three possibilites here:

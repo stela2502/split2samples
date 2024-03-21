@@ -148,7 +148,7 @@ impl Cigar{
 	    if other_count == 0 {
 	    	return 40_u8
 	    }
-	    let ratio = (count as i32) / ((other_count + count) as i32 );
+	    let ratio = (m_count as f32) / ((other_count + m_count) as f32 );
 	    (40.0  * (1.0 - ratio)) as u8
     }
 

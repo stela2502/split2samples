@@ -66,7 +66,7 @@ impl Iterator for GeneData {
 impl fmt::Display for GeneData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "GeneData name {} on chr {} at position {} with {} entries:\n{}",
-        	self.name, self.chr, self.start, self.len(), self.to_dna_string() )
+        	self.name, self.chr, self.start, self.len(), self.as_dna_string() )
     }
 }
 
@@ -82,6 +82,46 @@ impl GeneData{
 			current_position:0,
 		}
 	}
+
+	/// returns the GeneData's data as fasta sequence - >name|chr|start\nseq
+	pub fn to_fasta(&self) -> String{
+		let mut fasta = format!(">{}|{}|{}\n", self.name, self.chr, self.start);
+		fasta += &self.as_dna_string();
+		fasta += "\n";
+		fasta
+	}
+
+	// Convert the u8_encoded data to a u64
+    pub fn to_u64(&self) -> u64 {
+    	let mut ret = 0_u64;
+    	for byte in self.u8_encoded[0..8].iter().rev() {
+    		ret <<= 8;
+	        ret |= *byte as u64;
+	    }
+        ret
+    }
+
+    // Convert the u8_encoded data to a u32
+    pub fn to_u32(&self) -> u32 {
+        let mut ret = 0_u32;
+    	for byte in self.u8_encoded[0..4].iter().rev() {
+    		ret <<= 8;
+	        ret |= *byte as u32;
+	    }
+        ret
+    }
+
+    // Convert the u8_encoded data to a u16
+    pub fn to_u16(&self) -> u16 {
+        let mut ret = 0_u16;
+    	for byte in self.u8_encoded[0..2].iter().rev() {
+    		ret <<= 8;
+	        ret |= *byte as u16;
+	    }
+        ret
+    }
+
+    
 
 	// get the number of equal 4bp stretches over the whole length of the element
 	pub fn equal_entries(&self, other: &Self ) -> usize{
@@ -297,9 +337,6 @@ impl GeneData{
 	    //println!("next returns a u16 value: {u16_value:b}");
 	    Some( (u16_value, start) )
     } 
-
-	
-
 }
 
 impl BinaryMatcher for GeneData{
@@ -321,7 +358,7 @@ impl BinaryMatcher for GeneData{
 
 
 
-	fn to_dna_string(&self) -> String {
+	fn as_dna_string(&self) -> String {
 		if let Some(decoded) = self.to_bytes( self.len() ){
 			String::from_utf8_lossy(&decoded).into_owned()
 		}else {

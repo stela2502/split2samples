@@ -71,6 +71,27 @@ impl GenesMapper{
 		}
 	}
 
+	// sam_header will return both the header string as well as the fasta database to that
+	pub fn sam_header(&self) -> Option<(String, String)>{
+		
+		if let Some(hash) = &self.report4{
+			let mut vec = Vec::<String>::with_capacity( hash.len() );
+			let mut fasta = "".to_string();
+			for &id in hash {
+				let gene_name = &self.genes[id].get_name();
+			    let gene_len = self.genes[id].len();
+			    let formatted_line = format!("@SQ\tSN:{}\tLN:{}", gene_name, gene_len);
+			    vec.push(formatted_line);
+			    fasta+= &self.genes[id].to_fasta();
+
+			}
+			let ret = vec.join("\n") + "\n";
+			Some((ret, fasta))
+		}else {
+			None
+		}
+	}
+
 
 	pub fn set_min_matches( &mut self, val:usize) {
 		self.min_matches = val;
@@ -248,23 +269,23 @@ impl GenesMapper{
 
 		if let Some(capture) = match_length_problems.captures( &cigar.cigar ) {
 			let num_bp: usize = capture[1].parse().unwrap();
-			eprintln!("updateing the cigar string {cigar}");
+			//eprintln!("updateing the cigar string {cigar}");
 			match &capture[2] {
 				"I" => {
 					// the database was num_bp too large
 					let adjusted_db = database.slice(0, database.len() - num_bp ).unwrap();
 					let uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
-					eprintln!("Type I: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
+					//eprintln!("Type I: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
 				},
 				"D" => {
 					// the database was num_bp too short
 					let adjusted_db = &self.genes[*gene_id].slice( database.get_start() - self.genes[*gene_id].get_start() , database.len() + num_bp ).unwrap();
 					let uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
-					eprintln!("Type D: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
+					//eprintln!("Type D: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
 				},
 				&_ => (),
 			};
-			eprintln!("updataed cigar string   = '{cigar}'");
+			//eprintln!("updataed cigar string   = '{cigar}'");
 		}
 	}
 
@@ -284,10 +305,10 @@ impl GenesMapper{
 						if read.needleman_wunsch( &database, self.highest_humming_val, None ) < self.highest_nw_val {
 							if self.report4this_gene( gene_id ) || self.debug{
 								let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
-								println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
-									self.genes[*gene_id].get_name(), start[0], read_data.to_dna_string() );
+								//println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
+								//	self.genes[*gene_id].get_name(), start[0], read_data.as_dna_string() );
 								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)),
-									 cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+									 cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance() ) );
 							}else {
 								// 
 								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0 ) );
@@ -315,10 +336,10 @@ impl GenesMapper{
 								if self.report4this_gene( gene_id ) || self.debug{
 									// need to get the cigar string
 									let nw= read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
-									println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
-										self.genes[*gene_id].get_name(), start, read_data.to_dna_string() );
+									//println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
+									//	self.genes[*gene_id].get_name(), start, read_data.as_dna_string() );
 									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, true, Some(format!("{}",cigar)), 
-										cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+										cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance() ) );
 								}else {
 									// 
 									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None ,0, 0, 0 ) );
@@ -421,10 +442,10 @@ impl GenesMapper{
 								// gene_id:usize, databsase: &GeneData, read: &GeneData, cigar: &mut Cigar, match_length_problems:Regex
 								self.fix_database_4_cigar( gene_id, &database, &read, &mut cigar, &match_length_problems );
 							
-								println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
-									self.genes[*gene_id].get_name(), start[0], read_data.to_dna_string() );
+								//println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
+								//	self.genes[*gene_id].get_name(), start[0], read_data.as_dna_string() );
 								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)), 
-									cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+									cigar.mapping_quality(), (nw*read.len() as f32)as usize, cigar.edit_distance() ) );
 							}else {
 								// 
 								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0 ) );
@@ -453,10 +474,10 @@ impl GenesMapper{
 									let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
 									self.fix_database_4_cigar( gene_id, &database, &read, &mut cigar, &match_length_problems );
 									
-									println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
-										self.genes[*gene_id].get_name(), start, read_data.to_dna_string() );
+									//println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
+									//	self.genes[*gene_id].get_name(), start, read_data.as_dna_string() );
 									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, true, Some(format!("{}",cigar)), 
-										cigar.qual(), nw*read.len() as usize, cigar.edit_distance() ) );
+										cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance() ) );
 								}else {
 									// 
 									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None, 0 ,0, 0 ) );

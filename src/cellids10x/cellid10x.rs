@@ -34,7 +34,7 @@ impl Hash for CellId10x {
 // Implementing Display trait for CellId10x
 impl fmt::Display for CellId10x {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}",self.to_dna_string() )
+        write!(f, "{}",self.as_dna_string() )
     }
 }
 
@@ -68,7 +68,7 @@ impl BinaryMatcher for CellId10x {
         Some(((self.0 >> ( pos * 2)) & 0b11) as u8)
     }
 
-	fn to_dna_string(&self) -> String {
+	fn as_dna_string(&self) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
         for i in 0..16 {

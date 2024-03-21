@@ -3,6 +3,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 // use flate2::read::GzDecoder;
 use rustody::traits::CellIndex;
+use rustody::genes_mapper::SeqRec;
 
 use needletail::parse_fastx_file;
 use std::collections::HashSet;
@@ -270,8 +271,9 @@ fn cell_ident( opts:&Opts ){
                 //let seq = seqrec.seq().into_owned();
 
                 // first match the cell id - if that does not work the read is unusable
-                match cells.to_cellid( &seqrec1.seq() ){
-                    Ok(( val, _add )) => {
+                let r1 = SeqRec::new( seqrec1.id(), &seqrec1.seq(), seqrec1.qual().unwrap() );
+                match cells.to_cellid( &r1 ){
+                    Ok(( val, _add,_,_ )) => {
                         // OK the read is usable - check if it is a sample
                         match samples.get( &seqrec.seq(), 9, 10 ){
                             Ok(id) => {
@@ -424,9 +426,9 @@ fn sample_split( opts: &Opts){
                 unknown +=1;
                 continue;
             }
-
-            match cells.to_cellid( &seqrec1.seq() ){
-                Ok( (id, _add) ) => {
+            let r1 = SeqRec::new( seqrec1.id(), &seqrec1.seq(), seqrec1.qual().unwrap() );
+            match cells.to_cellid( &r1 ){
+                Ok( (id, _add, _, _) ) => {
                     // check if the cell has been detected before or print error
                     match cells2sample.get( &id ){
                         Some(cell_id) => {

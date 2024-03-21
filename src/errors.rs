@@ -20,6 +20,7 @@ pub enum MappingError {
 
 #[derive(Debug)]
 pub enum CellIdError {
+    TooShort,
     NoMatch,
     Ns,
 }
