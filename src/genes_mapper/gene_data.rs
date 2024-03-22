@@ -5,7 +5,9 @@ use crate::genes_mapper::Cigar;
 use core::cmp::max;
 use std::hash::{Hash, Hasher};
 use core::fmt;
+use num_traits::cast::ToPrimitive;
 
+use serde::{Serialize, Deserialize};
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -22,15 +24,21 @@ const MATCH_SCORE: i32 = 1;
 const MISMATCH_SCORE: i32 = -1;
 const GAP_PENALTY: i32 = -2;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,Deserialize,Serialize)]
 pub struct GeneData {
 	/// The data storage - we will never store any seq other than a 2bit encoded one.
 	u8_encoded: Vec::<u8>,
 	/// store the encoded length of the sequence (needed for subset of matching)
 	length:usize,
+	/// the name for the sequence (mostly a gene name here)
 	name: String,
+	/// where came this gene from (chr) not used at the moment
 	chr: String,
+	/// alternative gene names (like transcript id or family name)
+	//other_ids:Vec<String>,
+	/// If this is a subseq of the main entry - where on the main entry does this start
 	start: usize,
+	/// and this is something provate used for the next function
 	current_position: usize,
 }
 
@@ -53,14 +61,11 @@ impl Iterator for GeneData {
     type Item = (u16, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-
         let result = self.key_at_position(self.current_position );
         self.current_position += 1;
         return result
     }
 }
-
-
 
 // Implementing Display trait for SecondSeq
 impl fmt::Display for GeneData {
@@ -71,7 +76,8 @@ impl fmt::Display for GeneData {
 }
 
 impl GeneData{
-	pub fn new( seq: &[u8], name:&str, chr:&str, start:usize )-> Self{
+	//pub fn new( seq: &[u8], name:&str, chr:&str, start:usize, other_ids:Vec<String> )-> Self{
+	pub fn new( seq: &[u8], name:&str, chr:&str, start:usize ) -> Self {
 		let u8_encoded = Self::encode( seq );
 		Self{
 			u8_encoded,
@@ -79,11 +85,12 @@ impl GeneData{
 			name: name.to_string(),
 			chr: chr.to_string(),
 			start,
+			//other_ids: other_ids,
 			current_position:0,
 		}
 	}
 
-	/// returns the GeneData's data as fasta sequence - >name|chr|start\nseq
+	/// returns the GeneData's data as fasta sequence - >name|chr|start\nseq\n
 	pub fn to_fasta(&self) -> String{
 		let mut fasta = format!(">{}|{}|{}\n", self.name, self.chr, self.start);
 		fasta += &self.as_dna_string();
@@ -346,12 +353,15 @@ impl BinaryMatcher for GeneData{
     }
 
 	fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
-	    if pos > self.len() {
+	    if pos >= self.len() {
 	        return None; // Position exceeds the length of the encoded sequence
 	    }
 
 	    let byte_idx = pos / 4;
 	    let bit_offset = pos % 4;
+	    if byte_idx >= self.u8_encoded.len(){
+	    	return None
+	    }
 	    //println!("Byte idx {byte_idx}, bit_offset {bit_offset}");
 	    Some((self.u8_encoded[byte_idx] >> ( bit_offset * 2)) & 0b11)
 	}
@@ -493,8 +503,12 @@ impl BinaryMatcher for GeneData{
 	    }
 
 	    if let Some(cig) = cigar {
-	    	cig.calculate_cigar( &matrix );
+	    	cig.calculate_cigar( &matrix ,self.get_nucleotide_2bit(rows-1) == other.get_nucleotide_2bit(cols-1));
 	    	cig.clean_up_cigar( self, other);
+	    	/*if cig.calculate_covered_nucleotides( &cig.cigar ).0 != self.len(){
+	    		panic!("This cigar does not describe my mapping correctly! {} has a length of {} and this is me:\n{self}\nand that the other:\n{other}", 
+	    			&cig.cigar, cig.calculate_covered_nucleotides( &cig.cigar ).0);
+	    	}*/
 	    }
 
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32

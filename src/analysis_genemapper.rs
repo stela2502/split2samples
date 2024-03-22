@@ -10,6 +10,7 @@ use crate::genes_mapper::{ MapperResult, SeqRec};
 use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
 use std::env;
+use cargo_metadata::MetadataCommand;
 
 use crate::int_to_str::IntToStr;
 use crate::errors::MappingError;
@@ -102,15 +103,14 @@ impl AnalysisGeneMapper{
 	    //let mut gene_count = 0;
 	    
 	    if let Some(i) = index {
-	    	panic!("This is not implemented up to now!");
-	    	/*println!("Loading index from path {i}");
-	    	match genes.load_index( i ){
-	    		Ok(_r) => (),
+	    	println!("Loading index from path {i}");
+	    	genes = match  GenesMapper::load_index( i ){
+	    		Ok(r) => r,
 	    		Err(e) => panic!("Failed to load the index {e:?}")
-	    	}
+	    	};
 	    	genes.print();
 	    	//gene_count = genes.names.len();
-	    	*/
+	    	
 	    }
 
 	    if let Some(ex) = expression {
@@ -399,11 +399,11 @@ impl AnalysisGeneMapper{
 		    0x200 (512): QC_FAIL - Read fails quality checks.
 		    0x400 (1024): DUPLICATE - PCR or optical duplicate.
 		 */
-	
+		record += &format!("{}\t", gene_id[0].get_name() );
+		// the name of the database sequence
     	record += &format!("{}\t", gene_id[0].start());
     	// the start position of the read
     	record += &format!("{}\t", gene_id[0].mapq() );
-    	record +="\t";
     	// the map quality
     	let cigar_string = match gene_id[0].cigar() {
 		    Some(cigar) => cigar.to_string(),
@@ -463,6 +463,8 @@ impl AnalysisGeneMapper{
 	    3. Linked Read Extension (RE:A:Q): Indicates that the read is a linked read, meaning it is part of a set of reads that are linked together, typically by sharing a common barcode or unique molecular identifier (UMI).
 	    4. Chimeric Read Extension (RE:A:C): Indicates that the read is a chimeric read, meaning it contains sequences from two or more distinct DNA molecules or genomic regions.
 	    */
+	    //record += &format!("xf:i:{}\t",gene_id[0].edit_dist()); // li:i:0 // not linked
+
 	    record += "li:i:0\t"; // li:i:0 // not linked
 	    /*li:i:0: Linked-read identifier.
 	        li: Tag identifier, stands for "Linked-read identifier."
@@ -722,8 +724,14 @@ impl AnalysisGeneMapper{
     	// So if that is changed this header part needs to also change!
     	header += "@RG\tID:Sample4:0:1:HN2CKBGX9:1\tSM:Sample4\tLB:0.1\tPU:Sample4:0:1:HN2CKBGX9:1\tPL:ILLUMINA\n";
     	let args: Vec<String> = env::args().collect();
+    	let program = args[0].to_string();
 		let command_line: String = args.join(" ");
-		header += &format!("@PG\t{}", command_line);
+		// Get metadata about the package
+    	let metadata = MetadataCommand::new().exec().unwrap();
+    	// Get the version of the package
+    	let version = metadata.root_package().unwrap().version.to_string();
+
+		header += &format!("@PG\tPN:{}\tID:{}\tVN:{}\tCL:{}",&program, &program, &version, command_line);
 
     	writeln!(writer, "{}", header);
 

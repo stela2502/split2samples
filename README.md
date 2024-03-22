@@ -112,6 +112,16 @@ To run the test data (a tiny bit of a real dataset):
 ```
 target/release/quantify_rhapsody_multi -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
 ```
+Or the newer version of a mapper:
+```
+target/release/quantify_gene_mapper -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
+```
+
+Or want to test the 10x version of the tool (which is a LOT slower!):
+Here the most interesting is the sam file that will also be produced in the newest version: ``testData/10x/results/AlignedReadsOfInterest.sam``. I hope this will help to look into chrM cell tagging.
+```
+./target/release/quantify_gene_mapper -e testData/chrM_GRCm39.primary_assembly.genome.fa.gz -r testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R1_4m.fastq.gz  -f testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R2_4m.fastq.gz -o testData/10x/results/ --exp 10x --specie human --min-umi 20 --version "Single Cell 3' v3" --report4genes chrM --highest-nw-val 0.25  --chunk-size 10000
+```
 
 Latest results:
 

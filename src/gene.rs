@@ -1,4 +1,5 @@
 use crate::fast_mapper::FastMapper;
+use crate::genes_mapper::GenesMapper;
 
 const COMPLEMENT: [Option<u8>; 256] = {
     let mut lookup = [None; 256];
@@ -93,70 +94,73 @@ impl Gene{
 		self.exons.len()
 	}
 
+	
+
 	/// Select the correct regions from the gene and underlying sequences
 	/// to fill in the FastMapper index.
 	/// the [u8] we get here has to be utf8 encoded!
 	/// not 2bit binaries!
 	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper, covered_area:usize, print: bool ){
 
+		let ( mRNA, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
 
-		if let Some(mrna) = self.to_mrna(seq.to_owned()) {
-		    // The mrna sequence will be unchecked for non standard nucleotides - this needs to be checked later
-		    // But it will always be in sense orientation - now.
-		    
-		    // Stop this behaviour for now - not really necessary any more
-		    //println!(">{}\n{}", self.name.to_string() + " total mRNA -> chr " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
-
-		    if mrna.len() > covered_area{
-				//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna[ 0..100]).expect("Invalid UTF-8") );
-				index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string(), self.ids.clone() );
-				if print {
-					println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
-				}
+		if let Some(mrna) = mRNA {
+			index.add( &mrna.to_vec() , self.name.to_string(), self.ids.clone() );
+			if print {
+				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 			}
-			else {
-				//eprintln!( "adding this mrna to the index: \n{} -> \n{}", self.name.to_string() , std::str::from_utf8(&mrna).expect("Invalid UTF-8") );
-				index.add( &mrna , self.name.to_string(), self.ids.clone() );
+			if let Some(nascent) = raw{
+				index.add( &nascent.to_owned() , self.name.to_string() +"_int", self.ids.clone() );
 				if print {
-					println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8( &mrna ).unwrap() );
+					println!(">{}\n{}", self.name.to_string() + "_int " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 				}
 			}
 		} else {
 		    eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name, self.ids );
 		}
-		let last_exon = match self.sense_strand{
-			true => self.exons.len()-1,
-			false => 0,
-		};
-		if self.exons[last_exon][1]- self.exons[last_exon][0] < 100 && self.exons.len() > 1{
-			let addon = "_int".to_string();
-			match &self.to_nascent( seq.to_owned()){
-				Some( nascent ) => {
-					if nascent.len() > covered_area{
-						//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent[ 0..100]).expect("Invalid UTF-8") );
-						index.add( &nascent[ nascent.len()-covered_area..].to_owned() , self.name.to_string() + &addon, self.ids.clone() );
-						if print {
-							println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent[ nascent.len()-covered_area.. ].to_owned()  ).unwrap() );
-						}
-					}else{
-						//eprintln!( "adding this nascent to the index: \n{} -> \n{}", self.name.to_string() + &addon, std::str::from_utf8(&nascent).expect("Invalid UTF-8") );
-						index.add( nascent , self.name.to_string() + &addon, self.ids.clone()  );
-						if print {
-							println!(">{}\n{}", self.name.to_string()+ &addon + " " + &self.chrom  , std::str::from_utf8(  &nascent.to_owned()  ).unwrap() );
-						}
-					}
-				},
-				None=> {
-					eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name, self.ids );
+
+		
+
+	}
+
+	/// Select the correct regions from the gene and underlying sequences
+	/// to fill in the FastMapper index.
+	/// the [u8] we get here has to be utf8 encoded!
+	/// not 2bit binaries!
+	pub fn add_to_genes_mapper(&self, seq:&[u8], index: &mut GenesMapper, covered_area:usize, print: bool ){
+
+		let ( mRNA, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
+
+		if let Some(mrna) = mRNA {
+			index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string(), self.chrom.to_string(), 0   );
+			if print {
+				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
+			}
+			if let Some(nascent) = raw{
+				index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string() +"_int", self.chrom.to_string(), 0  );
+				if print {
+					println!(">{}\n{}", self.name.to_string() + "_int " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 				}
 			}
 		}
+		else {
+		    eprintln!("Error in gene {} {:?} - none standard nucleotides!",self.name, self.ids );
+		}
+
+		
+	}
+
+	/// generate mRNA and nacent RNA (if the last exon is small enough)
+	pub fn generate_rna_and_nascent_strings(&self, seq: &[u8], covered_area: usize) -> (Option<Vec<u8>>, Option<Vec<u8>>) {
+	    let mrna = self.to_mrna(seq.to_owned(), covered_area);
+	    let nascent = self.to_nascent(seq.to_owned(), covered_area);
+	    (mrna, nascent)
 	}
 
 	/// get the mRNA sequence of the transcript in sense orientation.
 	/// Fails if any other base than AGCT is in the sequence
 	/// This returns the revers complement if on the opposite starnd
-	pub fn to_mrna(&self, seq: Vec<u8>) -> Option<Vec<u8>> {
+	pub fn to_mrna(&self, seq: Vec<u8>, covered_area:usize) -> Option<Vec<u8>> {
 
 	    let mut mrna = Vec::<u8>::with_capacity(seq.len() ); // Allocate more space for potential additions
 
@@ -183,11 +187,27 @@ impl Gene{
 	        lc = !lc;
 	    }
 
-	    if !self.sense_strand {
-	        return Some(Self::rev_compl(mrna));
-	    }
+	    self.cut_to_size(mrna, covered_area )
 
-	    Some(mrna)
+	}
+
+	/// cut the RNA to the right size
+	fn cut_to_size( &self, seq:Vec<u8>, covered_area:usize) -> Option<Vec<u8>> {
+		if ! self.sense_strand{
+			if seq.len() > covered_area{
+				let start = seq.len() - covered_area;
+				Some ( Self::rev_compl( seq)[ start.. ].to_vec() )
+			}else {
+				Some ( Self::rev_compl( seq ))
+			}
+		}else {
+			if seq.len() > covered_area{
+				let start = seq.len() - covered_area;
+				Some (  seq[ start.. ].to_vec() )
+			}else {
+				Some ( seq )
+			}
+		}
 	}
 	
 	
@@ -195,34 +215,38 @@ impl Gene{
 	/// get the nascent RNA for this transcript (including introns).
 	/// Fails if any other base than AGCT is in the sequence
 	/// This returns the revers complement if on the opposite starnd
-	fn to_nascent(&self, seq:Vec<u8> ) -> Option<Vec<u8>> {
-		let size = self.end - self.start;
-		let mut nascent = Vec::<u8>::with_capacity(size);
-		nascent.extend_from_slice(&seq[self.start-1..self.end]);
-		// for &b in nascent.iter() {
-    	// 	let _entr = match CHECK[b as usize] {
-    	// 		Some(val) => val,
-    	// 		None => return None,
-		// 	};
-		// }
-		if ! self.sense_strand{
-			return Some ( Self::rev_compl( nascent ))
+	fn to_nascent(&self, seq:Vec<u8> , covered_area:usize) -> Option<Vec<u8>> {
+		let last_exon = match self.sense_strand{
+			true => self.exons.len()-1,
+			false => 0,
+		};
+		if self.exons[last_exon][1]- self.exons[last_exon][0] < covered_area && self.exons.len() > 1{
+
+			let size = self.end - self.start;
+			let mut nascent = Vec::<u8>::with_capacity(size);
+			nascent.extend_from_slice(&seq[self.start-1..self.end]);
+
+			self.cut_to_size(nascent, covered_area )
 		}
-		Some(nascent)
+		else {
+			None
+		}
 	}
 
-	/// is the position (pos) after our end?
-	pub fn passed( &self, pos:usize ) -> bool{
-        self.end < pos
-    }
-
-    /// the reverse complement of a Vec<u8>
+	/// the reverse complement of a Vec<u8>
     fn rev_compl( seq:Vec<u8> ) -> Vec<u8>{
 	    seq.iter()
 	        .rev()
 	        .filter_map(|&c| COMPLEMENT[c as usize])
 	        .collect()
     }
+
+	/// is the position (pos) after our end?
+	pub fn passed( &self, pos:usize ) -> bool{
+        self.end < pos
+    }
+
+    
 
     // /// the reverse complement of a &[u8]
 	// fn reverse_complement(seq: &[u8]) -> Vec<u8> {

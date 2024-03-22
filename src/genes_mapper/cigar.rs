@@ -163,7 +163,10 @@ impl Cigar{
 	        let count: usize = cap[1].parse().unwrap();
 	        let operation = &cap[2];
 	        match operation {
-	            "M" => (),
+	            "M" => (), // match
+	            "S" => (), // soft clip
+	            "H" => (), // hard clip
+	            "=" => (), // not quite sure, but should likely be good too - or?
 	            _ => other_count += count,
 	        }
 	    }
@@ -181,7 +184,7 @@ impl Cigar{
 		
 	    if let Some(mat) = re_end.captures(&old_cigar) {
 	        if let Some(clippable) = mat.get(1) {
-	        	if clippable.start() > 1{
+	        	if clippable.start() > 0{
 	        		let prev_char:&char = &self.cigar[(clippable.start()-1)..clippable.start()].chars().next().unwrap();
 				    if prev_char.is_digit(10) {
 				        // The character is a digit - overmatched
@@ -202,7 +205,7 @@ impl Cigar{
 			        // The character is not a digit - great
 			        let clipped_part = &self.cigar[clippable.start()..clippable.end()];
 			        let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
-			        //println!("I'll clip this part: {clipped_part} with a mine length of {mine}");
+			        //println!("not an digit - I'll clip this part: {clipped_part} with a mine length of {mine}");
 			        self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}S", mine));
 			    }
 	        }
@@ -237,7 +240,7 @@ impl Cigar{
     /// instead of that string I would like to see a 23S59M 
 
 	/// calculates the nucleotides on both mine and the other sequence that has passed at the end of the cigar string
-	fn calculate_covered_nucleotides(&self, cigar_string: &str) -> (usize, usize) {
+	pub(crate) fn calculate_covered_nucleotides(&self, cigar_string: &str) -> (usize, usize) {
 	    let mut mine = 0;
 	    let mut other = 0;
 	    let mut current_number = String::new();
@@ -256,11 +259,14 @@ impl Cigar{
 	                	other += count; 
 	                },
 	                'I' => {
-	                	mine += count; // Insertion
+	                	other += count; // Insertion
 	                },
 	                'D' => {
-	                	other += count;// Deletion or intron
-	                }, 
+	                	mine += count;// Deletion or intron
+	                },
+	                'S' => {
+	                	mine += count;// Deletion or intron
+	                }
 	                _ => {}, // Other CIGAR operations (e.g., S, H, P)
 	            }
 	            current_number.clear(); // Clear the current number for the next operation
@@ -292,7 +298,7 @@ impl Cigar{
 	    }    
 	}
 
-	pub fn calculate_cigar(&mut self, matrix : &Vec<Vec<Cell>> )  {
+	pub fn calculate_cigar(&mut self, matrix : &Vec<Vec<Cell>>, last_match:bool )  {
 			// Trace back the alignment path
 		
 		    let mut path = Vec::with_capacity( matrix.len().max( matrix[0].len() ));
@@ -303,8 +309,16 @@ impl Cigar{
 		    let mut i = rows - 1;
 		    let mut j = cols - 1;
 
+		    // fix the final entry
+		    if  last_match {
+				path.push(CigarEnum::Match);
+		    }else {
+		    	path.push(CigarEnum::Mismatch);
+		    }
+
 		    while i > 0 && j > 0 {
 		        let current_score = matrix[i][j].score;
+		        //println!("Current score = {current_score}");
 		        let diagonal_score = matrix[i - 1][j - 1].score;
 		        let up_score = matrix[i - 1][j].score;
 		        let left_score = matrix[i][j - 1].score;
@@ -313,17 +327,21 @@ impl Cigar{
 		        if max == diagonal_score {
 		        	if diagonal_score > current_score {
 		        		// mismatch!!!
-		        		 path.push(CigarEnum::Mismatch);
+		        		//println!("adding Mismatch");
+		        		path.push(CigarEnum::Mismatch);
 		        	}else {
 		        		// match
+		        		//println!("adding Match");
 		        		path.push(CigarEnum::Match);
 		        	}
 		            i -= 1;
 		            j -= 1;
 		        } else if max == up_score {
+		        	//println!("adding Deletion");
 		            path.push(CigarEnum::Deletion);
 		            i -= 1;
 		        } else {
+		        	//println!("adding Insertion");
 		            path.push(CigarEnum::Insertion);
 		            j -= 1;
 		        }
@@ -331,11 +349,13 @@ impl Cigar{
 
 		    // If there are remaining gaps at the beginning of the sequences, fill them with the corresponding directions
 		    while i > 0 {
+		    	//println!("End not reached by main - adding Deletion");
 		        path.push(CigarEnum::Deletion);
 		        i -= 1;
 		    }
 
 		    while j > 0 {
+		    	//println!("End not reached by main - adding Insertion");
 		        path.push(CigarEnum::Insertion);
 		        j -= 1;
 		    }
@@ -348,6 +368,7 @@ impl Cigar{
 		    //TTCATATCGACAATTAGGGTTTACGACCTCGATGTTTCAGGACTAGATAGTA
 		    // 37M3D7M3I4M ???! 37M OK 
 			self.convert_to_cigar(&path);
+		    
 		    /*
 		    let mut csv_table = String::new();
 
@@ -359,14 +380,11 @@ impl Cigar{
 		        csv_table.push_str(&format!("{}\n", line));
 		    }
 
-		    
-
 		    // Write CSV table to a file
-		    let mut file = File::create(&format!("{}.csv", &me.cigar)).unwrap();
+		    let mut file = File::create(&format!("{}.csv", &self.cigar)).unwrap();
 		    file.write_all(csv_table.as_bytes()).unwrap();
-		    
 
-		    println!("You can check my alignement table : '{}'", format!("{}.csv",  &me.cigar ) );
+		    println!("You can check my alignement table : '{}'", format!("{}.csv",  &self.cigar ) );
 			*/
 	}
 }

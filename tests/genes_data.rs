@@ -235,6 +235,8 @@ mod tests {
 	fn test_cigar(){
 		//                          ***
 		//           012345678901234567890123456789012345678901234
+		//           TGGTATCTTTTACTTACCTGCTTGAATACTTG
+		//           TGGTATCTTTTACTT   TGCTTGAATACTTG
 		let seq  = b"TGGTATCTTTTACTTACCTGCTTGAATACTTG";
 		let seq2 = b"TGGTATCTTTTACTTTGCTTGAATACTTG";
 		let obj  = GeneData::from_bytes( seq  );
@@ -249,7 +251,7 @@ mod tests {
 		//cig.clean_up_cigar( &obj, &obj2 );
 
 
-		assert_eq!( cigar.cigar, "15M3D13M", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "15M3D14M", "Cigar string was created correctly!" );
 
 
 	}
@@ -258,32 +260,85 @@ mod tests {
 	fn test_needleman_wunsch_cigar(){
 		// to bp each                   ***
 		//           012345678901234567890123456789012345678901234
-		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGA";
-		let seq2 = b"TTCATATCGACAATTAGGGACGACCTCGATGTTGGATCAGGA"; //missing three T-s in the middle.
+		//           TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGT
+		//           TTCATATCGACAATTAGGG   ACGACCTCGATGTTGGATCAGGT
+		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGT";
+		let seq2 = b"TTCATATCGACAATTAGGGACGACCTCGATGTTGGATCAGGT"; //missing three T-s in the middle.
 		let obj = GeneData::from_bytes( seq );
 		let obj2 = GeneData::from_bytes( seq2 );
 		let mut cigar = Cigar::new("");
 		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 
-		assert_eq!( cigar.cigar, "19M3D22M", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "19M3D23M", "Cigar string was created correctly!" );
 		
 	}
 
+	#[test]
+	fn test_needleman_wunsch_cigar_insertion_and_first_mismatch(){
+		// to bp each                      *** insertion
+		//           0123456789012345678901   2345678901234567890123456789
+		//           01234567890123456789012345678901234567890123456789
+		//           GTCATATCGACAATTAGGGTTT   ACGACCTCGATGTTGGATCAGGA 22 + 22 bp
+		//           TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGA
+		let seq =  b"GTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGT";
+		let seq2 = b"TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGT"; //missing three T-s in the middle.
+		let obj = GeneData::from_bytes( seq );
+		let obj2 = GeneData::from_bytes( seq2 );
+		let mut cigar = Cigar::new("");
+		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		assert_eq!( cigar.cigar, "1X21M3I23M", "Cigar string was created correctly!" );
+		
+	}
+
+	#[test]
+	fn test_needleman_wunsch_cigar_insertion_and_last_mismatch(){
+		// to bp each                      *** insertion
+		//           01234567890123456789012345678901234567890123456789
+		//           TTCATATCGACAATTAGGGTTT   ACGACCTCGATGTTGGATCAGGA 22 + 23 bp
+		//           TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGA
+		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGC";
+		let seq2 = b"TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGT"; //missing three T-s in the middle.
+		let obj = GeneData::from_bytes( seq );
+		let obj2 = GeneData::from_bytes( seq2 );
+		let mut cigar = Cigar::new("");
+		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		assert_eq!( cigar.cigar, "22M3I22M1X", "Cigar string was created correctly!" );
+		
+	}
 
 	#[test]
 	fn test_needleman_wunsch_cigar_insertion(){
 		// to bp each                      *** insertion
 		//           01234567890123456789012345678901234567890123456789
-		//           TTCATATCGACAATTAGGGTTT   ACGACCTCGATGTTGGATCAGGA
+		//           TTCATATCGACAATTAGGGTTT   ACGACCTCGATGTTGGATCAGGA 22 + 23 bp
 		//           TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGA
-		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGA";
-		let seq2 = b"TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGA"; //missing three T-s in the middle.
+		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGT";
+		let seq2 = b"TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGT"; //missing three T-s in the middle.
 		let obj = GeneData::from_bytes( seq );
 		let obj2 = GeneData::from_bytes( seq2 );
 		let mut cigar = Cigar::new("");
 		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 
-		assert_eq!( cigar.cigar, "22M3I22M", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "22M3I23M", "Cigar string was created correctly!" );
+		
+	}
+
+	#[test]
+	fn test_needleman_wunsch_cigar_insertion_last_mismatch(){
+		// to bp each                      *** insertion
+		//           01234567890123456789012345678901234567890123456789
+		//           TTCATATCGACAATTAGGGTTT   ACGACCTCGATGTTGGATCAGGA 23 + 24 bp
+		//           TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGA
+		let seq =  b"TTCATATCGACAATTAGGGTTTACGACCTCGATGTTGGATCAGGG";
+		let seq2 = b"TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGT"; //missing three T-s in the middle.
+		let obj = GeneData::from_bytes( seq );
+		let obj2 = GeneData::from_bytes( seq2 );
+		let mut cigar = Cigar::new("");
+		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		assert_eq!( cigar.cigar, "22M3I22M1X", "Cigar string was created correctly!" );
 		
 	}
 
@@ -298,7 +353,7 @@ mod tests {
 	
 	#[test]
 	fn test_slicing_2(){
-		let seq = b"GTTCTACATTCTTCATGGCTACTGGATTCCATGGACTCCATGTAATTATTGGATCAACATTCCTTATTGTTTGCCTACTACGACAACTAA";
+		let seq = b"GTTCTACATTCTTCATGGCTACTGGATTCCATGGACTCCATGTAATTATTGGATCAACATTCCTTATTGTTTGCCTACTACGACAACTAT";
 		let obj = GeneData::from_bytes( seq );
 		assert_eq!( obj.get_start(), 0 ,"Start is 0");
 
@@ -314,8 +369,18 @@ mod tests {
 			assert_eq!( slice_2.get_start(), 20 ,"Start is 20");
 			assert_eq!( slice_2.len(), 10 ,"Start is 0");
 		}
+	}
 
-		
+	#[test]
+	fn test_real_live_issue1(){
+		let seq = b"CGCCATCTTCAGCAAACCCTAAAAAGGTATTAAAGTAAGCAAAAGAATCAAACATAAAAACGTTAGGTCAAGGTGTAGCCAATGAAATGG";
+		let seq2 = b"CGCCATCTTCAGCAAACCCTAAAAAGGTATTAAAGTAAGCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGACACAAAACGTTTGGGGG";
+		let obj = GeneData::from_bytes( seq );
+		let obj2 = GeneData::from_bytes( seq2 );
+		let mut cigar = Cigar::new("");
+		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		assert_eq!( cigar.cigar, "44M46S", "Cigar string was created correctly!" );
 	}
 
 

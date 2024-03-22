@@ -1,8 +1,8 @@
 // genes_mapper/gene_link.rs
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
-
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone,Deserialize,Serialize)]
 pub struct GeneLink {
 	// store all chr position combos for this u16 8bp area.
 	data: Vec<(usize, usize)>,

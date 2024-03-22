@@ -46,13 +46,13 @@ mod tests {
 		gene.add_exon( "1".to_string(), "5".to_string() );
 		gene.add_exon( "15".to_string(), "20".to_string() );
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec() ) {
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec(), 100 ) {
 			assert_eq!( seq, b"ACCCCaatttt".to_vec(), "Correct mrna? {seq:?}" );
 		}else {
 			panic!("to_mrna has not returned a sequence!")
 		}
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT".to_vec() ) {
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT".to_vec(), 100 ) {
 			panic!("The sequences is one bp too short - that should return None - not {seq:?}!")
 		}else {
 			assert!(true); // to show we did good.
@@ -68,13 +68,13 @@ mod tests {
 		gene.add_exon( "1".to_string(), "5".to_string() );
 		gene.add_exon( "15".to_string(), "20".to_string() );
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec() ) {
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec(), 100 ) {
 			assert_eq!( seq, b"AAAATTGGGGT".to_vec(), "Correct mrna? {seq:?}" );
 		}else {
 			panic!("to_mrna has not returned a sequence!")
 		}
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT".to_vec() ) {
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT".to_vec(), 100 ) {
 			panic!("The sequences is one bp too short - that should return None - not {seq:?}!")
 		}else {
 			assert!(true); // to show we did good.

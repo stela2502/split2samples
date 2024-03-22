@@ -198,7 +198,7 @@ impl BinaryMatcher for CellId10x {
 
         // Trace back the alignment path
         if let Some(cig) = cigar {
-            cig.calculate_cigar( &matrix );
+            cig.calculate_cigar( &matrix ,self.get_nucleotide_2bit(rows-1) == other.get_nucleotide_2bit(cols-1));
             cig.clean_up_cigar( self, other);
         }
 

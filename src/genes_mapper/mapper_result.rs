@@ -13,6 +13,7 @@ pub struct MapperResult{
 	mapq: u8,
 	score: usize,
 	edit_dist: usize,
+	gene_name:String,
 }
 
 // Implementing Display trait for MapperResult
@@ -23,7 +24,7 @@ impl fmt::Display for MapperResult {
 }
 
 impl MapperResult{
-	pub fn new( gene_id:usize,  start: usize, save:bool, cigar:Option<String>, mapq:u8, score:usize, edit_dist:usize ) -> Self{
+	pub fn new( gene_id:usize,  start: usize, save:bool, cigar:Option<String>, mapq:u8, score:usize, edit_dist:usize, name:&str ) -> Self{
 		Self{
 			gene_id,
 			start,
@@ -31,8 +32,13 @@ impl MapperResult{
 			cigar,
 			mapq,
 			score,
-			edit_dist
+			edit_dist,
+			gene_name: name.to_string(),
 		}
+	}
+
+	pub fn get_name(&self) -> &str{
+		&self.gene_name
 	}
 
 	pub fn gene_id(&self) -> usize {

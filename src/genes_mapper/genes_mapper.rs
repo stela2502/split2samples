@@ -21,9 +21,20 @@ use std::collections::BTreeMap;
 
 use regex::Regex;
 
+use std::fs::File;
+use std::io::Read;
+
+use serde::{Serialize, Deserialize};
+
+use flate2::write::GzEncoder;
+use flate2::Compression;
+use std::io::BufWriter;
+use std::io::Write;
+
+
 use core::fmt;
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Deserialize,Serialize)]
 pub struct GenesMapper{
 	genes: Vec<GeneData>,
 	mapper: Vec<GeneLink>,
@@ -49,7 +60,9 @@ pub struct GenesMapper{
 // Implementing Display trait for SecondSeq
 impl fmt::Display for GenesMapper {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "GenesMapper with {} mapper entries for {} genes", self.with_data, self.genes.len() )
+    	let first = 5.min(self.genes.len());
+    	let names: Vec<String> = (0..first).map( |i| self.genes[i].get_name().to_string() ).collect();
+        write!(f, "GenesMapper with {} mapper entries for {} genes like {:?}", self.with_data, self.genes.len(), names )
     }
 }
 
@@ -150,7 +163,9 @@ impl GenesMapper{
 		false
 	}
 
+	//pub fn add(&mut self, seq: &[u8], name: String, chr: String, start:usize, other:Vec<String> ) -> usize{
 	pub fn add(&mut self, seq: &[u8], name: String, chr: String, start:usize ) -> usize{
+
 		let mut gene_data = GeneData::new( seq, &name, &chr, start );
 		// Hash the gene_data object to obtain its hash value
 	    let mut hasher = DefaultHasher::new();
@@ -308,10 +323,10 @@ impl GenesMapper{
 								//println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 								//	self.genes[*gene_id].get_name(), start[0], read_data.as_dna_string() );
 								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)),
-									 cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance() ) );
+									 cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance(), self.genes[*gene_id].get_name() ) );
 							}else {
 								// 
-								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0 ) );
+								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0, "" ) );
 							}
 							
 						}
@@ -339,10 +354,10 @@ impl GenesMapper{
 									//println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 									//	self.genes[*gene_id].get_name(), start, read_data.as_dna_string() );
 									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, true, Some(format!("{}",cigar)), 
-										cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance() ) );
+										cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance(), self.genes[*gene_id].get_name() ) );
 								}else {
 									// 
-									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None ,0, 0, 0 ) );
+									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None ,0, 0, 0, "" ) );
 								}
 							}
 						}	
@@ -404,10 +419,14 @@ impl GenesMapper{
 				continue;
 			}
 
-			i+=1;
+			
 			if ! self.mapper[key as usize].is_empty() {
+				i+=1;
 				self.mapper[key as usize].get( &mut res, start as i32 );
 			}
+			//if i == 20 {
+			//	break;
+			//}
 			//println!("after {i} iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
 		}
 		
@@ -445,10 +464,10 @@ impl GenesMapper{
 								//println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 								//	self.genes[*gene_id].get_name(), start[0], read_data.as_dna_string() );
 								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)), 
-									cigar.mapping_quality(), (nw*read.len() as f32)as usize, cigar.edit_distance() ) );
+									cigar.mapping_quality(), (nw*read.len() as f32)as usize, cigar.edit_distance(), self.genes[*gene_id].get_name() ) );
 							}else {
 								// 
-								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0 ) );
+								ret.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, false, None, 0, 0, 0, "" ) );
 							}
 						}
 					};			
@@ -477,10 +496,10 @@ impl GenesMapper{
 									//println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
 									//	self.genes[*gene_id].get_name(), start, read_data.as_dna_string() );
 									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, true, Some(format!("{}",cigar)), 
-										cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance() ) );
+										cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance(), self.genes[*gene_id].get_name() ) );
 								}else {
 									// 
-									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None, 0 ,0, 0 ) );
+									ret.push( MapperResult::new( *gene_id + self.offset, start as usize, false, None, 0 ,0, 0, "" ) );
 								}
 							}	
 						}else {
@@ -606,23 +625,41 @@ impl GenesMapper{
 	fn max_id( &self ) -> usize { // return the max:id for the sparse export of the data
 		self.genes.len()
 	}
-	pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
+	pub fn write_index( &mut self, path: String ) -> Result< (), String>{
 		// this index needs to store the genes vectors and names. Genes binary and names as comma separated list?
+		// Serialize the vector to binary
+	    let serialized = bincode::serialize(&self).unwrap();
+
+	    // Write the binary data to a file
+	    let mut file = File::create(path.to_string() + "/index.bin").unwrap();
+	    file.write_all(&serialized).unwrap();
 
 		// the mapper would probably also make sense to store. Let's check the time we need to re-create that before storing it.
-		eprintln!("GenesMapper::write_index - NOT IMPLEMENTED!!!");
+		eprintln!("GenesMapper binary Index written to {}/index.bin", path);
 		Ok(())
 	}
-	pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
-		eprintln!("GenesMapper::load_index - NOT IMPLEMENTED!!!");
-		Ok(())
+	pub fn load_index(  path: String ) -> Result< Self, String>{
+		let mut file = File::open(path.to_string() + "/index.bin").unwrap();
+		let mut buffer = Vec::new();
+    	file.read_to_end(&mut buffer).unwrap();
+    	let deserialized: Self = bincode::deserialize(&buffer).unwrap();
+		eprintln!("GenesMapper binary Index loaded from {}/index.bin\n{deserialized}", path);
+		Ok(deserialized)
 	}
 
-	pub fn write_index_txt( &mut self, path: String ) -> Result< (), &str>{
-		// this index needs to store the genes vectors and names. Genes binary and names as comma separated list?
+	/// this will simply export the mapper entries as gzipped fasta database
+	pub fn write_index_txt( &mut self, path: String ) -> Result< (), String>{
 
-		// the mapper would probably also make sense to store. Let's check the time we need to re-create that before storing it.
-		
+		let f1 = match File::create(path.to_string() + "/indexed_sequences.fa.gz"){
+            Ok(file) => file,
+            Err(err) => panic!("The file {} cound not be created: {err}",path + "/indexed_sequences.fa.gz" )
+        };
+        let file1 = GzEncoder::new(f1, Compression::default());
+        let mut buff1 = BufWriter::new( file1 );
+        for gene in &self.genes{
+        	write!(buff1, "{}", gene.to_fasta() );
+        }
+		println!("Human readable sequences stored in {}/indexed_sequences.fa.gz", path);
 		Ok(())
 	}
 
