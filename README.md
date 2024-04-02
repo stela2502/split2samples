@@ -72,6 +72,7 @@ cp target/release/bd_get_single_cell /usr/bin
 cp target/release/get_n_cell_reads /usr/bin
 cp target/release/int_2_seq /usr/bin
 cp target/release/check_read_gene_mapper /usr/bin
+cp target/release/check_read_fast_mapper /usr/bin
 cp target/release/create_index /usr/bin
 cp target/release/create_index_te /usr/bin
 cp target/release/te_analysis /usr/bin

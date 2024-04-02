@@ -10,6 +10,7 @@ use needletail::parse_fastx_file;
 
 static EMPTY_VEC: Vec<String> = Vec::new();
 
+/// Uses the logic from the quantify_ scripts to test exactly one read sequence (just the fasta part without the name line)
 
 #[derive(Parser)]
 #[clap(version = "1.0.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
