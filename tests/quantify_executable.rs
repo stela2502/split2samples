@@ -179,7 +179,7 @@ fn test_quantify_gene_mapper() {
     // Execute the command with the provided arguments
     let output = Command::new(
         if is_release_mode { "./target/release/quantify_gene_mapper" } 
-        else { "./target/debug/quantify_rhapsody_multi" }
+        else { "./target/debug/quantify_gene_mapper" }
         ).args(&[
             "-r", "testData/1e5_mRNA_S1_R1_001.fastq.gz",
             "-f", "testData/1e5_mRNA_S1_R2_001.fastq.gz",

@@ -19,8 +19,7 @@ use rustody::ofiles::Ofiles;
 // use std::collections::HashSet;
 // use std::convert::TryInto;
 
-/// Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles.
-/// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
+/// Uses the logic from the quantify_ scripts to test exactly one read sequence (just the fasta part without the name line)
 
 #[derive(Parser)]
 #[clap(version = "1.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]

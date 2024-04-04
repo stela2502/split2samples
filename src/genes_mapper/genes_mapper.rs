@@ -38,8 +38,8 @@ use core::fmt;
 pub struct GenesMapper{
 	genes: Vec<GeneData>,
 	mapper: Vec<GeneLink>,
-	/// make sure no gene is added with the same sequence twice
-	gene_hashes: HashSet<u64>,
+	/// make sure no gene is added with the same sequence twice and report the orig name of the entry
+	gene_hashes: BTreeMap<u64, String>,
 	/// how many of my mapper entries have data?
 	with_data: usize,
 	/// if this is not the only mapper used - where should I start to count my genes?
@@ -72,7 +72,7 @@ impl GenesMapper{
 		Self{
 			genes: Vec::<GeneData>::with_capacity( 40_000 ),
 			mapper: vec![GeneLink::new(); u16::MAX as usize],
-			gene_hashes: HashSet::new(),
+			gene_hashes: BTreeMap::new(),
 			with_data: 0,
 			offset,
 			names: BTreeMap::new(),
@@ -82,6 +82,11 @@ impl GenesMapper{
 			report4: None, // report for a gene?
 			debug:false,
 		}
+	}
+
+	/// this function could possibly be a good idea to get rid of repeat infos
+	pub fn make_index_te_ready(&mut self ) {
+		eprintln!("make_index_te_ready - Please implement me!")
 	}
 
 	// sam_header will return both the header string as well as the fasta database to that
@@ -171,12 +176,13 @@ impl GenesMapper{
 	    let mut hasher = DefaultHasher::new();
 	    gene_data.hash(&mut hasher);
 	    let hash_value = hasher.finish();
-		if self.gene_hashes.contains( &hash_value ){
-			eprintln!("The sequence for gene {gene_data} has already been added before");
+		if let Some(other_name) = self.gene_hashes.get( &hash_value ){
+
+			eprintln!("The sequence for gene {gene_data} has already been added before: {other_name}");
 			return 0
 		}
 		
-		self.gene_hashes.insert( hash_value );
+		self.gene_hashes.insert( hash_value, name.to_string() );
 		
 		// add the sequence info and names
 		let gene_id = self.genes.len();
@@ -216,11 +222,12 @@ impl GenesMapper{
         	let mut hasher = DefaultHasher::new();
 		    gene_data.hash(&mut hasher);
 		    let hash_value = hasher.finish();
-			if self.gene_hashes.contains( &hash_value ){
-				eprintln!("The sequence for gene {gene_data} has already been added before");
+			if let Some(other_name) = self.gene_hashes.get( &hash_value ){
+
+				eprintln!("The sequence for gene {gene_data} has already been added before {other_name}");
 				continue 'main;
 			}else {
-				self.gene_hashes.insert( hash_value );
+				self.gene_hashes.insert( hash_value, gene_data.get_name().to_string() );
 			}
 			let gene_id = self.genes.len();
 			self.genes.push(gene_data.clone());
@@ -418,15 +425,14 @@ impl GenesMapper{
 			if self.reject_key(&key){
 				continue;
 			}
-
-			
+	
 			if ! self.mapper[key as usize].is_empty() {
 				i+=1;
 				self.mapper[key as usize].get( &mut res, start as i32 );
 			}
-			//if i == 20 {
-			//	break;
-			//}
+			if i == 30 {
+				break;
+			}
 			//println!("after {i} iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
 		}
 		

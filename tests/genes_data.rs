@@ -218,6 +218,56 @@ mod tests {
 
 	}
 
+
+	#[test]
+	fn test_next(){
+		let seq = b"TGGTATCTTTTACTTA";
+		let mut obj = GeneData::from_bytes( seq );
+		let mut id = 0;
+
+		/*
+		A= 0b00; C=0b01, G=0b10 T= 0b11
+
+		TGGTATCTTTTACTTA -> TGGT, ATCT, TTTA, CTTA -> 
+		     T G G T       T C T A     A T T T     A T T C  
+		[ "0b11101011", "0b11011100", "0b111111", "0b111101" ]
+		[ "0b11101011", "0b11011100", "0b111111", "0b111101"]
+
+		
+		// encoded would be that
+		//                                           1111         11111111
+		//                   33221100    77665544    11009988     55443322  
+		//               [ 0b11101011, 0b11011100, 0b00111111,  0b00111101]
+	        1, 2, 3, 4
+	        5, 6, 7, 8?  
+	    */ 
+
+	    /*
+		e.g. the 9th slice (next call):
+          111111    1111
+          443322    11009988    77
+		0b111101  0b00111111, 0b11 -> 0b1111010011111111
+	    */
+		let exp: Vec::<u16> = vec![ 0b1101110011101011, 0b0011110100111111, 
+			0b1111011100111010, 0b1111110111001110, 0b1111111101110011, 0b0011111111011100,
+			0b0100111111110111, 0b1101001111111101, 0b1111010011111111
+		];
+
+		let encoded: Vec::<u8> = vec![ 0b11101011, 0b11011100, 0b111111, 0b111101];
+		assert_eq!( obj.get_encoded(), &encoded, "u8_encoded \n{:?}\nwas not the expected {:?}", 
+			obj.get_encoded().iter().map(|&x|  format!("{:b}", x)).collect::<Vec<_>>(), 
+			encoded.iter().map(|&x|  format!("{:b}", x)).collect::<Vec<_>>() );
+
+		while let Some(slice) = obj.next() {
+			if id == 10 {
+				panic!("at pos {id} I got the slice {slice:?} {:b} vs {:b}", slice.0, exp[id]);
+			}
+			assert_eq!( slice.0, exp[id], "position {id} failed {:b} vs {:b}", slice.0, exp[id] );
+			id +=1;
+		}
+		assert_eq!( id, 9, "9 possible iterations 8bp kmers for 16bp?");
+	}
+
 	#[test]
 	fn test_needleman_wunsch(){
 		// to bp each

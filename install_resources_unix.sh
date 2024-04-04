@@ -25,3 +25,4 @@ cp target/release/check_read_fast_mapper /usr/bin
 cp target/release/create_index /usr/bin
 cp target/release/create_index_te /usr/bin
 cp target/release/te_analysis /usr/bin
+cp target/release/create_gene_mapper_index /usr/bin

@@ -38,8 +38,10 @@ pub struct GeneData {
 	//other_ids:Vec<String>,
 	/// If this is a subseq of the main entry - where on the main entry does this start
 	start: usize,
-	/// and this is something provate used for the next function
+	/// and this is something private used for the next function
 	current_position: usize,
+	/// and this reports if the first set of next calls has been finished
+	first_set_finished:bool
 }
 
 impl Hash for GeneData {
@@ -61,9 +63,31 @@ impl Iterator for GeneData {
     type Item = (u16, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.key_at_position(self.current_position );
-        self.current_position += 1;
-        return result
+        // Check if there are still 8 bp combinations left to iterate over
+        if self.current_position % 8 == 0 && self.first_set_finished {
+    		// this index has already been reported on
+    		self.current_position +=1;
+    	}
+        if self.current_position + 8 <= self.length {
+        	//println!("I return the position {}!", self.current_position);
+            let result = self.key_at_position(self.current_position)?;
+            self.current_position += 8; // Shift by 8 bp
+            Some(result)
+        } else if (self.current_position % 8) + 1 != 8 {
+            // Check if there are any remaining 8 bp combinations due to shifting by 1 bp
+            self.current_position = (self.current_position % 8) + 1; // Shift by 1 bp
+            self.first_set_finished = true;
+            //println!("I reset to {}!", self.current_position);
+            let result = self.key_at_position(self.current_position)?;
+            self.current_position += 8;
+            Some(result)
+        } else {
+        	// reset iter vars
+        	self.current_position = 0;
+        	self.first_set_finished = false;
+        	//println!("Failing for position {}!", self.current_position);
+            None
+        }
     }
 }
 
@@ -87,7 +111,12 @@ impl GeneData{
 			start,
 			//other_ids: other_ids,
 			current_position:0,
+			first_set_finished:false,
 		}
+	}
+
+	pub fn get_encoded(&self) -> &Vec<u8> {
+		&self.u8_encoded
 	}
 
 	/// returns the GeneData's data as fasta sequence - >name|chr|start\nseq\n
@@ -195,6 +224,7 @@ impl GeneData{
 			chr: "unknown".to_string(),
 			start:0,
 			current_position:0,
+			first_set_finished:false,
 		}
 	}
 
@@ -311,6 +341,7 @@ impl GeneData{
             chr : self.chr.to_string(),
             start : self.start + start,
             current_position:0,
+            first_set_finished:false,
         })
     }
 

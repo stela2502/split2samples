@@ -1,5 +1,6 @@
 use crate::fast_mapper::FastMapper;
 use crate::genes_mapper::GenesMapper;
+use core::fmt;
 
 const COMPLEMENT: [Option<u8>; 256] = {
     let mut lookup = [None; 256];
@@ -52,9 +53,19 @@ pub struct Gene{
 	pub ids:Vec<String>, // e.g. ENSMBL ID and other entries like family name or class 
 }
 
+// Implementing Display trait for Gene
+impl fmt::Display for Gene {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Gene named {} with {} exons", self.name, self.exons.len() )
+    }
+}
+
+
+
 impl Gene{
 	pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, ids:Vec<String> ) -> Self {
 		let exons = Vec::<[usize;2]>::new();
+
 		let start = match start_s.parse::<usize>(){
 			Ok(v) => v,
 			Err(e) => panic!("I could not parse the start of the transcript as usize: {e:?}"),
@@ -105,7 +116,7 @@ impl Gene{
 		let ( mRNA, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
 
 		if let Some(mrna) = mRNA {
-			index.add( &mrna.to_vec() , self.name.to_string(), self.ids.clone() );
+			index.add( &mrna.to_owned() , self.name.to_string(), self.ids.clone() );
 			if print {
 				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 			}
@@ -132,14 +143,14 @@ impl Gene{
 		let ( mRNA, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
 
 		if let Some(mrna) = mRNA {
-			index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string(), self.chrom.to_string(), 0   );
+			index.add( &mrna.to_owned() , self.name.to_string(), self.chrom.to_string(), 0   );
 			if print {
-				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
+				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna.to_owned()  ).unwrap() );
 			}
 			if let Some(nascent) = raw{
-				index.add( &mrna[ mrna.len()-covered_area.. ].to_owned() , self.name.to_string() +"_int", self.chrom.to_string(), 0  );
+				index.add( &nascent.to_owned() , self.name.to_string() +"_int", self.chrom.to_string(), 0  );
 				if print {
-					println!(">{}\n{}", self.name.to_string() + "_int " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
+					println!(">{}\n{}", self.name.to_string() + "_int " + &self.chrom  , std::str::from_utf8(  &nascent.to_owned()  ).unwrap() );
 				}
 			}
 		}
@@ -165,7 +176,7 @@ impl Gene{
 	    let mut mrna = Vec::<u8>::with_capacity(seq.len() ); // Allocate more space for potential additions
 
 	    let mut sorted_exons = self.exons.clone();
-	    sorted_exons.sort_by_key(|a| a[0]);
+	    sorted_exons.sort_by(|a, b| a[0].cmp(&b[0]));
 
 	    // exons upper/lower case iterations to see the breaks
 	    let mut lc = false;
@@ -193,20 +204,11 @@ impl Gene{
 
 	/// cut the RNA to the right size
 	fn cut_to_size( &self, seq:Vec<u8>, covered_area:usize) -> Option<Vec<u8>> {
+		let start = seq.len().saturating_sub(covered_area);
 		if ! self.sense_strand{
-			if seq.len() > covered_area{
-				let start = seq.len() - covered_area;
-				Some ( Self::rev_compl( seq)[ start.. ].to_vec() )
-			}else {
-				Some ( Self::rev_compl( seq ))
-			}
+			Some ( Self::rev_compl( seq)[ start.. ].to_vec() )
 		}else {
-			if seq.len() > covered_area{
-				let start = seq.len() - covered_area;
-				Some (  seq[ start.. ].to_vec() )
-			}else {
-				Some ( seq )
-			}
+			Some (  seq[ start.. ].to_vec() )
 		}
 	}
 	
@@ -216,15 +218,24 @@ impl Gene{
 	/// Fails if any other base than AGCT is in the sequence
 	/// This returns the revers complement if on the opposite starnd
 	fn to_nascent(&self, seq:Vec<u8> , covered_area:usize) -> Option<Vec<u8>> {
+		if self.exons.len() == 0{
+			eprintln!("I have no exons?! - something is wrong here! {self}");
+			return None
+		}
 		let last_exon = match self.sense_strand{
 			true => self.exons.len()-1,
 			false => 0,
 		};
-		if self.exons[last_exon][1]- self.exons[last_exon][0] < covered_area && self.exons.len() > 1{
-
+		if self.exons[last_exon][0] >= self.exons[last_exon][1]{
+			eprintln!("What is this exon {last_exon} has a strange size: {} to {}bp?", self.exons[last_exon][0], self.exons[last_exon][1] );
+			None
+		}
+		else if self.exons[last_exon][1]- self.exons[last_exon][0] < covered_area && self.exons.len() > 1{
+			//println!("Worked! - last exon length = {} in {self}", self.exons[last_exon][1]- self.exons[last_exon][0] );
 			let size = self.end - self.start;
-			let mut nascent = Vec::<u8>::with_capacity(size);
-			nascent.extend_from_slice(&seq[self.start-1..self.end]);
+			let start_index = self.start.saturating_sub(1);
+			let end_index = self.end.min(seq.len());
+			let nascent = seq.get(start_index..end_index).unwrap_or_default().to_vec();
 
 			self.cut_to_size(nascent, covered_area )
 		}
