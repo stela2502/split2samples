@@ -168,7 +168,8 @@ impl GenesMapper{
 		false
 	}
 
-	//pub fn add(&mut self, seq: &[u8], name: String, chr: String, start:usize, other:Vec<String> ) -> usize{
+
+	/// the main add function to add a gene into the index. 
 	pub fn add(&mut self, seq: &[u8], name: String, chr: String, start:usize ) -> usize{
 
 		let mut gene_data = GeneData::new( seq, &name, &chr, start );

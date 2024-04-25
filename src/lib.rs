@@ -37,6 +37,7 @@ pub mod ifiles;
 pub mod analysis;
 pub mod analysis_te;
 pub mod analysis_genemapper;
+pub mod analysis_genomic_mapper;
 pub mod last5;
 
 pub mod fast_mapper;

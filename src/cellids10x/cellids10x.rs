@@ -112,7 +112,7 @@ impl CellIds10x{
             filepath.push(filename);
         } else {
             // Handle case where RustodyFiles environment variable is not set
-            eprintln!("RustodyFiles environment variable not set!");
+            panic!("RustodyFiles environment variable not set!");
             process::exit(0);   
         }
 
@@ -132,8 +132,8 @@ impl CellIds10x{
             }
         } else {
             // Handle case where file does not exist
-            eprintln!("The expected CellRanger CellIDs file {} does not exist!", filepath.display());
-            process::exit(0);   
+            panic!("The expected CellRanger CellIDs file {} does not exist!", filepath.display());
+            process::exit(1);   
         }
 
         let search: HashSet<u32> = possible.clone().into_iter().map(|c| c.0).collect();
