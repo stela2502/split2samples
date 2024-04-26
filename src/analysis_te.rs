@@ -282,7 +282,7 @@ impl AnalysisTE{
         Ok(())
     }
 
-    fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
+    fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, _pos: &[usize;8] ) -> SingleCellData{
     	
 
 

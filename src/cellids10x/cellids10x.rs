@@ -113,7 +113,7 @@ impl CellIds10x{
         } else {
             // Handle case where RustodyFiles environment variable is not set
             panic!("RustodyFiles environment variable not set!");
-            process::exit(0);   
+            //process::exit(0);   
         }
 
         let mut possible: Vec<CellId10x> = Vec::new();
@@ -133,7 +133,7 @@ impl CellIds10x{
         } else {
             // Handle case where file does not exist
             panic!("The expected CellRanger CellIDs file {} does not exist!", filepath.display());
-            process::exit(1);   
+            //process::exit(1);   
         }
 
         let search: HashSet<u32> = possible.clone().into_iter().map(|c| c.0).collect();

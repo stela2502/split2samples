@@ -363,7 +363,7 @@ impl Analysis{
         Ok(())
     }
 
-    fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
+    fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, _pos: &[usize;8] ) -> SingleCellData{
     	
         // first match the cell id - if that does not work the read is unusable
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
@@ -378,7 +378,7 @@ impl Analysis{
         for i in 0..data.len() {
 
         	match &self.cells.to_cellid( &data[i].0 ){
-	            Ok( (cell_id, umi, cell_seq,_) ) => {
+	            Ok( (cell_id, umi, _cell_seq,_) ) => {
 	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
 	            	report.cellular_reads +=1;
 

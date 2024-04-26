@@ -1,6 +1,6 @@
 // mapper_result.rs
 
-use crate::genes_mapper::Cigar;
+//use crate::genes_mapper::Cigar;
 
 use core::fmt;
 

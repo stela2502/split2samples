@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 
 //use crate::geneids::GeneIds;
-use crate::fast_mapper::FastMapper;
+//use crate::fast_mapper::FastMapper;
 use crate::mapping_info::MappingInfo;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::singlecelldata::ambient_rna_detect::AmbientRnaDetect;

@@ -113,9 +113,9 @@ impl Gene{
 	/// not 2bit binaries!
 	pub fn add_to_index(&self, seq:&[u8], index: &mut FastMapper, covered_area:usize, print: bool ){
 
-		let ( mRNA, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
+		let ( m_rna, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
 
-		if let Some(mrna) = mRNA {
+		if let Some(mrna) = m_rna {
 			index.add( &mrna.to_owned() , self.name.to_string(), self.ids.clone() );
 			if print {
 				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
@@ -140,9 +140,9 @@ impl Gene{
 	/// not 2bit binaries!
 	pub fn add_to_genes_mapper(&self, seq:&[u8], index: &mut GenesMapper, covered_area:usize, print: bool ){
 
-		let ( mRNA, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
+		let ( m_rna, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
 
-		if let Some(mrna) = mRNA {
+		if let Some(mrna) = m_rna {
 			index.add( &mrna.to_owned() , self.name.to_string(), self.chrom.to_string(), 0   );
 			if print {
 				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna.to_owned()  ).unwrap() );
@@ -232,7 +232,7 @@ impl Gene{
 		}
 		else if self.exons[last_exon][1]- self.exons[last_exon][0] < covered_area && self.exons.len() > 1{
 			//println!("Worked! - last exon length = {} in {self}", self.exons[last_exon][1]- self.exons[last_exon][0] );
-			let size = self.end - self.start;
+			//let size = self.end - self.start;
 			let start_index = self.start.saturating_sub(1);
 			let end_index = self.end.min(seq.len());
 			let nascent = seq.get(start_index..end_index).unwrap_or_default().to_vec();

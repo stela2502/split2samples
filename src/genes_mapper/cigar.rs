@@ -2,7 +2,7 @@
 
 use crate::traits::Cell;
 use crate::traits::BinaryMatcher;
-use crate::genes_mapper::gene_data::GeneData;
+//use crate::genes_mapper::gene_data::GeneData;
 
 
 use regex::Regex;
@@ -10,8 +10,8 @@ use regex::Regex;
 use core::cmp::max;
 use core::fmt;
 
-use std::fs::File;
-use std::io::Write;
+//use std::fs::File;
+//use std::io::Write;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CigarEnum{
@@ -33,7 +33,17 @@ impl fmt::Display for CigarEnum {
     }
 }
 
-
+/// This enum denotes the way a Cigar's end areas have been modified:
+/// NA - no modification; Start - a longer caotic area at the start has been fixed -> end match;
+/// End - a longer fix at the end of the Cigar has been fixed - a start match;
+/// Both - and internal match?! Let's see if that even happens.
+#[derive(Clone, Copy, PartialEq)]
+pub enum CigarEndFix{
+	Na,
+	Start,
+	End,
+	Both,
+}
 
 #[derive(Debug, Clone)]
 pub struct Cigar{
@@ -81,7 +91,7 @@ impl Cigar{
                 let deletion_end = deletion_length.end();
 
                 let mismatch_part = &self.cigar[..(mismatch_end+1)];
-           		let deletion_part = &self.cigar[..(deletion_end+1)];
+           		//let deletion_part = &self.cigar[..(deletion_end+1)];
            		//let match_part = &self.cigar[..(following_match_length.end()+1)];
            		let direction_str = &self.cigar[direction.start()..direction.end()];
 
@@ -89,7 +99,7 @@ impl Cigar{
             	let deletion_usize = deletion_length.as_str().parse::<usize>().unwrap();
             	let old_match_usize = following_match_length.as_str().parse::<usize>().unwrap();
 
-                let ( mm_mine, mm_other) = &self.calculate_covered_nucleotides( mismatch_part );
+                let ( mm_mine, _mm_other) = &self.calculate_covered_nucleotides( mismatch_part );
                 //let ( del_mine, del_other) = &self.calculate_covered_nucleotides( deletion_part );
                 let mut new_following_match = old_match_usize;
 
@@ -212,8 +222,9 @@ impl Cigar{
 	    }
 
 	    let problem = r"^\d\d*S$";
-		let re_problem = regex::Regex::new(end).unwrap();
-	   	if let Some(mat) = re_problem.captures(&self.cigar.clone()) {
+		let re_problem = regex::Regex::new(problem).unwrap();
+
+	   	if let Some(_mat) = re_problem.captures(&self.cigar.clone()) {
 	   		//panic!("This should not happen in the etsts!");
 	   		return;
 	   	}

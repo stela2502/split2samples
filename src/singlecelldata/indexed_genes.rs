@@ -16,7 +16,7 @@ impl IndexedGenes{
 		let mut ids_to_name = vec![String::new()];//;data.len() + offset];
 		let mut names = BTreeMap::new();
 		for (name, id) in data {
-			//ids_to_name[*id] = name.to_string(); 
+			ids_to_name[*id] = name.to_string(); 
 			names.insert( name.to_string(), *id );
 		}
 		Self{

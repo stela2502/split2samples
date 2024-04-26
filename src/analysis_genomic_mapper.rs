@@ -5,14 +5,12 @@ use crate::singlecelldata::SingleCellData;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::genes_mapper::GenesMapper;
-use crate::cellids10x::CellId10x;
 use crate::genes_mapper::{ MapperResult, SeqRec};
-use crate::traits::BinaryMatcher;
+//use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
 use std::env;
-use cargo_metadata::MetadataCommand;
+//use cargo_metadata::MetadataCommand;
 
-use crate::int_to_str::IntToStr;
 use crate::errors::MappingError;
 
 use crate::cellids::CellIds;
@@ -32,9 +30,9 @@ use needletail::errors::ParseError;
 
 use std::path::PathBuf;
 use std::fs::File;
-use std::path::Path;
-use std::io::{self, BufWriter, Write};
-use std::fs;
+//use std::path::Path;
+use std::io::{BufWriter, Write};
+//use std::fs;
 
 use std::thread;
 use rayon::prelude::*;
@@ -46,7 +44,7 @@ use glob::glob;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-static EMPTY_VEC: Vec<String> = Vec::new();
+//static EMPTY_VEC: Vec<String> = Vec::new();
 
 #[derive(Debug)]
 enum FilterError {
@@ -90,7 +88,7 @@ pub struct AnalysisGenomicMapper{
 impl AnalysisGenomicMapper{
 
 
-	pub fn new(gene_kmers:usize, version:String, specie: String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
+	pub fn new(_gene_kmers:usize, version:String, specie: String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -228,8 +226,8 @@ impl AnalysisGenomicMapper{
 	}
 
 	// Function to set min_matches
-    pub fn set_min_matches(&mut self, value: usize) {
-    	//eprintln!("set_min_matches - Not supported at the moment");
+    pub fn set_min_matches(&mut self, _value: usize) {
+    	panic!("set_min_matches - Not supported at the moment");
 		//self.genes.set_min_matches(value);
     }
 
@@ -437,7 +435,7 @@ impl AnalysisGenomicMapper{
 	    record
     }
 
-    pub fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, pos: &[usize;8] ) -> (SingleCellData, Vec<String>){
+    pub fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, _pos: &[usize;8] ) -> (SingleCellData, Vec<String>){
     	
 
         // first match the cell id - if that does not work the read is unusable
@@ -445,7 +443,7 @@ impl AnalysisGenomicMapper{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
 
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        //let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
         // lets tag this with the first gene I was interested in: Cd3e
         //let goi_id = self.genes.get_id("ADA".to_string());
@@ -562,7 +560,7 @@ impl AnalysisGenomicMapper{
 		let pattern = format!("{}/MappedReads*.sam", outpath);
     	let num_existing_files = match glob(&pattern) {
 	        Ok(files) => files.count(),
-	        Err(err) => {
+	        Err(_err) => {
 	            0
 	        }
 	    };
@@ -588,7 +586,11 @@ impl AnalysisGenomicMapper{
 	            Err(err) => panic!("The file {} cound not be created: {err}", outpath.to_string() +"/GenesOfInterest.fasta" )
 	        };
 	        let mut fasta_w = BufWriter::new(fasta_f);
-	        write!(fasta_w, "{}", fasta);
+	        match write!(fasta_w, "{}", fasta) {
+	    		Ok(_) => (),
+	    		Err(err) => panic!("Could not write the fasta entry: {err:?}"),
+	    	};	
+	        
 	    }
     	// this is just a copy from a real Illumina bam file - I also use the Sample4 as sample in my bam export.
     	// So if that is changed this header part needs to also change!
@@ -599,7 +601,10 @@ impl AnalysisGenomicMapper{
 
 		header += &format!("@PG\tPN:{}\tID:{}\tVN:{}\tCL:{}",&program, &program, &VERSION, command_line);
 
-    	writeln!(writer, "{}", header);
+		match writeln!(writer, "{}", header){
+    		Ok(_) => (),
+    		Err(err) => panic!("Could not write the header line: {err:?}"),
+    	};
 
     	let spinner_style = ProgressStyle::with_template("{prefix:.bold.dim} {spinner} {wide_msg}")
             .unwrap()
@@ -718,7 +723,11 @@ impl AnalysisGenomicMapper{
 			    for gex in total_results{
 			    	self.gex.merge(&gex.0.0);
 			    	for line in gex.0.1{
-			    		writeln!(writer, "{}", line);
+			    		match writeln!(writer, "{}", line){
+			        		Ok(_) => (),
+			        		Err(err) => panic!("parse_parallel could not write the bam line: {err:?}"),
+			        	}
+			    		;
 			    	}
 			       	report.merge( &gex.1 );
 			    }
@@ -768,7 +777,10 @@ impl AnalysisGenomicMapper{
 	        for gex in total_results{
 	        	self.gex.merge(&gex.0.0);
 	        	for line in gex.0.1{
-		    		writeln!(writer, "{}", line);
+		    		match writeln!(writer, "{}", line){
+		        		Ok(_) => (),
+		        		Err(err) => panic!("could not write to sam file? {err:?}"),
+		        	}
 		    	}
 	        	report.merge( &gex.1 );
 	        }

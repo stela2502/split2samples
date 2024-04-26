@@ -14,7 +14,7 @@ pub struct MultiMatch{
 impl fmt::Display for MultiMatch {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let formatted_data: String = self.data.iter().map(|x| format!("{:?}", x)).collect::<Vec<_>>().join("\n");
-		write!(f, "MultiMatch has {} entries: ( {:?} )", self.data.len(), formatted_data )
+		write!(f, "MultiMatch has {} entries: ( \n{:?} )", self.data.len(), formatted_data )
 	}
 }
 
@@ -29,8 +29,17 @@ impl MultiMatch{
 	pub fn push( &mut self, data:MapperResult) {
 		self.data.push( data );
 	}
+	pub fn clear( &mut self ) {
+		self.data.clear();
+	}
+	pub fn len( &self ) -> usize{
+		self.data.len()
+	}
 
 	pub fn get_best( &self, length:usize ) -> Result<MapperResult, String> {
+		if self.data.len() == 0 {
+			return Err("No Entry" );
+		}
 		if self.data.len() > 1{
 			let mut best_mapping_qualty = 0_u8; 
 			let mut best:MapperResult;
@@ -40,7 +49,7 @@ impl MultiMatch{
 			for value in self.data{
 				let cigar = match value.cigar(){
 					Some(cig) => Cigar::new(cig),
-					None => panic!("Ech match to look into needs a cigar - this one has none {value}"),
+					None => panic!("Each match to look into needs a cigar - this one has none {value}"),
 				};
 				match cigar.fixed{
 					Some(CigarEndFix::Na) | Some(CigarEndFix::Both) => {
@@ -68,6 +77,7 @@ impl MultiMatch{
 							best = value.clone();
 							best_mapping_qualty = cigar.mapping_quality();
 						}
+
 						end = Some(value);
 					},
 					None=> panic!("In order to identify the best match I need the Cigar information!")
@@ -93,7 +103,7 @@ impl MultiMatch{
 				
 				// Match and extract initial matching area
 				if let Some(caps) = initial_matching_pattern.captures(start_cigar) {
-					start_length. = Some( caps[1].parse().unwrap() );
+					start_length = Some( caps[1].parse().unwrap() );
 					println!("Initial matching area length in start_cigar: {:?}", start_length.ok_or(0));
 
 				} else {
@@ -115,17 +125,18 @@ impl MultiMatch{
 			    	let total = start_length.ok_or(0) + end_length.ok_or(0);
 			    	if total == length {
 			    		println!("The length of start match + end match fits the expected length" );
-			    		let cigar = Cigar::new( &format!("{}M{}N{}M", start_length..ok_or(0), end.start - (start.start + start_length..ok_or(0)), end_length.ok_or(0) ));
+			    		let cigar = Cigar::new( &format!("{}M{}N{}M", start_length.ok_or(0), 
+			    			end.start - (start.start + start_length.ok_or(0)), end_length.ok_or(0) ));
 			    		return Ok(
 			    			MapperResult::new( 
-			    				start.ok_or(panic!("This must not happen!")).gene_id(), 
-			    				start.ok_or(panic!("This must not happen!2")).start(), 
+			    				start.ok_or()?.gene_id(), 
+			    				start.ok_or()?.start(), 
 			    				true, 
 			    				Some(format!("{}",cigar)), 
 			    				cigar.mapping_quality(), 
 			    				length, 
 			    				cigar.edit_distance(), 
-			    				start.ok_or().get_name() 
+			    				start.ok_or()?.get_name() 
 			    				)
 			    			)
 			    	}else {

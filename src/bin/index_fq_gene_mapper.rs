@@ -1,10 +1,10 @@
 use clap::Parser;
 
-use regex::Regex;
+//use regex::Regex;
 
 use rustody::genes_mapper::GenesMapper;
 //use rustody::fast_mapper::FastMapper;
-use rustody::gene::Gene;
+//use rustody::gene::Gene;
 
 use needletail::parse_fastx_file;
 
@@ -18,21 +18,21 @@ use std::fs;
 use std::time::SystemTime;
 
 use std::fs::File;
-use std::io::BufReader;
-use std::io::BufRead;
+//use std::io::BufReader;
+//use std::io::BufRead;
 
-use flate2::read::GzDecoder;
-use std::collections::HashMap;
-use std::collections::HashSet;
+//use flate2::read::GzDecoder;
+//use std::collections::HashMap;
+//use std::collections::HashSet;
 
 use rustody::mapping_info::MappingInfo;
 use rustody::ofiles::Ofiles;
 
-use std::thread;
-use rayon::slice::ParallelSlice;
-use rayon::iter::ParallelIterator;
+//use std::thread;
+//use rayon::slice::ParallelSlice;
+//use rayon::iter::ParallelIterator;
 
-use indicatif::{ProgressStyle, ProgressBar, MultiProgress};
+//use indicatif::{ProgressStyle, ProgressBar, MultiProgress};
 
 //static EMPTY_VEC: Vec<String> = Vec::new();
 
@@ -146,8 +146,8 @@ fn main() {
     println!("Indexing...");
     let mut index = GenesMapper::new( 0 ); // only needs the offset
 
-    let num_threads = match &opts.num_threads{
-        Some(n) => {
+    let _num_threads = match &opts.num_threads{
+        Some(_n) => {
             eprintln!("At the moement we only support 1 thread");
             1
         },

@@ -287,11 +287,7 @@ fn main() {
 
     //// created the report object /////////////////////////////////////
 
-    let mut kmer_size = opts.gene_kmers;
-    if opts.gene_kmers > 32{
-        eprintln!("Sorry the max size of the kmers is 32 bp");
-        kmer_size = 32;
-    }
+    //let kmer_size = opts.gene_kmers.min(32);
 
     fs::create_dir_all(&opts.outpath).expect("AlreadyExists");
 

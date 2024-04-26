@@ -1,17 +1,17 @@
 //fast_mapper/genes_data.rs
-use std::collections::HashMap;
+//use std::collections::HashMap;
 use crate::traits::{ BinaryMatcher, Direction, Cell};
 use crate::genes_mapper::Cigar;
 use core::cmp::max;
 use std::hash::{Hash, Hasher};
 use core::fmt;
-use num_traits::cast::ToPrimitive;
+//use num_traits::cast::ToPrimitive;
 
 use serde::{Serialize, Deserialize};
 
-use std::fs::File;
-use std::io::prelude::*;
-use std::io;
+//use std::fs::File;
+//use std::io::prelude::*;
+//use std::io;
 
 // logics copied from https://github.com/COMBINE-lab/kmers/
 pub type Base = u8;
@@ -437,11 +437,9 @@ impl BinaryMatcher for GeneData{
 
 	fn di_nuc_tab (&self ) -> Vec<i8> {
 		let mut sum = vec![0_i8;16];
-		let order= vec![2,1,0,3];
         for i in 0..self.length-1 {
         	let id = i / 4;
         	let off =  i % 4;
-        	//let off = order[i % 4];
         	if off < 3{
         		let acc = (self.u8_encoded[id] >> (off * 2)) & 0b1111;
         		//println!("I try to do a {id} {off} merge and get that 'index' {acc} or {acc:b} ");
