@@ -91,11 +91,12 @@ impl SeqRec{
 
     pub fn slice(&self, start:usize, len:usize) -> Option<Self>{
     	let end  = start + len;
-    	if start <0 || end > self.id.len(){
+    	if end > self.seq.len(){
     		return None
     	}
+        let id = String::from_utf8_lossy(self.id.as_slice()).to_string() + &format!("{}+{}",start, len);
     	Some( 
-    		Self::new( &self.id[start..end],
+    		Self::new( &id.into_bytes(),
     		 &self.seq[start..end],
     		 &self.qual[start..end]
     		)

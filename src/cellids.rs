@@ -73,7 +73,19 @@ impl CellIndex for CellIds{
                 }
                 cell_id_seq += km.clone();
             }else {
-                panic!("I could not create the BD cell id as the sequence was too short?!")
+                let rep1 = match &r1.slice(self.c1.0, self.c1.1 -self.c1.0){
+                    Some(re) => re.as_dna_string(),
+                    None => "NA".to_string(),
+                };
+                let rep2 = match &r1.slice(self.c2.0, self.c2.1 -self.c2.0){
+                    Some(re) => re.as_dna_string(),
+                    None => "NA".to_string(),
+                };
+                let rep3 = match &r1.slice(self.c3.0, self.c3.1 -self.c3.0){
+                    Some(re) => re.as_dna_string(),
+                    None => "NA".to_string(),
+                };
+                panic!("I could not create the BD cell id as the sequence was too short?!\npart1: {rep1}\npart2: {rep2}\npart3: {rep3}\n");
             }
         }
 
