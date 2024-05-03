@@ -8,10 +8,12 @@ use crate::genes_mapper::gene_link::GeneLink;
 use crate::genes_mapper::Cigar;
 use crate::genes_mapper::MapperResult;
 use crate::genes_mapper::MultiMatch;
+use crate::genes_mapper::CigarEndFix;
 
 use crate::singlecelldata::IndexedGenes;
 use crate::traits::BinaryMatcher;
 
+use crate::genes_mapper::NeedlemanWunschAffine;
 
 use std::hash::{Hash, Hasher};
 
@@ -19,8 +21,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::BTreeMap;
-
-use regex::Regex;
 
 use std::fs::File;
 use std::io::Read;
@@ -32,6 +32,7 @@ use flate2::Compression;
 use std::io::BufWriter;
 use std::io::Write;
 
+use std::process::exit;
 
 use core::fmt;
 
@@ -56,6 +57,7 @@ pub struct GenesMapper{
 	report4: Option<HashSet<usize>>, // report for a gene?
 	/// additional mathcing and adding infos printed
 	debug: bool,
+
 }
 
 // Implementing Display trait for SecondSeq
@@ -63,7 +65,7 @@ impl fmt::Display for GenesMapper {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     	let first = 5.min(self.genes.len());
     	let names: Vec<String> = (0..first).map( |i| self.genes[i].get_name().to_string() ).collect();
-        write!(f, "GenesMapper with {} mapper entries for {} genes like {:?}", self.with_data, self.genes.len(), names )
+        write!(f, "GenesMapper with {} mapper entries (offset {}) for {} genes like {:?}", self.with_data, self.offset, self.genes.len(), names )
     }
 }
 
@@ -75,7 +77,7 @@ impl GenesMapper{
 			mapper: vec![GeneLink::new(); u16::MAX as usize],
 			gene_hashes: BTreeMap::new(),
 			with_data: 0,
-			offset,
+			offset: offset,
 			names: BTreeMap::new(),
 			highest_nw_val: 0.2,
 			highest_humming_val: 0.6,
@@ -129,6 +131,7 @@ impl GenesMapper{
 	/// the IndexedGenes replace the full mapper class in the data export
     /// This allowes for multiple Indices to all feed the same data structure.
     pub fn as_indexed_genes(&self) -> IndexedGenes{
+    	println!("I'll try to index my genes using the offset {}", self.offset);
     	IndexedGenes::new( &self.names, self.offset )
     }
 
@@ -187,9 +190,27 @@ impl GenesMapper{
 		self.gene_hashes.insert( hash_value, name.to_string() );
 		
 		// add the sequence info and names
-		let gene_id = self.genes.len();
-		self.names.insert( name.to_string(), gene_id );
-		self.genes.push(gene_data.clone());
+		// the above test only checks if we have the same gene + sequence in the database.
+		// therefore we here need to check the name once more!
+		let gene_id;
+		if self.names.contains_key( &name ){
+			let mut i =1;
+			let mut name2 = format!("{}.{}", name.to_string(),i);
+			while self.names.contains_key( &name2 ){
+				i +=1;
+				name2 = format!("{}.{}", name.to_string(),i);
+			}
+			gene_id = self.genes.len();
+			self.names.insert( name2.to_string(), gene_id );
+			gene_data = GeneData::new( seq, &name2, &chr, start );
+			self.genes.push(gene_data.clone());
+		}else {
+			gene_id = self.genes.len();
+			self.names.insert( name.to_string(), gene_id );
+			self.genes.push(gene_data.clone());
+		}
+
+		
 
 		// add the mapper keys
 		let mut keys = 0;
@@ -288,104 +309,32 @@ impl GenesMapper{
 		}	
 	}
 
-	/// this function adjusts the GeneData objects to get rid of terminal I's.
-	fn fix_database_4_cigar( &self, gene_id:&usize, database: &GeneData, read: &GeneData, cigar: &mut Cigar, match_length_problems:&Regex ){
+	// /// this function adjusts the GeneData objects to get rid of terminal I's.
+	// fn fix_database_4_cigar( &self, gene_id:&usize, database: &GeneData, read: &GeneData, cigar: &mut Cigar, match_length_problems:&Regex ){
 
-		if let Some(capture) = match_length_problems.captures( &cigar.cigar ) {
-			let num_bp: usize = capture[1].parse().unwrap();
-			//eprintln!("updateing the cigar string {cigar}");
-			match &capture[2] {
-				"I" => {
-					// the database was num_bp too large
-					let adjusted_db = database.slice(0, database.len() - num_bp ).unwrap();
-					let _uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
-					//eprintln!("Type I: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
-				},
-				"D" => {
-					// the database was num_bp too short
-					let adjusted_db = &self.genes[*gene_id].slice( database.get_start() - self.genes[*gene_id].get_start() , database.len() + num_bp ).unwrap();
-					let _uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
-					//eprintln!("Type D: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
-				},
-				&_ => (),
-			};
-			//eprintln!("updataed cigar string   = '{cigar}'");
-		}
-	}
+	// 	if let Some(capture) = match_length_problems.captures( &cigar.cigar ) {
+	// 		let num_bp: usize = capture[1].parse().unwrap();
+	// 		//eprintln!("updateing the cigar string {cigar}");
+	// 		match &capture[2] {
+	// 			"I" => {
+	// 				// the database was num_bp too large
+	// 				let adjusted_db = database.slice(0, database.len() - num_bp ).unwrap();
+	// 				let _uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
+	// 				//eprintln!("Type I: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
+	// 			},
+	// 			"D" => {
+	// 				// the database was num_bp too short
+	// 				let adjusted_db = &self.genes[*gene_id].slice( database.get_start() - self.genes[*gene_id].get_start() , database.len() + num_bp ).unwrap();
+	// 				let _uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
+	// 				//eprintln!("Type D: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
+	// 			},
+	// 			&_ => (),
+	// 		};
+	// 		//eprintln!("updataed cigar string   = '{cigar}'");
+	// 	}
+	// }
 
-	pub fn get(&self, read_data: &GeneData, res_vec: &Vec<(usize, Vec<i32>)>, _cellid:u32 ) ->  Result< Vec<MapperResult>, MappingError >{
-
-		let mut ret = Vec::<MapperResult>::new();
-		let mut cigar = Cigar::new("");
-		let mut helper = MultiMatch::new();
-		for (gene_id, start) in res_vec {
-
-			match Self::all_values_same( start ){
-				Ok(()) => {
-					if let Some((read, database)) = self.slice_objects( start[0] , &self.genes[*gene_id], &read_data){
-						if self.debug{
-							println!("using the match gene id {gene_id} and start at {} I'll compare these two sequences", start[0]);
-							println!("read \n{read} to database\n{database}\n");
-						}
-						if read.needleman_wunsch( &database, self.highest_humming_val, None ) < self.highest_nw_val {
-							
-							let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
-							//println!("get        got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
-							//	self.genes[*gene_id].get_name(), start[0], read_data.as_dna_string() );
-							helper.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)),
-								cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance(), self.genes[*gene_id].get_name() ) );
-						}
-					}
-				},
-				Err(GeneSelectionError::NotSame) =>{
-					let counts = Self::table( start );
-		    		//eprintln!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{start:?}");
-		    		for (start, count) in counts{
-		    			if count < 3 {
-		    				break;
-		    			}
-	    				// if the objects are slicable and depending whether start > 0 or not we need to slice them differently
-	    				if let Some((read, database)) = self.slice_objects( start , &self.genes[*gene_id], &read_data){
-
-	    					if self.debug{
-	    						println!("using the match start {start} count {count} I'll compare these two sequences");
-	    						println!("read \n{read} to database\n{database}\n");
-	    					}
-	    					if read.needleman_wunsch( &database, self.highest_humming_val, None ) < self.highest_nw_val {
-								// need to get the cigar string
-								let nw= read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
-								helper.push( 
-									MapperResult::new( 
-										*gene_id + self.offset, start as usize, 
-										true, Some(format!("{}",cigar)), 
-										cigar.mapping_quality(), (nw*read.len() as f32) as usize, 
-										cigar.edit_distance(), self.genes[*gene_id].get_name() 
-									)
-								);
-							}
-						}
-					}
-				},
-		    	_=> { // not enough matches in the first place!
-		    	},
-		    };
-		}
-
-		if self.debug{
-			println!("mapping the read {read_data}\new obtained a initial mapping result {helper}\n and in the end END we found {:?}", helper.get_best(read_data.len()));
-		}
-		if ret.is_empty(){
-			Err(MappingError::NoMatch)
-		}else {
-			match helper.get_best( read_data.len() ){
-				Ok (res) => Ok(vec![res]),
-				Err(err) => {
-					panic!("The mapping quality match has detected a problem - please check this manually:\n{read_data}\n{helper}")
-				},
-			}
-		}
-	}
-
+	
 
 	fn all_values_same(vec: &[i32]) -> Result<(), GeneSelectionError> {
 		if vec.len() < 3 {
@@ -416,15 +365,40 @@ impl GenesMapper{
 		sorted_counts
 	}
 
+	fn as_dna_string(val:&u16) -> String {
+        let mut data = String::new();
+        //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
+        for i in 0..8 {
+            // Use a mask (0b11) to extract the least significant 2 bits
+            let ch = match (val >> (i * 2)) & 0b11 {
+                0b00 => "A",
+                0b01 => "C",
+                0b10 => "G",
+                0b11 => "T",
+                _ => "N",
+            };
+            data += ch;
+            
+            //println!("{ch} and loc {loc:b}");
+        }
 
-	pub fn get_strict(&self, seq: &[u8], cellid:u32 ) ->  Result< Vec<MapperResult>, MappingError >{ 
+        //println!("\nMakes sense? {:?}", data);
+        data
+    }
+
+	pub fn get_strict(&self, seq: &[u8], _cellid:u32, nwa: &mut NeedlemanWunschAffine ) ->  Result< Vec<MapperResult>, MappingError >{ 
 		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
 		let mut res = HashMap::<usize, Vec<i32>>::new();
 		let mut helper = MultiMatch::new();
 		let mut i = 0;
 		while let Some((key, start)) = read_data.next(){
+
+			//println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
 			if self.reject_key(&key){
 				continue;
+			}
+			else if self.debug {
+				println!("I am testing this key: {}", Self::as_dna_string(&key) );
 			}
 
 			if ! self.mapper[key as usize].is_empty() {
@@ -434,23 +408,23 @@ impl GenesMapper{
 			if i == 30 {
 				break;
 			}
-			//println!("after {i} iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
+			
 		}
-		
 		
 		if res.is_empty(){
 			return Err(MappingError::NoMatch)
 		}
+
 		// Convert the HashMap into a vector of key-value pairs
 		let mut res_vec: Vec<_> = res.into_iter().collect();
 
 	    // Sort the vector by the length of the internal arrays
 	    // longest first
 	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
-
-	    let mut ret = Vec::<MapperResult>::new();
+		if self.debug {
+			println!("I have collected these initial matches: {:?}", res_vec );
+		}
 	    let mut cigar= Cigar::new("");
-	    let match_length_problems = Regex::new(r"(\d+)(D|I)$").unwrap();
 
 	    if let Some (entry) = &res_vec.first() {
 	    	let gene_id = &entry.0;
@@ -462,16 +436,27 @@ impl GenesMapper{
 	    					println!("using the match {entry:?} I'll compare these two sequences");
 	    					println!("read \n{read} to database\n{database}\n");
 	    				}
-	    				if database.equal_entries( &read ) >= self.min_matches {
-	    					let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
-							// gene_id:usize, databsase: &GeneData, read: &GeneData, cigar: &mut Cigar, match_length_problems:Regex
-							self.fix_database_4_cigar( gene_id, &database, &read, &mut cigar, &match_length_problems );
 
-							//println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
-							//	self.genes[*gene_id].get_name(), start[0], read_data.as_dna_string() );
-							helper.push( MapperResult::new( *gene_id + self.offset, start[0] as usize, true, Some(format!("{}",cigar)), 
-								cigar.mapping_quality(), (nw*read.len() as f32)as usize, cigar.edit_distance(), self.genes[*gene_id].get_name() ) );
+	    				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
+	    				cigar.convert_to_cigar( &nwa.cigar_vec() );
+	    				cigar.clean_up_cigar(&read, &database);
 
+	    				if nw.abs() < self.highest_nw_val  {
+							if cigar.mapping_quality() > 10 {
+								helper.push( 
+									MapperResult::new( 
+											*gene_id + self.offset, start[0] as usize, 
+										true, Some(cigar.clone()), 
+										cigar.mapping_quality(), *nw, (nw*read.len() as f32) as usize,
+										cigar.edit_distance(), self.genes[*gene_id].get_name(), self.genes[*gene_id].len()
+									)
+								);
+							}
+
+							cigar.clear();
+						}
+						if self.debug{
+							println!("I got this nw: {nw} and the matches: {}",helper);
 						}
 					};			
 				},
@@ -482,7 +467,7 @@ impl GenesMapper{
 					}
 
 	    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
-	    			for (start, count) in counts{
+	    			'for_loop: for (start, count) in counts{
 	    				if count < 3 {
 	    					break;
 	    				}
@@ -491,15 +476,38 @@ impl GenesMapper{
 	    						println!("using the match start {start} count {count} I'll compare these two sequences");
 	    						println!("read \n{read} to database\n{database}\n");
 	    					}
-	    					if database.equal_entries( &read ) >= self.min_matches {
-	    						let nw = read.needleman_wunsch( &database, self.highest_humming_val, Some(&mut cigar) );
-	    						self.fix_database_4_cigar( gene_id, &database, &read, &mut cigar, &match_length_problems );
-
-								//println!("get_strict got gene_id {gene_id} or {} for the cell {cellid}, the cigar {cigar}, the start {}, the nw_value {nw} and the read {}", 
-								//	self.genes[*gene_id].get_name(), start, read_data.as_dna_string() );
-								helper.push( MapperResult::new( *gene_id + self.offset, start as usize, true, Some(format!("{}",cigar)), 
-									cigar.mapping_quality(), (nw*read.len() as f32) as usize, cigar.edit_distance(), self.genes[*gene_id].get_name() ) );
-							}	
+	    					let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val );
+	    					cigar.convert_to_cigar( &nwa.cigar_vec() );
+	    					cigar.clean_up_cigar(&read, &database);
+	    					if nw.abs() < self.highest_nw_val || ( cigar.fixed == Some( CigarEndFix::End) ||  cigar.fixed == Some( CigarEndFix::Start) ){
+	    						
+	    						if cigar.mapping_quality() > 10 {
+									helper.push( 
+										MapperResult::new( 
+												*gene_id + self.offset, 
+												start as usize, 
+											true, 
+											Some(cigar.clone()), 
+											cigar.mapping_quality(), 
+											*nw, 
+											(nw*read.len() as f32) as usize,
+											cigar.edit_distance(), 
+											self.genes[*gene_id].get_name(), 
+											self.genes[*gene_id].len()
+										)
+									);
+								}
+								if self.debug{
+									println!("I got the matches: {}",helper);
+								}
+								if cigar.edit_distance() == 0.0 && cigar.fixed == Some(CigarEndFix::Na) {
+									break 'for_loop; //That is a perfect match - we are done here!
+								}
+								cigar.clear();
+							}
+							if self.debug{
+								println!("I got this nw: {nw} and the matches: {}",helper);
+							}
 						}else {
 							// I could not slice?!
 							if self.debug{
@@ -515,16 +523,34 @@ impl GenesMapper{
 		} // end populating helper
 
 		if self.debug{
-			let res_lines = res_vec.iter().map(|obj| format!("{:?}", obj)).collect::<Vec<String>>().join("\n");
-			let ret_lines = ret.iter().map(|obj| format!("{:?}", obj)).collect::<Vec<String>>().join("\n");
+			//let res_lines = res_vec.iter().map(|obj| format!("{:?}", obj)).collect::<Vec<String>>().join("\n");
 			println!("mapping the read {read_data}\nwe obtained an initial mapping result \n{helper}\nand in the end found \n{:?}",
 				helper.get_best( seq.len()) );
 		}
 		match helper.get_best( seq.len()){
-			Ok(val) => Ok(val),
-			Err("No Entry") => Err(MappingError::NoMatch), //that is kind of OK
-			Err(err) => {
-				panic!("I got a matching error {err} for this helper object:\n{helper}");
+			Ok(val) => {
+				//println!("I found a best result! {}", &val);
+				if let Some(cigar) = val.cigar(){
+					if cigar.mapping_quality() > 20 && cigar.fixed != Some(CigarEndFix::Both) {
+						//println!("get_struct got an accepted match (get_strict) {}", val );
+						Ok(vec![val])
+					}else {
+						Err(MappingError::NoMatch)
+						//self.get( &read_data, &res_vec, cellid, nwa)
+					}
+				}else {
+					Err(MappingError::NoMatch)
+					//self.get( &read_data, &res_vec, cellid, nwa)
+				}			
+			},
+			Err("No Entry") => {
+				//println!("No hit in the strict search!");
+				Err(MappingError::NoMatch)
+				//self.get( &read_data, &res_vec, cellid, nwa)
+			}, //that is kind of OK
+			Err(_err) => {
+				//eprintln!("I got a matching error {err} for this helper object:\n{helper}");
+				Err(MappingError::NoMatch)
 			},
 		}
 	}
@@ -577,6 +603,10 @@ impl GenesMapper{
 
 	pub fn get_gene_count(&self) -> usize{
 		self.genes.len()
+	}
+
+	pub fn get_max_gene_id(&self) -> usize{
+		self.get_gene_count() + self.offset
 	}
 
 	pub fn get_all_gene_names( &self ) -> Vec<String> {
@@ -634,11 +664,18 @@ impl GenesMapper{
 		Ok(())
 	}
 	pub fn load_index(  path: String ) -> Result< Self, String>{
-		let mut file = File::open(path.to_string() + "/index.bin").unwrap();
+		let mut file = match File::open(path.to_string() + "/index.bin"){
+			Ok(f) => f,
+			Err(err) => {panic!("The index could not be loaded from {path}:\n{err:?}")},
+		};
 		let mut buffer = Vec::new();
 		file.read_to_end(&mut buffer).unwrap();
 		let deserialized: Self = bincode::deserialize(&buffer).unwrap();
 		eprintln!("GenesMapper binary Index loaded from {}/index.bin\n{deserialized}", path);
+		if deserialized.genes.is_empty(){
+			eprintln!("No index data found in the path {}", path);
+			exit(0);
+		}
 		Ok(deserialized)
 	}
 

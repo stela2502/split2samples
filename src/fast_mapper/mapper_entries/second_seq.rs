@@ -53,9 +53,11 @@ impl Hash for SecondSeq {
 
 
 
-
-
 impl BinaryMatcher for SecondSeq {
+
+    fn len(&self) -> usize{
+        self.1 as usize
+    }
 
     fn max3<T: Ord>(a: T, b: T, c: T) -> T {
         max(a, max(b, c))

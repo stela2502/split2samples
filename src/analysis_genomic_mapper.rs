@@ -5,7 +5,7 @@ use crate::singlecelldata::SingleCellData;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::genes_mapper::GenesMapper;
-use crate::genes_mapper::{ MapperResult, SeqRec};
+use crate::genes_mapper::{ MapperResult, SeqRec, NeedlemanWunschAffine};
 //use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
 use std::env;
@@ -18,6 +18,7 @@ use crate::cellids10x::CellIds10x;
 use crate::traits::CellIndex;
 
 use crate::mapping_info::MappingInfo;
+
 //use std::io::BufReader;
 //use flate2::write::GzDecoder;
 
@@ -88,7 +89,7 @@ pub struct AnalysisGenomicMapper{
 impl AnalysisGenomicMapper{
 
 
-	pub fn new(_gene_kmers:usize, version:String, specie: String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
+	pub fn new(_gene_kmers:usize, version:String, specie: String, index:Option<String>, num_threads:usize, exp:&str, _debug: bool  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -96,7 +97,9 @@ impl AnalysisGenomicMapper{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :GenesMapper = GenesMapper::new( 0 ); // split them into 9 bp kmers
-
+	    /*if debug {
+	    	genes.debug(Some(debug));
+	    }*/
 	    //let mut gene_count = 0;
 	    
 	    if let Some(i) = index {
@@ -126,7 +129,9 @@ impl AnalysisGenomicMapper{
 	    //panic!("Antibody count {} and expression count {}", antibodies.get_gene_count(), genes.get_gene_count());
 	    let mut samples= GenesMapper::new( genes.get_gene_count() );
 	    //let mut sample_names:Vec<String> = Vec::with_capacity(12);
-
+	    /*if debug {
+	    	samples.debug(Some(debug));
+	    }*/
 	    let mut id = 1;
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
@@ -205,6 +210,7 @@ impl AnalysisGenomicMapper{
 		let sample_names: Vec<String>  = samples.get_all_gene_names();
 		let gene_names: Vec<String>  = genes.get_all_gene_names();
 	    genes.report4( &gene_names.iter().map(|s| s.as_str()).collect::<Vec<&str>>() );
+
 
 		Self{
 			genes,
@@ -443,6 +449,8 @@ impl AnalysisGenomicMapper{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
 
+        let mut nwa = NeedlemanWunschAffine::new(90);
+
         //let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
         // lets tag this with the first gene I was interested in: Cd3e
@@ -450,7 +458,7 @@ impl AnalysisGenomicMapper{
 
         let mut bam = Vec::<String>::with_capacity(10_000);
         for i in 0..data.len() {
-
+        	
         	match &self.cells.to_cellid( &data[i].0 ){
         		//   u32      u64
 	            Ok( (cell_id, umi, cell_seq, umi_seq) ) => {
@@ -464,7 +472,7 @@ impl AnalysisGenomicMapper{
 	            	// or a mRNA match
 	            	// And of casue not a match at all
 
-	                ok = match &self.samples.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32){
+	                ok = match &self.samples.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa){
 	                    Ok(gene_id) =>{
 	                    	report.iter_read_type( "sample reads" );
 	                    	
@@ -485,14 +493,14 @@ impl AnalysisGenomicMapper{
 	                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
 	                    	report.multimapper +=1;
 	                    	report.no_data +=1;
-	                    	continue
+	                    	false
 	                    }
 	                };
 	                
 
 	                if ! ok{
 	                	
-		                match &self.genes.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32){
+		                match &self.genes.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa){
 		                	Ok(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
 

@@ -144,7 +144,7 @@ fn main() {
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker: Analysis = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
-                opts.antibody, opts.specie, opts.index, 1, &opts.exp );
+                opts.antibody, opts.specie, opts.index, 1, &opts.exp, false );
 
 
     // match opts.exp.as_str(){

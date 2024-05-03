@@ -113,7 +113,7 @@ fn main() {
     
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
-    let mut worker = AnalysisGenomicMapper::new( 32, "v2.96".to_string(), opts.specie, opts.index, num_threads, "bd");
+    let mut worker = AnalysisGenomicMapper::new( 32, "v1".to_string(), opts.specie, opts.index, num_threads, "bd", true);
 
     if let Some(genes) = opts.report4genes{
         let slice_str: Vec<&str> = genes.split_whitespace().collect();
@@ -144,7 +144,8 @@ fn main() {
     );
     let qual: Vec<u8>  = vec![b'F'; opts.dna.len()];
     let r2 = SeqRec::new( b"SomeRead2", &opts.dna.as_bytes(), qual.as_slice() );
-    let data= vec![ (r1, r2 )];
+    let data= vec![ (r1, r2.clone() )];
+    println!("I analyze the read {} now", &r2);
     worker.analyze_paralel( &data, &mut results, pos );
 
     //worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );
@@ -153,7 +154,7 @@ fn main() {
 
     //worker.write_data( opts.outpath, &mut results, opts.min_umi );
 
-
+    println!("{}",results.summary(0,0,0));
 
     match now.elapsed() {
         Ok(elapsed) => {

@@ -87,7 +87,7 @@ impl Analysis{
 
 
 	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 
-		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
+		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str, _debug:bool  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -95,6 +95,10 @@ impl Analysis{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000, 0 ); // split them into 9 bp kmers
+
+	    /*if debug{
+	    	genes.debug( Some(debug) );
+	    }*/
 
 	    //let mut gene_count = 0;
 	    
@@ -133,7 +137,9 @@ impl Analysis{
 
 	    eprintln!("Changing the expression start gene id to {}", genes.get_gene_count() );
 	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000, genes.get_gene_count()  );
-
+		/*if debug{
+	    	antibodies.debug( Some(debug) );
+	    }*/
 	    if let Some(ab) = antibody {
 
 		    if Path::new(&ab).exists(){
@@ -181,7 +187,9 @@ impl Analysis{
 	    //panic!("Antibody count {} and expression count {}", antibodies.get_gene_count(), genes.get_gene_count());
 	    let mut samples= FastMapper::new( gene_kmers, 10_000, antibodies.get_gene_count() + genes.get_gene_count() );
 	    //let mut sample_names:Vec<String> = Vec::with_capacity(12);
-
+	    /*if debug{
+	    	samples.debug( Some(debug) );
+	    }*/
 	    let mut id = 1;
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.

@@ -114,7 +114,7 @@ fn main() {
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker = AnalysisGeneMapper::new( 32, "v1".to_string(), opts.expression,
-        opts.antibody, opts.specie, opts.index, num_threads, "bd");
+        opts.antibody, opts.specie, opts.index, num_threads, "bd", true);
 
     if let Some(genes) = opts.report4genes{
         let slice_str: Vec<&str> = genes.split_whitespace().collect();

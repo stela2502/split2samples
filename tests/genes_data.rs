@@ -8,6 +8,7 @@ mod tests {
 	use rustody::traits::BinaryMatcher;
 	use rustody::int_to_str::IntToStr;
 	use rustody::genes_mapper::Cigar;
+	use rustody::genes_mapper::NeedlemanWunschAffine;
 
 	#[test]
 	fn test_encode_decode(){
@@ -335,7 +336,13 @@ mod tests {
 		let obj = GeneData::from_bytes( seq );
 		let obj2 = GeneData::from_bytes( seq2 );
 		let mut cigar = Cigar::new("");
-		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+		let mut nwa = NeedlemanWunschAffine::new(40);
+		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
+		cigar.convert_to_cigar( &nwa.cigar_vec() );
+		cigar.clean_up_cigar(&obj2, &obj);
+		//let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+
+		//println!("{}", &nwa.to_string( &obj2, &obj ) );
 
 		assert_eq!( cigar.cigar, "1X21M3I23M", "Cigar string was created correctly!" );
 		

@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-
+use core::fmt;
 
 
 pub struct IndexedGenes{
@@ -9,12 +9,27 @@ pub struct IndexedGenes{
 	offset: usize,
 }
 
+// Implementing Display trait for SecondSeq
+impl fmt::Display for IndexedGenes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    	let first = 5.min( self.names.len() );
+    	let names: Vec<String> = (0..first).map( |i| self.ids_to_name[ i ].to_string() ).collect();
+        write!(f, "IndexedGenes for {} entries and gene names like {:?}",  self.names.len(), names )
+    }
+}
 
 impl IndexedGenes{
 
 	pub fn new ( data: &BTreeMap<String, usize>, offset: usize ) -> Self {
-		let mut ids_to_name = vec![String::new()];//;data.len() + offset];
+		let mut ids_to_name = vec![String::new(); data.len() + offset ];
 		let mut names = BTreeMap::new();
+		let mut max_entry = 0_usize;
+		let _ =data.iter().for_each(| (_,val) | if *val > max_entry {max_entry = *val});
+		println!("I have gotten a max extry of {max_entry} and have a vec with {} available spaces",ids_to_name.len() );
+		if max_entry > (data.len() + offset) {
+			panic!("This is a library error - why is my largest id {max_entry} when it should be {}?!?",  data.len() + offset);
+		}
+
 		for (name, id) in data {
 			ids_to_name[*id] = name.to_string(); 
 			names.insert( name.to_string(), *id );

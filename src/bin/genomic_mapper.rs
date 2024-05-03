@@ -160,7 +160,7 @@ fn main() {
     };
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
-    let mut worker = AnalysisGenomicMapper::new( 32, opts.version, opts.specie, opts.index, num_threads, &opts.exp);
+    let mut worker = AnalysisGenomicMapper::new( 32, opts.version, opts.specie, opts.index, num_threads, &opts.exp, false);
 
     if let Some(min_matches) = opts.min_matches{
         worker.set_min_matches( min_matches );

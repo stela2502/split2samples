@@ -20,15 +20,16 @@ mod tests {
         );
         let id:u32 = 1;
         let exp= ( 
-            ((id-1)* 384 * 384 + (id-1) * 384 + (id-1)) +1 as u32, 
-            0, 
-            SeqRec::new( b"GTCGCTATATACAGGATAAAGCCTTCT",b"GTCGCTATATACAGGATAAAGCCTTCT",b"GTCGCTATATACAGGATAAAGCCTTCT"),
+            ((id-1)* 384 * 384 + (id-1) * 384 + (id-1)) +1 as u32, // cell id
+            0, // UMI
+            SeqRec::new( b"GTCGCTATATACAGGATAAAGCCTTCT",b"GTCGCTATATACAGGATAAAGCCTTCT",b"GTCGCTATATACAGGATAAAGCCTTCT"), 
             SeqRec::new( b"NNNNAAAA",b"NNNNAAAA",b"NNNNAAAA"),
         );
         match cells.to_cellid( &primer){
             Ok(val) => {
-            assert_eq!( val , exp );
-            eprintln!("WHAT we go an id here: {}", val.0 )}, // will never insert one element twice. Great!
+                assert_eq!( val.0 , exp.0 );
+                eprintln!("WHAT we got an id here: {}", val.0 )
+            }, // will never insert one element twice. Great!
             Err(_err) => {panic!("This did not work!?\n")}, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
         
@@ -54,7 +55,7 @@ mod tests {
             SeqRec::new( b"NNNNAAAA",b"NNNNAAAA",b"NNNNAAAA"),
         );
         match cells.to_cellid( &primer){
-            Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
+            Ok(val) => assert_eq!( val.0 , exp.0 ), // will never insert one element twice. Great!
             Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
         
@@ -75,7 +76,7 @@ mod tests {
         );
         exp2 = CellIds::into_u64( vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"] );
         match cells.to_cellid( &primer){
-            Ok(val) => assert_eq!( val , exp ), // will never insert one element twice. Great!
+            Ok(val) => assert_eq!( val.0 , exp.0 ), // will never insert one element twice. Great!
             Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
         //assert_eq!( cells.to_cellid( primer)? , exp );
@@ -97,7 +98,7 @@ mod tests {
         exp2 = CellIds::into_u64( vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"] );
         //assert_eq!( 884735+1 , exp);
         match cells.to_cellid( &primer2){
-            Ok(val) => assert_eq!( val , exp, "the expected sequence triplet #2" ), // will never insert one element twice. Great!
+            Ok(val) => assert_eq!( val.0 , exp.0, "the expected sequence triplet #2" ), // will never insert one element twice. Great!
             Err(_err) => (), //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
         };
         //assert_eq!( cells.to_cellid( primer)? , exp );
@@ -121,7 +122,7 @@ mod tests {
             SeqRec::new( b"NNNNAAAA",b"NNNNAAAA",b"NNNNAAAA"),
         );
         match cells.to_cellid( &primer){
-            Ok(val) => assert_eq!( val , exp ),
+            Ok(val) => assert_eq!( val.0 , exp.0 ),
             Err(_err) => (),
         };
         
@@ -142,7 +143,7 @@ mod tests {
         );
         exp2 = CellIds::into_u64( vec![b"CTTCACATA", b"TGTGAAGAA", b"CACAAGTAT"] );
         match cells.to_cellid( &primer){
-            Ok(val) => assert_eq!( val , exp ), 
+            Ok(val) => assert_eq!( val.0 , exp.0 ), 
             Err(_err) => (), 
         };
         //assert_eq!( cells.to_cellid( primer)? , exp );
@@ -164,7 +165,7 @@ mod tests {
         exp2 = CellIds::into_u64(vec![b"TGCGATCTA", b"CAACAACGG", b"CATAGGTCA"]);
         //assert_eq!( 884735+1 , exp);
         match cells.to_cellid( &primer){
-            Ok(val) => assert_eq!( val , exp ), 
+            Ok(val) => assert_eq!(val.0 , exp.0 ), 
             Err(_err) => (),
         };
         //assert_eq!( cells.to_cellid( primer)? , exp );
@@ -188,7 +189,7 @@ mod tests {
             SeqRec::new( b"NNNNAAAA",b"NNNNAAAA",b"NNNNAAAA"),
         );
         match cells.to_cellid( &primer){
-            Ok(val) => assert_eq!( val , exp ),
+            Ok(val) => assert_eq!( val.0 , exp.0 ),
             Err(_err) => (),
         };
         

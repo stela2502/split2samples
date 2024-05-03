@@ -56,6 +56,10 @@ impl CellId10x {
 
 impl BinaryMatcher for CellId10x {
 
+    fn len( &self ) -> usize{
+        16
+    }
+
     fn max3<T: Ord>(a: T, b: T, c: T) -> T {
         max(a, max(b, c))
     }

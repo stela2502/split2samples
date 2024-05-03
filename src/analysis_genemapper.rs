@@ -17,6 +17,7 @@ use crate::errors::MappingError;
 use crate::cellids::CellIds;
 use crate::cellids10x::CellIds10x;
 use crate::traits::CellIndex;
+ use crate::genes_mapper::NeedlemanWunschAffine;
 
 use crate::mapping_info::MappingInfo;
 //use std::io::BufReader;
@@ -88,7 +89,7 @@ impl AnalysisGeneMapper{
 
 
 	pub fn new(_gene_kmers:usize, version:String, expression:Option<String>, 
-		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
+		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str, _debug:bool  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -97,6 +98,9 @@ impl AnalysisGeneMapper{
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :GenesMapper = GenesMapper::new( 0 ); // split them into 9 bp kmers
 
+	    /*if debug {
+	    	genes.debug(Some(debug));
+	    }*/
 	    //let mut gene_count = 0;
 	    
 	    if let Some(i) = index {
@@ -131,8 +135,13 @@ impl AnalysisGeneMapper{
 		    }
 	    }
 
+
 	    eprintln!("Changing the expression start gene id to {}", genes.get_gene_count() );
 	    let mut antibodies :GenesMapper = GenesMapper::new( genes.get_gene_count()  );
+
+	    /*if debug {
+	    	antibodies.debug(Some(debug));
+	    }*/
 
 	    if let Some(ab) = antibody {
 
@@ -181,7 +190,9 @@ impl AnalysisGeneMapper{
 	    //panic!("Antibody count {} and expression count {}", antibodies.get_gene_count(), genes.get_gene_count());
 	    let mut samples= GenesMapper::new( antibodies.get_gene_count() + genes.get_gene_count() );
 	    //let mut sample_names:Vec<String> = Vec::with_capacity(12);
-
+	    /*if debug {
+	    	samples.debug(Some(debug));
+	    }*/
 	    let mut id = 1;
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
@@ -528,6 +539,7 @@ impl AnalysisGeneMapper{
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
+        let mut nwa = NeedlemanWunschAffine::new(90);
 
         //let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
@@ -551,7 +563,7 @@ impl AnalysisGeneMapper{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32 ){
+	            	ok = match &self.antibodies.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa ){
 	                    Ok(gene_id) =>{
 
 	                    	report.iter_read_type( "antibody reads" );
@@ -580,12 +592,12 @@ impl AnalysisGeneMapper{
 	                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
 	                    	report.multimapper +=1;
 	                    	report.no_data +=1;
-	                    	continue
+	                    	false
 	                    }
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32){
+	                	ok = match &self.samples.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa){
 		                    Ok(gene_id) =>{
 		                    	report.iter_read_type( "sample reads" );
 		                    	
@@ -618,7 +630,7 @@ impl AnalysisGeneMapper{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32){
+		                match &self.genes.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa){
 		                	Ok(gene_id) =>{
 		                		report.iter_read_type( "expression reads" );
 
@@ -952,8 +964,11 @@ impl AnalysisGeneMapper{
 	    results.stop_file_io_time();
 
 	    let genes_idx = &self.genes.as_indexed_genes();
+	    println!("Indexed the genes names");
 	    let ab_idx = &self.antibodies.as_indexed_genes();
+	    println!("Indexed the antibody names");
 	    let samples_idx = &self.samples.as_indexed_genes();
+	    println!("Indexed the samples names");
 	    
 	    println!("filtering cells");
 	    self.gex.update_genes_to_print( genes_idx, &self.gene_names );

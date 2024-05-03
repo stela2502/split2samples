@@ -21,8 +21,8 @@ pub const G: Base = 2;
 pub const T: Base = 3;
 
 const MATCH_SCORE: i32 = 1;
-const MISMATCH_SCORE: i32 = -1;
-const GAP_PENALTY: i32 = -2;
+const MISMATCH_SCORE: i32 = -4;
+const GAP_PENALTY: i32 = -1;
 
 #[derive(Debug, Clone,Deserialize,Serialize)]
 pub struct GeneData {
@@ -168,10 +168,6 @@ impl GeneData{
 			}
 		}
 		ret
-	}
-
-	pub fn len( &self ) -> usize{
-		self.length
 	}
 
 	pub fn set_name(&mut self, name:&str) {
@@ -379,6 +375,10 @@ impl GeneData{
 
 impl BinaryMatcher for GeneData{
 
+	fn len( &self ) -> usize{
+		self.length
+	}
+	
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
         max(a, max(b, c))
     }
@@ -483,7 +483,6 @@ impl BinaryMatcher for GeneData{
 
 	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut Cigar> ) -> f32 { 
 		let size = self.len().min(other.len());
-
         if size < 15  || self.tri_nuc_abs_diff(other) > humming_cut{
             return 100.0
         }

@@ -63,4 +63,5 @@ pub trait BinaryMatcher : Sync{
 	fn di_nuc_tab (&self ) -> Vec<i8>;
 	fn tri_nuc_tab (&self ) -> Vec<i8>;
 	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut Cigar> ) -> f32;
+	fn len(&self) -> usize;
 }

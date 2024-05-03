@@ -475,6 +475,7 @@ fn main() {
     //eprintln!("THIS IS STILL IN TEST MODE => TEXT INDEX WRITTEN!!! {}",opts.outpath.to_string() );
     eprintln!("{}", report.program_states_string() );
 
+
     match now.elapsed() {
         Ok(elapsed) => {
             let mut milli = elapsed.as_millis();
