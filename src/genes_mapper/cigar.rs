@@ -180,8 +180,8 @@ impl Cigar{
 	        let operation = &cap[2];
 	        match operation {
 	            "M" => m_count += count,
-	            "S" => (),// soft clipped is igniored here
-	            "H" => (),// hard clipped is igniored here
+	            //"S" => (),// soft clipped is ignored here
+	            //"H" => (),// hard clipped is ignored here
 	            "N" => (),// not matched (intron) is ignored, too
 	            _ => other_count += count,
 	        }
@@ -206,8 +206,8 @@ impl Cigar{
 	        let operation = &cap[2];
 	        match operation {
 	            "M" => (), // match
-	            "S" => total -= count,// soft clipped is igniored here
-	            "H" => total -= count,// hard clipped is igniored here
+	            //"S" => total -= count,// soft clipped is igniored here
+	            //"H" => total -= count,// hard clipped is igniored here
 	            "N" => total -= count,// not matched (intron) also ignored
 	            "=" => (), // not quite sure, but should likely be good too - or?
 	            _ => other_count += count,
@@ -309,7 +309,7 @@ impl Cigar{
     /// instead of that string I would like to see a 23S59M 
 
 	/// calculates the nucleotides on both mine and the other sequence that has passed at the end of the cigar string
-	pub(crate) fn calculate_covered_nucleotides(&self, cigar_string: &str) -> (usize, usize) {
+	pub fn calculate_covered_nucleotides(&self, cigar_string: &str) -> (usize, usize) {
 	    let mut mine = 0;
 	    let mut other = 0;
 	    let mut current_number = String::new();

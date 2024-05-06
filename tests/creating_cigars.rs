@@ -6,7 +6,7 @@
 mod tests {
 	use rustody::genes_mapper::Cigar;
 	use rustody::genes_mapper::gene_data::GeneData;
-	use rustody::traits::BinaryMatcher;
+	//use rustody::traits::BinaryMatcher;
 	use rustody::genes_mapper::NeedlemanWunschAffine;
 
 	#[test]

@@ -42,6 +42,7 @@ use crate::ofiles::{Ofiles, Fspot};
 
 static EMPTY_VEC: Vec<String> = Vec::new();
 
+
 #[derive(Debug)]
 enum FilterError {
     Length,

@@ -14,6 +14,12 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
+### 2.2.1
+
+The new mapping strategy seams to work. Slow but working.
+I now can create SAM files, too! New binaries genomic_mapper and index_fq_gene_mapper; the first mapping using the index the second creates. This index does not need a gtf file to create.
+
+
 ### 2.2.0
 
 Implemeting a new mapping strategy. Instead of storing all the 8+32bp combinations for the transcripts, just store a transcript_id and a position in the transcript and store all transcripts in the index.
@@ -113,6 +119,8 @@ It is included here solely to present this mapping procedure.
 
 To run the test data (a tiny bit of a real dataset):
 
+### the main mappers
+
 ```
 target/release/quantify_rhapsody_multi -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
 ```
@@ -127,92 +135,20 @@ Here the most interesting is the sam file that will also be produced in the newe
 ./target/release/quantify_gene_mapper -e testData/chrM_GRCm39.primary_assembly.genome.fa.gz -r testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R1_4m.fastq.gz  -f testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R2_4m.fastq.gz -o testData/10x/results/ --exp 10x --specie human --min-umi 20 --version "Single Cell 3' v3" --report4genes chrM --highest-nw-val 0.25  --chunk-size 10000
 ```
 
-Latest results:
+[An example analysis of the fast_mapper based analys data is available here:]( ./testData/BD_results/CombinedAnalysis_scanpy_v1.2.1.ipynb).
+
+### the new genomic mapper
+
+The main output from this mapper is a sam file with all mapping sequences.
+The idea behind this is of cause to look into mutations. Hope to get this mapper to really find interesting stuf.
 
 ```
-target/release/quantify_rhapsody_multi -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f testData/1e5_mRNA_S1_R2_001.fastq.gz -o testData/output_1e5 -s mouse -e testData/genes.fasta -a testData/MyAbSeqPanel.fasta -m 10 -v v1
-Analysis will stop after having processed 18446744073709551615 fastq entries containing a cell info
+# ceate the index
+target/release/index_fq_gene_mapper -f testData/chrM_GRCm39.primary_assembly.genome.fa.gz --outpath testData/ChrM_MouseIdx
+# use the index
 
-init models
-the log file: Mapping_log.txt
-Changing the expression start gene id to 462
-After indexing all fastq files we have the following indices:
-the mRNA index:
-I have 40941 kmers for 462 genes with 0.16243777% duplicate entries
-gene names like 'Rpl36a'
-gene_ids range from Some(0) to Some(461)
-
-the sample id index:
-I have 346 kmers for 12 genes with 0.06916427% duplicate entries
-gene names like 'Sample12'
-gene_ids range from Some(0) to Some(11)
-
-and the antibodies index:
-I have 143 kmers for 5 genes with 0% duplicate entries
-gene names like 'IgM'
-gene_ids range from Some(0) to Some(4)
-
-Writing index version 6
-with kmer_len 32
-And a total of 40941 data entries
-
-Parsing file pair 1
-
-I am using 12 cpus
-   0.10 mio reads (68.56% with cell_id, 62.45% with gene_id 0.00% multimapper)
-
-Writing outfiles ...
-filtering cells
-Dropping cell with too little counts (n=34750)
-62 cells have passed the cutoff of 10 umi counts per cell.
-
-
-writing gene expression
-sparse Matrix: 62 cell(s), 99 gene(s) and 422 entries written to path Ok("testData/output_1e5/BD_Rhapsody_expression");
-Writing Antibody counts
-sparse Matrix: 62 cell(s), 1 gene(s) and 4 entries written to path Ok("testData/output_1e5/BD_Rhapsody_antibodies");
-Writing samples table
-dense matrix: 62 cell written
-
-Summary:
-cellular   reads  : 68556 reads (68.56% of total)
-no cell ID reads  : 17366 reads (17.37% of total)
-no gene ID reads  : 0 reads (0.00% of total)
-filtered   reads  : 14078 reads (14.08% of total)
- ->  multimapper  : 0 reads (0.00% of total)
- -> bad qualiity  : 10696 reads (10.70% of total)
- ->    too short  : 3381 reads (3.38% of total)
- ->          N's  : 1 reads (0.00% of total)
-
-total      reads  : 100000 reads
-
-collected read counts:
-expression reads  : 45310 reads (66.09% of cellular)
-antibody reads    : 16153 reads (23.56% of cellular)
-sample reads      : 986 reads (1.44% of cellular)
-
-reported UMI counts:
-expression reads  : 535 UMIs (0.78% of cellular)
-antibody reads    : 194 UMIs (0.28% of cellular)
-sample reads      : 11 UMIs (0.02% of cellular)
-
-PCR duplicates or bad cells: 67816 reads (98.92% of cellular)
-
-timings:
-   overall run time 0 h 0 min 1 sec 385 millisec
-   file-io run time 0 h 0 min 0 sec 197 millisec
-single-cpu run time 0 h 0 min 0 sec 47 millisec
- multi-cpu run time 0 h 0 min 0 sec 874 millisec
-
-
-Cell->Sample table written to "testData/output_1e5/SampleCounts.tsv"
-
-quantify_rhapsody finished in 0h 0min 1 sec 392milli sec
-
+./target/release/genomic_mapper -i testData/ChrM_MouseIdx -r testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R1_4m.fastq.gz  -f testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R2_4m.fastq.gz -o testData/10x/results/ --exp 10x --specie human --min-umi 20 --version "Single Cell 3' v3" --highest-nw-val 0.25  --chunk-size 10000
 ```
-
-
-[An example analysis of this data is available here:]( ./testData/BD_results/CombinedAnalysis_scanpy_v1.2.1.ipynb).
 
 
 # Usage
@@ -806,3 +742,4 @@ cp target/release/create_index_te ~/sens05_home/bin
 cp target/release/create_gene_mapper_index ~/sens05_home/bin
 cp target/release/te_analysis ~/sens05_home/bin
 ```
+

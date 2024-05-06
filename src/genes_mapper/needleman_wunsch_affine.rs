@@ -18,21 +18,30 @@ pub struct NeedlemanWunschAffine{
 impl NeedlemanWunschAffine {
 	pub fn new( size:usize ) ->Self {
 		// Initialize the DP matrix
-		let mut dp = vec![vec![0; size + 1]; size + 1];
-		// Initialize the first row and column with gap penalties
-    	for i in 1..=size {
-	        dp[i][0] = dp[i - 1][0] + GAP_OPEN_PENALTY + (i - 1) as i32 * GAP_EXTENSION_PENALTY;
-	    }
-	    for j in 1..=size {
-	        dp[0][j] = dp[0][j - 1] + GAP_OPEN_PENALTY + (j - 1) as i32 * GAP_EXTENSION_PENALTY;
-	    }
-	    Self {
-	    	dp,
+
+		let me = Self {
+	    	dp : Vec::<Vec::<i32>>::new(),
 	    	n: size,
 	    	m:size,
 	    	cigar_vec: None,
 	    	circles:0,
-	    }
+	    };
+	    me
+	}
+
+	/// initialize does exactly that - initializes the internal storage - if necessary.
+	pub fn initialize( &mut self, rows:usize, cols:usize ){
+
+		let size = rows.max(cols);
+
+		if self.dp.len() < size +2 || self.dp[0].len() < size +2 {
+			self.dp = vec![vec![0; size + 2]; size + 2];
+			for i in 1..=size {
+		        self.dp[i][0] = self.dp[i - 1][0] + GAP_OPEN_PENALTY + (i - 1) as i32 * GAP_EXTENSION_PENALTY;
+		        self.dp[0][i] = self.dp[0][i - 1] + GAP_OPEN_PENALTY + (i - 1) as i32 * GAP_EXTENSION_PENALTY;
+		    }
+		}
+
 	}
 
 	pub fn to_string<T>( &mut self, seq1: &T, seq2: &T, humming_cut: f32 ) -> String 
@@ -60,18 +69,8 @@ impl NeedlemanWunschAffine {
 	    if n.min(m) < 15  || seq1.tri_nuc_abs_diff(seq2) > humming_cut{
             return 100.0
         }
-	    if self.dp.len() < n +10 || self.dp[0].len() < m +10 {
-	    	eprintln!("dp dimensions need to be adjusted to ({n} +10 ; {m} +10 )");
-	    	// Initialize the DP matrix
-	    	self.dp = vec![vec![0; m + 10]; n + 10];
-	    	// Initialize the first row and column with gap penalties
-	    	for i in 1..=n {
-		        self.dp[i][0] = self.dp[i - 1][0] + GAP_OPEN_PENALTY + (i - 1) as i32 * GAP_EXTENSION_PENALTY;
-		    }
-		    for j in 1..=m {
-		        self.dp[0][j] = self.dp[0][j - 1] + GAP_OPEN_PENALTY + (j - 1) as i32 * GAP_EXTENSION_PENALTY;
-		    }
-	    }
+
+        self.initialize( n, m );
 
 	    // Fill in the DP matrix
 	    for i in 1..=n {
@@ -241,7 +240,7 @@ impl NeedlemanWunschAffine {
 	    let mut seq1_id = 0;
 	    let mut seq2_id = 0;
 	    let mut i = 0;
-	    while i < cigar.len(){
+	    'main: while i < cigar.len(){
 	    	//eprintln!("(round #{i})" );
 	    	match gap_start{
 	    		None => {
@@ -257,6 +256,9 @@ impl NeedlemanWunschAffine {
 							seq2_id +=1;
 							cigar[i] = CigarEnum::Match;
 							i +=1;
+							if i == cigar.len(){
+								break 'main; // this is not a usable thing!
+							}
 							if cigar[i] != CigarEnum::Deletion{
 								cigar[i] = CigarEnum::Deletion;
 								matching -=1;

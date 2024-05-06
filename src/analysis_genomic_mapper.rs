@@ -436,7 +436,7 @@ impl AnalysisGenomicMapper{
 	        Z: Tag data type, denotes a string.
 
 		*/	
-	    record += &format!("RG:Z:{}\n", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
+	    record += &format!("RG:Z:{}", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
 
 	    record
     }
@@ -449,7 +449,7 @@ impl AnalysisGenomicMapper{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
 
-        let mut nwa = NeedlemanWunschAffine::new(90);
+        let mut nwa = NeedlemanWunschAffine::new(120);
 
         //let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
@@ -484,6 +484,8 @@ impl AnalysisGenomicMapper{
 	                        ) { 
 	                        	report.pcr_duplicates += 1 
 	                        }
+	                        // not interested in that!!!
+	                        //bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
 	                        true
 	                    },
 	                    Err(MappingError::NoMatch) => {
@@ -512,7 +514,7 @@ impl AnalysisGenomicMapper{
 		                        ){
 		                        	report.pcr_duplicates += 1 
 		                        }
-								bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
+								bam.push( self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ) );
 		                    },
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
@@ -731,7 +733,7 @@ impl AnalysisGenomicMapper{
 			    for gex in total_results{
 			    	self.gex.merge(&gex.0.0);
 			    	for line in gex.0.1{
-			    		match writeln!(writer, "{}", line){
+			    		match writeln!(writer, "{}\n", line){
 			        		Ok(_) => (),
 			        		Err(err) => panic!("parse_parallel could not write the bam line: {err:?}"),
 			        	}
@@ -785,7 +787,7 @@ impl AnalysisGenomicMapper{
 	        for gex in total_results{
 	        	self.gex.merge(&gex.0.0);
 	        	for line in gex.0.1{
-		    		match writeln!(writer, "{}", line){
+		    		match write!(writer, "{}\n", line){
 		        		Ok(_) => (),
 		        		Err(err) => panic!("could not write to sam file? {err:?}"),
 		        	}

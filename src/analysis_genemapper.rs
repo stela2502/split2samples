@@ -9,7 +9,6 @@ use crate::genes_mapper::{ MapperResult, SeqRec};
 //use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
 use std::env;
-use cargo_metadata::MetadataCommand;
 
 //use crate::int_to_str::IntToStr;
 use crate::errors::MappingError;
@@ -43,6 +42,8 @@ use crate::ofiles::{Ofiles, Fspot};
 //use std::fs::write;
 
 //static EMPTY_VEC: Vec<String> = Vec::new();
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 
 #[derive(Debug)]
 enum FilterError {
@@ -272,6 +273,7 @@ impl AnalysisGeneMapper{
 		let sample_names: Vec<String>  = samples.get_all_gene_names();
 		let gene_names: Vec<String>  = genes.get_all_gene_names();
 		let ab_names: Vec<String>  = antibodies.get_all_gene_names();
+		genes.report4( &gene_names.iter().map(|s| s.as_str()).collect::<Vec<&str>>() );
 	    
 		Self{
 			genes,
@@ -386,7 +388,24 @@ impl AnalysisGeneMapper{
         Ok(())
     }
 
-    fn build_sam_record ( &self, read2:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> String{
+    fn build_sam_record ( &self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> String{
+
+    	let mut read2 = read.clone();
+
+    	match gene_id[0].cigar() {
+    		Some(cigar) => 
+    		{
+    			let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.to_string() );
+    			if mine < read2.len(){
+    				read2=read2.slice(0, mine ).unwrap();
+    			}
+    			if mine + gene_id[0].start() > gene_id[0].db_length() {
+    				panic!("Cigar suggest longer match than db_length allows!");
+    			}
+    		},
+    		None=> {
+    		},
+    	};
 
     	let mut record = "".to_string();
     	// starting
@@ -527,7 +546,7 @@ impl AnalysisGeneMapper{
 	        Z: Tag data type, denotes a string.
 
 		*/	
-	    record += &format!("RG:Z:{}\n", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
+	    record += &format!("RG:Z:{}", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
 
 	    record
     }
@@ -580,7 +599,7 @@ impl AnalysisGeneMapper{
 
 	                        if gene_id[0].save(){
 	                        	//build_sam_record ( &self, read2:&SeqReq, gene_id:&Vec<MapperResult>, cell_id:&SeqReq, umi:&SeqReq ) 
-							    bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
+							    //bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
 	                        }
 							
 	                        true
@@ -612,7 +631,7 @@ impl AnalysisGeneMapper{
 
 		                        if gene_id[0].save(){
 		                        	//build_sam_record ( &self, read2:&SeqReq, gene_id:&Vec<MapperResult>, cell_id:&SeqReq, umi:&SeqReq ) 
-								    bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
+								    //bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
 		                        }
 		                        true
 		                    },
@@ -705,7 +724,7 @@ impl AnalysisGeneMapper{
             Err(err) => panic!("The file {} cound not be created: {err}", outpath.to_string() +"/AlignedReadsOfInterest.sam" )
         };
 
-    	let mut writer = BufWriter::new(file);
+    	let mut sam_file_writer = BufWriter::new(file);
     	let mut header = "@HD\tVN:1.4\tSO:coordinate\n".to_string();
     	let mut fasta= "".to_string();
     	if let Some((h,f)) = self.samples.sam_header(){
@@ -740,13 +759,9 @@ impl AnalysisGeneMapper{
     	let program = args[0].to_string();
 		let command_line: String = args.join(" ");
 		// Get metadata about the package
-    	let metadata = MetadataCommand::new().exec().unwrap();
-    	// Get the version of the package
-    	let version = metadata.root_package().unwrap().version.to_string();
+		header += &format!("@PG\tPN:{}\tID:{}\tVN:{}\tCL:{}",&program, &program, &VERSION, command_line);
 
-		header += &format!("@PG\tPN:{}\tID:{}\tVN:{}\tCL:{}",&program, &program, &version, command_line);
-
-    	match writeln!(writer, "{}", header){
+    	match writeln!(sam_file_writer, "{}", header){
     		Ok(_) => (),
     		Err(err) => panic!("could not write the header line? {err:?}"),
     	};
@@ -868,7 +883,7 @@ impl AnalysisGeneMapper{
 			    for gex in total_results{
 			    	self.gex.merge(&gex.0.0);
 			    	for line in gex.0.1{
-			    		match writeln!(writer, "{}", line){
+			    		match writeln!(sam_file_writer, "{}", line){
 			        		Ok(_) => (),
 			        		Err(err) => panic!("could not write to sam file? {err:?}"),
 			        	}
@@ -921,7 +936,7 @@ impl AnalysisGeneMapper{
 	        for gex in total_results{
 	        	self.gex.merge(&gex.0.0);
 	        	for line in gex.0.1{
-		    		match writeln!(writer, "{}", line){
+		    		match writeln!(sam_file_writer, "{}", line){
 		        		Ok(_) => (),
 		        		Err(err) => panic!("could not write to sam file? {err:?}"),
 		        	}

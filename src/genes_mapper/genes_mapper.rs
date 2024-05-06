@@ -397,13 +397,16 @@ impl GenesMapper{
 			if self.reject_key(&key){
 				continue;
 			}
-			else if self.debug {
-				println!("I am testing this key: {}", Self::as_dna_string(&key) );
-			}
-
+			
 			if ! self.mapper[key as usize].is_empty() {
 				i+=1;
+				if self.debug {
+					println!("I am testing this key: {} and got {:?}", Self::as_dna_string(&key) , self.mapper[key as usize].data() );
+				}
 				self.mapper[key as usize].get( &mut res, start as i32 );
+
+			}else if self.debug{
+				println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
 			}
 			if i == 30 {
 				break;
@@ -420,15 +423,26 @@ impl GenesMapper{
 
 	    // Sort the vector by the length of the internal arrays
 	    // longest first
-	    res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
+	    res_vec.sort_by(|(a_key, a_value), (b_key, b_value)| {
+		    match b_value.len().cmp(&a_value.len()) {
+		        std::cmp::Ordering::Equal => a_key.cmp(b_key),
+		        other => other,
+		    }
+		});
+	    //res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
 		if self.debug {
 			println!("I have collected these initial matches: {:?}", res_vec );
 		}
 	    let mut cigar= Cigar::new("");
+	    //panic!("remind me what I get here: {res_vec:?}");
 
+		if res_vec.is_empty() || res_vec[0].1.len() < 5 {
+			return Err(MappingError::NoMatch)
+		}
 	    if let Some (entry) = &res_vec.first() {
 	    	let gene_id = &entry.0;
 	    	let start = &entry.1;
+	    	
 	    	match Self::all_values_same( start ){
 	    		Ok(()) => {
 	    			if let Some((read, database)) = self.slice_objects( start[0], &self.genes[*gene_id], &read_data ){
@@ -436,7 +450,7 @@ impl GenesMapper{
 	    					println!("using the match {entry:?} I'll compare these two sequences");
 	    					println!("read \n{read} to database\n{database}\n");
 	    				}
-
+						
 	    				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
 	    				cigar.convert_to_cigar( &nwa.cigar_vec() );
 	    				cigar.clean_up_cigar(&read, &database);

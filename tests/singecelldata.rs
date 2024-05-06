@@ -4,7 +4,7 @@ mod tests {
 	use rustody::singlecelldata::cell_data::GeneUmiHash;
 	use rustody::fast_mapper::FastMapper;
 	use rustody::mapping_info::MappingInfo;
-    use rustody::singlecelldata::IndexedGenes;
+    //use rustody::singlecelldata::IndexedGenes;
 
 	static EMPTY_VEC: Vec<String> = Vec::new();
 

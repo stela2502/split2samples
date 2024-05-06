@@ -89,6 +89,10 @@ impl SeqRec{
         &self.qual
     }
 
+    pub fn len(&self) -> usize{
+        self.seq.len()
+    }
+
     pub fn slice(&self, start:usize, len:usize) -> Option<Self>{
     	let end  = start + len;
     	if end > self.seq.len(){

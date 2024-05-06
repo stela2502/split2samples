@@ -23,7 +23,7 @@ use rustody::ofiles::Ofiles;
 /// If you use '-' as outpath the sam file will be printed to std out instead.  
 
 #[derive(Parser)]
-#[clap(version = "1.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
+#[clap(version = "1.1.1", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
     #[clap(short, long)]
