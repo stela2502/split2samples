@@ -13,12 +13,25 @@ use core::fmt;
 //use std::fs::File;
 //use std::io::Write;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CigarEnum{
 	Match,
 	Mismatch,
 	Insertion,
 	Deletion,
+	Empty,
+}
+
+impl CigarEnum{
+	pub fn opposite(&self, other: &Self ) ->bool {
+		match &self{
+			CigarEnum::Match => other == &CigarEnum::Mismatch,
+			CigarEnum::Mismatch => other == &CigarEnum::Match,
+			CigarEnum::Insertion => other == &CigarEnum::Deletion,
+			CigarEnum::Deletion => other == &CigarEnum::Insertion,
+			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
+		}
+	}
 }
 
 impl fmt::Display for CigarEnum {
@@ -28,6 +41,7 @@ impl fmt::Display for CigarEnum {
 			CigarEnum::Mismatch => "X",
 			CigarEnum::Insertion => "I",
 			CigarEnum::Deletion => "D",
+			CigarEnum::Empty => panic!("There is an empty cigar entry in your vector!"),
         };
         write!(f, "{}", direction_str)
     }
@@ -350,7 +364,10 @@ impl Cigar{
 
 		self.cigar.clear();
 
-	    for &direction in path.iter() {
+		let mut loc_path = path.to_vec();
+    	Self::fix_1d1i_1i1d(&mut loc_path);
+
+	    for &direction in loc_path.iter() {
 	        if Some(direction) == last_direction {
 	            count += 1;
 	        } else {
@@ -365,6 +382,19 @@ impl Cigar{
 	    if count > 0 {
 	        self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
 	    }    
+	}
+
+	fn fix_1d1i_1i1d(cigar: &mut Vec<CigarEnum>) {
+	    let mut i = 1;
+	    while i < cigar.len() - 1 {
+	        if (cigar[i - 1] == CigarEnum::Deletion && cigar[i] == CigarEnum::Insertion && cigar[i + 1] != CigarEnum::Deletion)
+	            || (cigar[i - 1] == CigarEnum::Insertion && cigar[i] == CigarEnum::Deletion && cigar[i + 1] != CigarEnum::Insertion)
+	        {
+	            cigar.remove(i);
+	            cigar[i - 1] = CigarEnum::Mismatch;
+	        }
+	        i += 1;
+	    }
 	}
 
 	pub fn calculate_cigar(&mut self, matrix : &Vec<Vec<Cell>>, last_match:bool )  {
