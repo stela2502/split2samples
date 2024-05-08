@@ -558,7 +558,7 @@ impl AnalysisGeneMapper{
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
-        let mut nwa = NeedlemanWunschAffine::new(90);
+        let mut nwa = NeedlemanWunschAffine::new();
 
         //let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 

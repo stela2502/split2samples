@@ -287,6 +287,10 @@ impl GenesMapper{
 						return None
 					},
 				};
+				if self.debug{
+					println!("slicing with start <0 {start} and \n{change_start}\nand\n{change_end}");
+					println!("I got you this return values:\n{obj_b}\n{obj_a}\ngood?\n")
+				}
 				Some((obj_b, obj_a))
 			},
 			false => {
@@ -304,6 +308,10 @@ impl GenesMapper{
 						return None
 					},
 				};
+				if self.debug{
+					println!("slicing with start >0 {start} and \n{change_start}\nand\n{change_end}");
+					println!("I got you this return values:\n{obj_a}\n{obj_b}\ngood?\n")
+				}
 				Some((obj_a, obj_b))
 			}
 		}	
@@ -449,6 +457,12 @@ impl GenesMapper{
 	    				if self.debug{
 	    					println!("using the match {entry:?} I'll compare these two sequences");
 	    					println!("read \n{read} to database\n{database}\n");
+	    					let ( alng1, alng2, cigar_vec) = nwa.needleman_wunsch_affine_backtrack(&read, &database, self.highest_humming_val);
+    						println!("the alignement:\n{}\n{}\n{}\n", 
+    							NeedlemanWunschAffine::cigar_to_string( &cigar_vec),
+    							String::from_utf8_lossy(&alng1), 
+    							String::from_utf8_lossy(&alng2) 
+    						);
 	    				}
 						
 	    				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
@@ -486,11 +500,19 @@ impl GenesMapper{
 	    					break;
 	    				}
 	    				if let Some((read, database)) = self.slice_objects( start, &self.genes[*gene_id], &read_data ){
+	    					
+	    					let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val );
 	    					if self.debug{
 	    						println!("using the match start {start} count {count} I'll compare these two sequences");
 	    						println!("read \n{read} to database\n{database}\n");
+	    						let ( alng1, alng2, cigar_vec) = nwa.needleman_wunsch_affine_backtrack(&read, &database, self.highest_humming_val);
+	    						println!("the alignement:\n{}\n{}\n{}\n", 
+	    							NeedlemanWunschAffine::cigar_to_string( &cigar_vec),
+	    							String::from_utf8_lossy(&alng1), 
+	    							String::from_utf8_lossy(&alng2) 
+	    						);
+
 	    					}
-	    					let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val );
 	    					cigar.convert_to_cigar( &nwa.cigar_vec() );
 	    					cigar.clean_up_cigar(&read, &database);
 	    					if nw.abs() < self.highest_nw_val || ( cigar.fixed == Some( CigarEndFix::End) ||  cigar.fixed == Some( CigarEndFix::Start) ){

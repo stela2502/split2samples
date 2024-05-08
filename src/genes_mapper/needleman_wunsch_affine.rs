@@ -6,6 +6,8 @@ const GAP_EXTENSION_PENALTY: i32 = -2; // Penalty for extending a gap
 use crate::genes_mapper::cigar::{CigarEnum};
 use crate::traits::BinaryMatcher;
 
+use std::fs::File;
+use std::io::{self,Write};
 
 pub struct NeedlemanWunschAffine{
 	dp: Vec<Vec<i32>>,
@@ -13,18 +15,20 @@ pub struct NeedlemanWunschAffine{
 	m: usize,
 	cigar_vec: Option<Vec<CigarEnum>>,
 	circles:usize,
+	debug:bool,
 }
 
 impl NeedlemanWunschAffine {
-	pub fn new( size:usize ) ->Self {
+	pub fn new(  ) ->Self {
 		// Initialize the DP matrix
 
 		let me = Self {
 	    	dp : Vec::<Vec::<i32>>::new(),
-	    	n: size,
-	    	m:size,
+	    	n: 0,
+	    	m: 0,
 	    	cigar_vec: None,
 	    	circles:0,
+	    	debug: false,
 	    };
 	    me
 	}
@@ -72,29 +76,32 @@ impl NeedlemanWunschAffine {
 
         self.initialize( n, m );
 
-	    // Fill in the DP matrix
-	    for i in 1..=n {
-	        for j in 1..=m {
-	        	if let (Some(nuc1), Some(nuc2)) = (seq1.get_nucleotide_2bit(i - 1), seq2.get_nucleotide_2bit(j - 1) ){
+		// Fill in the DP matrix
+		for i in 1..=n {
+		    for j in 1..=m {
+		        if let (Some(nuc1), Some(nuc2)) = (seq1.get_nucleotide_2bit(i - 1), seq2.get_nucleotide_2bit(j - 1)) {
+		            // Calculate match/mismatch score
 		            let match_mismatch_score = if nuc1 == nuc2 { MATCH_SCORE } else { MISMATCH_SCORE };
-		            let mut scores = vec![
-		                self.dp[i - 1][j - 1] + match_mismatch_score, // Diagonal (match/mismatch)
-		                self.dp[i - 1][j] + GAP_OPEN_PENALTY + GAP_EXTENSION_PENALTY, // Gap in seq1
-		                self.dp[i][j - 1] + GAP_OPEN_PENALTY + GAP_EXTENSION_PENALTY, // Gap in seq2
-		            ];
-		            // Check if an extension of an existing gap is more favorable
-		            for k in 1..=i - 1 {
-		                scores[1] = scores[1].max(self.dp[i - k][j] + GAP_OPEN_PENALTY + k as i32 * GAP_EXTENSION_PENALTY);
-		            }
-		            for k in 1..=j - 1 {
-		                scores[2] = scores[2].max(self.dp[i][j - k] + GAP_OPEN_PENALTY + k as i32 * GAP_EXTENSION_PENALTY);
-		            }
-		            self.dp[i][j] = scores.iter().copied().max().unwrap();
-		        }else {
-		        	panic!("Could not get sequence for nuc1 or nuc2 needleman_wunsch_affine")
+
+		            // Compute the maximum score directly
+		            self.dp[i][j] = [
+		            	// Score for diagonal (match/mismatch)
+		                self.dp[i - 1][j - 1] + match_mismatch_score,
+		                // Score for gap in seq1 (insertion in read)
+		                self.dp[i - 1][j] + GAP_OPEN_PENALTY,
+		                // Score for gap in seq2 (deletion in read)
+		                self.dp[i][j - 1] + GAP_OPEN_PENALTY, 
+		                // Score for gap extension in seq1 (insertion in read)
+		                (1..=i - 1).map(|k| self.dp[i - k][j] + GAP_OPEN_PENALTY + k as i32 * GAP_EXTENSION_PENALTY).max().unwrap_or(std::i32::MIN),
+		                // Score for gap extension in seq2 (deletion in read)
+		                (1..=j - 1).map(|k| self.dp[i][j - k] + GAP_OPEN_PENALTY + k as i32 * GAP_EXTENSION_PENALTY).max().unwrap_or(std::i32::MIN),
+		            ].iter().copied().max().unwrap();
+		        } else {
+		            // Panic if unable to retrieve nucleotide sequences
+		            panic!("Could not get sequence for nuc1 or nuc2 needleman_wunsch_affine")
 		        }
-	        }
-	    }
+		    }
+		}
 	    let size = n.min(m) as f32;
 	    self.cigar_vec = Some(self.to_cigar_vec( seq1, seq2, humming_cut ));
 	    // this call might have swapped but the self.n and self.m have been updated!
@@ -201,25 +208,76 @@ impl NeedlemanWunschAffine {
 	    let mut rev_id = cigar.len().saturating_sub(1);
 
 	    while i > 0 || j > 0 {
+	    	let this_value = self.dp[i][j];
+	    	if let Some((max_index, max_value)) = vec![
+	    	self.dp[i.saturating_sub(1)][j.saturating_sub(1)], 
+	    	self.dp[i.saturating_sub(1)][j],
+	    	self.dp[i][j.saturating_sub(1)]
+	    	].iter().enumerate().max_by_key(|(_, &val)| val) {
+	    		cigar[rev_id] = match max_index{
+	    			0 => {
+	    				// a match or a mismatch self.dp[i.saturating_sub(1)][j.saturating_sub(1)]
+	    				i = i.saturating_sub(1);
+	    				j =j.saturating_sub(1);
+	    				if  *max_value == this_value - MATCH_SCORE {
+	    					CigarEnum::Match
+	    				}else {
+	    					CigarEnum::Mismatch
+	    				}
+	    			},
+	    			1=>{
+	    				// an instertion is most likely
+	    				i = i.saturating_sub( 1 );
+	    				CigarEnum::Insertion
+	    			},
+	    			2=> {
+	    				// a deletion is most likely
+	    				j = j.saturating_sub(1);
+	    				CigarEnum::Deletion
+	    			},
+	    			_ => unreachable!()
+	    		};
+	    		println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {}",cigar[rev_id]);
+	    		if rev_id == 0 {
+		        	break
+		        }
+		        rev_id = rev_id.saturating_sub( 1 );
+	    	}else {
+
+	    	}
+
+	    	/*
+
 	    	if let (Some(nuc1), Some(nuc2)) = (seq1.get_nucleotide_2bit(i.saturating_sub(1)), seq2.get_nucleotide_2bit(j.saturating_sub(1)) ){
 		        if i > 0 && j > 0 && self.dp[i][j] == self.dp[i.saturating_sub(1)][j.saturating_sub(1)] + (if nuc1 == nuc2 { MATCH_SCORE } else { MISMATCH_SCORE }) {
 		        	cigar[rev_id] = if nuc1 == nuc2 { CigarEnum::Match } else { CigarEnum::Mismatch } ;
 		            i = i.saturating_sub(1);
 		            j =j.saturating_sub(1);
-		        }else if i > 0 && (self.dp[i][j] == self.dp[i.saturating_sub(1)][j] + GAP_OPEN_PENALTY || self.dp[i][j] == self.dp[i.saturating_sub(1)][j] + GAP_EXTENSION_PENALTY) {
+		        // this is wrong -> }else if i > 0 && (self.dp[i][j] == self.dp[i.saturating_sub(1)][j] + GAP_OPEN_PENALTY || self.dp[i][j] == self.dp[i.saturating_sub(1)][j] + GAP_EXTENSION_PENALTY) {
+		        //} else if i > 0 && (self.dp[i][j] == self.dp[i.saturating_sub(1)][j] + GAP_OPEN_PENALTY || self.dp[i][j] == self.dp[i.saturating_sub(1)][j] + GAP_EXTENSION_PENALTY ) {
+		        } else if self.dp[i.saturating_sub(1)][j] > self.dp[i][j.saturating_sub(1)]	{
 		        	// CRAP - this is not good!
 		        	// this algorithm SUCKS with insertions
 		        	// better invert the whole issue here
-		        	return self.to_cigar_vec_inverted( seq1, seq2, humming_cut);
-		        	/*
 		        	// not sure how to handle this here!
 		        	cigar[rev_id] = CigarEnum::Insertion;
 		            i = i.saturating_sub( 1 );
-		            */
-		        } else {
+		            
+		        //}  else if i > 0 && (self.dp[i][j] == self.dp[i][j.saturating_sub(1)] + GAP_OPEN_PENALTY || self.dp[i][j.saturating_sub(1)] == self.dp[i.saturating_sub(1)][j] + GAP_EXTENSION_PENALTY ) {
+		        }else{
+		        	//eprintln!("I am fliping the alignement!");
+		        	//return self.to_cigar_vec_inverted( seq1, seq2, humming_cut);
 		        	cigar[rev_id] = CigarEnum::Deletion ;
 		            j = j.saturating_sub(1);
-		        }
+		        } 
+		        /*else {
+		        	let add_on = match nuc1 == nuc2{
+		        		true=> "match",
+		        		false=> "mismatch",
+		        	};
+		        	panic!("I do not see how I can have this value here: i:{}; j:{} with last {} and the three options: [i-1;j-1: {}, i-1;j: {}, i;j-1: {}]]. I have a sequence {add_on}.",
+       i, j, self.dp[i][j], self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i.saturating_sub(1)][j], self.dp[i][j.saturating_sub(1)]);
+		        }*/
 		        if rev_id == 0 {
 		        	break
 		        }
@@ -227,6 +285,7 @@ impl NeedlemanWunschAffine {
 		       } else {
 		       		panic!("Could not get sequence for nuc1 or nuc2 to_cigar_vec ( {i}, {j} )")
 		       }
+		       */
 	    }
 
 	    // The alignement is consitently bad at mapping bp around a deletion.
@@ -315,6 +374,23 @@ impl NeedlemanWunschAffine {
 		}
 		ret
 	}
+
+
+
+// Function to export DP matrix to a file
+pub fn export_dp_matrix(&self, file_path: &str) -> io::Result<()> {
+    let mut file = File::create(file_path)?;
+
+    for row in &self.dp {
+        let row_str: Vec<String> = row.iter().map(|&val| val.to_string()).collect();
+        let row_line = row_str.join("\t");
+        writeln!(file, "{}", row_line)?;
+    }
+    println!("I have exported the nwa matrix to {file_path}");
+    Ok(())
+}
+
+
 }
 
 

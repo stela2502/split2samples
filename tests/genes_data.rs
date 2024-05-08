@@ -336,7 +336,7 @@ mod tests {
 		let obj = GeneData::from_bytes( seq );
 		let obj2 = GeneData::from_bytes( seq2 );
 		let mut cigar = Cigar::new("");
-		let mut nwa = NeedlemanWunschAffine::new(40);
+		let mut nwa = NeedlemanWunschAffine::new();
 		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
 		cigar.convert_to_cigar( &nwa.cigar_vec() );
 		cigar.clean_up_cigar(&obj2, &obj);

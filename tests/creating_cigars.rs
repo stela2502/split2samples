@@ -16,7 +16,7 @@ mod tests {
 		let gd1 = GeneData::new( seq1, "read", "chrM", 0 );
 		let gd2 = GeneData::new( seq2, "database", "chrM", 0 );
 		let mut cigar = Cigar::new("");
-		let mut nwa = NeedlemanWunschAffine::new(91);
+		let mut nwa = NeedlemanWunschAffine::new();
 
 		let _nw = nwa.needleman_wunsch_affine( &gd1, &gd2, 0.4);
 		cigar.convert_to_cigar( &nwa.cigar_vec() );
@@ -32,7 +32,7 @@ mod tests {
 		let gd1 = GeneData::new( seq1, "read", "chrM", 0 );
 		let gd2 = GeneData::new( seq2, "database", "chrM", 0 );
 		let mut cigar = Cigar::new("");
-		let mut nwa = NeedlemanWunschAffine::new(91);
+		let mut nwa = NeedlemanWunschAffine::new();
 
 		let _nw = nwa.needleman_wunsch_affine( &gd1, &gd2, 0.4);
 		cigar.convert_to_cigar( &nwa.cigar_vec() );
@@ -48,7 +48,7 @@ mod tests {
 		let gd1 = GeneData::new( seq1, "read", "chrM", 0 );
 		let gd2 = GeneData::new( seq2, "database", "chrM", 0 );
 		let mut cigar = Cigar::new("");
-		let mut nwa = NeedlemanWunschAffine::new(91);
+		let mut nwa = NeedlemanWunschAffine::new();
 
 		let _nw = nwa.needleman_wunsch_affine( &gd1, &gd2, 0.4 );
 		cigar.convert_to_cigar( &nwa.cigar_vec() );

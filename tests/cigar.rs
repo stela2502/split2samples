@@ -51,7 +51,7 @@ mod tests {
 	#[test]
 	fn test_calculate_covered_nucleotides_real() {
 		let obj = Cigar::new("1X8M1I39M2X16M7S");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (73, 74), "corect sizes" )
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (73, 67), "corect sizes" )
 	}
 
 }

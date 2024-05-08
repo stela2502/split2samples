@@ -449,7 +449,7 @@ impl AnalysisGenomicMapper{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
 
-        let mut nwa = NeedlemanWunschAffine::new(120);
+        let mut nwa = NeedlemanWunschAffine::new();
 
         //let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
