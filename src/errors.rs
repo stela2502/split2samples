@@ -12,7 +12,7 @@ pub enum FilterError {
     Quality,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone, Copy, PartialEq)]
 pub enum MappingError {
     NoMatch,
     MultiMatch,
@@ -31,6 +31,3 @@ pub enum SeqError {
     End,
     LowComplexity,
 }
-
-
-

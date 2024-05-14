@@ -442,6 +442,7 @@ impl GenesMapper{
 			println!("I have collected these initial matches: {:?}", res_vec );
 		}
 	    let mut cigar= Cigar::new("");
+	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
 		if res_vec.is_empty() || res_vec[0].1.len() < 5 {
@@ -454,18 +455,13 @@ impl GenesMapper{
 	    	match Self::all_values_same( start ){
 	    		Ok(()) => {
 	    			if let Some((read, database)) = self.slice_objects( start[0], &self.genes[*gene_id], &read_data ){
+	    				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
 	    				if self.debug{
 	    					println!("using the match {entry:?} I'll compare these two sequences");
 	    					println!("read \n{read} to database\n{database}\n");
-	    					let ( alng1, alng2, cigar_vec) = nwa.needleman_wunsch_affine_backtrack(&read, &database, self.highest_humming_val);
-    						println!("the alignement:\n{}\n{}\n{}\n", 
-    							NeedlemanWunschAffine::cigar_to_string( &cigar_vec),
-    							String::from_utf8_lossy(&alng1), 
-    							String::from_utf8_lossy(&alng2) 
-    						);
+	    					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
 	    				}
 						
-	    				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
 	    				cigar.convert_to_cigar( &nwa.cigar_vec() );
 	    				cigar.clean_up_cigar(&read, &database);
 
@@ -473,7 +469,7 @@ impl GenesMapper{
 							if cigar.mapping_quality() > 10 {
 								helper.push( 
 									MapperResult::new( 
-											*gene_id + self.offset, start[0] as usize, 
+											*gene_id + self.offset, start[0].max(0) as usize, 
 										true, Some(cigar.clone()), 
 										cigar.mapping_quality(), *nw, (nw*read.len() as f32) as usize,
 										cigar.edit_distance(), self.genes[*gene_id].get_name(), self.genes[*gene_id].len()
@@ -505,13 +501,7 @@ impl GenesMapper{
 	    					if self.debug{
 	    						println!("using the match start {start} count {count} I'll compare these two sequences");
 	    						println!("read \n{read} to database\n{database}\n");
-	    						let ( alng1, alng2, cigar_vec) = nwa.needleman_wunsch_affine_backtrack(&read, &database, self.highest_humming_val);
-	    						println!("the alignement:\n{}\n{}\n{}\n", 
-	    							NeedlemanWunschAffine::cigar_to_string( &cigar_vec),
-	    							String::from_utf8_lossy(&alng1), 
-	    							String::from_utf8_lossy(&alng2) 
-	    						);
-
+	    						println!("the alignement:\n{}", nwa.to_string( &read, &database, self.highest_humming_val ));
 	    					}
 	    					cigar.convert_to_cigar( &nwa.cigar_vec() );
 	    					cigar.clean_up_cigar(&read, &database);
@@ -521,7 +511,7 @@ impl GenesMapper{
 									helper.push( 
 										MapperResult::new( 
 												*gene_id + self.offset, 
-												start as usize, 
+												start.max(0) as usize, 
 											true, 
 											Some(cigar.clone()), 
 											cigar.mapping_quality(), 

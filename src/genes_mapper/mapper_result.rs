@@ -1,6 +1,7 @@
 // mapper_result.rs
 
 use crate::genes_mapper::Cigar;
+use crate::genes_mapper::CigarEndFix;
 
 use core::fmt;
 
@@ -16,7 +17,8 @@ pub struct MapperResult{
 	edit_dist: f32,
 	gene_name:String,
     /// the length of the database entry - is necessary to estimate if a short match is good enough (e.g. sampleid or AB tag)
-    db_length: usize, 
+    db_length: usize,
+
 }
 
 // Implementing Display trait for MapperResult
@@ -47,7 +49,8 @@ impl Default for MapperResult {
 
 impl MapperResult{
 	pub fn new( gene_id:usize,  start: usize, save:bool, cigar:Option<Cigar>, mapq:u8, nw:f32,score:usize, edit_dist:f32, name:&str, db_length:usize ) -> Self{
-		Self{
+
+        Self{
 			gene_id,
 			start,
 			save,

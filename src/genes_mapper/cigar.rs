@@ -51,12 +51,15 @@ impl fmt::Display for CigarEnum {
 /// NA - no modification; Start - a longer caotic area at the start has been fixed -> end match;
 /// End - a longer fix at the end of the Cigar has been fixed - a start match;
 /// Both - and internal match?! Let's see if that even happens.
+/// StartInsert - this cigar indicated that teh match was longer on the starting end - Likely the db too short?
+///               Anyhow - this need to be fixed in the analysis scripts and therefore a CigarEndFix is needed.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CigarEndFix{
 	Na,
 	Start,
 	End,
 	Both,
+	StartInsert,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -64,6 +67,7 @@ pub struct Cigar{
 	// the cigar string
 	pub cigar:String,
 	pub fixed:Option<CigarEndFix>,
+	debug:bool,
 }
 
 // Implementing Display trait for SecondSeq
@@ -78,6 +82,7 @@ impl Default for Cigar {
         Cigar {
             cigar: "".to_string(),
             fixed: None,
+            debug: false,
         }
     }
 }
@@ -89,9 +94,14 @@ impl Cigar{
 		Self{
 			cigar: cigar.to_owned(),
 			fixed:None,
+			debug:false,
 		}
 	}
 
+	pub fn set_debug(&mut self, state:bool) {
+		self.debug = state;
+	}
+	
 	pub fn clear(&mut self) {
 		self.cigar ="".to_string();
 		self.fixed = None;
@@ -115,6 +125,8 @@ impl Cigar{
    			return ();
     	}
 
+		/*
+		// this is now all handled by the needleman_wunsch_affine class
 		let missmatch_followd_by_deletion = r"(\d+)X(\d+)([ID])(\d+)M";
 		let re_msbd = regex::Regex::new(missmatch_followd_by_deletion).unwrap();
 
@@ -174,6 +186,7 @@ impl Cigar{
 
             }
         }
+        */
 
         //println!("Before the soft clip I have this result {self} for these sequences:{seq1}\n {seq2}\n");
         self.soft_clip_start_end();
@@ -243,6 +256,22 @@ impl Cigar{
     	total
     }
 
+    /// it is possible that the database entry was just not long enough to match to this read completely
+    /// better to just move on the database here.
+    pub fn drop_starting_insertions(&mut self) -> usize{
+		let inserts = Regex::new(r"^([1-9][0-9]*)I").unwrap();
+    	if let Some(mat) = inserts.captures(&self.cigar) {
+	        if let Some(num_str) = mat.get(1) {
+	            if let Ok(num) = num_str.as_str().parse::<usize>() {
+	                // Drop the matched part from self.cigar
+	                self.cigar = inserts.replace(&self.cigar, "").into_owned();
+	                return num;
+	            }
+	        }
+	    }
+	    0 // Return 0 if no insertions found or parsing fails	
+	}
+
     pub fn soft_clip_start_end( &mut self) {
     	let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){5,})";
     	//let start = r"^((?:[123456789][IXMD]){5,})";
@@ -261,12 +290,18 @@ impl Cigar{
 	        		let prev_char:&char = &self.cigar[(clippable.start()-1)..clippable.start()].chars().next().unwrap();
 				    if prev_char.is_digit(10) {
 				        // The character is a digit - overmatched
-				        //eprintln!("Detected an over match!");
 				        let clipped_part = &self.cigar[(clippable.start()+2)..clippable.end()];
-				        //eprintln!("Detected an over match! - clipped part = {clipped_part}");
-				        let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
+				        
+				        let (mine, other) = self.calculate_covered_nucleotides(clipped_part);
+				        if self.debug{
+				        	println!("Detected an over match!");
+				        	println!("	clipped part = {clipped_part} with a mine size of {mine} and an other size of {other}");
+				        }
 				        self.cigar.replace_range((clippable.start()+2)..clippable.end(), &format!("{}S", mine));
 				        self.fixed = Some(CigarEndFix::End);
+				        if self.debug{
+				        	println!("updated cigar!\n{self}");
+				        }
 				    } else {
 				        // The character is not a digit - great
 				        let clipped_part = &self.cigar[clippable.start()..clippable.end()];
@@ -342,10 +377,10 @@ impl Cigar{
 	                	other += count; 
 	                },
 	                'I' => {
-	                	other += count; // Insertion
+	                	mine += count; // Insertion
 	                },
 	                'D' => {
-	                	mine += count;// Deletion or intron
+	                	other += count;// Deletion or intron
 	                },
 	                'S' => {
 	                	mine += count;// Deletion or intron
@@ -364,10 +399,9 @@ impl Cigar{
 
 		self.cigar.clear();
 
-		let mut loc_path = path.to_vec();
-    	Self::fix_1d1i_1i1d(&mut loc_path);
+		//let mut loc_path = path.to_vec();
 
-	    for &direction in loc_path.iter() {
+	    for &direction in path.iter() {
 	        if Some(direction) == last_direction {
 	            count += 1;
 	        } else {
@@ -384,18 +418,67 @@ impl Cigar{
 	    }    
 	}
 
-	fn fix_1d1i_1i1d(cigar: &mut Vec<CigarEnum>) {
-	    let mut i = 1;
-	    while i < cigar.len() - 1 {
-	        if (cigar[i - 1] == CigarEnum::Deletion && cigar[i] == CigarEnum::Insertion && cigar[i + 1] != CigarEnum::Deletion)
-	            || (cigar[i - 1] == CigarEnum::Insertion && cigar[i] == CigarEnum::Deletion && cigar[i + 1] != CigarEnum::Insertion)
-	        {
-	            cigar.remove(i);
-	            cigar[i - 1] = CigarEnum::Mismatch;
+	pub fn fix_1d1i_1i1d(cigar: &mut Vec<CigarEnum>, start_pos: Option<usize>) {
+	    let mut start_index = start_pos.clone().unwrap_or(cigar.len() - 1);
+
+	    if start_index >= 3 {
+	        for i in 0..=start_index - 3 {
+	        	if i > cigar.len() -4 {
+	        		break
+	        	}
+	            if ((cigar[i] == CigarEnum::Match || cigar[i] == CigarEnum::Mismatch) &&
+	               (cigar[i + 1] == CigarEnum::Insertion || cigar[i + 1] == CigarEnum::Deletion) &&
+	               (cigar[i + 2] == CigarEnum::Match || cigar[i + 2] == CigarEnum::Mismatch) &&
+	               (cigar[i + 3] == CigarEnum::Deletion || cigar[i + 3] == CigarEnum::Insertion)) &&
+	               cigar[i + 1] != cigar[i + 3] {
+	                   
+	                   //println!("Found a pattern - {} to {} {}{}{}{}", i + 3, i, cigar[i], cigar[i + 1], cigar[i + 2], cigar[i + 3]);
+	                   
+	                   // Resolve the pattern
+	                   //cigar[i] = CigarEnum::Mismatch;
+	                   cigar[i+2] = CigarEnum::Mismatch;
+					   cigar[i + 1] = CigarEnum::Mismatch; // each DI ID element represents one X
+	                   //println!("Removing {}: {}", i + 3, cigar[i + 3]);
+	                   cigar.remove(i + 3);
+	                   
+	                   //println!("pattern changed to {}{}{}",  cigar[i], cigar[i + 1], cigar[i + 2] );
+	                   
+	                   // Adjust start_index
+	                   start_index += 1;
+	            }
 	        }
-	        i += 1;
+	    }
+
+	    // this sometimes can create 1D1J or 1J1D entries - which in reality are a simple X.
+		let mut start_index = start_pos.unwrap_or(cigar.len() - 1);
+		if start_index >= 2 {
+	        for i in 0..=start_index - 2 {
+	        	if i > cigar.len() -2 {
+	        		break
+	        	}
+	        	if 
+	               ((cigar[i] == CigarEnum::Insertion || cigar[i] == CigarEnum::Deletion) &&
+	               (cigar[i + 1] == CigarEnum::Deletion || cigar[i + 1] == CigarEnum::Insertion)) &&
+	               cigar[i] != cigar[i + 1] {
+	                   
+	                   //println!("Found a pattern - {} to {} {}{}", i , i+1, cigar[i], cigar[i + 1]);
+	                   
+	                   // Resolve the pattern
+	                   cigar[i] = CigarEnum::Mismatch;
+
+	                   //println!("Removing {}: {}", i + 1, cigar[i + 1]);
+	                   cigar.remove(i + 1);
+	                   
+	                   //println!("pattern changed to {}",  cigar[i] );
+	                   
+	                   // Adjust start_index
+	                   start_index += 1;
+	            }
+	        }
 	    }
 	}
+
+
 
 	pub fn calculate_cigar(&mut self, matrix : &Vec<Vec<Cell>>, last_match:bool )  {
 			// Trace back the alignment path

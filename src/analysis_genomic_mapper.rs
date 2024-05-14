@@ -5,7 +5,8 @@ use crate::singlecelldata::SingleCellData;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::genes_mapper::GenesMapper;
-use crate::genes_mapper::{ MapperResult, SeqRec, NeedlemanWunschAffine};
+use crate::genes_mapper::{ MapperResult, SeqRec, NeedlemanWunschAffine, CigarEndFix};
+
 //use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
 use std::env;
@@ -318,14 +319,27 @@ impl AnalysisGenomicMapper{
 		 */
 		record += &format!("{}\t", gene_id[0].get_name() );
 		// the name of the database sequence
-    	record += &format!("{}\t", gene_id[0].start());
+    	record += &format!("{}\t", gene_id[0].start()+1);
     	// the start position of the read
     	record += &format!("{}\t", gene_id[0].mapq() );
     	// the map quality
+
+    	let cig = gene_id[0].get_cigar();
+		let read_mod = match cig.fixed {
+			Some(CigarEndFix::StartInsert) => {
+				//shit - the read needs to be adjusted!
+				let (cig_mapping_length, _) = cig.calculate_covered_nucleotides( &cig.cigar );
+				let bp_to_clip = read2.len() - cig_mapping_length;
+				read2.slice( bp_to_clip, cig_mapping_length ).unwrap()
+			},
+			_ => {
+				read2.clone()
+			}
+		};
     	let cigar_string = match gene_id[0].cigar() {
 		    Some(cigar) => cigar.to_string(),
 		    None => {
-		    	format!("{}S", read2.seq().len())
+		    	format!("{}S", read_mod.seq().len())
 		    }
 		};
 		record += &cigar_string ;
@@ -337,10 +351,12 @@ impl AnalysisGenomicMapper{
 		//1-based position of the mate/next read
 		record += "0\t";
 		//Template length
-		record += &String::from_utf8_lossy( &read2.seq() ) ;
+
+		
+		record += &String::from_utf8_lossy( &read_mod.seq() ) ;
     	record +="\t";
 		//Read sequence
-		record += &String::from_utf8_lossy( &read2.qual() ) ;
+		record += &String::from_utf8_lossy( &read_mod.qual() ) ;
     	record +="\t";
 		//Phred quality scores
 

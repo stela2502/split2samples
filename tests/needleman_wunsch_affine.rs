@@ -9,14 +9,14 @@ mod tests {
 	use std::fs;
 	use std::path::Path;
 
-	static opath: &str = "testData/output_nwa/";
+	static OPATH: &str = "testData/output_nwa/";
 
 	#[test]
 	fn create_path(){
 
-		if !Path::new(opath).exists() {
-		    match fs::create_dir_all(opath) {
-		        Ok(()) => println!("Created directory: {}", opath),
+		if !Path::new(OPATH).exists() {
+		    match fs::create_dir_all(OPATH) {
+		        Ok(()) => println!("Created directory: {}", OPATH),
 		        Err(err) => panic!("Failed to create directory: {}", err),
 		    }
 		}
@@ -39,7 +39,7 @@ mod tests {
 
 		let mut cigar= Cigar::new( "" );
 		cigar.convert_to_cigar( &test.cigar_vec() );
-		let _ =test.export_dp_matrix( &(opath.to_string()+"test_needleman_wunsch_affine.tsv"));
+		let _ =test.export_dp_matrix( &(OPATH.to_string()+"test_needleman_wunsch_affine.tsv"));
 
 		assert_eq!( format!("{}",cigar), "50M - None", "get a perfect 50 bp matching result" )
 
@@ -64,7 +64,7 @@ mod tests {
 
 		let mut cigar= Cigar::new( "" );
 		cigar.convert_to_cigar( &test.cigar_vec() );
-		let _ =test.export_dp_matrix(&(opath.to_string()+"test_needleman_wunsch_affine_gap.tsv"));
+		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_gap.tsv"));
 
 		assert_eq!( format!("{}",cigar), "18M4D28M - None", "get a perfect 50 bp matching result" )
 
@@ -90,7 +90,7 @@ mod tests {
 
 		let mut cigar= Cigar::new( "" );
 		cigar.convert_to_cigar( &test.cigar_vec() );
-		let _ =test.export_dp_matrix(&(opath.to_string()+"test_needleman_wunsch_affine_insert.tsv"));
+		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_insert.tsv"));
 
 		assert_eq!( format!("{}",cigar), "18M4I28M - None", "get a perfect 50 bp matching result" )
 
@@ -111,12 +111,12 @@ mod tests {
 		let database = GeneData::new( b"AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC",
 			"database", "database1", 0);
 
-		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
+		let _nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		//assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 {nw}");
 
 		let mut cigar= Cigar::new( "" );
 		cigar.convert_to_cigar( &test.cigar_vec() );
-		let _ =test.export_dp_matrix(&(opath.to_string()+"test_needleman_wunsch_affine_large_gap.tsv"));
+		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_gap.tsv"));
 
 		assert_eq!( format!("{}",cigar), "17M84D19M - None", "get a perfect 50 bp matching result" )
 
@@ -138,13 +138,13 @@ mod tests {
 		let database = GeneData::new(     b"AAAACGCTTAGCCTAGCATTTCGTGCCAGCCACCGC", 
 			"database","database1", 0  );
 
-		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
+		let _nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		//assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 0");
 
 		let mut cigar= Cigar::new( "" );
 		cigar.convert_to_cigar( &test.cigar_vec() );
 
-		let _ =test.export_dp_matrix(&(opath.to_string()+"test_needleman_wunsch_affine_large_insert.tsv"));
+		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_insert.tsv"));
 
 		assert_eq!( format!("{}",cigar), "17M84I19M - None", "get a perfect 50 bp matching result" )
 
@@ -153,10 +153,19 @@ mod tests {
 
 	#[test]
 	fn test_failing_comparison(){
-
+		//11       81                                        2                1  311
+		//MX       MI                                    39M X             16MX  MXM
 		//mXmmmmmmmmImmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmXXmmmmmmmmmmmmmmmmXmmmXm
 		//CAGGCTATGA-TCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA
 		//CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA
+
+		//mXmmmmmmmmImmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmXIMDMmmmmmmmmmmmmmmmmXmmmXm
+		//CAGGCTATGA-TCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAG-CTTCGTGAATGAATGCATCAA
+		//CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGA-GGCTTCGTGAATGAATGAATCTA
+
+		//mXmmmmmmmmImmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmXIDMmmmmmmmmmmmmmmmmXmmmXm
+		//CAGGCTATGA-TCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCA-GCTTCGTGAATGAATGCATCAA
+		//CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGA-GGCTTCGTGAATGAATGAATCTA
 
 		let database= GeneData::new(
 			b"CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA",
@@ -172,7 +181,7 @@ mod tests {
 		let mut cigar= Cigar::new( "" );
 		cigar.convert_to_cigar( &test.cigar_vec() );
 
-		let _ =test.export_dp_matrix(&(opath.to_string()+"test_failing_insertion.tsv"));
+		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_insertion.tsv"));
 
 
 		assert_eq!( format!("{}",cigar), "1M1X8M1D39M2X16M1X3M1X1M - None", "A really bitchy mapping" );
@@ -199,7 +208,7 @@ mod tests {
 		let mut cigar= Cigar::new( "" );
 		cigar.convert_to_cigar( &test.cigar_vec() );
 
-		let _ =test.export_dp_matrix(&(opath.to_string()+"test_failing_deletion.tsv"));
+		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_deletion.tsv"));
 
 		assert_eq!( format!("{}",cigar), "1M1X8M1I39M2X16M1X3M1X1M - None", "A really bitchy mapping" );
 

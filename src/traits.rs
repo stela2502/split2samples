@@ -54,7 +54,7 @@ impl fmt::Display for Direction {
 
 
 
-pub trait BinaryMatcher : Sync{
+pub trait BinaryMatcher : Sync + std::fmt::Display {
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T;
 	fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8>;
 	fn as_dna_string(&self) -> String ;

@@ -1,3 +1,7 @@
+# 2.2.0
+
+The created SAM files now are accepted by samtools.
+
 # 2.1.2
 
 quantify_gene_mapper now creates sam out files for the matches you wanted reported.

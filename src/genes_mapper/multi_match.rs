@@ -107,6 +107,9 @@ impl MultiMatch{
 		    				)
 		    			);
 					},
+					Some(CigarEndFix::StartInsert) => {
+						// this is handled during the creation of the sam strings
+					},
 					None=> panic!("In order to identify the best match I need the Cigar information! {}", cigar)
 				}
 			} // for loop ends here
