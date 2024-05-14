@@ -5,6 +5,9 @@
 use crate::traits::CellIndex;
 use crate::int_to_str::IntToStr;
 use crate::cellids10x::CellId10x;
+use crate::genes_mapper::SeqRec;
+
+use std::collections::HashSet;
 
 use std::path::PathBuf;
 use std::fs::File;
@@ -22,77 +25,78 @@ use std::process;
 pub struct CellIds10x{
     pub ver: String,
     possible: Vec<CellId10x>, // all possible cell tags
+    search: HashSet<u32>,
     //detected: HashSet<CellId10x>, // those that we already saw in this analysis
     size: usize, // how long are the sequences normally?
 }
 
 impl CellIndex for CellIds10x{
 
-    fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64 ), CellIdError >{
+    fn to_cellid (&self, r1: &SeqRec )-> Result<( u32, u64, SeqRec, SeqRec ), CellIdError >{
 
-        let mut tool = IntToStr::new( r1[..self.size].to_vec(), 9);
+        let cell = match  r1.slice(0, self.size ){
+            Some(c) => c,
+            None => return Err(CellIdError::TooShort),
+        };
+        let umi = match r1.slice( self.size, r1.seq().len() - self.size ){
+            Some(c) => c,
+            None => return Err(CellIdError::TooShort),
+        };
 
-        let cell:u32 = tool.into_u32();
-        tool.from_vec_u8 ( r1[self.size..].to_vec());
-        let umi:u64  = tool.into_u64();
-
-        if let Some(checked_cell) = self.process_sequence( cell ){
-            return Ok( (checked_cell, umi) )
+        if let Some(checked_cell) = self.process_sequence( cell.to_u32() ){
+            return Ok( (checked_cell, umi.to_u64(), cell, umi ) )
         }
-        //println!("We found a cellid {} and an umi {}", cell, umi);
+
         Err( CellIdError::NoMatch )
-
     }
-
-
 }
 
 
 
 
-impl  CellIds10x{
+impl CellIds10x{
     pub fn new(ver:&str )-> Self {
         //println!("Yes you initialized a cellIds10x object!");
 
         /*
-        3M-febrary-2018.txt.gz  Single Cell 3' v3, Single Cell 3' v3.1, Single Cell 3' HT v3.1
-        737k-august-2016.txt    Single Cell 3' v2, Single Cell 5' v1 and v2, Single Cell 5' HT v2
-        737k-april-2014_rc.txt  Single Cell 3' v1 
-        737k-arc-v1.txt.gz  Single Cell Multiome (ATAC+GEX) v1
+        3M-february-2018.txt.gz  Single Cell 3' v3, Single Cell 3' v3.1, Single Cell 3' HT v3.1
+        737K-august-2016.txt    Single Cell 3' v2, Single Cell 5' v1 and v2, Single Cell 5' HT v2
+        737K-april-2014_rc.txt  Single Cell 3' v1 
+        737K-arc-v1.txt.gz  Single Cell Multiome (ATAC+GEX) v1
         737-cratac-v1.txt.gz    Single Cell ATAC 
         (located within cellranger-atac installation directory: cellranger-atac-2.1.0/lib/python/atac/barcodes/)
         9K-LT-march-2021.txt.gz     Single Cell 3' LT
-        737k-fixed-rna-profiling.txt.gz     Fixed RNA Profiling (Present starting from Cell Ranger v7.0)
+        737K-fixed-rna-profiling.txt.gz     Fixed RNA Profiling (Present starting from Cell Ranger v7.0)
         */
         let filename = match ver{
-            "Single Cell 3' v3" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' v3.1" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' HT v3.1" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' v2" => "737k-august-2016.txt.gz",
-            "Single Cell 5' v1 and v2" => "737k-august-2016.txt.gz",
-            "Single Cell 5' v1" => "737k-august-2016.txt.gz",
-            "Single Cell 5' v2" => "737k-august-2016.txt.gz",
-            "Single Cell 5' HT v2" => "737k-august-2016.txt.gz",
-            "Single Cell 3' v1" => "737k-april-2014_rc.txt.gz",
-            "Single Cell Multiome (ATAC+GEX) v1" => "737k-arc-v1.txt.gz",
-            "Single Cell ATAC" => "737k-arc-v1.txt.gz",
+            "Single Cell 3' v3" => "3M-february-2018.txt.gz",
+            "Single Cell 3' v3.1" => "3M-february-2018.txt.gz",
+            "Single Cell 3' HT v3.1" => "3M-february-2018.txt.gz",
+            "Single Cell 3' v2" => "737K-august-2016.txt.gz",
+            "Single Cell 5' v1 and v2" => "737K-august-2016.txt.gz",
+            "Single Cell 5' v1" => "737K-august-2016.txt.gz",
+            "Single Cell 5' v2" => "737K-august-2016.txt.gz",
+            "Single Cell 5' HT v2" => "737K-august-2016.txt.gz",
+            "Single Cell 3' v1" => "737K-april-2014_rc.txt.gz",
+            "Single Cell Multiome (ATAC+GEX) v1" => "737K-arc-v1.txt.gz",
+            "Single Cell ATAC" => "737K-arc-v1.txt.gz",
             //"9K-LT-march-2021.txt.gz" => "Single Cell 3' LT",
-            //"Fixed RNA Profiling" => "737k-fixed-rna-profiling.txt.gz",
+            //"Fixed RNA Profiling" => "737K-fixed-rna-profiling.txt.gz",
             _ => {
 
                 let mapping = r#"
                 version         =>  file to load
-            "Single Cell 3' v3" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' v3.1" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' HT v3.1" => "3M-febrary-2018.txt.gz",
-            "Single Cell 3' v2" => "737k-august-2016.txt.gz",
-            "Single Cell 5' v1 and v2" => "737k-august-2016.txt.gz",
-            "Single Cell 5' v1" => "737k-august-2016.txt.gz",
-            "Single Cell 5' v2" => "737k-august-2016.txt.gz",
-            "Single Cell 5' HT v2" => "737k-august-2016.txt.gz",
-            "Single Cell 3' v1" => "737k-april-2014_rc.txt.gz",
-            "Single Cell Multiome (ATAC+GEX) v1" => "737k-arc-v1.txt.gz",
-            "Single Cell ATAC" => "737k-arc-v1.txt.gz",
+            "Single Cell 3' v3" => "3M-february-2018.txt.gz",
+            "Single Cell 3' v3.1" => "3M-february-2018.txt.gz",
+            "Single Cell 3' HT v3.1" => "3M-february-2018.txt.gz",
+            "Single Cell 3' v2" => "737K-august-2016.txt.gz",
+            "Single Cell 5' v1 and v2" => "737K-august-2016.txt.gz",
+            "Single Cell 5' v1" => "737K-august-2016.txt.gz",
+            "Single Cell 5' v2" => "737K-august-2016.txt.gz",
+            "Single Cell 5' HT v2" => "737K-august-2016.txt.gz",
+            "Single Cell 3' v1" => "737K-april-2014_rc.txt.gz",
+            "Single Cell Multiome (ATAC+GEX) v1" => "737K-arc-v1.txt.gz",
+            "Single Cell ATAC" => "737K-arc-v1.txt.gz",
 "#;           
                 eprintln!("CellId10x does not supprt the 10x version {ver}!");
                 eprintln!("All/Only versions supported by CellRanger 6.0 are also available here:\n{mapping}");
@@ -108,8 +112,8 @@ impl  CellIds10x{
             filepath.push(filename);
         } else {
             // Handle case where RustodyFiles environment variable is not set
-            eprintln!("RustodyFiles environment variable not set!");
-            process::exit(0);   
+            panic!("RustodyFiles environment variable not set!");
+            //process::exit(0);   
         }
 
         let mut possible: Vec<CellId10x> = Vec::new();
@@ -128,14 +132,16 @@ impl  CellIds10x{
             }
         } else {
             // Handle case where file does not exist
-            eprintln!("The expected CellRanger CellIDs file {} does not exist!", filepath.display());
-            process::exit(0);   
+            panic!("The expected CellRanger CellIDs file {} does not exist!", filepath.display());
+            //process::exit(1);   
         }
+
+        let search: HashSet<u32> = possible.clone().into_iter().map(|c| c.0).collect();
 
         Self {
             ver: ver.to_string(),
             possible,
-            //detected: HashSet::new(),
+            search,
             size,
         }
     }
@@ -147,6 +153,11 @@ impl  CellIds10x{
         }*/
 
         // Check if the sequence matches any possible cell tag
+
+        if self.search.contains( &sequence ){
+            //println!("Fast find!");
+            return Some( sequence )
+        }
         self.possible.iter().find(|&&cell| cell.0 == sequence).map(|cell_id| cell_id.0)
     }
 

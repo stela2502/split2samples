@@ -1,8 +1,10 @@
 use crate::traits::{BinaryMatcher, Cell, Direction};
-
+use crate::genes_mapper::Cigar;
 use core::cmp::max;
 
 use std::hash::{Hash, Hasher};
+
+use core::fmt;
 
 /// This is in fact only a u32, but I'll attach all ma matching function to that
 
@@ -29,6 +31,13 @@ impl Hash for CellId10x {
     }
 }
 
+// Implementing Display trait for CellId10x
+impl fmt::Display for CellId10x {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}",self.as_dna_string() )
+    }
+}
+
 
 impl CellId10x {
 
@@ -42,14 +51,28 @@ impl CellId10x {
          Some(CellId10x(u32::from_le_bytes(bytes)))
     }
 
-    fn max3<T: Ord>(a: T, b: T, c: T) -> T {
-        max(a, max(b, c))
-    }
+    
 }
 
 impl BinaryMatcher for CellId10x {
 
-	fn to_string(&self) -> String {
+    fn len( &self ) -> usize{
+        16
+    }
+
+    fn max3<T: Ord>(a: T, b: T, c: T) -> T {
+        max(a, max(b, c))
+    }
+
+    fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
+        if pos > 16 {
+            return None; // Position exceeds the length of the encoded sequence
+        }
+        //println!("Byte idx {byte_idx}, bit_offset {bit_offset}");
+        Some(((self.0 >> ( pos * 2)) & 0b11) as u8)
+    }
+
+	fn as_dna_string(&self) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
         for i in 0..16 {
@@ -127,10 +150,11 @@ impl BinaryMatcher for CellId10x {
         ret as f32 / 2.0 / 16.0
     }
 
+    
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
     /// for sequences shorter than 15 bp this fails and returns 100.0
-    fn needleman_wunsch(&self, other: &Self, _humming_cut:f32 ) -> f32 {
+    fn needleman_wunsch(&self, other: &Self, _humming_cut:f32, cigar: Option<&mut Cigar> ) -> f32 {
 
         let rows: usize = 16;
         let cols: usize = 16;
@@ -149,94 +173,40 @@ impl BinaryMatcher for CellId10x {
         }
 
         // Fill in the matrix
-        let mut a: u32;
-        let mut b: u32;
 
         for i in 1..rows {
             for j in 1..cols {
-                a = (self.0 >> ((i-1) * 2)) & 0b11;
-                b = (other.0 >> ((j-1) * 2)) & 0b11;
-                let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
+                if let ( Some(a), Some(b) ) = ( self.get_nucleotide_2bit(i-1), other.get_nucleotide_2bit(j-1) ) {
 
-                let diagonal_score = matrix[i - 1][j - 1].score + match_score;
-                let up_score = matrix[i - 1][j].score + GAP_PENALTY;
-                let left_score = matrix[i][j - 1].score + GAP_PENALTY;
+                    let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
 
-                let max_score = Self::max3(diagonal_score, up_score, left_score);
+                    let diagonal_score = matrix[i - 1][j - 1].score + match_score;
+                    let up_score = matrix[i - 1][j].score + GAP_PENALTY;
+                    let left_score = matrix[i][j - 1].score + GAP_PENALTY;
 
-                matrix[i][j].score = max_score;
+                    let max_score = Self::max3(diagonal_score, up_score, left_score);
 
-                matrix[i][j].direction = match max_score {
-                    _ if max_score == diagonal_score => Direction::Diagonal,
-                    _ if max_score == up_score => Direction::Up,
-                    _ if max_score == left_score => Direction::Left,
-                    _ => unreachable!(),
-                };
+                    matrix[i][j].score = max_score;
+
+                    matrix[i][j].direction = match max_score {
+                        _ if max_score == diagonal_score => Direction::Diagonal,
+                        _ if max_score == up_score => Direction::Up,
+                        _ if max_score == left_score => Direction::Left,
+                        _ => unreachable!(),
+                    };
+                }else {
+                    panic!("positions not reachable: {i}/{j}");
+                }
             }
         }
 
-        // Uncomment the following lines to print the alignment matrix
-        /*for i in 0..rows {
-            for j in 0..cols {
-                print!("{:4} ", matrix[i][j].score);
-            }
-            println!();
-        }*/
-
-        //println!("Can that be cut short: {self} vs {other} - abs_diff {} NW {}", self.di_nuc_abs_diff(other),  (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
+        // Trace back the alignment path
+        if let Some(cig) = cigar {
+            cig.calculate_cigar( &matrix ,self.get_nucleotide_2bit(rows-1) == other.get_nucleotide_2bit(cols-1));
+            cig.clean_up_cigar( self, other);
+        }
 
         (16.0 - (matrix[rows - 1][cols - 1].score).abs() as f32) / 16.0
     }
-
-    /// calculate the base flips between two u32 sequences
-    /// stops after having detected 4 different bases.
-    fn hamming_distance(self, other: &Self) -> u32 {
-        
-        //let mask:u32;
-        let mut a: u32;
-        let mut b: u32;
-        let mut ret: u32 = 0;
-        for i in 0..16{
-            a = (self.0 >> (i * 2)) & 0b11;
-            b = (other.0 >> (i * 2)) & 0b11;
-            if a != b {
-                ret +=1;
-            }
-            //ret += HAMMING_LOOKUP[(a ^ b) as usize];
-            if ret == 4{
-                 break;
-            }
-        }
-        //println!("hamming dist was {ret}");
-        ret
-    }
-
-    fn table(&self) -> std::collections::HashMap<char, u32> {
-        let mut a_cnt = 0;
-        let mut c_cnt = 0;
-        let mut g_cnt = 0;
-        let mut t_cnt = 0;
-        let sequence = self.0;
-
-        for i in 0..16 {
-            let pair = (sequence >> (i * 2)) & 0b11;
-            match pair {
-                0b00 => a_cnt += 1,
-                0b01 => c_cnt += 1,
-                0b10 => g_cnt += 1,
-                0b11 => t_cnt += 1,
-                _ => {} // Handle invalid pairs if needed
-            }
-        }
-
-        let mut counts = std::collections::HashMap::new();
-        counts.insert('A', a_cnt);
-        counts.insert('C', c_cnt);
-        counts.insert('G', g_cnt);
-        counts.insert('T', t_cnt);
-
-        counts
-    }
-
-
+    
 }

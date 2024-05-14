@@ -11,6 +11,7 @@ use crate::traits::CellIndex;
 use crate::fast_mapper::mapper_entries::second_seq::SecondSeq;
 use crate::traits::BinaryMatcher;
 use crate::errors::CellIdError;
+use crate::genes_mapper::SeqRec;
 
 //use std::thread;
 
@@ -47,7 +48,7 @@ impl CellIndex for CellIds{
     /// to_cellid checks up to 5 bp of shift in the read stucure.
     /// It seams as if the UMI has to also been shifted as it is read from the same read as the cell id!
     /// hence we need to report the shift back to the caller (id:u32, umi:u64)
-    fn to_cellid (&self, r1: &[u8]  )-> Result<( u32, u64), CellIdError>{
+    fn to_cellid (&self, r1: &SeqRec )-> Result<( u32, u64, SeqRec, SeqRec), CellIdError>{
         
         // This has to be a static 384 to reproduce what BD has...
         // I would use that for v2.384 only...
@@ -59,14 +60,32 @@ impl CellIndex for CellIds{
         //println!("to_cellid the c1 seq: {:?}", std::str::from_utf8( &r1[c1[0]..c1[1]] ) );
         //println!("to_cellid the c2 seq: {:?}", std::str::from_utf8( &r1[c2[0]..c2[1]] ) );
         //println!("to_cellid the c3 seq: {:?}", std::str::from_utf8( &r1[c3[0]..c3[1]] ) );
+        let mut cell_id_seq = SeqRec::default();
 
-        for km in [ &r1[self.c1.0..self.c1.1], &r1[self.c2.0..self.c2.1], &r1[self.c3.0..self.c3.1 ] ]{
-            for nuc in km{  
-                if *nuc ==b'N'{
-                    //let tmp = std::str::from_utf8(km)?;
-                    return Err( CellIdError::Ns) ;
-                    //Err::<i32, NnuclError<'_>>( NnuclError::new( &tmp ));
+        for opt in [ &r1.slice(self.c1.0, self.c1.1 -self.c1.0), &r1.slice(self.c2.0, self.c2.1 -self.c2.0), &r1.slice(self.c3.0 ,self.c3.1 -self.c3.0 ) ]{
+            if let Some(km) = opt{
+                for nuc in km.seq(){  
+                    if *nuc ==b'N'{
+                        //let tmp = std::str::from_utf8(km)?;
+                        return Err( CellIdError::Ns) ;
+                        //Err::<i32, NnuclError<'_>>( NnuclError::new( &tmp ));
+                    }
                 }
+                cell_id_seq += km.clone();
+            }else {
+                let rep1 = match &r1.slice(self.c1.0, self.c1.1 -self.c1.0){
+                    Some(re) => re.as_dna_string(),
+                    None => "NA".to_string(),
+                };
+                let rep2 = match &r1.slice(self.c2.0, self.c2.1 -self.c2.0){
+                    Some(re) => re.as_dna_string(),
+                    None => "NA".to_string(),
+                };
+                let rep3 = match &r1.slice(self.c3.0, self.c3.1 -self.c3.0){
+                    Some(re) => re.as_dna_string(),
+                    None => "NA".to_string(),
+                };
+                panic!("I could not create the BD cell id as the sequence was too short?!\npart1: {rep1}\npart2: {rep2}\npart3: {rep3}\n");
             }
         }
 
@@ -83,7 +102,7 @@ impl CellIndex for CellIds{
             //matches.clear();
             let mut cell_id:usize = 0;
             //ok = false;
-            let ( km1, km2, km3) = self.get_as_second_seq ( r1.to_vec(), add );
+            let ( km1, km2, km3) = self.get_as_second_seq ( r1.seq().to_vec(), add );
             cell_id += match self.csl1.get( &km1.0 ){
                 Some(c1) => {
                         //println!("to_cellid the c1 {}", c1 );
@@ -94,7 +113,7 @@ impl CellIndex for CellIds{
                 None => {
                     let mut good = Vec::<(usize, f32)>::with_capacity(self.c1s.len());
                     for i in 0..self.c1s.len(){ 
-                        let dist = self.c1s[i].needleman_wunsch( &km1, 0.4 );
+                        let dist = self.c1s[i].needleman_wunsch( &km1, 0.4, None );
                         good.push( (i, dist ) );
                     }
                     if let Some(c1) = Self::best_entry( good ){
@@ -123,7 +142,7 @@ impl CellIndex for CellIds{
                 None => {
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c2s.len());
                     for i in 0..self.c2s.len(){
-                        let dist = self.c2s[i].needleman_wunsch( &km2, 0.4 );
+                        let dist = self.c2s[i].needleman_wunsch( &km2, 0.4, None );
                         good.push( (i, dist)  );
                     }
                     if let Some(c2) = Self::best_entry( good ){
@@ -151,7 +170,7 @@ impl CellIndex for CellIds{
                 None => {
                     let mut good = Vec::<(usize,f32)>::with_capacity(self.c3s.len());
                     for i in 0..self.c3s.len(){
-                        let dist = self.c3s[i].needleman_wunsch( &km3, 0.4 );
+                        let dist = self.c3s[i].needleman_wunsch( &km3, 0.4, None );
                         good.push( (i, dist) );
                     }
                     if let Some(c3) = Self::best_entry( good ){
@@ -167,8 +186,10 @@ impl CellIndex for CellIds{
             };
 
             if ok {
-                let tool =IntToStr::new( r1[(self.umi.0+add)..(self.umi.1+add)].to_vec(), 31 );
-                let umi:u64 = tool.into_u64();
+                let umi = match r1.slice( self.umi.0+add, self.umi.1-self.umi.0+add){
+                    Some(u) => u,
+                    None => panic!("I could not get a UMI?!"),
+                };
                 /*fn in_list( this:u64 )-> bool{
                     ((this == 52638_u64) | ( this == 29170_u64))| (this == 156688_u64)
                 }
@@ -177,7 +198,7 @@ impl CellIndex for CellIds{
                         println!("Cell_id 7243072 from this seq: {}/{} {}/{} {}/{}",&km1, tool.u64_to_string( 9, &km1 ), &km2, tool.u64_to_string( 9, &km2 ), &km3, tool.u64_to_string( 9, &km3 ) )
                     //}
                 }*/
-                return Ok( ( (cell_id +1).try_into().unwrap() , umi) ); 
+                return Ok( ( (cell_id +1) as u32 , umi.to_u64(), cell_id_seq, umi ) ); 
             }
             // ok no match for shift add == iteration of this loop
         }

@@ -1,3 +1,24 @@
+# 2.2.0
+
+The created SAM files now are accepted by samtools.
+
+# 2.1.2
+
+quantify_gene_mapper now creates sam out files for the matches you wanted reported.
+This allowes for a simple mappiing against e.g. the ChrM as the mapper simply indexes a fasta entry on the fly.
+
+It is still unclear if end tagged expression data has the capability to get enough genetic information on a mitochodria
+to use this it as a cell index, but this is a first step to answer that.
+
+# 2.1.1
+
+Adding a new index type - istead of indexing 32bp fragments the whole fasta entry is now stored as 2bit encoded u8 Vec. This vector is later on used to find the mapping areas for the reads.
+
+This lead to two new binaries:
+
+check_read_gene_mapper: A tool to check a single reads mapping in detail.
+quantify_gene_mapper: Map whichever single cell data using the new index.
+
 # 2.1.0
 
 I finally found fishy reads and had to further improve on the mapping.

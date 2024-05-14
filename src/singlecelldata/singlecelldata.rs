@@ -7,12 +7,13 @@ use std::collections::HashSet;
 
 
 //use crate::geneids::GeneIds;
-use crate::fast_mapper::FastMapper;
+//use crate::fast_mapper::FastMapper;
 use crate::mapping_info::MappingInfo;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::singlecelldata::ambient_rna_detect::AmbientRnaDetect;
 use crate::singlecelldata::CellData;
 //use crate::cellids::CellIds;
+use crate::singlecelldata::IndexedGenes;
 
 use std::io::BufWriter;
 use std::fs::File;
@@ -169,13 +170,13 @@ impl SingleCellData{
         }
     }
 
-    pub fn write (&mut self, file_path: PathBuf, genes: &mut FastMapper, min_count:usize) -> Result< (), &str>{
+    pub fn write (&mut self, file_path: PathBuf, genes:&IndexedGenes, min_count:usize) -> Result< (), &str>{
 
         let names = genes.get_all_gene_names();
         return self.write_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sub (&mut self, file_path: PathBuf, genes: &mut FastMapper, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
+    pub fn write_sub (&mut self, file_path: PathBuf, genes:&IndexedGenes, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
     
         let rs:bool = Path::new( &file_path ).exists();
         if rs && fs::remove_file(  &file_path ).is_ok(){};
@@ -227,12 +228,12 @@ impl SingleCellData{
 
 
     /// this will create a path and populate that with 10x kind of files.
-    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &mut FastMapper, min_count:usize) -> Result< (), &str>{
+    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &IndexedGenes, min_count:usize) -> Result< (), &str>{
         let names= genes.get_all_gene_names();
         return self.write_sparse_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes: &mut FastMapper, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
+    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes:&IndexedGenes, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
             
         let rs = Path::new( &file_path ).exists();
 
@@ -348,7 +349,7 @@ impl SingleCellData{
     }
     /// Update the gene names for export to sparse
     /// returns the count of cells and the count of total gene values
-    pub fn update_genes_to_print( &mut self, genes: &FastMapper, names:&Vec<String>) -> [usize; 2] {
+    pub fn update_genes_to_print( &mut self, genes:&IndexedGenes, names:&Vec<String>) -> [usize; 2] {
         
         let mut entries = 0;
 
@@ -419,7 +420,7 @@ impl SingleCellData{
     }
 
 
-    pub fn mtx_counts(&mut self, genes: &mut FastMapper, min_count:usize, num_threads: usize ) -> String{
+    pub fn mtx_counts(&mut self, genes:&IndexedGenes,  min_count:usize, num_threads: usize ) -> String{
         
 
         if ! self.checked{
@@ -439,13 +440,12 @@ impl SingleCellData{
             let results: Vec<(u64, bool)>  = keys
             .par_chunks(chunk_size) 
             .flat_map(|chunk| {
-                let genes = &genes;
                 let min_count = min_count;
 
                 let mut ret= Vec::<(u64, bool)>::with_capacity(chunk_size);
                 for key in chunk {
                     if let Some(cell_obj) = &self.get(key) {
-                        let n = cell_obj.n_umi( genes, &self.genes_to_print );
+                        let n = cell_obj.n_umi( );
                         ret.push( (*key, n >= min_count) );
                     }
                 }
@@ -480,7 +480,7 @@ impl SingleCellData{
         ret
     }
 
-    pub fn n_reads( &mut self, genes: &FastMapper, names: &Vec<String> ) -> usize {
+    pub fn n_reads( &mut self, genes:&IndexedGenes, names: &Vec<String> ) -> usize {
         let mut count = 0;
 
         for cell_obj in self.values() {

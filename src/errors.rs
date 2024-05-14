@@ -1,3 +1,8 @@
+#[derive(Debug)]
+pub enum GeneSelectionError {
+    NotSame,
+    TooView,
+}
 
 #[derive(Debug)]
 pub enum FilterError {
@@ -7,7 +12,7 @@ pub enum FilterError {
     Quality,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone, Copy, PartialEq)]
 pub enum MappingError {
     NoMatch,
     MultiMatch,
@@ -15,6 +20,7 @@ pub enum MappingError {
 
 #[derive(Debug)]
 pub enum CellIdError {
+    TooShort,
     NoMatch,
     Ns,
 }
@@ -25,5 +31,3 @@ pub enum SeqError {
     End,
     LowComplexity,
 }
-
-

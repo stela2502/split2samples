@@ -4,6 +4,8 @@ use rustody::cellids::CellIds;
 use rustody::traits::CellIndex;
 
 use rustody::ofiles::Ofiles;
+use rustody::genes_mapper::SeqRec;
+
 use std::fs;
 
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
@@ -111,8 +113,8 @@ fn main() {
             // first match the cell id - if that does not work the read is unusable
             //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
             
-        
-            if let Ok((cell_id, _add)) = cells.to_cellid( &seqrec1.seq() ) {
+            let r1 = SeqRec::new( seqrec1.id(), &seqrec1.seq(), seqrec1.qual().unwrap() );
+            if let Ok((cell_id, _add,_,_)) = cells.to_cellid( &r1 ) {
                 if total % split == 0{
                     let log_str = format!("cell read (any/{}) {total}/{count} here I have cell {cell_id}", opts.id );
                     pb.set_message( log_str.clone() );

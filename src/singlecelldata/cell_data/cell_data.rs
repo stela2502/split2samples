@@ -9,7 +9,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 
 //use crate::geneids::GeneIds;
-use crate::fast_mapper::FastMapper;
+use crate::singlecelldata::IndexedGenes;
 
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
 /// But I do not correct the UMIs here - even with sequencing errors 
@@ -210,7 +210,8 @@ impl CellData{
         }
     }*/
 
-    pub fn n_umi( &self, _gene_info:&FastMapper, _gnames: &[String] ) -> usize {
+    /// n_umi gets all umis stored for one cell
+    pub fn n_umi( &self ) -> usize {
         self.total_umis
 
         // let mut n = 0;
@@ -224,12 +225,12 @@ impl CellData{
 
     /// This is used to calculate the subset specific umi counts after the
     /// crap cells have been discarded - definitely necessary to get it gene specific!
-    pub fn n_reads( &self, gene_info:&FastMapper, gnames: &Vec<String> ) -> usize {
+    pub fn n_reads( &self, gene_info:&IndexedGenes, gnames: &Vec<String> ) -> usize {
         //println!("I got {} umis for cell {}", n, self.name );
         //return self.total_umis;
         let mut n = 0;
-        for gname in gnames{
-            let id = gene_info.get_id( gname.to_string() );
+        let gene_ids = gene_info.ids_for_gene_names( gnames );
+        for id in gene_ids{
             n += match self.total_reads.get( &id  ){
                 Some( count ) => {
                     *count
@@ -239,100 +240,15 @@ impl CellData{
         }
         n
     }
-
-    /*
-    pub fn fix_multimappers( &mut self ){
-        for (umis, geneids ) in self.multimapper.values(){
-            eprintln!("I have a multimapper group: {:?}", geneids);
-            eprintln!("With this umi count: {}", umis.len());
-            // do we have data on these genes alone?
-            //let with_data = geneids.map(|k|, self.genes.contains_key(k) );
-            let with_data: Vec<_> = geneids.iter().filter(|&k| self.genes.contains_key(k)).cloned().collect();
-            eprintln!("We have data on these genes?\n{:?}\n", with_data);
-            
-            match with_data.len(){
-                // worst possibility:
-                // none of the multimappers are also single mappers here
-                0 => { eprintln!("Sorry - no reference points here: ignoring expression of the multimapper set {:?}", geneids); },
-                // perfect outcomes would be 
-                // 1. I only have one gene from the list of genes
-                1 => {
-                    match self.genes.get_mut( &with_data[0] ){
-                        Some(umi_store) => {
-                            for umi in umis{
-                                if umi_store.insert( *umi ) {
-                                    self.total_umis += 1;
-                                    match self.total_reads.get_mut( &with_data[0] ){
-                                        Some( count ) => *count += 1,
-                                        None => panic!("This must not happen - libraray error"),
-                                    }
-                                }
-                            }
-                        },
-                        None => {}
-                    }
-                },
-                // 2. I have a list of other genes that are also expressed in this cell
-                count => {
-                    // then I need to add the umis from the multimapper to the singles
-                    // but this should be done in an inteligent way.
-                    // first get rid of all umis that are already known.
-                    let mut already_known= Vec::<u64>::with_capacity( umis.len() );
-                    let mut gene_counts = Vec::<(usize, usize)>::with_capacity( count );
-                    for geneid in &with_data{
-                        match self.genes.get_mut( geneid ){
-                            Some(umi_store) => {
-                                for umi in umis{
-                                    if already_known.contains( &umi ){
-                                        continue 
-                                    }
-                                    if umi_store.contains( umi ){
-                                        already_known.push( *umi );
-                                    }
-                                }
-                                gene_counts.push( (*geneid, umis.len()) );
-                            },
-                            None => {},
-                        }
-                    }
-                    eprintln!("I have a total of {} counts to still deal with", umis.len() - already_known.len() );
-                    match umis.len() - already_known.len(){
-                        0 => { }, // cool finished!
-                        1 => {
-                            // add that to the top scorer
-                            panic!("This need to be implemented!\nthe umis we need to get rid of {} the umis we already have handled {}\nthe available genes {:?}\n",
-                                umis.len(), already_known.len(),gene_counts );
-                        }
-                        _ => {
-                            panic!("This need to be implemented!\nthe umis we need to get rid of {} the umis we already have handled {}\nthe available genes {:?}\n",
-                                umis.len(), already_known.len(),gene_counts );
-                        }
-                    }
-                },
-            };
-        }
-        self.multimapper.clear();
-    }*/
-
-    // replace this function call with a
-    //let gene_ids = gene_info.ids_for_gene_names_mut( names );
-    //for id in gene_ids { let n = *self.total_reads.get( &id  ).unwrap_or(&0);}
-    /*pub fn n_umi_4_gene( &self, gene_info:&FastMapper, gname:&String) -> usize {
-        let id = match gene_info.names.get( gname ){
-            Some(g_id) => g_id,
-            None => panic!("Programming error: I could not resolve the gene name {gname}" ),
-        };
-        *self.total_reads.get( id  ).unwrap_or(&0)
-    }*/
     
 
     pub fn n_umi_4_gene_id( &self, gene_id:&usize ) -> usize{
         *self.total_reads.get( gene_id ).unwrap_or(&0)
     }
     
-    pub fn to_str(&self, gene_info:&FastMapper, names: &Vec<String> ) -> String {
+    pub fn to_str(&self, gene_info:&IndexedGenes, names: &Vec<String> ) -> String {
 
-        let mut data = Vec::<std::string::String>::with_capacity( gene_info.get_gene_count()+4 ); 
+        let mut data = Vec::<std::string::String>::with_capacity( names.len()+4 ); 
         data.push(format!( "Cell{}", self.name ) );
 
         // here our internal data already should be stored with the same ids as the gene names.

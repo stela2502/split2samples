@@ -18,7 +18,7 @@ use rustody::ofiles::Ofiles;
 // use std::collections::HashSet;
 // use std::convert::TryInto;
 
-/// Quantifies a DB Rhapsody experiment and creates sparse matrix outfiles.
+/// Quantifies a BD Rhapsody / 10x single cell experiment and creates sparse matrix outfiles.
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
@@ -175,7 +175,7 @@ fn main() {
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker = Analysis::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie, opts.index, num_threads, &opts.exp);
+        opts.antibody, opts.specie, opts.index, num_threads, &opts.exp, false);
 
     if let Some(genes) = opts.report4genes{
         let slice_str: Vec<&str> = genes.split_whitespace().collect();

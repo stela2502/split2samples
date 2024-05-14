@@ -20,6 +20,8 @@ use crate::ifiles::Ifilesr;
 use crate::fast_mapper::mapper_entries::MapperEntry;
 use crate::fast_mapper::mapper_entries::NameEntry;
 
+use crate::singlecelldata::IndexedGenes;
+
 use std::path::Path;
 use std::io::Write;
 use std::fs::{self, DirBuilder};
@@ -131,6 +133,12 @@ impl FastMapper{
             highest_nw_val: 0.6,
             highest_humming_val: 0.3,
         }
+    }
+
+    /// the IndexedGenes replace the full mapper class in the data export
+    /// This allowes for multiple Indices to all feed the same data structure.
+    pub fn as_indexed_genes(&self) -> IndexedGenes{
+        IndexedGenes::new( &self.names, self.offset )
     }
 
     // Function to set min_matches
@@ -820,6 +828,9 @@ impl FastMapper{
         if self.get_best_gene( &genes, &mut matching_geneids ){
             //println!("And I got a match! ({matching_geneids:?})");
             if matching_geneids.len() == 1 {
+                if self.report4gene(&matching_geneids){
+                    println!("gene id {matching_geneids:?} seq {:?}", String::from_utf8_lossy(&seq) );
+                }
                 return Ok( matching_geneids )
             }else {
                 return Err(MappingError::MultiMatch)

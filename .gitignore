@@ -29,3 +29,6 @@ cmp
 
 *_not_in_index.txt
 log
+
+# test files for the Cigra/matching problems.
+test*.tsv

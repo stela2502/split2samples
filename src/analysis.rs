@@ -15,6 +15,8 @@ use crate::cellids10x::CellIds10x;
 use crate::traits::CellIndex;
 
 use crate::mapping_info::MappingInfo;
+use crate::genes_mapper::SeqRec;
+
 //use std::io::BufReader;
 //use flate2::write::GzDecoder;
 
@@ -39,6 +41,7 @@ use crate::ofiles::{Ofiles, Fspot};
 
 
 static EMPTY_VEC: Vec<String> = Vec::new();
+
 
 #[derive(Debug)]
 enum FilterError {
@@ -85,7 +88,7 @@ impl Analysis{
 
 
 	pub fn new(gene_kmers:usize, version:String, expression:Option<String>, 
-		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str  ) -> Self{
+		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str, _debug:bool  ) -> Self{
 		//let sub_len = 9;
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
@@ -93,6 +96,10 @@ impl Analysis{
 	    // let mut cell_umi:HashSet<u128> = HashSet::new();
 	    //let mut genes :GeneIds = GeneIds::new(gene_kmers); // split them into 9 bp kmers
 	    let mut genes :FastMapper = FastMapper::new( gene_kmers, 100_000, 0 ); // split them into 9 bp kmers
+
+	    /*if debug{
+	    	genes.debug( Some(debug) );
+	    }*/
 
 	    //let mut gene_count = 0;
 	    
@@ -107,19 +114,6 @@ impl Analysis{
 	    	
 	    }
 
-	    /*let mut gene_names = Vec::new();
-	    for gname in &genes.names_store {
-	    	gene_names.push( gname.to_string());
-	    }
-
-	    let mut gene_names:Vec<String> = Vec::with_capacity(gene_count);
-
-	    for gene in genes.names.keys() {
-	    	gene_names.push(gene.to_string());
-	    }
-	    let mut ab_names:Vec<String> = Vec::with_capacity(30);
-
-	    let mut seq_temp:Vec::<u8>;*/
 	    genes.tool.step_size(3);
 	    if let Some(ex) = expression {
 	    	if Path::new(&ex).exists(){
@@ -144,7 +138,9 @@ impl Analysis{
 
 	    eprintln!("Changing the expression start gene id to {}", genes.get_gene_count() );
 	    let mut antibodies :FastMapper = FastMapper::new( gene_kmers, 10_000, genes.get_gene_count()  );
-
+		/*if debug{
+	    	antibodies.debug( Some(debug) );
+	    }*/
 	    if let Some(ab) = antibody {
 
 		    if Path::new(&ab).exists(){
@@ -192,7 +188,9 @@ impl Analysis{
 	    //panic!("Antibody count {} and expression count {}", antibodies.get_gene_count(), genes.get_gene_count());
 	    let mut samples= FastMapper::new( gene_kmers, 10_000, antibodies.get_gene_count() + genes.get_gene_count() );
 	    //let mut sample_names:Vec<String> = Vec::with_capacity(12);
-
+	    /*if debug{
+	    	samples.debug( Some(debug) );
+	    }*/
 	    let mut id = 1;
 	    if  specie.eq("human") {
 	        // get all the human sample IDs into this.
@@ -287,6 +285,7 @@ impl Analysis{
 
 		self.antibodies.report4(gname);
 		self.genes.report4(gname);
+		self.samples.report4(gname);
 
 	}
 
@@ -373,10 +372,8 @@ impl Analysis{
         Ok(())
     }
 
-    fn analyze_paralel( &self, data:&[(Vec<u8>, Vec<u8>)], report:&mut MappingInfo, pos: &[usize;8] ) -> SingleCellData{
+    fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, _pos: &[usize;8] ) -> SingleCellData{
     	
-
-
         // first match the cell id - if that does not work the read is unusable
         //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
         let mut gex = SingleCellData::new( self.num_threads );
@@ -390,7 +387,7 @@ impl Analysis{
         for i in 0..data.len() {
 
         	match &self.cells.to_cellid( &data[i].0 ){
-	            Ok( (cell_id, umi) ) => {
+	            Ok( (cell_id, umi, _cell_seq,_) ) => {
 	            	//let tool = IntToStr::new( data[i].0[(pos[6]+add)..(pos[7]+add)].to_vec(), 32 );
 	            	report.cellular_reads +=1;
 
@@ -401,11 +398,8 @@ impl Analysis{
 	            	// And of casue not a match at all
 
 
-	            	ok = match &self.antibodies.get( &data[i].1, &mut tool ){
+	            	ok = match &self.antibodies.get( &data[i].1.seq(), &mut tool ){
 	                    Ok(gene_id) =>{
-	                    	if self.antibodies.report4gene(gene_id){
-	                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-	                		}
 
 	                    	report.iter_read_type( "antibody reads" );
                     		
@@ -431,10 +425,9 @@ impl Analysis{
 	                };
 
 	                if ! ok{
-	                	ok = match &self.samples.get( &data[i].1,  &mut tool ){
+	                	ok = match &self.samples.get( &data[i].1.seq(),  &mut tool ){
 		                    Ok(gene_id) =>{
-		                    	//println!("sample ({:?} and ids {gene_id:?}) with {:?}",self.samples.gene_names_for_ids( gene_id ), String::from_utf8_lossy(&data[i].1) );
-		                    	//eprintln!("I got a sample umi id {umi}");
+
 		                    	report.iter_read_type( "sample reads" );
 		                    	
 	                    		let data = GeneUmiHash( gene_id[0], *umi);
@@ -461,11 +454,8 @@ impl Analysis{
 
 	                if ! ok{
 	                	
-		                match &self.genes.get( &data[i].1,  &mut tool ){
+		                match &self.genes.get( &data[i].1.seq(),  &mut tool ){
 		                	Ok(gene_id) =>{
-		                		if self.genes.report4gene(gene_id){
-		                    		println!("gene id {gene_id:?} seq {:?}", String::from_utf8_lossy(&data[i].1) );
-		                		}
 		                		report.iter_read_type( "expression reads" );
 
 		                    	let data = GeneUmiHash( gene_id[0], *umi);
@@ -480,11 +470,11 @@ impl Analysis{
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
 		                    	report.write_to_ofile( Fspot::Buff1, 
-		                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].1) 
+		                    		format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].1.as_dna_string() ) 
 		                    	);
 								
 								report.write_to_ofile( Fspot::Buff2, 
-									format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].0 ) 
+									format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].0.as_dna_string() ) 
 								);
 		                    	report.no_data +=1;
 		                    },
@@ -497,20 +487,18 @@ impl Analysis{
 		            }
 	            },
 	            Err(_err) => {
+	            	/* 
 	            	// this is fucked up - the ids are changed!
 	            	report.write_to_ofile( Fspot::Buff1, 
-	            		format!(">No Cell detected\n{:?}\n{:?}\n{:?}\n{:?}\n", 
-	            			&data[i].0, 
-	            			&data[i].0[pos[0]..pos[1]],
-	            			&data[i].0[pos[2]..pos[3]],
-	            			&data[i].0[pos[4]..pos[5]],
+	            		format!(">No Cell detected\n{:?}\n", 
+	            			&data[i].0
 	            		)
 	            	);
 
                 	report.write_to_ofile( Fspot::Buff2, 
                 		format!(">No Cell detected\n{:?}\n", &data[i].1 )
                 	);
-
+					*/
 	                report.no_sample +=1;
 	                continue
 	            }, //we mainly need to collect cellids here and it does not make sense to think about anything else right now.
@@ -552,7 +540,7 @@ impl Analysis{
 
         //let reads_perl_chunk = 1_000_000;
         //eprintln!("Starting with data collection");
-        let mut good_reads: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity( chunk_size * self.num_threads );
+        let mut good_reads: Vec<(SeqRec, SeqRec)> = Vec::with_capacity( chunk_size * self.num_threads );
         let mut good_read_count = 0;
 
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
@@ -579,7 +567,9 @@ impl Analysis{
         		match Self::quality_control( read1, read2, report.min_quality, pos, min_sizes){
         			Ok(()) => {
         				good_read_count +=1;
-        				good_reads.push( (read1.seq().to_vec(), read2.seq().to_vec() ) );
+        				let r1 = SeqRec::new( read1.id(), &read1.seq(), read1.qual().unwrap() );
+        				let r2 = SeqRec::new( read2.id(), &read2.seq(), read2.qual().unwrap() );
+        				good_reads.push( (r1, r2 ) );
         			},
         			/*Err(FilterError::PolyA)=> {
         				report.poly_a +=1;
@@ -770,8 +760,10 @@ impl Analysis{
                 let mut ok: bool;
                 // first match the cell id - if that does not work the read is unusable
                 //match cells.to_cellid( &seqrec1.seq(), vec![0,9], vec![21,30], vec![43,52]){
-                match &self.cells.to_cellid( &seqrec1.seq() ){
-                	Ok( (cell_id, umi) ) => {
+
+        		let r1 = SeqRec::new( seqrec2.id(), &seqrec2.seq(), seqrec2.qual().unwrap() );
+                match &self.cells.to_cellid( &r1 ){
+                	Ok( (cell_id, umi,_,_) ) => {
 		            	report.cellular_reads +=1;
 
 		            	// now I have three possibilites here:
@@ -921,15 +913,19 @@ impl Analysis{
 
 	    // this always first as this will decide which cells are OK ones!
 	    results.stop_file_io_time();
+
+	    let genes_idx = &self.genes.as_indexed_genes();
+	    let ab_idx = &self.antibodies.as_indexed_genes();
+	    let samples_idx = &self.samples.as_indexed_genes();
 	    
 	    println!("filtering cells");
-	    self.gex.update_genes_to_print( &self.genes, &self.gene_names );
-	    self.gex.mtx_counts( &mut self.genes, min_umi, self.gex.num_threads ) ;
+	    self.gex.update_genes_to_print( genes_idx, &self.gene_names );
+	    self.gex.mtx_counts( genes_idx, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
 	    println!("writing gene expression");
 
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.genes , &self.gene_names, min_umi ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, genes_idx , &self.gene_names, min_umi ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
@@ -939,22 +935,22 @@ impl Analysis{
 	    	);
 
 	    println!("Writing Antibody counts");
-	    match self.gex.write_sparse_sub ( file_path_sp, &mut self.antibodies, &self.ab_names, 0 ) {
+	    match self.gex.write_sparse_sub ( file_path_sp, ab_idx, &self.ab_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}")
 	    };
 
 	    println!("Writing samples table");
 
-	    match self.gex.write_sub ( file_path, &mut self.samples, &self.sample_names, 0 ) {
+	    match self.gex.write_sub ( file_path, samples_idx, &self.sample_names, 0 ) {
 	    	Ok(_) => (),
 	    	Err(err) => panic!("Error in the data write: {err}" )
 	    };
 
 	    
-	    let reads_genes = self.gex.n_reads( &self.genes , &self.gene_names );
-	    let reads_ab = self.gex.n_reads( &self.antibodies , &self.ab_names );
-	    let reads_samples = self.gex.n_reads( &self.samples , &self.sample_names );
+	    let reads_genes = self.gex.n_reads( genes_idx , &self.gene_names );
+	    let reads_ab = self.gex.n_reads( ab_idx , &self.ab_names );
+	    let reads_samples = self.gex.n_reads( samples_idx , &self.sample_names );
 
 	    println!( "{}",results.summary( reads_genes, reads_ab, reads_samples) );
 

@@ -2,8 +2,8 @@
 use std::hash::{Hash, Hasher};
 use core::fmt;
 
-use crate::traits::{ BinaryMatcher, Cell, Direction};
-
+use crate::traits::{ BinaryMatcher, Cell, Direction };
+use crate::genes_mapper::Cigar;
 use std::cmp::{max, Ord};
 
 const MATCH_SCORE: i32 = 1;
@@ -53,11 +53,17 @@ impl Hash for SecondSeq {
 
 
 
-
-
 impl BinaryMatcher for SecondSeq {
 
-    fn to_string(&self) -> String {
+    fn len(&self) -> usize{
+        self.1 as usize
+    }
+
+    fn max3<T: Ord>(a: T, b: T, c: T) -> T {
+        max(a, max(b, c))
+    }
+
+    fn as_dna_string(&self) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
         for i in 0..self.1.min(32) {
@@ -137,10 +143,18 @@ impl BinaryMatcher for SecondSeq {
         ret as f32 / 2.0 / size as f32
     }
 
+    fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
+        if pos > self.1 as usize {
+            return None; // Position exceeds the length of the encoded sequence
+        }
+        //println!("Byte idx {byte_idx}, bit_offset {bit_offset}");
+        Some(((self.0 >> (pos * 2)) & 0b11) as u8)
+    }
+
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.
     /// for sequences shorter than 15 bp this fails and returns 100.0
-    fn needleman_wunsch(&self, other: &SecondSeq, humming_cut:f32 ) -> f32 {
+    fn needleman_wunsch(&self, other: &SecondSeq, humming_cut:f32, cigar: Option<&mut Cigar> ) -> f32 {
 
         let size = self.min_length(other).min(33);
 
@@ -165,131 +179,49 @@ impl BinaryMatcher for SecondSeq {
         }
 
         // Fill in the matrix
-        let mut a: u64;
-        let mut b: u64;
+
 
         for i in 1..rows {
             for j in 1..cols {
-                a = (self.0 >> ((i-1) * 2)) & 0b11;
-                b = (other.0 >> ((j-1) * 2)) & 0b11;
-                let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
+                if let (Some(a), Some(b)) = ( self.get_nucleotide_2bit(j-1), other.get_nucleotide_2bit(i-1)){
+                    let match_score = if a == b { MATCH_SCORE } else { MISMATCH_SCORE };
 
-                let diagonal_score = matrix[i - 1][j - 1].score + match_score;
-                let up_score = matrix[i - 1][j].score + GAP_PENALTY;
-                let left_score = matrix[i][j - 1].score + GAP_PENALTY;
+                    let diagonal_score = matrix[i - 1][j - 1].score + match_score;
+                    let up_score = matrix[i - 1][j].score + GAP_PENALTY;
+                    let left_score = matrix[i][j - 1].score + GAP_PENALTY;
 
-                let max_score = Self::max3(diagonal_score, up_score, left_score);
+                    let max_score = Self::max3(diagonal_score, up_score, left_score);
 
-                matrix[i][j].score = max_score;
+                    matrix[i][j].score = max_score;
 
-                matrix[i][j].direction = match max_score {
-                    _ if max_score == diagonal_score => Direction::Diagonal,
-                    _ if max_score == up_score => Direction::Up,
-                    _ if max_score == left_score => Direction::Left,
-                    _ => unreachable!(),
-                };
+                    matrix[i][j].direction = match max_score {
+                        _ if max_score == diagonal_score => Direction::Diagonal,
+                        _ if max_score == up_score => Direction::Up,
+                        _ if max_score == left_score => Direction::Left,
+                        _ => unreachable!(),
+                    };
+                }else {
+                    panic!("Sequence not defined {i}/{j} self: {self}\nother: {other}");
+                }
+                
             }
         }
 
-        // Uncomment the following lines to print the alignment matrix
-        /*for i in 0..rows {
-            for j in 0..cols {
-                print!("{:4} ", matrix[i][j].score);
-            }
-            println!();
-        }*/
+        // Trace back the alignment path
+        if let Some( cig ) = cigar{
+            cig.calculate_cigar( &matrix, self.get_nucleotide_2bit(rows-1) == other.get_nucleotide_2bit(cols-1) );
+            cig.clean_up_cigar( self, other);
+        };
 
-        /*
-        println!("Can that be cut short(di_diff {}, tri_diff {}, NW {}) : \n{self} vs \n{other}", 
-            self.di_nuc_abs_diff(other),  
-            self.tri_nuc_abs_diff(other),  
-            (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32 );
-        */
         (size as i32 - matrix[rows - 1][cols - 1].score).abs() as f32 / size as f32
     }
-
-    /// calculate the base flips between two u64 sequences
-    /// stops after having detected 4 different bases.
-    fn hamming_distance(self, other: &SecondSeq) -> u32 {
-        
-        //let mask:u64;
-        let size = self.min_length(other);
-
-        let mut a: u64;
-        let mut b: u64;
-        let mut ret: u32 = 0;
-        for i in 0..size{
-            a = (self.0 >> (i * 2)) & 0b11;
-            b = (other.0 >> (i * 2)) & 0b11;
-            if a != b {
-                ret +=1;
-            }
-            //ret += HAMMING_LOOKUP[(a ^ b) as usize];
-            if ret == 4{
-                 break;
-            }
-        }
-        //println!("hamming dist was {ret}");
-        ret
-        
-        /*
-        // quite much slower!
-        let size = usize::min(self.1 as usize, other.1 as usize);
-
-        let mut a_shifted = self.0;
-        let mut b_shifted = other.0;
-        
-        let mut ret: u32 = 0;
-
-        for _ in 0..size {
-            let a_value = a_shifted & 0b11;
-            let b_value = b_shifted & 0b11;
-            if a_value != b_value {
-                ret +=1;
-            }
-            a_shifted >>= 2;
-            b_shifted >>= 2;
-        }
-
-        ret
-        */
-    }
-
-    fn table(&self) -> std::collections::HashMap<char, u32> {
-        let mut a_cnt = 0;
-        let mut c_cnt = 0;
-        let mut g_cnt = 0;
-        let mut t_cnt = 0;
-        let sequence = self.0;
-
-        for i in 0..self.1 {
-            let pair = (sequence >> (i * 2)) & 0b11;
-            match pair {
-                0b00 => a_cnt += 1,
-                0b01 => c_cnt += 1,
-                0b10 => g_cnt += 1,
-                0b11 => t_cnt += 1,
-                _ => {} // Handle invalid pairs if needed
-            }
-        }
-
-        let mut counts = std::collections::HashMap::new();
-        counts.insert('A', a_cnt);
-        counts.insert('C', c_cnt);
-        counts.insert('G', g_cnt);
-        counts.insert('T', t_cnt);
-
-        counts
-    }
-
-
 }
 
 
 // Implementing Display trait for SecondSeq
 impl fmt::Display for SecondSeq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SecondSeq (u64: {} or {:b}, u8: {})", BinaryMatcher::to_string(self), self.0, self.1)
+        write!(f, "SecondSeq (u64: {} or {:b}, u8: {})", BinaryMatcher::as_dna_string(self), self.0, self.1)
     }
 }
 
@@ -349,14 +281,14 @@ impl SecondSeq {
 
     pub fn print_second_seq(&self) {
         println!("Contents of SecondSeq:");
-        println!("u64: {:b} or {:?}", self.0, BinaryMatcher::to_string(self) );
+        println!("u64: {:b} or {:?}", self.0, BinaryMatcher::as_dna_string(self) );
         println!("{} sig bp", self.1);
     }
 
     pub fn fuzzy_match(&self, other:&SecondSeq, max_dist:f32 ) -> bool {
 
         //return self.hamming_distance( other ) <= max_dist.try_into().unwrap()
-        self.needleman_wunsch( other, max_dist ) <= max_dist
+        self.needleman_wunsch( other, max_dist, None ) <= max_dist
     }
 
     
@@ -379,17 +311,17 @@ mod tests {
         assert_eq!(seq1, seq4,  "same, but one is longer");
     }
 
-    #[test]
-    fn test_second_table() {
-        let seq1 = SecondSeq(0b1010101011010101, 32);
-        let mut exp = std::collections::HashMap::new();
-        exp.insert('A', 24);
-        exp.insert('C', 3);
-        exp.insert('G', 4);
-        exp.insert('T', 1);
+    // #[test]
+    // fn test_second_table() {
+    //     let seq1 = SecondSeq(0b1010101011010101, 32);
+    //     let mut exp = std::collections::HashMap::new();
+    //     exp.insert('A', 24);
+    //     exp.insert('C', 3);
+    //     exp.insert('G', 4);
+    //     exp.insert('T', 1);
 
-        assert_eq!(seq1.table() , exp,  "table did return the right counts");
-    }
+    //     assert_eq!(seq1.table() , exp,  "table did return the right counts");
+    // }
 
     #[test]
     fn test_second_seq_hashing() {
@@ -403,20 +335,20 @@ mod tests {
         assert_eq!(map.get(&seq2), None); // Test retrieval by different key
     }
 
-    #[test]
-    fn test_humming2() {
-        let seq1 = SecondSeq(0b101010, 20);
-        let seq2 = SecondSeq(0b101010, 20);
-        assert_eq!( seq1.hamming_distance( &seq2 ), 0 );
-        let seq3 = SecondSeq(0b011010, 20);
-        assert_eq!( seq1.hamming_distance( &seq3 ), 1 );
-        let seq4 = SecondSeq(0b001010, 20);
-        assert_eq!( seq1.hamming_distance( &seq4 ), 1 );
-        let seq5 = SecondSeq(0b011001, 20);
-        assert_eq!( seq1.hamming_distance( &seq5 ), 2 );
-        let seq6 = SecondSeq(0b0, 20);
-        assert_eq!( seq1.hamming_distance( &seq6 ), 3 );
-    }
+    // #[test]
+    // fn test_humming2() {
+    //     let seq1 = SecondSeq(0b101010, 20);
+    //     let seq2 = SecondSeq(0b101010, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq2 ), 0 );
+    //     let seq3 = SecondSeq(0b011010, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq3 ), 1 );
+    //     let seq4 = SecondSeq(0b001010, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq4 ), 1 );
+    //     let seq5 = SecondSeq(0b011001, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq5 ), 2 );
+    //     let seq6 = SecondSeq(0b0, 20);
+    //     assert_eq!( seq1.hamming_distance( &seq6 ), 3 );
+    // }
 
     #[test]
     fn test_di_nuc_abs_diff() {

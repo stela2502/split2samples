@@ -4,6 +4,8 @@ mod tests {
 	use rustody::singlecelldata::cell_data::GeneUmiHash;
 	use rustody::fast_mapper::FastMapper;
 	use rustody::mapping_info::MappingInfo;
+    //use rustody::singlecelldata::IndexedGenes;
+
 	static EMPTY_VEC: Vec<String> = Vec::new();
 
 
@@ -52,8 +54,8 @@ mod tests {
         let  names= vec!("Gene1".to_string(), "Gene3".to_string(), "Gene4".to_string() );
         // this string counts: genes, cell, lines
         let  exp2:String = "3 2 4".to_string();
-        celldata.update_genes_to_print( &mapper, &names);
-        let  val = celldata.mtx_counts( &mut mapper, 1, 1 );
+        celldata.update_genes_to_print( &mapper.as_indexed_genes() , &names);
+        let  val = celldata.mtx_counts( &mapper.as_indexed_genes(), 1, 1 );
 
         assert_eq!( val,  exp2 ); 
 
