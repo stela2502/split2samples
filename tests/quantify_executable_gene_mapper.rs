@@ -22,7 +22,7 @@ fn test_quantify_gene_mapper() {
     let args = &[
         "-r", "testData/1e5_mRNA_S1_R1_001.fastq.gz",
         "-f", "testData/1e5_mRNA_S1_R2_001.fastq.gz",
-        "-o", "testData/output_1e5_gm",
+        "-o", "testData/output_1e5_q_gm",
         "-s", "mouse",
         "-e", "testData/genes.fasta",
         "-a", "testData/MyAbSeqPanel.fasta",
@@ -54,7 +54,7 @@ fn test_quantify_gene_mapper() {
     let output_str = String::from_utf8_lossy(&output.stdout);
 
     // Check if output contains the expected lines
-    let file_path ="testData/output_1e5_gm/SampleCounts.tsv";
+    let file_path ="testData/output_1e5_q_gm/SampleCounts.tsv";
     assert!(output_str.contains(file_path));
 
     assert!(fs::metadata(file_path).is_ok(), "expected outfile does exists");

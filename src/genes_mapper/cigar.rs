@@ -32,6 +32,15 @@ impl CigarEnum{
 			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
 		}
 	}
+	pub fn to_id(&self) -> usize{
+		match &self{
+			CigarEnum::Match => 0,
+			CigarEnum::Mismatch => 1,
+			CigarEnum::Insertion => 2,
+			CigarEnum::Deletion => 3,
+			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
+		}
+	}
 }
 
 impl fmt::Display for CigarEnum {
@@ -68,6 +77,11 @@ pub struct Cigar{
 	pub cigar:String,
 	pub fixed:Option<CigarEndFix>,
 	debug:bool,
+	/// contains whether <CigarEnum>.to_id() is part of this cigar
+	contains: Vec<bool>,
+	/// state_changes is a measure of quality for a Cigar - the more changes the less likely that this is real.
+	state_changes: usize,
+
 }
 
 // Implementing Display trait for SecondSeq
@@ -83,6 +97,8 @@ impl Default for Cigar {
             cigar: "".to_string(),
             fixed: None,
             debug: false,
+            contains: vec![false;4],
+            state_changes: 0,
         }
     }
 }
@@ -95,16 +111,23 @@ impl Cigar{
 			cigar: cigar.to_owned(),
 			fixed:None,
 			debug:false,
+			contains: vec![false;4],
+			state_changes: 0,
 		}
 	}
 
 	pub fn set_debug(&mut self, state:bool) {
 		self.debug = state;
 	}
+
+	pub fn state_changes(&self) -> usize{
+		self.state_changes
+	}
 	
 	pub fn clear(&mut self) {
 		self.cigar ="".to_string();
 		self.fixed = None;
+		self.contains = vec![false;4];
 	}
 
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
@@ -293,12 +316,14 @@ impl Cigar{
 				        let clipped_part = &self.cigar[(clippable.start()+2)..clippable.end()];
 				        
 				        let (mine, other) = self.calculate_covered_nucleotides(clipped_part);
+				        #[cfg(debug_assertions)]
 				        if self.debug{
 				        	println!("Detected an over match!");
 				        	println!("	clipped part = {clipped_part} with a mine size of {mine} and an other size of {other}");
 				        }
 				        self.cigar.replace_range((clippable.start()+2)..clippable.end(), &format!("{}S", mine));
 				        self.fixed = Some(CigarEndFix::End);
+				        #[cfg(debug_assertions)]
 				        if self.debug{
 				        	println!("updated cigar!\n{self}");
 				        }
@@ -398,6 +423,7 @@ impl Cigar{
 	    let mut last_direction = None;
 
 		self.cigar.clear();
+		self.state_changes = 0;
 
 		//let mut loc_path = path.to_vec();
 
@@ -405,8 +431,10 @@ impl Cigar{
 	        if Some(direction) == last_direction {
 	            count += 1;
 	        } else {
+	        	self.state_changes += 1;
 	            if count > 0 {
 	                self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
+	                self.contains[last_direction.unwrap().to_id()] =  true ;
 	            }
 	            count = 1;
 	            last_direction = Some(direction);
@@ -415,10 +443,26 @@ impl Cigar{
 
 	    if count > 0 {
 	        self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
+	        self.contains[last_direction.unwrap().to_id()] =  true ;
 	    }    
 	}
 
-	pub fn fix_1d1i_1i1d(cigar: &mut Vec<CigarEnum>, start_pos: Option<usize>) {
+	fn populate_contains( &mut self, cigar: &[CigarEnum] ) {
+		for entry in cigar{
+			self.contains[entry.to_id()] = true;
+		}
+	}
+
+	pub fn fix_1d1i_1i1d(&mut self, cigar: &mut Vec<CigarEnum>, start_pos: Option<usize>) {
+
+		if ! self.contains.iter().any(|&x| x){
+			self.populate_contains(&cigar);
+		}
+		if ! self.contains[CigarEnum::Deletion.to_id()] &&  ! self.contains[CigarEnum::Insertion.to_id()] {
+			// not necessary to process this!
+			return ();
+		}
+
 	    let mut start_index = start_pos.clone().unwrap_or(cigar.len() - 1);
 
 	    if start_index >= 3 {

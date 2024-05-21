@@ -296,7 +296,45 @@ impl AnalysisGenomicMapper{
         Ok(())
     }
 
-    fn build_sam_record ( &self, read2:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> String{
+    fn build_sam_record ( &self, read2:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> Option<String>{
+
+    	
+    	let cig = gene_id[0].get_cigar();
+    	// this can likely go as the CigarEndFix::StartInsert is not used any more.
+		let mut read_mod = match cig.fixed {
+			Some(CigarEndFix::StartInsert) => {
+				//shit - the read needs to be adjusted!
+				let (cig_mapping_length, _) = cig.calculate_covered_nucleotides( &cig.cigar );
+				let bp_to_clip = read2.len().saturating_sub( cig_mapping_length );
+				match read2.slice( bp_to_clip, cig_mapping_length ){
+					Some(r) => r,
+					None => {
+						eprintln!("#1 I try to clip read2 from {bp_to_clip} with a length of {cig_mapping_length} - but failed!\n{read2}");
+						return None
+					},
+				}
+			},
+			_ => {
+				read2.clone()
+			}
+		};
+		// mapping to chrM I now have the issue with circularity of that genome.
+    	// I do not have a clever way to fix the issue, but when my Cigar describes a smaller area
+    	// than the read2 would normally cover and the match start() is 0 then it is hily likely that we sequecned more than what the databse has to provide.
+    	// Hence to not make samtools freak out we need to adjust the read2
+    	let (length, _) = cig.calculate_covered_nucleotides( &format!("{}",cig) );
+    	read_mod = if read_mod.len() != length && gene_id[0].start() == 0 {
+    		let bp_to_clip = read_mod.len().saturating_sub(length);
+    		match read_mod.slice( bp_to_clip, length ){
+				Some(r) => r,
+				None => {
+					eprintln!("#2 I try to clip read_mod from {bp_to_clip} with a length of {length} - but failed!\n{read_mod}");
+					return None
+				},
+			}
+    	}else {
+    		read_mod
+    	};
 
     	let mut record = "".to_string();
     	// starting
@@ -324,18 +362,8 @@ impl AnalysisGenomicMapper{
     	record += &format!("{}\t", gene_id[0].mapq() );
     	// the map quality
 
-    	let cig = gene_id[0].get_cigar();
-		let read_mod = match cig.fixed {
-			Some(CigarEndFix::StartInsert) => {
-				//shit - the read needs to be adjusted!
-				let (cig_mapping_length, _) = cig.calculate_covered_nucleotides( &cig.cigar );
-				let bp_to_clip = read2.len() - cig_mapping_length;
-				read2.slice( bp_to_clip, cig_mapping_length ).unwrap()
-			},
-			_ => {
-				read2.clone()
-			}
-		};
+    	
+		
     	let cigar_string = match gene_id[0].cigar() {
 		    Some(cigar) => cigar.to_string(),
 		    None => {
@@ -454,7 +482,7 @@ impl AnalysisGenomicMapper{
 		*/	
 	    record += &format!("RG:Z:{}", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
 
-	    record
+	    Some(record)
     }
 
     pub fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, _pos: &[usize;8] ) -> (SingleCellData, Vec<String>){
@@ -530,7 +558,12 @@ impl AnalysisGenomicMapper{
 		                        ){
 		                        	report.pcr_duplicates += 1 
 		                        }
-								bam.push( self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ) );
+		                        match self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ) {
+		                        	Some(sam_line) => bam.push( sam_line ),
+		                        	None => {
+		                        		eprintln!("There has been an error in the build_sam_record() function - please check what went wrong with this sequence data:\n{}\nand this the cell sequence:\n{}\n",&data[i].1, &data[i].0 );
+		                        	}
+		                        }
 		                    },
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work

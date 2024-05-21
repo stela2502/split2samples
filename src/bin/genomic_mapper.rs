@@ -126,7 +126,8 @@ fn main() {
     let ofile = Ofiles::new( 1, "Umapped_with_cellID", "R2.fastq.gz", "R1.fastq.gz",  opts.outpath.as_str() );
     
     // needs log_writer:BufWriter<File>, min_quality:f32, max_reads:usize, ofile:Ofiles
-    let mut results = MappingInfo::new( Some(log_file), opts.min_quality, opts.max_reads, Some(ofile) );
+    //let mut results = MappingInfo::new( Some(log_file), opts.min_quality, opts.max_reads, Some(ofile) );
+    let mut results = MappingInfo::new( Some(log_file), opts.min_quality, opts.max_reads, None );
     
 
     let pos:&[usize;8];

@@ -27,6 +27,7 @@ use std::path::PathBuf;
 use std::path::Path;
 
 use rayon::prelude::*;
+use core::fmt;
 
 
 // This SingleCellData needs to copy some of the logics from split2samples - no it actually is totally different
@@ -48,6 +49,17 @@ pub struct SingleCellData{
 impl Default for SingleCellData {
     fn default() -> Self {
         Self::new(1)
+    }
+}
+
+
+impl fmt::Display for SingleCellData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let checked = match self.checked{
+            true => "checked".to_string(),
+            false => "unchecked".to_string(),
+        };
+        write!(f, "SingleCellData with {} cells and {} genes ({})", self.keys().len(), self.genes_with_data.len(), checked )
     }
 }
 

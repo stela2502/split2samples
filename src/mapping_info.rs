@@ -44,6 +44,7 @@ pub struct MappingInfo{
     pub single_processor_time: Duration,
     pub multi_processor_time: Duration,
     pub file_io_time: Duration,
+    pub subprocess_time: Duration,
     pub reads_log: BTreeMap<String, usize >,
 
 }
@@ -55,6 +56,7 @@ impl MappingInfo{
 		let multi_processor_time = Duration::new(0,0);
 		let file_io_time = Duration::new(0,0);
 		let reads_log = BTreeMap::new();
+		let subprocess_time = Duration::new(0,0);
 		let mut this = Self{
 			quality: 0,
 		    length: 0,
@@ -81,6 +83,7 @@ impl MappingInfo{
 			single_processor_time,
 			multi_processor_time,
 			file_io_time,
+			subprocess_time,
 			reads_log,
 		};
 		this.start_counter();
@@ -107,6 +110,11 @@ impl MappingInfo{
 
 	pub fn stop_multi_processor_time ( &mut self ) {
 		self.multi_processor_time += self.realtive_start.unwrap().elapsed().unwrap();
+		self.start_counter();
+	}
+
+	pub fn subprocess_time ( &mut self ) {
+		self.subprocess_time += self.realtive_start.unwrap().elapsed().unwrap();
 		self.start_counter();
 	}
 
@@ -229,6 +237,10 @@ impl MappingInfo{
 	   	result += format!("single-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
 	   	( hours, min, sec , mulli ) = Self::split_duration( self.multi_processor_time);
 	   	result += format!(" multi-cpu run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	if self.subprocess_time != Duration::new(0,0) {
+	   		( hours, min, sec , mulli ) = Self::split_duration( self.subprocess_time);
+	    	result += format!("subprocess run time {} h {} min {} sec {} millisec\n", hours, min, sec , mulli ).as_str();
+	   	}
 	   	result
 	}
 

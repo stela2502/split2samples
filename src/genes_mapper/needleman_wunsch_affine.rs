@@ -262,6 +262,7 @@ impl <'a> NeedlemanWunschAffine {
 
 	    	//if let (Some(nuc1), Some(nuc2)) = (seq1.get_nucleotide_2bit(i.saturating_sub(1)), seq2.get_nucleotide_2bit(j.saturating_sub(1)) ){
 	    		let this_value = self.dp[i][j];
+	    		#[cfg(debug_assertions)]
 	    		if self.debug {
 	    			println!("I am testing this part of the dp matrix with the lower right corner i:{i};j:{j}:\n{}\t{}\n{}\t{}",
 		    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
@@ -304,6 +305,7 @@ impl <'a> NeedlemanWunschAffine {
 		    			},
 		    			_ => unreachable!()
 		    		};
+		    		#[cfg(debug_assertions)]
 		    		if self.debug{
 		    			println!("inserted the value {} at position {rev_id}", &cigar[rev_id] );
 		    		}
@@ -333,6 +335,7 @@ impl <'a> NeedlemanWunschAffine {
 	    // I need that for the debug:
 	    let mut cig = Cigar::new("");
 	    cig.convert_to_cigar( &cigar );
+	    #[cfg(debug_assertions)]
 	    if self.debug {
 	    	let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( seq1, seq2, &cigar );
 	    	println!("Initial cigar string:\n{cig}\n{}\n{}", alng1, alng2 );
@@ -372,6 +375,7 @@ impl <'a> NeedlemanWunschAffine {
 		                let mut drop_replaces = 0;
 		                while let (Some(nuc1), Some(nuc2)) = (seq1.get_nucleotide_2bit(seq1_id.saturating_sub(1)), seq2.get_nucleotide_2bit(seq2_id.saturating_sub(1) )) {
 		                    if nuc1 != nuc2 {
+		                    	#[cfg(debug_assertions)]
 		                    	if self.debug{
 		                    		println!("I detected a {replace_with} at position {i} (seq1_id = {seq1_id}; seq2_id = {seq2_id}) - but {} does not match {}", 
 		                    			Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char)
@@ -380,6 +384,7 @@ impl <'a> NeedlemanWunschAffine {
 		                    	//seq2_id -= 1;
 		                    	break;
 		                    }
+		                    #[cfg(debug_assertions)]
 		                    if self.debug{
 		                    	println!("I detected a {replace_with} at position {i} - and {} does match {}", 
 		                    		Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char)
@@ -396,6 +401,7 @@ impl <'a> NeedlemanWunschAffine {
 		                    if cigar[i].opposite(&replace_with) {
 		                    	// if we just replace that we change the alignement length!
 		                    	// actually this is a wrong alignement here: just drop it and check if that works
+		                    	#[cfg(debug_assertions)]
 		                    	if self.debug{
 		                    		println!("#1 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
 		                    	}
@@ -406,6 +412,7 @@ impl <'a> NeedlemanWunschAffine {
 		                    // make sure we overwrite the old value to make the required move of the deletion / insert
 		                    else if cigar[i] != replace_with{
 		                    	cigar[i] = replace_with;
+		                    	#[cfg(debug_assertions)]
 		                    	if self.debug {
 		                    		cig.convert_to_cigar( &cigar );
 		                    		println!("#1 at position {i}+1 (now looking into {i}) - I will replace the {} with {} here {cig}",  cigar[i], replace_with);
@@ -421,6 +428,7 @@ impl <'a> NeedlemanWunschAffine {
 		                if matching > 0 {
 
 		                	gap_start = Some( (matching, replace_with, drop_replaces) );
+		                	#[cfg(debug_assertions)]
 		                	if self.debug{
 		                		println!("#1 I created a gap_start {gap_start:?}");
 		                	}
@@ -446,12 +454,14 @@ impl <'a> NeedlemanWunschAffine {
 		                    	cigar.remove(i);
 		                    	i-=1;
 		                    	gap_start = Some((to_ignore, replace_with, drop_replaces + 1) );
+		                    	#[cfg(debug_assertions)]
 		                    	if self.debug {
 		                    		println!("#2 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
 		                    		println!("The updated alignement: {}", self.int_state_to_string( seq1, seq2, &cigar ));
 		                    	}
 		                    }else if cigar[i] != replace_with {
 		                    	cigar[i] = replace_with;
+		                    	#[cfg(debug_assertions)]
 		                    	if self.debug{
 		                    		cig.convert_to_cigar( &cigar );
 		                    		println!("#2 position {i} - replcaing a {} with {} ({cig})", cigar[i], replace_with);
@@ -476,7 +486,7 @@ impl <'a> NeedlemanWunschAffine {
 		    	seq2_id = seq2_id.saturating_sub(1);
 		    }
 		}
-
+		#[cfg(debug_assertions)]
 		if self.debug {
 			cig.convert_to_cigar( &cigar );
 			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( seq1, seq2, &cigar );
@@ -485,9 +495,10 @@ impl <'a> NeedlemanWunschAffine {
 		//cig.convert_to_cigar( &cigar );
 		//println!("{cig}\nIs what we have after and before the fix_1d1i_1i1d() call");
 
-		Cigar::fix_1d1i_1i1d( &mut cigar, None );
+		cig.clear();
+		cig.fix_1d1i_1i1d( &mut cigar, None );
 
-
+		#[cfg(debug_assertions)]
 		if self.debug {
 			cig.convert_to_cigar( &cigar );
 			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( seq1, seq2, &cigar );

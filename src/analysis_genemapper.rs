@@ -388,7 +388,7 @@ impl AnalysisGeneMapper{
         Ok(())
     }
 
-    fn build_sam_record ( &self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> String{
+    fn build_sam_record ( &self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> Option<String>{
 
     	let mut read2 = read.clone();
 
@@ -398,6 +398,7 @@ impl AnalysisGeneMapper{
     			let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.to_string() );
     			if mine < read2.len(){
     				read2=read2.slice(0, mine ).unwrap();
+
     			}
     			if mine + gene_id[0].start() > gene_id[0].db_length() {
     				panic!("Cigar suggest longer match than db_length allows!");
@@ -560,7 +561,7 @@ impl AnalysisGeneMapper{
 		*/	
 	    record += &format!("RG:Z:{}", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
 
-	    record
+	    Some(record)
     }
 
     pub fn analyze_paralel( &self, data:&[(SeqRec, SeqRec)], report:&mut MappingInfo, _pos: &[usize;8] ) -> (SingleCellData, Vec<String>){
@@ -676,7 +677,12 @@ impl AnalysisGeneMapper{
 
 		                        if gene_id[0].save(){
 		                        	//build_sam_record ( &self, read2:&SeqReq, gene_id:&Vec<MapperResult>, cell_id:&SeqReq, umi:&SeqReq )
-								    bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
+		                        	match self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ) {
+			                        	Some(sam_line) => bam.push( sam_line ),
+			                        	None => {
+			                        		eprintln!("There has been an error in the build_sam_record() function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
+			                        	}
+			                        }
 		                        }
 		                    },
 		                    Err(MappingError::NoMatch) => {
@@ -804,7 +810,7 @@ impl AnalysisGeneMapper{
         //eprintln!("Starting with data collection");
         let mut good_reads: Vec<(SeqRec, SeqRec)> = Vec::with_capacity( chunk_size * self.num_threads );
         let mut good_read_count = 0;
-
+        
         'main: while let (Some(record1), Some(record2)) = (&readereads.next(), &readefile.next())  {
         	if report.total > max_reads{
         		break 'main

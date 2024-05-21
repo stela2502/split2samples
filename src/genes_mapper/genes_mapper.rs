@@ -109,7 +109,17 @@ impl GenesMapper{
 			let ret = vec.join("\n") + "\n";
 			Some((ret, fasta))
 		}else {
-			None
+			let mut vec = Vec::<String>::with_capacity( hash.len() );
+			let mut fasta = "".to_string();
+			for ( id, gene_obj) in &self.genes {
+				let gene_name = gene_obj.get_name();
+				let gene_len = gene_obj.len();
+				let formatted_line = format!("@SQ\tSN:{}\tLN:{}", gene_name, gene_len);
+				vec.push(formatted_line);
+				fasta+= &self.genes[id].to_fasta();
+			}
+			let ret = vec.join("\n") + "\n";
+			Some((ret, fasta))
 		}
 	}
 
@@ -401,6 +411,7 @@ impl GenesMapper{
 		let mut i = 0;
 		while let Some((key, start)) = read_data.next(){
 
+
 			//println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
 			if self.reject_key(&key){
 				continue;
@@ -408,6 +419,7 @@ impl GenesMapper{
 			
 			if ! self.mapper[key as usize].is_empty() {
 				i+=1;
+				#[cfg(debug_assertions)]
 				if self.debug {
 					println!("I am testing this key: {} and got {:?}", Self::as_dna_string(&key) , self.mapper[key as usize].data() );
 				}
@@ -438,10 +450,12 @@ impl GenesMapper{
 		    }
 		});
 	    //res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
+	    #[cfg(debug_assertions)]
 		if self.debug {
 			println!("I have collected these initial matches: {:?}", res_vec );
 		}
 	    let mut cigar= Cigar::new("");
+	    #[cfg(debug_assertions)]
 	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
@@ -456,6 +470,7 @@ impl GenesMapper{
 	    		Ok(()) => {
 	    			if let Some((read, database)) = self.slice_objects( start[0], &self.genes[*gene_id], &read_data ){
 	    				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
+	    				#[cfg(debug_assertions)]
 	    				if self.debug{
 	    					println!("using the match {entry:?} I'll compare these two sequences");
 	    					println!("read \n{read} to database\n{database}\n");
@@ -466,7 +481,7 @@ impl GenesMapper{
 	    				cigar.clean_up_cigar(&read, &database);
 
 	    				if nw.abs() < self.highest_nw_val  {
-							if cigar.mapping_quality() > 10 {
+							if cigar.mapping_quality() > 20 && cigar.state_changes() < 10  {
 								helper.push( 
 									MapperResult::new( 
 											*gene_id + self.offset, start[0].max(0) as usize, 
@@ -479,6 +494,7 @@ impl GenesMapper{
 
 							cigar.clear();
 						}
+						#[cfg(debug_assertions)]
 						if self.debug{
 							println!("I got this nw: {nw} and the matches: {}",helper);
 						}
@@ -486,18 +502,22 @@ impl GenesMapper{
 				},
 				Err(GeneSelectionError::NotSame) =>{
 					let counts = Self::table( start );
+					let mut last = 1.0;
+					#[cfg(debug_assertions)]
 					if self.debug{
 						println!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{counts:?}");
 					}
 
 	    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
 	    			'for_loop: for (start, count) in counts{
-	    				if count < 3 {
+	    				if count as f32 / (last + count as f32) < 0.2 {
 	    					break;
 	    				}
+	    				last = count as f32;
 	    				if let Some((read, database)) = self.slice_objects( start, &self.genes[*gene_id], &read_data ){
 	    					
 	    					let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val );
+	    					#[cfg(debug_assertions)]
 	    					if self.debug{
 	    						println!("using the match start {start} count {count} I'll compare these two sequences");
 	    						println!("read \n{read} to database\n{database}\n");
@@ -507,7 +527,7 @@ impl GenesMapper{
 	    					cigar.clean_up_cigar(&read, &database);
 	    					if nw.abs() < self.highest_nw_val || ( cigar.fixed == Some( CigarEndFix::End) ||  cigar.fixed == Some( CigarEndFix::Start) ){
 	    						
-	    						if cigar.mapping_quality() > 10 {
+	    						if cigar.mapping_quality() > 20 && cigar.state_changes() < 10 {
 									helper.push( 
 										MapperResult::new( 
 												*gene_id + self.offset, 
@@ -523,6 +543,7 @@ impl GenesMapper{
 										)
 									);
 								}
+								#[cfg(debug_assertions)]
 								if self.debug{
 									println!("I got the matches: {}",helper);
 								}
@@ -531,11 +552,13 @@ impl GenesMapper{
 								}
 								cigar.clear();
 							}
+							#[cfg(debug_assertions)]
 							if self.debug{
 								println!("I got this nw: {nw} and the matches: {}",helper);
 							}
 						}else {
 							// I could not slice?!
+							#[cfg(debug_assertions)]
 							if self.debug{
 								println!("I could not slice using {start} and read\n{read_data} and database\n{}",self.genes[*gene_id]);
 							}
@@ -547,7 +570,7 @@ impl GenesMapper{
 		    	},
 		    };
 		} // end populating helper
-
+		#[cfg(debug_assertions)]
 		if self.debug{
 			//let res_lines = res_vec.iter().map(|obj| format!("{:?}", obj)).collect::<Vec<String>>().join("\n");
 			println!("mapping the read {read_data}\nwe obtained an initial mapping result \n{helper}\nand in the end found \n{:?}",
