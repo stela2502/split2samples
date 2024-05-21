@@ -406,11 +406,11 @@ impl GenesMapper{
 
 	pub fn get_strict(&self, seq: &[u8], _cellid:u32, nwa: &mut NeedlemanWunschAffine ) ->  Result< Vec<MapperResult>, MappingError >{ 
 		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
-		let mut res = HashMap::<usize, Vec<i32>>::new();
+		// store the gene id, the relative start on that and the count for this combo
+		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
 		let mut helper = MultiMatch::new();
 		let mut i = 0;
 		while let Some((key, start)) = read_data.next(){
-
 
 			//println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
 			if self.reject_key(&key){
@@ -423,7 +423,9 @@ impl GenesMapper{
 				if self.debug {
 					println!("I am testing this key: {} and got {:?}", Self::as_dna_string(&key) , self.mapper[key as usize].data() );
 				}
+				// this will directly modify the res HashMap as it can also find more than one!
 				self.mapper[key as usize].get( &mut res, start as i32 );
+				
 
 			}else if self.debug{
 				println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
@@ -443,8 +445,8 @@ impl GenesMapper{
 
 	    // Sort the vector by the length of the internal arrays
 	    // longest first
-	    res_vec.sort_by(|(a_key, a_value), (b_key, b_value)| {
-		    match b_value.len().cmp(&a_value.len()) {
+	    res_vec.sort_by(|( (a_key, a_rel_start), a_counts), ((b_key, b_rel_start), b_counts)| {
+	    	match b_counts.cmp(&a_counts) {
 		        std::cmp::Ordering::Equal => a_key.cmp(b_key),
 		        other => other,
 		    }
@@ -459,116 +461,47 @@ impl GenesMapper{
 	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
-		if res_vec.is_empty() || res_vec[0].1.len() < 5 {
+		if res_vec.is_empty() || res_vec[0].1 < 5 {
 			return Err(MappingError::NoMatch)
 		}
-	    if let Some (entry) = &res_vec.first() {
-	    	let gene_id = &entry.0;
-	    	let start = &entry.1;
-	    	
-	    	match Self::all_values_same( start ){
-	    		Ok(()) => {
-	    			if let Some((read, database)) = self.slice_objects( start[0], &self.genes[*gene_id], &read_data ){
-	    				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
-	    				#[cfg(debug_assertions)]
-	    				if self.debug{
-	    					println!("using the match {entry:?} I'll compare these two sequences");
-	    					println!("read \n{read} to database\n{database}\n");
-	    					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
-	    				}
-						
-	    				cigar.convert_to_cigar( &nwa.cigar_vec() );
-	    				cigar.clean_up_cigar(&read, &database);
+		// collect all possible matches
+	    for ((gene_id, start), count) in &res_vec {
+	    	if *count < 5{
+	    		break
+	    	}
 
-	    				if nw.abs() < self.highest_nw_val  {
-							if cigar.mapping_quality() > 20 && cigar.state_changes() < 10  {
-								helper.push( 
-									MapperResult::new( 
-											*gene_id + self.offset, start[0].max(0) as usize, 
-										true, Some(cigar.clone()), 
-										cigar.mapping_quality(), *nw, (nw*read.len() as f32) as usize,
-										cigar.edit_distance(), self.genes[*gene_id].get_name(), self.genes[*gene_id].len()
-									)
-								);
-							}
+	    	if let Some((read, database)) = self.slice_objects( *start, &self.genes[*gene_id], &read_data ){
+				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
+				#[cfg(debug_assertions)]
+				if self.debug{
+					println!("using the match to gene #{gene_id} with rel start {start} and {count} key matches supporting that, I'll compare these two sequences:\n");
+					println!("read \n{read}\nto database\n{database}\n");
+					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
+				}
+				
+				cigar.convert_to_cigar( &nwa.cigar_vec() );
+				cigar.clean_up_cigar(&read, &database);
 
-							cigar.clear();
-						}
-						#[cfg(debug_assertions)]
-						if self.debug{
-							println!("I got this nw: {nw} and the matches: {}",helper);
-						}
-					};			
-				},
-				Err(GeneSelectionError::NotSame) =>{
-					let counts = Self::table( start );
-					let mut last = 1.0;
-					#[cfg(debug_assertions)]
-					if self.debug{
-						println!("I have multiple matching 8bp's but they match at different positions relative to the gene start!\n{counts:?}");
+				if nw.abs() < self.highest_nw_val  {
+					if cigar.mapping_quality() > 20 && cigar.state_changes() < 10  {
+						helper.push( 
+							MapperResult::new( 
+									*gene_id + self.offset, *start.max(&0) as usize, 
+								true, Some(cigar.clone()), 
+								cigar.mapping_quality(), *nw, (nw*read.len() as f32) as usize,
+								cigar.edit_distance(), self.genes[*gene_id].get_name(), self.genes[*gene_id].len()
+							)
+						);
 					}
 
-	    			//eprintln!("But there seams to be some higly likely entries: {counts:?}");
-	    			'for_loop: for (start, count) in counts{
-	    				if count as f32 / (last + count as f32) < 0.2 {
-	    					break;
-	    				}
-	    				last = count as f32;
-	    				if let Some((read, database)) = self.slice_objects( start, &self.genes[*gene_id], &read_data ){
-	    					
-	    					let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val );
-	    					#[cfg(debug_assertions)]
-	    					if self.debug{
-	    						println!("using the match start {start} count {count} I'll compare these two sequences");
-	    						println!("read \n{read} to database\n{database}\n");
-	    						println!("the alignement:\n{}", nwa.to_string( &read, &database, self.highest_humming_val ));
-	    					}
-	    					cigar.convert_to_cigar( &nwa.cigar_vec() );
-	    					cigar.clean_up_cigar(&read, &database);
-	    					if nw.abs() < self.highest_nw_val || ( cigar.fixed == Some( CigarEndFix::End) ||  cigar.fixed == Some( CigarEndFix::Start) ){
-	    						
-	    						if cigar.mapping_quality() > 20 && cigar.state_changes() < 10 {
-									helper.push( 
-										MapperResult::new( 
-												*gene_id + self.offset, 
-												start.max(0) as usize, 
-											true, 
-											Some(cigar.clone()), 
-											cigar.mapping_quality(), 
-											*nw, 
-											(nw*read.len() as f32) as usize,
-											cigar.edit_distance(), 
-											self.genes[*gene_id].get_name(), 
-											self.genes[*gene_id].len()
-										)
-									);
-								}
-								#[cfg(debug_assertions)]
-								if self.debug{
-									println!("I got the matches: {}",helper);
-								}
-								if cigar.edit_distance() == 0.0 && cigar.fixed == Some(CigarEndFix::Na) {
-									break 'for_loop; //That is a perfect match - we are done here!
-								}
-								cigar.clear();
-							}
-							#[cfg(debug_assertions)]
-							if self.debug{
-								println!("I got this nw: {nw} and the matches: {}",helper);
-							}
-						}else {
-							// I could not slice?!
-							#[cfg(debug_assertions)]
-							if self.debug{
-								println!("I could not slice using {start} and read\n{read_data} and database\n{}",self.genes[*gene_id]);
-							}
-						}
-					}
-				},
-				_=> { 
-		    		// not enough matches in the first place!
-		    	},
-		    };
+					cigar.clear();
+				}
+				#[cfg(debug_assertions)]
+				if self.debug{
+					println!("I got this nw: {nw} and the matches: {}",helper);
+				}
+			};			
+
 		} // end populating helper
 		#[cfg(debug_assertions)]
 		if self.debug{

@@ -29,20 +29,16 @@ impl GeneLink{
 		self.data.push( ( gene_id, start) );
 	}
 
-	pub fn get( &self, res:&mut HashMap<usize, Vec<i32>>, pos:i32 ) {
+	pub fn get( &self, res:&mut HashMap<(usize, i32), usize>, pos:i32 ) {
 		for (gene_id, start_on_gene) in &self.data {
-			match res.get_mut(&gene_id){
-				Some( pos_vec ) => {
-					pos_vec.push( *start_on_gene as i32 - pos )
-				},
-				None =>{
-					let mut pos_vec = Vec::<i32>::with_capacity(10);
-					pos_vec.push( *start_on_gene as i32 - pos );
-					res.insert( *gene_id, pos_vec );
-				}
-			}
+			res.entry(( *gene_id, *start_on_gene as i32 - pos )).and_modify(|e| {
+		        // the count for this combo
+		            *e += 1; // Increment the total_amount
+		    }).or_insert( 1 );
 		}
 	}
+
+
 	pub fn data(&self) -> std::slice::Iter<(usize, usize)>{
 		self.data.iter()
 	}
