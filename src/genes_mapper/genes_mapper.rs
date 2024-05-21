@@ -109,14 +109,14 @@ impl GenesMapper{
 			let ret = vec.join("\n") + "\n";
 			Some((ret, fasta))
 		}else {
-			let mut vec = Vec::<String>::with_capacity( hash.len() );
+			let mut vec = Vec::<String>::with_capacity( self.genes.len() );
 			let mut fasta = "".to_string();
-			for ( id, gene_obj) in &self.genes {
+			for  gene_obj in &self.genes {
 				let gene_name = gene_obj.get_name();
 				let gene_len = gene_obj.len();
 				let formatted_line = format!("@SQ\tSN:{}\tLN:{}", gene_name, gene_len);
 				vec.push(formatted_line);
-				fasta+= &self.genes[id].to_fasta();
+				fasta+= &gene_obj.to_fasta();
 			}
 			let ret = vec.join("\n") + "\n";
 			Some((ret, fasta))
