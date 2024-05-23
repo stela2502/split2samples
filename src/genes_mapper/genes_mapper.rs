@@ -57,6 +57,8 @@ pub struct GenesMapper{
 	report4: Option<HashSet<usize>>, // report for a gene?
 	/// additional mathcing and adding infos printed
 	debug: bool,
+	/// an internal version that should be iterated one anything important changes.
+	version:usize,
 
 }
 
@@ -76,6 +78,7 @@ impl GenesMapper{
 			genes: Vec::<GeneData>::with_capacity( 40_000 ),
 			mapper: vec![GeneLink::new(); u16::MAX as usize],
 			gene_hashes: BTreeMap::new(),
+			version: 7,
 			with_data: 0,
 			offset: offset,
 			names: BTreeMap::new(),
@@ -297,6 +300,7 @@ impl GenesMapper{
 						return None
 					},
 				};
+
 				if self.debug{
 					println!("slicing with start <0 {start} and \n{change_start}\nand\n{change_end}");
 					println!("I got you this return values:\n{obj_b}\n{obj_a}\ngood?\n")
@@ -318,6 +322,7 @@ impl GenesMapper{
 						return None
 					},
 				};
+				#[cfg(debug_assertions)]
 				if self.debug{
 					println!("slicing with start >0 {start} and \n{change_start}\nand\n{change_end}");
 					println!("I got you this return values:\n{obj_a}\n{obj_b}\ngood?\n")
@@ -419,15 +424,19 @@ impl GenesMapper{
 			
 			if ! self.mapper[key as usize].is_empty() {
 				i+=1;
+
 				#[cfg(debug_assertions)]
 				if self.debug {
-					println!("I am testing this key: {} and got {:?}", Self::as_dna_string(&key) , self.mapper[key as usize].data() );
+					let values: Vec<_> = self.mapper[key as usize].data().collect();
+					let m = 9.min( values.len() );
+					println!("I am testing this key: {} and got {:?} ...", Self::as_dna_string(&key) , &values[0..m] );
 				}
+				
 				// this will directly modify the res HashMap as it can also find more than one!
 				self.mapper[key as usize].get( &mut res, start as i32 );
-				
-
-			}else if self.debug{
+			}
+			else if self.debug{
+				#[cfg(debug_assertions)]
 				println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
 			}
 			if i == 30 {
@@ -445,7 +454,7 @@ impl GenesMapper{
 
 	    // Sort the vector by the length of the internal arrays
 	    // longest first
-	    res_vec.sort_by(|( (a_key, a_rel_start), a_counts), ((b_key, b_rel_start), b_counts)| {
+	    res_vec.sort_by(|( (a_key, _a_rel_start), a_counts), ((b_key, _b_rel_start), b_counts)| {
 	    	match b_counts.cmp(&a_counts) {
 		        std::cmp::Ordering::Equal => a_key.cmp(b_key),
 		        other => other,
@@ -454,10 +463,10 @@ impl GenesMapper{
 	    //res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
 	    #[cfg(debug_assertions)]
 		if self.debug {
-			println!("I have collected these initial matches: {:?}", res_vec );
+			let to=9.min(res_vec.len());
+			println!("I have collected these initial matches (first 10): {:?}", &res_vec[0..to] );
 		}
 	    let mut cigar= Cigar::new("");
-	    #[cfg(debug_assertions)]
 	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
@@ -472,8 +481,10 @@ impl GenesMapper{
 
 	    	if let Some((read, database)) = self.slice_objects( *start, &self.genes[*gene_id], &read_data ){
 				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
+
 				#[cfg(debug_assertions)]
 				if self.debug{
+					println!("#################################################################################");
 					println!("using the match to gene #{gene_id} with rel start {start} and {count} key matches supporting that, I'll compare these two sequences:\n");
 					println!("read \n{read}\nto database\n{database}\n");
 					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
@@ -483,6 +494,10 @@ impl GenesMapper{
 				cigar.clean_up_cigar(&read, &database);
 
 				if nw.abs() < self.highest_nw_val  {
+					#[cfg(debug_assertions)]
+					if self.debug{
+						println!("################## And I deem this match intereting");
+					}
 					if cigar.mapping_quality() > 20 && cigar.state_changes() < 10  {
 						helper.push( 
 							MapperResult::new( 
@@ -508,6 +523,7 @@ impl GenesMapper{
 			//let res_lines = res_vec.iter().map(|obj| format!("{:?}", obj)).collect::<Vec<String>>().join("\n");
 			println!("mapping the read {read_data}\nwe obtained an initial mapping result \n{helper}\nand in the end found \n{:?}",
 				helper.get_best( seq.len()) );
+			println!("#################################################################################");
 		}
 		match helper.get_best( seq.len()){
 			Ok(val) => {

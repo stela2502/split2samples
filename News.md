@@ -1,3 +1,10 @@
+# 2.2.1
+
+Using 10x data the index length of 400 bp is too short.
+It has now been changed to 500 bp for both indices.
+
+Indices from previouse versions will not work any more!
+
 # 2.2.0
 
 The created SAM files now are accepted by samtools.

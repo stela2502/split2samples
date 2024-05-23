@@ -122,7 +122,7 @@ impl FastMapper{
             max_id,
             last_count,
             with_data,
-            version: 6,
+            version: 7,
             tool,
             mask,
             pos,

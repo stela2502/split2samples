@@ -29,6 +29,9 @@ mod tests {
 	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search" );
 	    	},
 	    	None=> {
+	    		if sam_strings.is_empty(){
+	    			panic!("I go no result instead of a sam line!");
+	    		}
 	    		assert_eq!(sam_strings[0], sam_line, "We got the expected sam line?");
 	    	}
 	    }
@@ -90,7 +93,7 @@ mod tests {
 	}
 
     #[test]
-    fn problematic_cigar() {
+    fn identify_the_better_database_entry() {
         let name ="Rpl11_int";
         let database = "testData/problematic_match.fasta".to_string();
         let seq = b"GGAGAAAGGCCTGAAGGTGCGGGAGTATGAGTTGCGGAAAAATAACTTCTCGGATACTGGAAACTTTGGTTTTGGAATTCAAGAACACAT";
@@ -98,6 +101,5 @@ mod tests {
         test_this_seqence( seq, database, bam_line, None );
 
     }
-
 
 }

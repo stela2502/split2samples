@@ -139,7 +139,7 @@ impl Cigar{
     }
 
     /// cleanup in this regards is meant to fix alignment errors.
-    pub fn clean_up_cigar<T>(&mut self, seq1:&T, seq2:&T)
+    pub fn clean_up_cigar<T>(&mut self, _seq1:&T, _seq2:&T)
     where
     	T:BinaryMatcher + std::fmt::Display,
     {

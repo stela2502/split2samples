@@ -176,7 +176,7 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
 
 fn process_genes_multi ( genes: &[Gene], index: &mut FastMapper ,
     seq_records: &HashMap< String, Vec<u8>>, chr:&Regex, genes2print: &HashSet<String> ){
-    const COVERED_AREA:usize = 400; // cover 400 bp of the transcript
+    const COVERED_AREA:usize = 500; // cover 400 bp of the transcript
     for gene in genes {
         let gene_name: String = gene.name.to_string();
         // Do something with the gene, e.g. remove it
