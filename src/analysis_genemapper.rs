@@ -434,6 +434,10 @@ impl AnalysisGeneMapper{
     	record += &format!("{}\t", gene_id[0].mapq() );
     	// the map quality
     	let cig = gene_id[0].get_cigar();
+    	let (mine, _other) = cig.calculate_covered_nucleotides( &cig.to_string() );
+    	if mine != &read_mod.len(){
+    		panic!("I am trying to create a bam line and found a discrepancy between cigar length and sequence length: {cig}\n{read2}");
+    	}
 		let read_mod = match cig.fixed {
 			Some(CigarEndFix::StartInsert) => {
 				//shit - the read needs to be adjusted!

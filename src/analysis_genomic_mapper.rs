@@ -298,43 +298,24 @@ impl AnalysisGenomicMapper{
 
     fn build_sam_record ( &self, read2:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> Option<String>{
 
+    	let mut read2 = read.clone();
     	
-    	let cig = gene_id[0].get_cigar();
-    	// this can likely go as the CigarEndFix::StartInsert is not used any more.
-		let mut read_mod = match cig.fixed {
-			Some(CigarEndFix::StartInsert) => {
-				//shit - the read needs to be adjusted!
-				let (cig_mapping_length, _) = cig.calculate_covered_nucleotides( &cig.cigar );
-				let bp_to_clip = read2.len().saturating_sub( cig_mapping_length );
-				match read2.slice( bp_to_clip, cig_mapping_length ){
-					Some(r) => r,
-					None => {
-						eprintln!("#1 I try to clip read2 from {bp_to_clip} with a length of {cig_mapping_length} - but failed!\n{read2}");
-						return None
-					},
-				}
-			},
-			_ => {
-				read2.clone()
-			}
-		};
-		// mapping to chrM I now have the issue with circularity of that genome.
-    	// I do not have a clever way to fix the issue, but when my Cigar describes a smaller area
-    	// than the read2 would normally cover and the match start() is 0 then it is hily likely that we sequecned more than what the databse has to provide.
-    	// Hence to not make samtools freak out we need to adjust the read2
-    	let (length, _) = cig.calculate_covered_nucleotides( &format!("{}",cig) );
-    	read_mod = if read_mod.len() != length && gene_id[0].start() == 0 {
-    		let bp_to_clip = read_mod.len().saturating_sub(length);
-    		match read_mod.slice( bp_to_clip, length ){
-				Some(r) => r,
-				None => {
-					eprintln!("#2 I try to clip read_mod from {bp_to_clip} with a length of {length} - but failed!\n{read_mod}");
-					return None
-				},
-			}
-    	}else {
-    		read_mod
+    	match gene_id[0].cigar() {
+    		Some(cigar) => 
+    		{
+    			let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.to_string() );
+    			if mine < read2.len(){
+    				read2=read2.slice(0, mine ).unwrap();
+
+    			}
+    			if mine + gene_id[0].start() > gene_id[0].db_length() {
+    				panic!("Cigar suggest longer match than db_length allows!");
+    			}
+    		},
+    		None=> {
+    		},
     	};
+
 
     	let mut record = "".to_string();
     	// starting
@@ -370,6 +351,10 @@ impl AnalysisGenomicMapper{
 		    	format!("{}S", read_mod.seq().len())
 		    }
 		};
+		let (mine, _other) = gene_id[0].get_cigar().calculate_covered_nucleotides( &cig.to_string() );
+    	if mine != &read2.len(){
+    		panic!("I am trying to create a bam line and found a discrepancy between cigar length and sequence length: {cig}\n{read2}");
+    	}
 		record += &cigar_string ;
     	record +="\t";
 		// the Cigar string
