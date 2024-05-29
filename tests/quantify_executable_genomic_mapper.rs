@@ -120,12 +120,12 @@ fn test_quantify_gene_mapper() {
         }
     }
 
-    assert_eq!( i , 44976,"not the right number of lines in the sam file {}", i);
-
     assert_eq!( only_s , 0,"still {} unacceptably bad matches in the sam file", only_s);
 
     assert_eq!( empty , 0,"still {} empty lines in the sam file", empty);
 
+    assert_eq!( i , 41709,"not the right number of lines in the sam file {}", i);
+    
     // check the sampleCounts
 
     // Check if output contains the expected lines
@@ -213,13 +213,13 @@ sample reads      : 12 UMIs (0.02% of cellular)
     exp.insert( "SampleTag06_mm".to_string(), 134 );
     exp.insert( "AssignedSampleName".to_string(), 1 );
     */
-    exp.insert( "na".to_string(), 25865 );
-    exp.insert( "SampleTag01_mm".to_string(), 129 );
-    exp.insert( "SampleTag02_mm".to_string(), 209 );
-    exp.insert( "SampleTag03_mm".to_string(), 242 );
-    exp.insert( "SampleTag04_mm".to_string(), 163 );
+    exp.insert( "na".to_string(), 25684 );
+    exp.insert( "SampleTag01_mm".to_string(), 111 );
+    exp.insert( "SampleTag02_mm".to_string(), 202 );
+    exp.insert( "SampleTag03_mm".to_string(), 232 );
+    exp.insert( "SampleTag04_mm".to_string(), 157 );
     exp.insert( "SampleTag05_mm".to_string(), 20 );
-    exp.insert( "SampleTag06_mm".to_string(), 132 );
+    exp.insert( "SampleTag06_mm".to_string(), 127 );
     exp.insert( "AssignedSampleName".to_string(), 1 );
 
 
@@ -228,14 +228,14 @@ sample reads      : 12 UMIs (0.02% of cellular)
     exp.insert( "filtered reads".to_string(), 14078 );
 
     //collected read counts:
-    exp.insert( "expression reads".to_string(), 44507);
+    exp.insert( "expression reads".to_string(), 43944 );
     exp.insert( "antibody reads".to_string(),   0 );
-    exp.insert( "sample reads".to_string(),     911 );
+    exp.insert( "sample reads".to_string(),     862 );
 
     //reported UMI counts:
-    exp.insert( "expression UMIs".to_string(),  44432 );
+    exp.insert( "expression UMIs".to_string(),  43870 );
     exp.insert( "antibody UMIs".to_string(),    0 );
-    exp.insert( "sample UMIs".to_string(),      911 );
+    exp.insert( "sample UMIs".to_string(),      862 );
 
     // Iterate over the actual hashmap and assert each key-value pair separately
     let mut failed = false;

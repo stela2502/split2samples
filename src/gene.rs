@@ -164,8 +164,31 @@ impl Gene{
 	/// generate mRNA and nacent RNA (if the last exon is small enough)
 	pub fn generate_rna_and_nascent_strings(&self, seq: &[u8], covered_area: usize) -> (Option<Vec<u8>>, Option<Vec<u8>>) {
 	    let mrna = self.to_mrna(seq.to_owned(), covered_area);
+
 	    let nascent = self.to_nascent(seq.to_owned(), covered_area);
 	    (mrna, nascent)
+	}
+
+	/// returns the start position on the mRNA in genomic coordinates and the global end position
+	fn to_mrna_positions(&self, covered_area:usize ) ->(usize, usize) {
+		let mut rev_sorted_exons = self.exons.clone();
+	    rev_sorted_exons.sort_by(|a, b| b[0].cmp(&a[0]));
+	    let end = rev_sorted_exons[0][1];
+	    let mut cum_len = 0;
+	    for reg in &rev_sorted_exons {
+	    	cum_len += reg[1].saturating_sub(reg[0]);
+	    	if cum_len > covered_area{
+	    		return ( reg[0] + ( cum_len - covered_area ) , end )
+	    	}
+	    }
+	    match rev_sorted_exons.pop(){
+	    	Some( st ) => {
+	    		(st[0], end)
+	    	},
+	    	None => {
+	    		panic!("library error - I could not identify the first start in my list of exons!")
+	    	}
+	    }
 	}
 
 	/// get the mRNA sequence of the transcript in sense orientation.
@@ -178,6 +201,8 @@ impl Gene{
 	    let mut sorted_exons = self.exons.clone();
 	    sorted_exons.sort_by(|a, b| a[0].cmp(&b[0]));
 
+	    println!( "The sorted exons: {:?}", sorted_exons);
+
 	    // exons upper/lower case iterations to see the breaks
 	    let mut lc = false;
 	    for reg in &sorted_exons {
@@ -185,19 +210,10 @@ impl Gene{
 	            eprintln!("The exon positions exceed the sequence length!");
 	            return None;
 	        }
-	        let exon_slice = &seq[reg[0] - 1..reg[1]];
-
-	        // Convert characters to uppercase or lowercase based on `lc`
-	        let exon_mrna: Vec<u8> = exon_slice
-	            .iter()
-	            .map(|&c| if lc { c.to_ascii_lowercase() } else { c.to_ascii_uppercase() })
-	            .collect();
-
-	        mrna.extend_from_slice(&exon_mrna);
-
-	        lc = !lc;
+	        //println!("processing slice {:?} {}-{} with these indices: {:?}", std::str::from_utf8(&seq[reg[0] - 1..(reg[1])]), reg[0], reg[1], reg[0] - 1..(reg[1]) );
+			mrna.extend_from_slice(&seq[reg[0] - 1..(reg[1])]);
 	    }
-
+	    //println!("the final mRNA   {:?}", std::str::from_utf8(&mrna) );
 	    self.cut_to_size(mrna, covered_area )
 
 	}
@@ -236,8 +252,10 @@ impl Gene{
 			let start_index = self.start.saturating_sub(1);
 			let end_index = self.end.min(seq.len());
 			let nascent = seq.get(start_index..end_index).unwrap_or_default().to_vec();
-
-			self.cut_to_size(nascent, covered_area )
+			let (glob_start, glob_end) = self.to_mrna_positions(covered_area);
+			//make the nascent WAY longer??
+			//self.cut_to_size(nascent, glob_end - glob_start )
+			self.cut_to_size(nascent, covered_area*2 )
 		}
 		else {
 			None

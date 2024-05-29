@@ -8,7 +8,7 @@ mod tests {
 	use rustody::genes_mapper::SeqRec;
 	use rustody::errors::MappingError;
 
-	fn test_this_seqence( seq: &[u8], database:String, sam_line: &str, err:Option<MappingError> ){
+	fn test_this_seqence( seq: &[u8], database:String, sam_line: Option<&str>, err:Option<MappingError> ){
 
 		let mut results = MappingInfo::new( None, 20.0, 10, None );
 		let mut worker = AnalysisGeneMapper::new( 32, "v1".to_string(), Some(database),
@@ -26,13 +26,23 @@ mod tests {
 	    let (single_cell_data, sam_strings) = worker.analyze_paralel( &data, &mut results, pos );
 	    match err{
 	    	Some(e) => {
+	    		assert_eq!( single_cell_data.is_empty(), true, "no results in the data object");
 	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search" );
 	    	},
 	    	None=> {
-	    		if sam_strings.is_empty(){
-	    			panic!("I go no result instead of a sam line!");
+	    		assert_eq!( single_cell_data.is_empty(), false, "there is a result in the data object");
+	    		match sam_line {
+	    			Some( sam ) => {
+	    				if sam_strings.is_empty(){
+			    			panic!("I go no result instead of a sam line!");
+			    		}
+			    		assert_eq!(sam_strings[0], sam, "We got the expected sam line?");
+	    			},
+	    			None => {
+	    				assert_eq!( sam_strings.len(), 0, "I go no result for the search" );
+	    			}
 	    		}
-	    		assert_eq!(sam_strings[0], sam_line, "We got the expected sam line?");
+	    		
 	    	}
 	    }
 	    
@@ -44,7 +54,7 @@ mod tests {
 		let database = "testData/ChrM.fasta.gz".to_string();
 
 		let bam_line= "SomeRead20+85\t0\tchrM\t1\t39\t72M1X12M\t*\t0\t0\tCGATGGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTGTGCACGC\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:39\tnM:i:0.011764706\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-		test_this_seqence( seq, database, bam_line, None );
+		test_this_seqence( seq, database, Some(bam_line), None );
 	}
 
 	#[test]
@@ -52,7 +62,7 @@ mod tests {
 		let seq = b"CCTACAAGCCTCAGAGTACTTCGAGTCTCCCTTCACCATTTCCGACGGCATCTACGGCTCAACATTTTTTGTAGCCACAGGCTTCCACGG";
 		let database = "testData/ChrM.fasta.gz".to_string();
 		let bam_line= "SomeRead2\t0\tchrM\t9731\t40\t90M\t*\t0\t0\tCCTACAAGCCTCAGAGTACTTCGAGTCTCCCTTCACCATTTCCGACGGCATCTACGGCTCAACATTTTTTGTAGCCACAGGCTTCCACGG\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:40\tnM:i:0\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-		test_this_seqence( seq, database, bam_line, None );
+		test_this_seqence( seq, database, Some(bam_line), None );
 	}
 
 	#[test]
@@ -63,7 +73,7 @@ mod tests {
 		//          eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeesssssssssssssssssssssssssss
 		let seq = b"ATGTATGTTGTAGCTCCTCAAATAAATTTGTTCCAGCATTAgcactctcacttactaagcATGTTCTA";
 		let bam_line= "SomeRead2\t0\t";
-		test_this_seqence( seq, database, bam_line, Some(MappingError::NoMatch) );
+		test_this_seqence( seq, database, Some(bam_line), Some(MappingError::NoMatch) );
 	}
 
 	#[test]
@@ -75,7 +85,7 @@ mod tests {
 		let seq = b"ATGTATGTTGTAGCTCCTCAAATAAATTTGTTCCAGCATTAgcactctc";
 		//                               the right gene               the smaller sequence.
 		let bam_line= "SomeRead20+41\t0\tBtla\t145\t40\t41M\t*\t0\t0\tATGTATGTTGTAGCTCCTCAAATAAATTTGTTCCAGCATTA\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:40\tnM:i:0\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-		test_this_seqence( seq, database, bam_line, None );
+		test_this_seqence( seq, database, Some(bam_line), None );
 
 	}
 
@@ -88,7 +98,7 @@ mod tests {
 		let seq = b"GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTGTGCACGCGATAGCATTG";
 		//                               the right gene               the smaller sequence.
 		let bam_line= "SomeRead2\t0\tchrM\t1\t39\t72M1X17M\t*\t0\t0\tGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTGTGCACGCGATAGCATTG\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:39\tnM:i:0.011111111\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-		test_this_seqence( seq, database, bam_line, None );
+		test_this_seqence( seq, database, Some(bam_line), None );
 
 	}
 
@@ -98,8 +108,16 @@ mod tests {
         let database = "testData/problematic_match.fasta".to_string();
         let seq = b"GGAGAAAGGCCTGAAGGTGCGGGAGTATGAGTTGCGGAAAAATAACTTCTCGGATACTGGAAACTTTGGTTTTGGAATTCAAGAACACAT";
         let bam_line= "SomeRead20+78\t0\tRpl11\t320\t40\t78M\t*\t0\t0\tGGAGAAAGGCCTGAAGGTGCGGGAGTATGAGTTGCGGAAAAATAACTTCTCGGATACTGGAAACTTTGGTTTTGGAAT\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:40\tnM:i:0\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-        test_this_seqence( seq, database, bam_line, None );
+        test_this_seqence( seq, database, Some(bam_line), None );
 
+    }
+
+    #[test]
+    fn idenitfy_sample1() {
+    	let database = "testData/problematic_match.fasta".to_string();
+    	let seq = b"ATTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
+    	// sample ids do not create a sam line!
+    	test_this_seqence( seq, database, None, None );
     }
 
 }

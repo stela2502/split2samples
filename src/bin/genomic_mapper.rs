@@ -18,9 +18,8 @@ use rustody::ofiles::Ofiles;
 // use std::collections::HashSet;
 // use std::convert::TryInto;
 
-/// The genomic_mapper needs a gene_mapper index created using the create_egen_mapper_index program.
+/// The genomic_mapper needs a gene_mapper index created using the create_gene_mapper_index program.
 /// Instead of the quantify scripts this will in addition create a sam file with all genmic reads.
-/// If you use '-' as outpath the sam file will be printed to std out instead.  
 
 #[derive(Parser)]
 #[clap(version = "1.1.1", author = "Stefan L. <stefan.lang@med.lu.se>")]

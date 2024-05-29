@@ -23,9 +23,15 @@ indicatif = {version = "*", features = ["rayon"]}
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
 needletail = "0.5.1"
 noodles-bam = "0.26.0"
+rand = "0.8"
+
 noodles-bgzf = "0.26.0"
 num_cpus = "1.14"
 rayon = "1.5"
 regex = "1"
 serde = { version="1.0.103", features = ["derive"] }
 num-traits = "*"
+
+[features]
+# print a lot (!) of additional mapping intermediates (on top of the additional debug output)
+mapping_debug =[]

@@ -3,6 +3,7 @@
 use crate::traits::Cell;
 use crate::traits::BinaryMatcher;
 //use crate::genes_mapper::gene_data::GeneData;
+use core::cmp::Ordering;
 
 
 use regex::Regex;
@@ -41,6 +42,16 @@ impl CigarEnum{
 			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
 		}
 	}
+	pub fn from_str(c: &str) -> Option<CigarEnum> {
+        match c {
+            "I" => Some(CigarEnum::Insertion),
+            "D" => Some(CigarEnum::Deletion),
+            "M" => Some(CigarEnum::Match),
+            "X" => Some(CigarEnum::Mismatch),
+            // Add more cases as needed
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for CigarEnum {
@@ -62,7 +73,7 @@ impl fmt::Display for CigarEnum {
 /// Both - and internal match?! Let's see if that even happens.
 /// StartInsert - this cigar indicated that teh match was longer on the starting end - Likely the db too short?
 ///               Anyhow - this need to be fixed in the analysis scripts and therefore a CigarEndFix is needed.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CigarEndFix{
 	Na,
 	Start,
@@ -71,7 +82,7 @@ pub enum CigarEndFix{
 	StartInsert,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cigar{
 	// the cigar string
 	pub cigar:String,
@@ -98,11 +109,29 @@ impl Default for Cigar {
             fixed: None,
             debug: false,
             contains: vec![false;4],
-            state_changes: 0,
+            state_changes: 1000,
         }
     }
 }
 
+impl PartialOrd for Cigar {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Cigar {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Define your comparison logic here. For example:
+        // 1. Compare by `state_changes` (ascending)
+        // 2. Then by length of `cigar` string (descending)
+        // 3. Finally by `cigar` string lexicographically (ascending)
+
+        self.mapping_quality().cmp(&other.mapping_quality()) // more is better
+        .then_with( || self.len().cmp(&other.len())) // more is better
+        .then_with( || other.state_changes.cmp(&self.state_changes)) // less is better
+    }
+}
 
 impl Cigar{
 
@@ -114,6 +143,10 @@ impl Cigar{
 			contains: vec![false;4],
 			state_changes: 0,
 		}
+	}
+
+	pub fn better_as( &self, other: &Self ) -> bool{
+		self > other
 	}
 
 	pub fn set_debug(&mut self, state:bool) {
@@ -128,6 +161,7 @@ impl Cigar{
 		self.cigar ="".to_string();
 		self.fixed = None;
 		self.contains = vec![false;4];
+		self.state_changes = 0;
 	}
 
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
@@ -136,6 +170,30 @@ impl Cigar{
 
     pub fn to_string(&self) -> String{
     	self.cigar.to_string()
+    }
+
+    pub fn restart_from_cigar(&mut self, cigar_string:&str ) {
+    	self.clear();
+    	let mut result = Vec::new();
+		let re = Regex::new(r"(\d+)(\w)").unwrap();
+
+		for cap in re.captures_iter(cigar_string) {
+	        let count: usize = cap[1].parse().unwrap();
+	        let operation = &cap[2];
+	        let cigar_type = match CigarEnum::from_str(operation) {
+	        	None => { 
+	        		panic!("You try to revert the Cigar String {cigar_string} back to a vector of CigarEnum - but we do not recognize the {operation} as a CigarEnum!")
+	        	},
+	            Some (cig) => cig,
+	        };
+
+	        // Add the operation to the result vector `count` times
+	        for _ in 0..count {
+	            result.push(cigar_type);
+	        }
+   		}
+
+	    self.convert_to_cigar( &result );
     }
 
     /// cleanup in this regards is meant to fix alignment errors.
@@ -148,69 +206,6 @@ impl Cigar{
    			return ();
     	}
 
-		/*
-		// this is now all handled by the needleman_wunsch_affine class
-		let missmatch_followd_by_deletion = r"(\d+)X(\d+)([ID])(\d+)M";
-		let re_msbd = regex::Regex::new(missmatch_followd_by_deletion).unwrap();
-
-		let old_cigar = &self.cigar.clone();
-		let matches: Vec<regex::Captures> = re_msbd.captures_iter( &old_cigar ).collect::<Vec<regex::Captures>>();
-		
-		for mat in matches.into_iter().rev() {
-			if let (Some(mismatch_length), Some(deletion_length), Some(direction), Some(following_match_length)) = (mat.get(1), mat.get(2), mat.get(3), mat.get(4)) {
-
-				//panic!( "With {old_cigar} I got the end values for the three matches as {}, {} and {}", mismatch_length.end(), deletion_length.end(), following_match_length.end()); 
-                let mismatch_end = mismatch_length.end();
-                let deletion_end = deletion_length.end();
-
-                let mismatch_part = &self.cigar[..(mismatch_end+1)];
-           		//let deletion_part = &self.cigar[..(deletion_end+1)];
-           		//let match_part = &self.cigar[..(following_match_length.end()+1)];
-           		let direction_str = &self.cigar[direction.start()..direction.end()];
-
-           		let mismatch_usize = mismatch_length.as_str().parse::<usize>().unwrap();
-            	let deletion_usize = deletion_length.as_str().parse::<usize>().unwrap();
-            	let old_match_usize = following_match_length.as_str().parse::<usize>().unwrap();
-
-                let ( mm_mine, _mm_other) = &self.calculate_covered_nucleotides( mismatch_part );
-                //let ( del_mine, del_other) = &self.calculate_covered_nucleotides( deletion_part );
-                let mut new_following_match = old_match_usize;
-
-                let mut new_mismatch = mismatch_usize;
-                //panic!("Do I get the correct parts? whole: {}, missmatch {}, deletion {} and finally with the match {}",old_cigar, mismatch_part, deletion_part, match_part );
-
-                for add in 0..mismatch_usize.min(deletion_usize){
-                	//eprintln!("{self} and\nA: {seq1}\nB: {seq2}: I am trying to access the position {} in seq1 and {} in seq2", mm_mine-add, del_other-add );
-                	if direction_str == "D"{
-	                	if seq2.get_nucleotide_2bit(mm_mine-add-1) == seq1.get_nucleotide_2bit(mm_mine-add-1+deletion_usize){
-	                		//eprintln!("And I got a match");
-	                		new_mismatch -= 1;
-	                		new_following_match +=1;
-	                	}	
-                	}else{ // "I"
-                		if seq2.get_nucleotide_2bit(mm_mine-add-1+deletion_usize) == seq1.get_nucleotide_2bit(mm_mine-add-1){
-	                		//eprintln!("And I got a match");
-	                		new_mismatch -= 1;
-	                		new_following_match +=1;
-	                	}
-                	}
-                	
-                }
-                // fix the following match part
-                self.cigar.replace_range((deletion_end+1)..following_match_length.end(), &format!("{}", new_following_match)) ;
-                // fix the mismatch part
-                if new_mismatch == 0{
-                	// remove that part
-                	self.cigar.replace_range(mismatch_length.start()..(mismatch_length.end()+1), "");
-                }else {
-                	// replace the value
-                	self.cigar.replace_range(mismatch_length.start()..(mismatch_length.end()), &format!("{}", new_mismatch) );
-                }
-
-            }
-        }
-        */
-
         //println!("Before the soft clip I have this result {self} for these sequences:{seq1}\n {seq2}\n");
         self.soft_clip_start_end();
 
@@ -218,6 +213,10 @@ impl Cigar{
     }
 
     pub fn mapping_quality(&self ) -> u8 {
+
+    	if &self.cigar == ""{
+    		return 0
+    	}
     	let re = Regex::new(r"(\d+)(\w)").unwrap();
     
 	    // Initialize counts for 'M' and other operations
@@ -279,28 +278,17 @@ impl Cigar{
     	total
     }
 
-    /// it is possible that the database entry was just not long enough to match to this read completely
-    /// better to just move on the database here.
-    pub fn drop_starting_insertions(&mut self) -> usize{
-		let inserts = Regex::new(r"^([1-9][0-9]*)I").unwrap();
-    	if let Some(mat) = inserts.captures(&self.cigar) {
-	        if let Some(num_str) = mat.get(1) {
-	            if let Ok(num) = num_str.as_str().parse::<usize>() {
-	                // Drop the matched part from self.cigar
-	                self.cigar = inserts.replace(&self.cigar, "").into_owned();
-	                return num;
-	            }
-	        }
-	    }
-	    0 // Return 0 if no insertions found or parsing fails	
-	}
 
     pub fn soft_clip_start_end( &mut self) {
-    	let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){5,})";
+    	if self.state_changes < 6 {
+    		self.fixed = Some(CigarEndFix::Na);
+    		return;
+    	}
+    	let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){4,})";
     	//let start = r"^((?:[123456789][IXMD]){5,})";
     	let re_start = regex::Regex::new(start).unwrap();
 
-		let end = r"((?:[1-7]M|[1-9][0-9]*[IXD]){5,})$";
+		let end = r"((?:[1-7]M|[1-9][0-9]*[IXD]){4,})$";
     	//let end = r"((?:[123456789][IXMD]){5,})$";
     	let re_end = regex::Regex::new(end).unwrap();
 
@@ -314,14 +302,17 @@ impl Cigar{
 				    if prev_char.is_digit(10) {
 				        // The character is a digit - overmatched
 				        let clipped_part = &self.cigar[(clippable.start()+2)..clippable.end()];
-				        
+
+						#[cfg(debug_assertions)]	        
 				        let (mine, other) = self.calculate_covered_nucleotides(clipped_part);
+				        #[cfg(not(debug_assertions))]
+				        let (mine, _other) = self.calculate_covered_nucleotides(clipped_part);
 				        #[cfg(debug_assertions)]
 				        if self.debug{
 				        	println!("Detected an over match!");
 				        	println!("	clipped part = {clipped_part} with a mine size of {mine} and an other size of {other}");
 				        }
-				        self.cigar.replace_range((clippable.start()+2)..clippable.end(), &format!("{}S", mine));
+				        self.cigar.replace_range((clippable.start()+2)..clippable.end(), &format!("{}X", mine));
 				        self.fixed = Some(CigarEndFix::End);
 				        #[cfg(debug_assertions)]
 				        if self.debug{
@@ -332,7 +323,7 @@ impl Cigar{
 				        let clipped_part = &self.cigar[clippable.start()..clippable.end()];
 		        		let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
 		        		//println!("I'll clip this part: {clipped_part} with a mine length of {mine}");
-		            	self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}S", mine));
+		            	self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}X", mine));
 		            	self.fixed = Some(CigarEndFix::End);
 				    }
 					
@@ -341,7 +332,7 @@ impl Cigar{
 			        let clipped_part = &self.cigar[clippable.start()..clippable.end()];
 			        let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
 			        //println!("not an digit - I'll clip this part: {clipped_part} with a mine length of {mine}");
-			        self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}S", mine));
+			        self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}X", mine));
 			        self.fixed = Some(CigarEndFix::End);
 			    }
 	        }
@@ -351,7 +342,8 @@ impl Cigar{
 		let re_problem = regex::Regex::new(problem).unwrap();
 
 	   	if let Some(_mat) = re_problem.captures(&self.cigar.clone()) {
-	   		//panic!("This should not happen in the etsts!");
+	   		//panic!("This should not happen in the tests!");
+	   		self.state_changes = 1;
 	   		return;
 	   	}
 
@@ -362,7 +354,7 @@ impl Cigar{
 	            if clippable.start() <= clippable.end() && clippable.end() <= self.cigar.len() {
 	        		let clipped_part = &self.cigar[clippable.start()..clippable.end()];
 	        		let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
-	            	self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}S", mine));
+	            	self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}X", mine));
 	            	match self.fixed{
 	            		Some(CigarEndFix::End) => self.fixed = Some( CigarEndFix::Both),
 	            		Some(CigarEndFix::Na) => self.fixed =Some( CigarEndFix::Start),
@@ -373,6 +365,13 @@ impl Cigar{
 	        		// panic!("With {self} I found a crappy match {} {}: {} old: {}", clippable.start(), clippable.end(), self.cigar.len(), old_cigar);
 	        	}
 	            
+	        }
+	    }
+
+	    self.state_changes = 0;
+	    for c in self.cigar.chars() {
+	        if ! c.is_digit(10) {
+	        	self.state_changes +=1;
 	        }
 	    }
 
@@ -409,13 +408,48 @@ impl Cigar{
 	                },
 	                'S' => {
 	                	mine += count;// Deletion or intron
+	                },
+	                'H' => {
+	                	mine += count;// hard klipped
+	                },
+	                _ => {}, // Other CIGAR operations (e.g., P)
+	            }
+	            current_number.clear(); // Clear the current number for the next operation
+	        }
+	    }   
+	    (mine, other)
+	}
+
+	pub fn len (&self) -> usize{
+		let mut mine = 0;
+		let mut current_number = String::new();
+		for c in self.cigar.chars() {
+	        if c.is_digit(10) {
+	            // If the character is a digit, append it to the current number
+	            current_number.push(c);
+	        } else {
+	            // If the character is not a digit, process the operation
+	            let count = current_number.parse::<usize>().unwrap_or(1); // Parse the count, default to 1 if parsing fails
+
+	            match c {
+	                'M' | '=' | 'X' => {
+	                	mine  += count; // Match, mismatch, or sequence match
+	                },
+	                'I' => {
+	                	mine += count; // Insertion
+	                },
+	                'S' => {
+	                	mine += count;// soft klipped
+	                },
+	                'H' => {
+	                	mine += count;// hard klipped
 	                }
 	                _ => {}, // Other CIGAR operations (e.g., S, H, P)
 	            }
 	            current_number.clear(); // Clear the current number for the next operation
 	        }
 	    }   
-	    (mine, other)
+	    mine
 	}
 
 	pub fn convert_to_cigar(&mut self, path: &[CigarEnum] ){

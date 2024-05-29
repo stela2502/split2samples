@@ -116,9 +116,7 @@ impl SeqRec{
             0
         }else {
             start
-        };
-
-    	
+        };	
 
     	let used_len = if real_start + len > self.seq.len(){
             #[cfg(debug_assertions)]

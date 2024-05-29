@@ -140,7 +140,9 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
             
             // and add a gene
             // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
-            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), vec![gene_name.to_string(), transcript_id.to_string()] );
+            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), transcript_id.to_string(), vec![gene_name.to_string(), transcript_id.to_string()] );
+            #[cfg(debug_assertions)]
+            println!("I am inserting a new gene: {} {}",transcript_id, gene );
             genes.insert( transcript_id, gene );
         }
 

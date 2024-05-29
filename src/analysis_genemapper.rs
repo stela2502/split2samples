@@ -131,6 +131,7 @@ impl AnalysisGeneMapper{
 		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
 		        	}
 		        }
+
 		    }else {
 		    	eprintln!("Expression file could not be read - ignoring")
 		    }
@@ -253,6 +254,8 @@ impl AnalysisGeneMapper{
 
 	    //samples.set_min_matches(2);
 	    samples.set_highest_nw_val(0.1);
+	    samples.set_small_entries();
+	    antibodies.set_small_entries();
 	    genes.set_min_matches( 8 );
 	    samples.set_min_matches( 5 );
 
@@ -397,6 +400,8 @@ impl AnalysisGeneMapper{
     		{
     			let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.to_string() );
     			if mine < read2.len(){
+    				#[cfg(debug_assertions)]
+    				eprintln!("build_sam_record tries to slice the {}bp long seq \n{read2}\n as the cigar {cigar} is shorter.", read2.len());
     				read2=read2.slice(0, mine ).unwrap();
 
     			}
@@ -435,7 +440,7 @@ impl AnalysisGeneMapper{
     	// the map quality
     	let cig = gene_id[0].get_cigar();
     	let (mine, _other) = cig.calculate_covered_nucleotides( &cig.to_string() );
-    	if mine != &read_mod.len(){
+    	if mine != read2.len(){
     		panic!("I am trying to create a bam line and found a discrepancy between cigar length and sequence length: {cig}\n{read2}");
     	}
 		let read_mod = match cig.fixed {
@@ -692,11 +697,11 @@ impl AnalysisGeneMapper{
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
 		                    	report.write_to_ofile( Fspot::Buff1, 
-		                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].1) 
+		                    		format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].1) 
 		                    	);
 								
 								report.write_to_ofile( Fspot::Buff2, 
-									format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].0 ) 
+									format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].0 ) 
 								);
 		                    	report.no_data +=1;
 		                    },

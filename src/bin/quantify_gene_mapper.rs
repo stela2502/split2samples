@@ -170,7 +170,7 @@ fn main() {
         None => num_cpus::get(),
     };
     
-    let save= opts.index.is_none();
+    let save= opts.expression.is_some();
 
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String

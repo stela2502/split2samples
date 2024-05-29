@@ -73,20 +73,19 @@ impl Iterator for GeneData {
             let result = self.key_at_position(self.current_position)?;
             self.current_position += 8; // Shift by 8 bp
             Some(result)
-        } else if (self.current_position % 8) + 1 != 8 {
-            // Check if there are any remaining 8 bp combinations due to shifting by 1 bp
-            self.current_position = (self.current_position % 8) + 1; // Shift by 1 bp
-            self.first_set_finished = true;
-            //println!("I reset to {}!", self.current_position);
-            let result = self.key_at_position(self.current_position)?;
-            self.current_position += 8;
-            Some(result)
         } else {
-        	// reset iter vars
-        	self.current_position = 0;
-        	self.first_set_finished = false;
-        	//println!("Failing for position {}!", self.current_position);
-            None
+        	match self.iterator_skip_to_next_frame(){
+        		Ok(_) => {
+        			let result = self.key_at_position(self.current_position)?;
+        			self.current_position += 8;
+        			Some(result)
+        		},
+        		Err(_) => {
+        			self.current_position = 0;
+        			self.first_set_finished = false;
+        			None
+        		} 
+        	}
         }
     }
 }
@@ -114,6 +113,18 @@ impl GeneData{
 			first_set_finished:false,
 		}
 	}
+
+	/// This shifts the next 8bp window by 1 bp and sets the start to the sequence start.
+	/// It throws an error if the iterator would reach its end this way.
+	pub fn iterator_skip_to_next_frame(&mut self)  -> Result<(), &'static str> {
+        self.current_position = (self.current_position % 8) + 1;
+        self.first_set_finished = true;
+		if self.current_position == 8 {
+			Err("iterator reached the end.")
+		}else {
+			Ok(())
+		}
+    }
 
 	pub fn get_encoded(&self) -> &Vec<u8> {
 		&self.u8_encoded

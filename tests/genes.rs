@@ -47,7 +47,7 @@ mod tests {
 		gene.add_exon( "15".to_string(), "20".to_string() );
 
 		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec(), 100 ) {
-			assert_eq!( seq, b"ACCCCaatttt".to_vec(), "Correct mrna? {seq:?}" );
+			assert_eq!( seq, b"ACCCCAATTTT".to_vec(), "Correct mrna? {seq:?}" );
 		}else {
 			panic!("to_mrna has not returned a sequence!")
 		}
@@ -82,10 +82,104 @@ mod tests {
 		
 	}
 
-	// #[test]
-	// fn test_add_to_index(){
-	// 	panic!("Not implemented!!");
-	// }
+	#[test]
+	fn test_to_mrna2(){
+		//          ********************--------------------********************--------------------********************--------------------*********************
+		//          AGCTAAATGCAGACTGTGGC                    GTTTGACTTGGTATCTTTTC                    GATTGTGCTGAGACTGGAGT                    TCTAAGAGGATGCTGGCTAT
+		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
+
+		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
+			"+".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+
+		gene.add_exon( "1".to_string(), "20".to_string() );
+		gene.add_exon( "41".to_string(), "60".to_string() );
+		gene.add_exon( "81".to_string(), "100".to_string() );
+		gene.add_exon( "121".to_string(), "140".to_string() );
+		
 
 
+		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 100 ) {
+			assert_eq!(mrna.len(), 80, "I had expected a 60bp sequence");
+			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "AGCTAAATGCAGACTGTGGCGTTTGACTTGGTATCTTTTCGATTGTGCTGAGACTGGAGTTCTAAGAGGATGCTGGCTAT", "spliced correctly");
+		}else {
+			panic!("I did not get an mRNA at all.")
+		}
+	}
+
+	#[test]
+	fn test_to_mrna2_sub(){
+		//          ********************--------------------********************--------------------********************--------------------*********************
+		//          AGCTAAATGCAGACTGTGGC                    GTTTGACTTGGTATCTTTTC                    GATTGTGCTGAGACTGGAGT                    TCTAAGAGGATGCTGGCTAT
+		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
+
+		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
+			"+".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+
+		gene.add_exon( "1".to_string(), "20".to_string() );
+		gene.add_exon( "41".to_string(), "60".to_string() );
+		gene.add_exon( "81".to_string(), "100".to_string() );
+		gene.add_exon( "121".to_string(), "140".to_string() );
+		
+
+
+		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 30 ) {
+			assert_eq!(mrna.len(), 30, "I had expected a 30bp sequence");
+			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "AGACTGGAGTTCTAAGAGGATGCTGGCTAT", "spliced correctly - and subset");
+		}else {
+			panic!("I did not get an mRNA at all.")
+		}
+	}
+
+
+	#[test]
+	fn test_to_mrna2_rev(){
+		//          ********************--------------------********************--------------------********************--------------------*********************
+		//          AGCTAAATGCAGACTGTGGC                    GTTTGACTTGGTATCTTTTC                    GATTGTGCTGAGACTGGAGT                    TCTAAGAGGATGCTGGCTAT
+		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
+
+		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
+			"-".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+
+		gene.add_exon( "1".to_string(), "20".to_string() );
+		gene.add_exon( "41".to_string(), "60".to_string() );
+		gene.add_exon( "81".to_string(), "100".to_string() );
+		gene.add_exon( "121".to_string(), "140".to_string() );
+		
+
+		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 100 ) {
+			assert_eq!(mrna.len(), 80, "I had expected a 60bp sequence");
+			// manually reversed the sequence!
+			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "ATAGCCAGCATCCTCTTAGAACTCCAGTCTCAGCACAATCGAAAAGATACCAAGTCAAACGCCACAGTCTGCATTTAGCT", "spliced correctly");
+		}else {
+			panic!("I did not get an mRNA at all.")
+		}
+	}
+
+	#[test]
+	fn test_to_mrna2_rev_sub(){
+		//          ********************--------------------********************--------------------********************--------------------*********************
+		//          AGCTAAATGCAGACTGTGGC                    GTTTGACTTGGTATCTTTTC                    GATTGTGCTGAGACTGGAGT                    TCTAAGAGGATGCTGGCTAT
+		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
+		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
+
+		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
+			"-".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+
+		gene.add_exon( "1".to_string(), "20".to_string() );
+		gene.add_exon( "41".to_string(), "60".to_string() );
+		gene.add_exon( "81".to_string(), "100".to_string() );
+		gene.add_exon( "121".to_string(), "140".to_string() );
+		
+
+		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 30 ) {
+			assert_eq!(mrna.len(), 30, "I had expected a 60bp sequence");
+			// manually reversed the sequence!
+			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "CAAGTCAAACGCCACAGTCTGCATTTAGCT", "spliced correctly");
+		}else {
+			panic!("I did not get an mRNA at all.")
+		}
+	}
 }

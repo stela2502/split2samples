@@ -6,6 +6,7 @@ mod tests {
 	use rustody::genes_mapper::{GenesMapper, NeedlemanWunschAffine, CigarEndFix, Cigar};
 	use needletail::parse_fastx_file;
 	use std::path::Path;
+	use std::fs;
 	use rustody::errors::MappingError;
 
 
@@ -191,7 +192,7 @@ mod tests {
 	#[test]
 	fn test_wrap_arount_to_max(){
 
-		let mut cig = Cigar::new( "1I20M1D52M" );
+		let mut cig = Cigar::new( "21M1D49M1I3M" );
 		cig.fixed = Some(CigarEndFix::Na);
 		test_this_seqence( 
 			b"CTGCCCCTCTTTTGTGTTGTCTTTTTTTCTTAGACTATCTGTCCTTTCTCCTTGATTTCTAAACTATGTTATTT",
@@ -259,6 +260,65 @@ mod tests {
 			Some(0),
 			None
 		);
+	}
+
+	#[test]
+	fn create_save_and_load_an_index(){
+
+		let mut genes = GenesMapper::new(100);
+		let database = "testData/genes.fasta";
+
+		#[allow(unused_variables)] //otherwise the compiler falsly brags about this.
+		let mut i = 0;
+		if Path::new(&database).exists(){
+	    	let mut expr_file = parse_fastx_file(database).expect("valid path/file");
+
+	    	while let Some(e_record) = expr_file.next() {
+	    		i+=1;
+		        let seqrec = e_record.expect("invalid record");
+	        	match std::str::from_utf8(seqrec.id()){
+		            Ok(st) => {
+	                	if let Some(id) = st.to_string().split('|').next(){
+		                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
+	                	}
+	            	},
+	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
+	        	}
+	        }
+	    }else {
+	    	panic!("Expression file could not be read - ignoring")
+	    }
+
+		assert_eq!( genes.len(), 466, "the right amount of genes" );
+		assert_eq!( genes.depth(), 41716, "the expected amount of mappers");
+
+		let outpath = "testData/output_index_test/genes";
+
+		if fs::metadata(&outpath).is_err() {
+        if let Err(err) = fs::create_dir_all(&outpath) {
+	            eprintln!("Error creating directory {}: {}", &outpath, err);
+	        } else {
+	            println!("New output directory created successfully!");
+	        }
+	    }
+
+		match genes.write_index( "testData/output_index_test/genes".to_string()  ){
+			Ok(_) => { },
+			Err(e) => panic!("Writing of the index failed with the error {e}")
+		};
+
+		assert_eq!( Path::new("testData/output_index_test/genes/index.bin").exists(), true, "the index file exists");
+		assert_eq!( Path::new("testData/output_index_test/genes/indexed_sequences.fa.gz").exists(), true, "the fasta file exists");
+
+		let mut from_binary = match GenesMapper::load_index( "testData/output_index_test/genes".to_string() ){
+			Ok(mapper) => mapper,
+			Err(e) => {panic!("The loading of the index failed with the error {e}")}
+		};
+
+		assert_eq!( genes.len(), from_binary.len(), "from binary the right amount of genes" );
+		assert_eq!( genes.depth(), from_binary.depth(), "from binary the expected amount of mappers");
+
+
 	}
 
 }

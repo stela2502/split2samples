@@ -4,54 +4,104 @@
 #[cfg(test)]
 mod tests {
 	use rustody::genes_mapper::Cigar;
+	use rustody::genes_mapper::cigar::CigarEnum;
+	use rustody::genes_mapper::CigarEndFix;
 
 	#[test]
 	fn test_soft_start(){
-		let mut obj = Cigar::new("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M");
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M");
 		obj.soft_clip_start_end( );
-		assert_eq!( obj.cigar, "24S65M");
+		assert_eq!( obj.cigar, "24X65M");
+		assert_eq!( obj.fixed, Some(CigarEndFix::Start), "start fixed");
 	}
 
 	#[test]
 	fn test_soft_end(){
-		let mut obj = Cigar::new("59M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("59M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		obj.soft_clip_start_end( );
-		assert_eq!( obj.cigar, "59M30S");
+		assert_eq!( obj.cigar, "59M30X");
+		assert_eq!( obj.fixed, Some(CigarEndFix::End), "end fixed");
 	}
 
 	#[test]
 	fn test_soft_both(){
-		let mut obj = Cigar::new("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		obj.soft_clip_start_end( );
-		assert_eq!( obj.cigar, "24S65M30S");
+		assert_eq!( obj.cigar, "24X65M30X");
+		assert_eq!( obj.fixed, Some(CigarEndFix::Both), "both fixed");
 	}
 
 	#[test]
 	fn test_quality(){
-		let obj = Cigar::new("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
-		assert_eq!( obj.mapping_quality(), 26 )
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
+		assert_eq!( obj.mapping_quality(), 26 );
 	}
 
 	#[test]
 	fn test_calculate_covered_nucleotides() {
-		let obj = Cigar::new("14M1X39M1X7M1X12M");
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("14M1X39M1X7M1X12M");
 		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (75, 75), "corect sizes" )
 	}
 
 	#[test]
 	fn test_calculate_covered_nucleotides_deletions() {
-		let obj = Cigar::new("14M1X39M1D7M1X12M");
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("14M1X39M1D7M1X12M");
 		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (74, 75), "corect sizes" )
 	}
 	#[test]
 	fn test_calculate_covered_nucleotides_insertions() {
-		let obj = Cigar::new("14M1X39M1I7M1X12M");
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("14M1X39M1I7M1X12M");
 		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (75, 74), "corect sizes" )
 	}
 	#[test]
 	fn test_calculate_covered_nucleotides_real() {
-		let obj = Cigar::new("1X8M1I39M2X16M7S");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (74, 66), "corect sizes" )
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("1X8M1I39M2X16M7X");
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (74, 73), "corect sizes" )
 	}
+
+	#[test]
+	fn test_default_is_worst() {
+		let mut obj1 = Cigar::default();
+		let mut obj2 = Cigar::default();
+
+		obj1.restart_from_cigar( "32M" );
+
+		assert!( obj1.better_as(&obj2), "{obj1:?}\nis better than \n{obj2:?} ({})", obj1.better_as(&obj2) );
+	}
+
+	#[test]
+	fn test_compare() {
+		let mut obj1 = Cigar::new("32M");
+		let mut obj2 = Cigar::new("36M");
+		obj1.convert_to_cigar(&vec![CigarEnum::Match; 32]);
+		obj2.convert_to_cigar(&vec![CigarEnum::Match; 36]);
+
+		assert!( obj2.better_as(&obj1), "{obj2} is better than {obj1}" );
+
+		obj1.convert_to_cigar( &[CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match, 
+			CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, 
+			CigarEnum::Deletion, CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, 
+			CigarEnum::Match, ] );
+		obj2.convert_to_cigar( &[CigarEnum::Match, CigarEnum::Match, CigarEnum::Deletion, 
+			CigarEnum::Match,CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match ]);
+		assert!( obj1.better_as(&obj2), "{obj1:?} is better than {obj2:?} ({})", obj2.better_as(&obj1) );
+
+		obj1.restart_from_cigar( "21M1D49M1I3M" ); // len 74
+		obj2.restart_from_cigar( "1I20M1D52M" ); // len 73
+
+		assert!( obj1.better_as(&obj2), "{obj1:?}\nis better than \n{obj2:?} ({})", obj1.better_as(&obj2) );
+	}
+
+	
+
+
 
 }

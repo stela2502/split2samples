@@ -5,7 +5,9 @@ use crate::singlecelldata::SingleCellData;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::genes_mapper::GenesMapper;
-use crate::genes_mapper::{ MapperResult, SeqRec, NeedlemanWunschAffine, CigarEndFix};
+#[cfg(debug_assertions)]
+use crate::genes_mapper::CigarEndFix;
+use crate::genes_mapper::{ MapperResult, SeqRec, NeedlemanWunschAffine};
 
 //use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
@@ -191,7 +193,7 @@ impl AnalysisGenomicMapper{
 	    }
 
 	    //samples.set_min_matches(2);
-	    samples.set_highest_nw_val(0.1);
+	    samples.set_highest_nw_val(0.2);
 	    samples.set_min_matches( 5 );
 	    genes.set_min_matches( 8 );
 
@@ -211,7 +213,7 @@ impl AnalysisGenomicMapper{
 		let sample_names: Vec<String>  = samples.get_all_gene_names();
 		let gene_names: Vec<String>  = genes.get_all_gene_names();
 	    genes.report4( &gene_names.iter().map(|s| s.as_str()).collect::<Vec<&str>>() );
-
+	    samples.set_small_entries();
 
 		Self{
 			genes,
@@ -296,7 +298,7 @@ impl AnalysisGenomicMapper{
         Ok(())
     }
 
-    fn build_sam_record ( &self, read2:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> Option<String>{
+    fn build_sam_record ( &self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec ) -> Option<String>{
 
     	let mut read2 = read.clone();
     	
@@ -348,11 +350,12 @@ impl AnalysisGenomicMapper{
     	let cigar_string = match gene_id[0].cigar() {
 		    Some(cigar) => cigar.to_string(),
 		    None => {
-		    	format!("{}S", read_mod.seq().len())
+		    	format!("{}S", read2.seq().len())
 		    }
 		};
-		let (mine, _other) = gene_id[0].get_cigar().calculate_covered_nucleotides( &cig.to_string() );
-    	if mine != &read2.len(){
+        let cig = gene_id[0].get_cigar();
+		let (mine, _other) = cig.calculate_covered_nucleotides( &cigar_string );
+    	if mine != read2.len(){
     		panic!("I am trying to create a bam line and found a discrepancy between cigar length and sequence length: {cig}\n{read2}");
     	}
 		record += &cigar_string ;
@@ -366,10 +369,10 @@ impl AnalysisGenomicMapper{
 		//Template length
 
 		
-		record += &String::from_utf8_lossy( &read_mod.seq() ) ;
+		record += &String::from_utf8_lossy( read2.seq() ) ;
     	record +="\t";
 		//Read sequence
-		record += &String::from_utf8_lossy( &read_mod.qual() ) ;
+		record += &String::from_utf8_lossy( read2.qual() ) ;
     	record +="\t";
 		//Phred quality scores
 
@@ -553,11 +556,11 @@ impl AnalysisGenomicMapper{
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
 		                    	report.write_to_ofile( Fspot::Buff1, 
-		                    		format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].1) 
+		                    		format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].1) 
 		                    	);
 								
 								report.write_to_ofile( Fspot::Buff2, 
-									format!(">Cell{cell_id} no gene detected\n{:?}\n", &data[i].0 ) 
+									format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].0 ) 
 								);
 		                    	report.no_data +=1;
 		                    },

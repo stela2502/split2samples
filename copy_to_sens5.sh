@@ -11,5 +11,6 @@ cp target/release/get_n_cell_reads ~/sens05_home/bin
 cp target/release/int_2_seq ~/sens05_home/bin
 cp target/release/quantify_rhapsody_multi ~/sens05_home/bin
 cp target/release/quantify_rhapsody ~/sens05_home/bin
+cp target/release/quantify_gene_mapper ~/sens05_home/bin
 cp target/release/split2samples ~/sens05_home/bin
 cp target/release/te_analysis ~/sens05_home/bin

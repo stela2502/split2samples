@@ -24,8 +24,8 @@ pub struct MapperResult{
 // Implementing Display trait for MapperResult
 impl fmt::Display for MapperResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MapperResult ( gene_id {}, gene_name {}, start {}, save {}, cigar {:?}, nw {}, mapq {}, edit_dist {} )\n", 
-            self.gene_id, self.gene_name, self.start, self.save, self.cigar, self.nw, self.mapq, self.edit_dist )
+        write!(f, "MapperResult ( gene_id {}, gene_name {}, start {}, save {}, cigar {:?}, nw {}, mapq {}, edit_dist {}, position_from_end {})\n", 
+            self.gene_id, self.gene_name, self.start, self.save, self.cigar, self.nw, self.mapq, self.edit_dist, self.position_from_end() )
     }
 }
 
@@ -35,11 +35,11 @@ impl Default for MapperResult {
             gene_id: 0,
             start: 0,
             save: false,
-            cigar: None,
-            mapq: 0,
+            cigar: Some(Cigar::default()),
+            mapq: 200,
             score: 0,
-            nw:0.0,
-            edit_dist: 0.0,
+            nw:100.0,
+            edit_dist: 100.0,
             gene_name: String::default(),
             db_length: 0,
         }
@@ -96,6 +96,10 @@ impl MapperResult{
             Some(cig) => cig.clone(),
             None => Cigar::default(),
         }
+    }
+
+    pub fn position_from_end (&self) -> usize{
+        self.db_length.saturating_sub( self.start )
     }
 
     pub fn mapq(&self) -> u8 {

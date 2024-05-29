@@ -57,6 +57,8 @@ pub struct GenesMapper{
 	report4: Option<HashSet<usize>>, // report for a gene?
 	/// additional mathcing and adding infos printed
 	debug: bool,
+	/// if there are extremely small entries in this database we (sample tags or antibody tags) we need to know that
+	small_entries:bool,
 	/// an internal version that should be iterated one anything important changes.
 	version:usize,
 
@@ -78,7 +80,7 @@ impl GenesMapper{
 			genes: Vec::<GeneData>::with_capacity( 40_000 ),
 			mapper: vec![GeneLink::new(); u16::MAX as usize],
 			gene_hashes: BTreeMap::new(),
-			version: 7,
+			version: 8,
 			with_data: 0,
 			offset: offset,
 			names: BTreeMap::new(),
@@ -87,7 +89,26 @@ impl GenesMapper{
 			min_matches: 10, //40 bp exact match
 			report4: None, // report for a gene?
 			debug:false,
+			small_entries: false,
 		}
+	}
+
+	pub fn len(&self) -> usize {
+		self.genes.len()
+	}
+
+	pub fn depth(&self) -> usize {
+		let mut sum = 0;
+		for mapper in &self.mapper{
+			if ! mapper.is_empty() {
+				sum+=1;
+			}
+		}
+		sum
+	}
+
+	pub fn set_small_entries( &mut self ) {
+		self.small_entries = true;
 	}
 
 	/// this function could possibly be a good idea to get rid of repeat infos
@@ -409,12 +430,15 @@ impl GenesMapper{
         data
     }
 
-	pub fn get_strict(&self, seq: &[u8], _cellid:u32, nwa: &mut NeedlemanWunschAffine ) ->  Result< Vec<MapperResult>, MappingError >{ 
-		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
-		// store the gene id, the relative start on that and the count for this combo
+    fn query_database( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
+    	//if self.small_entries {
+    		return self.query_database_small( seq );
+    	//}
 		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
-		let mut helper = MultiMatch::new();
+		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
 		let mut i = 0;
+		let mut failed = 0;
+
 		while let Some((key, start)) = read_data.next(){
 
 			//println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
@@ -424,35 +448,35 @@ impl GenesMapper{
 			
 			if ! self.mapper[key as usize].is_empty() {
 				i+=1;
-
+				failed = 0;
 				#[cfg(debug_assertions)]
 				if self.debug {
 					let values: Vec<_> = self.mapper[key as usize].data().collect();
 					let m = 9.min( values.len() );
 					println!("I am testing this key: {} and got {:?} ...", Self::as_dna_string(&key) , &values[0..m] );
 				}
-				
 				// this will directly modify the res HashMap as it can also find more than one!
 				self.mapper[key as usize].get( &mut res, start as i32 );
 			}
-			else if self.debug{
+			else {
+				failed +=1;
+				if failed == 3 {
+					match read_data.iterator_skip_to_next_frame() {
+						Ok(_) => failed = 0,
+						Err(_) => break,
+					}
+				}
 				#[cfg(debug_assertions)]
-				println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
+				if self.debug{
+					println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
+				}
 			}
 			if i == 30 {
 				break;
 			}
-			
 		}
-		
-		if res.is_empty(){
-			return Err(MappingError::NoMatch)
-		}
-
-		// Convert the HashMap into a vector of key-value pairs
 		let mut res_vec: Vec<_> = res.into_iter().collect();
-
-	    // Sort the vector by the length of the internal arrays
+		res_vec.retain(|(_, counts)| *counts > 4);
 	    // longest first
 	    res_vec.sort_by(|( (a_key, _a_rel_start), a_counts), ((b_key, _b_rel_start), b_counts)| {
 	    	match b_counts.cmp(&a_counts) {
@@ -460,6 +484,83 @@ impl GenesMapper{
 		        other => other,
 		    }
 		});
+
+		res_vec
+    }
+
+    fn query_database_small( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
+		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
+		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
+		let mut i = 0;
+
+		#[cfg(debug_assertions)]
+		println!("I am runing query_database_small");
+
+		while let Some((key, start)) = read_data.next(){
+
+			//println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
+			if self.reject_key(&key){
+				continue;
+			}
+			
+			if ! self.mapper[key as usize].is_empty() {
+				i+=1;
+				#[cfg(debug_assertions)]
+				if self.debug {
+					let values: Vec<_> = self.mapper[key as usize].data().collect();
+					let m = 9.min( values.len() );
+					println!("I am testing this key: {} and got {:?} ...", Self::as_dna_string(&key) , &values[0..m] );
+				}
+				// this will directly modify the res HashMap as it can also find more than one!
+				self.mapper[key as usize].get( &mut res, start as i32 );
+			}
+			else {
+				#[cfg(debug_assertions)]
+				if self.debug{
+					println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
+				}
+			}
+			if i == 30 {
+				break;
+			}
+		}
+		let mut res_vec: Vec<_> = res.into_iter().collect();
+
+		#[cfg(debug_assertions)]
+		{
+			res_vec.retain(|(_, counts)| *counts > 2);
+			res_vec.sort_by(|( (a_key, _a_rel_start), a_counts), ((b_key, _b_rel_start), b_counts)| {
+	    	match b_counts.cmp(&a_counts) {
+		        std::cmp::Ordering::Equal => a_key.cmp(b_key),
+		        other => other,
+		    }
+		});
+			println!("And I got the initial results {res_vec:?}");
+		}
+
+		res_vec.retain(|(_, counts)| *counts > 4);
+	    // longest first
+	    res_vec.sort_by(|( (a_key, _a_rel_start), a_counts), ((b_key, _b_rel_start), b_counts)| {
+	    	match b_counts.cmp(&a_counts) {
+		        std::cmp::Ordering::Equal => a_key.cmp(b_key),
+		        other => other,
+		    }
+		});
+
+		res_vec
+    }
+
+    pub fn get_strict(&self, seq: &[u8], _cellid:u32, nwa: &mut NeedlemanWunschAffine ) ->  Result< Vec<MapperResult>, MappingError >{ 
+		let read_data = GeneData::new( seq, "read", "read2", 0 );
+		// store the gene id, the relative start on that and the count for this combo
+		let res_vec = self.query_database( seq );
+
+		if res_vec.is_empty() {
+			return Err(MappingError::NoMatch)
+		}
+
+		let mut helper = MultiMatch::new();
+		
 	    //res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
 	    #[cfg(debug_assertions)]
 		if self.debug {
@@ -470,16 +571,22 @@ impl GenesMapper{
 	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
-		if res_vec.is_empty() || res_vec[0].1 < 5 {
-			return Err(MappingError::NoMatch)
-		}
+		
+
 		// collect all possible matches
+		#[allow(unused_variables)]
 	    for ((gene_id, start), count) in &res_vec {
-	    	if *count < 5{
-	    		break
-	    	}
 
 	    	if let Some((read, database)) = self.slice_objects( *start, &self.genes[*gene_id], &read_data ){
+	    		cigar.clear();
+	    		if (read.len() as f32) < (read_data.len() as f32 * 0.8) && (read.len() as f32) < (self.genes[*gene_id].len() as f32 * 0.9) {
+	    			// this database match is a little short!
+	    			#[cfg(debug_assertions)]
+					if self.debug{
+						println!("Mappable sequence is too short: {}", read_data.len() );
+					}
+	    			continue;
+	    		}
 				let nw = &nwa.needleman_wunsch_affine( &read, &database, self.highest_humming_val  );
 
 				#[cfg(debug_assertions)]
@@ -530,26 +637,28 @@ impl GenesMapper{
 				//println!("I found a best result! {}", &val);
 				if let Some(cigar) = val.cigar(){
 					if cigar.mapping_quality() > 20 && cigar.fixed != Some(CigarEndFix::Both) {
-						//println!("get_struct got an accepted match (get_strict) {}", val );
+						#[cfg(debug_assertions)]
+						println!("get_strict got an accepted match (get_strict) {}", val );
 						Ok(vec![val])
 					}else {
+						#[cfg(debug_assertions)]
+						println!("secondary checks failed: {} <= 20 || {:?} != Some(CigarEndFix::Both) ", cigar.mapping_quality(), cigar.fixed);
 						Err(MappingError::NoMatch)
 						//self.get( &read_data, &res_vec, cellid, nwa)
 					}
 				}else {
+					#[cfg(debug_assertions)]
+					println!("The match had no acciociated cigar!?!" );
 					Err(MappingError::NoMatch)
 					//self.get( &read_data, &res_vec, cellid, nwa)
 				}			
 			},
-			Err("No Entry") => {
-				//println!("No hit in the strict search!");
+			Err(_) => {
+				#[cfg(debug_assertions)]
+				println!("No best mapper identified!");
 				Err(MappingError::NoMatch)
 				//self.get( &read_data, &res_vec, cellid, nwa)
 			}, //that is kind of OK
-			Err(_err) => {
-				//eprintln!("I got a matching error {err} for this helper object:\n{helper}");
-				Err(MappingError::NoMatch)
-			},
 		}
 	}
 
@@ -659,6 +768,11 @@ impl GenesMapper{
 
 		// the mapper would probably also make sense to store. Let's check the time we need to re-create that before storing it.
 		eprintln!("GenesMapper binary Index written to {}/index.bin", path);
+
+		match self.write_index_txt( path ){
+			Ok(_) => {},
+			Err(e) => {panic!("I did not manage to write the fasta data {e}")}
+		}; //will be necessary for the downstream analyses
 		Ok(())
 	}
 	pub fn load_index(  path: String ) -> Result< Self, String>{
@@ -668,7 +782,10 @@ impl GenesMapper{
 		};
 		let mut buffer = Vec::new();
 		file.read_to_end(&mut buffer).unwrap();
-		let deserialized: Self = bincode::deserialize(&buffer).unwrap();
+		let deserialized: Self = match bincode::deserialize(&buffer){
+			Ok(bin) => bin,
+			Err(e) => {panic!("Loading the inde we hit this error:\n{e}\nTry to re-create the index?")}
+		};
 		eprintln!("GenesMapper binary Index loaded from {}/index.bin\n{deserialized}", path);
 		if deserialized.genes.is_empty(){
 			eprintln!("No index data found in the path {}", path);
