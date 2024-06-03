@@ -85,7 +85,7 @@ fn main() {
 
     if let Some(i) = &opts.index {
     	println!("Loading index from path {i}");
-    	match genes.load_index( i.to_string() ){
+    	match genes.load_index( i ){
     		Ok(_r) => (),
     		Err(e) => panic!("Failed to load the index {e:?}")
     	}
@@ -109,7 +109,7 @@ fn main() {
 	                	if let Some(id) = st.to_string().split('|').next(){
                 			seq_temp = seqrec.seq().to_vec();
                 			//seq_temp.reverse();
-	                    	genes.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
+	                    	genes.add( &seq_temp, id, id, EMPTY_VEC.clone() );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -138,7 +138,7 @@ fn main() {
 	                	if let Some(id) = st.to_string().split('|').next(){
 	                		seq_temp = seqrec.seq().to_vec();
 	                		//seq_temp.reverse();
-		                    antibodies.add( &seq_temp, id.to_string(), EMPTY_VEC.clone() );
+		                    antibodies.add( &seq_temp, id, id, EMPTY_VEC.clone() );
 	                    	//gene_names.push( id.to_string() );
 	                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
 	                	};
@@ -170,7 +170,7 @@ fn main() {
 	        	//seq.reverse();
 	        	let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	seq_ext.extend_from_slice( seq );
-	        	samples.add( &seq_ext, format!("SampleTag{id:02}_hs"),EMPTY_VEC.clone() );
+	        	samples.add( &seq_ext, &format!("SampleTag{id:02}_hs"), &format!("SampleTag{id:02}_hs"), EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -189,7 +189,7 @@ fn main() {
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), &format!("SampleTag{id:02}_mm"), &format!("SampleTag{id:02}_mm"), EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -204,9 +204,9 @@ fn main() {
 		samples.make_index_te_ready();
 
 	// to understand the mapping a little better I now need the index written to a file
-	let _ = genes.write_index_txt(  format!("{}/genes_index", &opts.outpath) );
-	let _ = antibodies.write_index_txt(  format!("{}/antibodies_index", &opts.outpath) );
-	let _ = samples.write_index_txt(  format!("{}/samples_index", &opts.outpath) );
+	let _ = genes.write_index_txt(  &format!("{}/genes_index", &opts.outpath) );
+	let _ = antibodies.write_index_txt(  &format!("{}/antibodies_index", &opts.outpath) );
+	let _ = samples.write_index_txt(  &format!("{}/samples_index", &opts.outpath) );
 
 
 	println!("Ill check this dna: '{}'", &opts.dna );

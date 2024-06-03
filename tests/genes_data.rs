@@ -303,7 +303,7 @@ mod tests {
 		//cig.clean_up_cigar( &obj, &obj2 );
 
 
-		assert_eq!( cigar.cigar, "15M3D14M", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "15M3I14M", "Cigar string was created correctly!" );
 
 
 	}
@@ -321,7 +321,7 @@ mod tests {
 		let mut cigar = Cigar::new("");
 		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 
-		assert_eq!( cigar.cigar, "19M3D23M", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "19M3I23M", "Cigar string was created correctly!" );
 		
 	}
 
@@ -362,7 +362,7 @@ mod tests {
 		let mut cigar = Cigar::new("");
 		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 
-		assert_eq!( cigar.cigar, "22M3I22M1X", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "22M3D22M1X", "Cigar string was created correctly!" );
 		
 	}
 
@@ -379,7 +379,7 @@ mod tests {
 		let mut cigar = Cigar::new("");
 		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 
-		assert_eq!( cigar.cigar, "22M3I23M", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "22M3D23M", "Cigar string was created correctly!" );
 		
 	}
 
@@ -396,7 +396,7 @@ mod tests {
 		let mut cigar = Cigar::new("");
 		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 
-		assert_eq!( cigar.cigar, "22M3I22M1X", "Cigar string was created correctly!" );
+		assert_eq!( cigar.cigar, "22M3D22M1X", "Cigar string was created correctly!" );
 		
 	}
 
@@ -429,19 +429,25 @@ mod tests {
 		}
 	}
 
+	
 	#[test]
 	fn test_real_live_issue1(){
+		//          MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    	//          CGCCATCTTCAGCAAACCCTAAAAAGGTATTAAAGTAAGCAAAAGAATCAAACATAAAAACGTTAGGTCAAGGTGTAGCCAATGAAATGG
+    	//          CGCCATCTTCAGCAAACCCTAAAAAGGTATTAAAGTAAGCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGACACAAAACGTTTGGGGG
 		let seq = b"CGCCATCTTCAGCAAACCCTAAAAAGGTATTAAAGTAAGCAAAAGAATCAAACATAAAAACGTTAGGTCAAGGTGTAGCCAATGAAATGG";
 		let seq2 = b"CGCCATCTTCAGCAAACCCTAAAAAGGTATTAAAGTAAGCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGACACAAAACGTTTGGGGG";
 		let obj = GeneData::from_bytes( seq );
-		let obj2 = GeneData::from_bytes( seq2 );
-		let mut cigar = Cigar::new("");
-		let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 
+		let obj2 = GeneData::from_bytes( seq2 );
+
+		let mut nwa = NeedlemanWunschAffine::new();
+		let mut cigar = Cigar::new("");
+		//let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
+		cigar.convert_to_cigar( &nwa.cigar_vec() );
+		cigar.clean_up_cigar(&obj2, &obj);
 		assert_eq!( cigar.cigar, "44M46X", "Cigar string was created correctly!" );
 	}
-
-
-
 
 }

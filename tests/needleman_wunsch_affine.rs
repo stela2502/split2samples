@@ -29,9 +29,9 @@ mod tests {
 	fn test_needleman_wunsch_affine(){
 		let mut test = 	NeedlemanWunschAffine::new();
 
-		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", 
+		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", "read1",
 			"read1","gene1", 0  );
-		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
+		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC","database",  //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
 			"database", "database1", 0);
 
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
@@ -54,9 +54,9 @@ mod tests {
 		//AAGCCGGCGTAAAGAGTG----AGATCACCCCCATAGGTTTGGTCCTAGC
 		//AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC
 
-		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGAGATCACCCCCATAGGTTTGGTCCTAGC", 
+		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGAGATCACCCCCATAGGTTTGGTCCTAGC", "read1",
 			"read1","gene1", 0  );
-		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
+		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", "database", //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
 			"database", "database1", 0);
 
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
@@ -66,7 +66,7 @@ mod tests {
 		cigar.convert_to_cigar( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_gap.tsv"));
 
-		assert_eq!( format!("{}",cigar), "18M4D28M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "18M4I28M - None", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -80,9 +80,9 @@ mod tests {
 		//AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC
 		//AAGCCGGCGTAAAGAGTG----AGATCACCCCCATAGGTTTGGTCCTAGC
 
-		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", 
+		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", "read1",
 			"read1","gene1", 0  );
-		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGAGATCACCCCCATAGGTTTGGTCCTAGC", //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
+		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGAGATCACCCCCATAGGTTTGGTCCTAGC", "database", //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
 			"database", "database1", 0);
 
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
@@ -92,7 +92,7 @@ mod tests {
 		cigar.convert_to_cigar( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_insert.tsv"));
 
-		assert_eq!( format!("{}",cigar), "18M4I28M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "18M4D28M - None", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -106,9 +106,9 @@ mod tests {
 		//AAAACGCTTAGCCTAGC------------------------------------------------------------------------------------ATTTCGTGCCAGCCACCGC
 		//AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC
 
-		let read = GeneData::new(     b"AAAACGCTTAGCCTAGCATTTCGTGCCAGCCACCGC", 
+		let read = GeneData::new(     b"AAAACGCTTAGCCTAGCATTTCGTGCCAGCCACCGC", "read1",
 			"read1","gene1", 0  );
-		let database = GeneData::new( b"AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC",
+		let database = GeneData::new( b"AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC","database", 
 			"database", "database1", 0);
 
 		let _nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
@@ -118,7 +118,7 @@ mod tests {
 		cigar.convert_to_cigar( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_gap.tsv"));
 
-		assert_eq!( format!("{}",cigar), "17M84D19M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "17M84I19M - None", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -133,9 +133,9 @@ mod tests {
 		//AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC
 		//AAAACGCTTAGCCTAGC------------------------------------------------------------------------------------ATTTCGTGCCAGCCACCGC
 		
-		let read = GeneData::new( b"AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC",
+		let read = GeneData::new( b"AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC","read1",
 			"read", "read1", 0);
-		let database = GeneData::new(     b"AAAACGCTTAGCCTAGCATTTCGTGCCAGCCACCGC", 
+		let database = GeneData::new(     b"AAAACGCTTAGCCTAGCATTTCGTGCCAGCCACCGC", "database", 
 			"database","database1", 0  );
 
 		let _nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
@@ -146,7 +146,7 @@ mod tests {
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_insert.tsv"));
 
-		assert_eq!( format!("{}",cigar), "17M84I19M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "17M84D19M - None", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -168,10 +168,10 @@ mod tests {
 		//CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGA-GGCTTCGTGAATGAATGAATCTA
 
 		let database= GeneData::new(
-			b"CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA",
+			b"CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA","database", 
 			"database", "database_larger", 0);
 		let read = GeneData::new(
-			b"CAGGCTATGATCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA",
+			b"CAGGCTATGATCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA","read1",
 			"read_w_deletion", "deletion_after_10bp", 0);
 		let mut test = 	NeedlemanWunschAffine::new();
 
@@ -195,10 +195,10 @@ mod tests {
 		//CAGGCTATGA-TCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA
 			
 		let database= GeneData::new(
-			b"CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA",
+			b"CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA","database", 
 			"database", "database_larger", 0);
 		let read = GeneData::new(
-			b"CAGGCTATGATCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA",
+			b"CAGGCTATGATCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA","read1",
 			"read_w_deletion", "deletion_after_10bp", 0);
 		let mut test = 	NeedlemanWunschAffine::new();
 

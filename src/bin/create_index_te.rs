@@ -157,14 +157,15 @@ fn process_lines ( lines:&&[String], index: &mut FastMapper ,
             // for this approach we need to use the family model?
             //eprintln!("I will add these gene names: {}, {}, {}, {}", transcript_id.to_string(), gene_name.to_string(), family_name.to_string(), class_name.to_string() );
             let mut gene = Gene::new(
-                parts[0].to_string(),
-                parts[3].to_string(),
-                parts[4].to_string(),
-                parts[6].to_string(),
-                transcript_id.to_string(), // this will be the id we add to the index
+                &parts[0],
+                &parts[3],
+                &parts[4],
+                &parts[6],
+                &gene_name,
+                &transcript_id, // this will be the id we add to the index
                 vec![transcript_id.to_string(), gene_name.to_string(), family_name.to_string(), class_name.to_string()],
             );
-            gene.add_exon( parts[3].to_string(),parts[4].to_string());
+            gene.add_exon( &parts[3], &parts[4]);
             
             match families.get_mut( &family_name ){
                 Some( family_object ) => {
@@ -460,7 +461,7 @@ fn main() {
             println!("Chromosome {last_chr} is finished - integrating it");
 
             partial_index.make_index_te_ready();
-            partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
+            partial_index.write_index( &format!("{}/{}/",opts.outpath, last_chr )).unwrap();
 
             index.merge( partial_index );
             index.make_index_te_ready();
@@ -519,7 +520,7 @@ fn main() {
     }
 
     partial_index.make_index_te_ready();
-    partial_index.write_index( format!("{}/{}/",opts.outpath, last_chr )).unwrap();
+    partial_index.write_index( &format!("{}/{}/",opts.outpath, last_chr )).unwrap();
 
     index.merge( partial_index );
     let (h,m,s,_ms) = MappingInfo::split_duration( report.absolute_start.elapsed().unwrap() );
@@ -532,10 +533,10 @@ fn main() {
 
     eprintln!(" total first keys {}\n total second keys {}\n total single gene per second key {}\n total multimapper per second key {}", index.info()[0], index.info()[1], index.info()[2], index.info()[3] );
 
-    index.write_index( opts.outpath.to_string() ).unwrap();
+    index.write_index( &opts.outpath ).unwrap();
 
     if opts.text{
-        index.write_index_txt( opts.outpath.to_string() ).unwrap();
+        index.write_index_txt( &opts.outpath ).unwrap();
     }
     
     eprintln!("{}", report.program_states_string() );

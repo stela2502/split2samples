@@ -50,6 +50,7 @@ pub struct Gene{
 	exons:Vec<[usize;2]>, // a vector of start and end positions
 	sense_strand:bool, // sense_strand in the genome true 1->n; false n <- 1
 	pub name:String, // the gene symbol
+	pub transcript:String,
 	pub ids:Vec<String>, // e.g. ENSMBL ID and other entries like family name or class 
 }
 
@@ -63,7 +64,7 @@ impl fmt::Display for Gene {
 
 
 impl Gene{
-	pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, ids:Vec<String> ) -> Self {
+	pub fn new(chrom:&str, start_s:&str, end_s:&str, sense_strand_s:&str, transcript:&str, name:&str, ids:Vec<String> ) -> Self {
 		let exons = Vec::<[usize;2]>::new();
 
 		let start = match start_s.parse::<usize>(){
@@ -78,17 +79,18 @@ impl Gene{
 		let sense_strand = sense_strand_s == "+";
 
 		Self{
-			chrom,
+			chrom: chrom.to_string(),
 			start,
 			end,
 			exons,
 			sense_strand,
-			name,
+			name: name.to_string(),
+			transcript: transcript.to_string(),
 			ids,
 		}
 	}
 	/// Return if the exon matched to the transcript
-	pub fn add_exon(&mut self, start_s:String, end_s:String ) {
+	pub fn add_exon(&mut self, start_s:&str, end_s:&str ) {
 		let start = match start_s.parse::<usize>(){
 			Ok(v) => v,
 			Err(e) => panic!("I could not parse the start of the transcript as usize: {e:?}"),
@@ -116,12 +118,12 @@ impl Gene{
 		let ( m_rna, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
 
 		if let Some(mrna) = m_rna {
-			index.add( &mrna.to_owned() , self.name.to_string(), self.ids.clone() );
+			index.add( &mrna.to_owned(),&self.name , &self.name, self.ids.clone() );
 			if print {
 				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 			}
 			if let Some(nascent) = raw{
-				index.add( &nascent.to_owned() , self.name.to_string() +"_int", self.ids.clone() );
+				index.add( &nascent.to_owned(),&self.name , &(self.name.to_string() +"_int"), self.ids.clone() );
 				if print {
 					println!(">{}\n{}", self.name.to_string() + "_int " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 				}
@@ -143,14 +145,14 @@ impl Gene{
 		let ( m_rna, raw) = self.generate_rna_and_nascent_strings( seq, covered_area );
 
 		if let Some(mrna) = m_rna {
-			index.add( &mrna.to_owned() , self.name.to_string(), self.chrom.to_string(), 0   );
+			index.add( &mrna.to_owned(), &self.transcript.to_string() , &self.name, &self.chrom, 0   );
 			if print {
-				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna.to_owned()  ).unwrap() );
+				println!(">{}|{}|{}\n{}", &self.transcript, self.name, &self.chrom  , std::str::from_utf8(  &mrna.to_owned()  ).unwrap() );
 			}
 			if let Some(nascent) = raw{
-				index.add( &nascent.to_owned() , self.name.to_string() +"_int", self.chrom.to_string(), 0  );
+				index.add( &nascent.to_owned(), &(self.transcript.to_string() + "_int"), &(self.name.to_string() +"_int"), &self.chrom, 0  );
 				if print {
-					println!(">{}\n{}", self.name.to_string() + "_int " + &self.chrom  , std::str::from_utf8(  &nascent.to_owned()  ).unwrap() );
+					println!(">{}_int|{}_int|{}\n{}", &self.transcript.to_string(), &self.name, &self.chrom  , std::str::from_utf8(  &nascent.to_owned()  ).unwrap() );
 				}
 			}
 		}
@@ -201,7 +203,7 @@ impl Gene{
 	    let mut sorted_exons = self.exons.clone();
 	    sorted_exons.sort_by(|a, b| a[0].cmp(&b[0]));
 
-	    println!( "The sorted exons: {:?}", sorted_exons);
+	    //println!( "The sorted exons: {:?}", sorted_exons);
 
 	    // exons upper/lower case iterations to see the breaks
 	    let mut lc = false;
@@ -220,12 +222,21 @@ impl Gene{
 
 	/// cut the RNA to the right size
 	fn cut_to_size( &self, seq:Vec<u8>, covered_area:usize) -> Option<Vec<u8>> {
+		
 		let start = seq.len().saturating_sub(covered_area);
+		if ! self.sense_strand{
+			Some ( Self::rev_compl( seq)[ start.. ].to_vec() )
+			//Some ( seq[ ..covered_area ].to_vec() )
+		}else {
+			Some (  seq[ start.. ].to_vec() )
+		}
+		/*
+		// I think I have already done that - it screwes the rev - genes up for good here!
 		if ! self.sense_strand{
 			Some ( Self::rev_compl( seq)[ start.. ].to_vec() )
 		}else {
 			Some (  seq[ start.. ].to_vec() )
-		}
+		}*/
 	}
 	
 	

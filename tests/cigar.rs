@@ -12,7 +12,7 @@ mod tests {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M");
 		obj.soft_clip_start_end( );
-		assert_eq!( obj.cigar, "24X65M");
+		assert_eq!( obj.cigar, "22X65M");
 		assert_eq!( obj.fixed, Some(CigarEndFix::Start), "start fixed");
 	}
 
@@ -21,7 +21,7 @@ mod tests {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("59M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		obj.soft_clip_start_end( );
-		assert_eq!( obj.cigar, "59M30X");
+		assert_eq!( obj.cigar, "59M26X");
 		assert_eq!( obj.fixed, Some(CigarEndFix::End), "end fixed");
 	}
 
@@ -30,7 +30,7 @@ mod tests {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		obj.soft_clip_start_end( );
-		assert_eq!( obj.cigar, "24X65M30X");
+		assert_eq!( obj.cigar, "22X65M26X");
 		assert_eq!( obj.fixed, Some(CigarEndFix::Both), "both fixed");
 	}
 
@@ -52,19 +52,19 @@ mod tests {
 	fn test_calculate_covered_nucleotides_deletions() {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("14M1X39M1D7M1X12M");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (74, 75), "corect sizes" )
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (75, 73), "corect sizes" )
 	}
 	#[test]
 	fn test_calculate_covered_nucleotides_insertions() {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("14M1X39M1I7M1X12M");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (75, 74), "corect sizes" )
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (73, 75), "corect sizes" )
 	}
 	#[test]
 	fn test_calculate_covered_nucleotides_real() {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X8M1I39M2X16M7X");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (74, 73), "corect sizes" )
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (72, 74), "corect sizes" )
 	}
 
 	#[test]

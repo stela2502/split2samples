@@ -32,7 +32,7 @@ use flate2::Compression;
 use std::io::BufWriter;
 use std::io::Write;
 
-use std::process::exit;
+//use std::process::exit;
 
 use core::fmt;
 
@@ -123,7 +123,7 @@ impl GenesMapper{
 			let mut vec = Vec::<String>::with_capacity( hash.len() );
 			let mut fasta = "".to_string();
 			for &id in hash {
-				let gene_name = &self.genes[id].get_name();
+				let gene_name = &self.genes[id].get_unique_name();
 				let gene_len = self.genes[id].len();
 				let formatted_line = format!("@SQ\tSN:{}\tLN:{}", gene_name, gene_len);
 				vec.push(formatted_line);
@@ -136,7 +136,7 @@ impl GenesMapper{
 			let mut vec = Vec::<String>::with_capacity( self.genes.len() );
 			let mut fasta = "".to_string();
 			for  gene_obj in &self.genes {
-				let gene_name = gene_obj.get_name();
+				let gene_name = gene_obj.get_unique_name();
 				let gene_len = gene_obj.len();
 				let formatted_line = format!("@SQ\tSN:{}\tLN:{}", gene_name, gene_len);
 				vec.push(formatted_line);
@@ -208,15 +208,15 @@ impl GenesMapper{
 
 
 	/// the main add function to add a gene into the index. 
-	pub fn add(&mut self, seq: &[u8], name: String, chr: String, start:usize ) -> usize{
+	pub fn add(&mut self, seq: &[u8], unique_name:&str, name: &str, chr: &str, start:usize ) -> usize{
 
-		let mut gene_data = GeneData::new( seq, &name, &chr, start );
+		let mut gene_data = GeneData::new( seq, &unique_name, name, chr, start );
 		// Hash the gene_data object to obtain its hash value
 		let mut hasher = DefaultHasher::new();
 		gene_data.hash(&mut hasher);
 		let hash_value = hasher.finish();
 		if let Some(other_name) = self.gene_hashes.get( &hash_value ){
-
+			#[cfg(debug_assertions)]
 			eprintln!("The sequence for gene {gene_data} has already been added before: {other_name}");
 			return 0
 		}
@@ -227,16 +227,16 @@ impl GenesMapper{
 		// the above test only checks if we have the same gene + sequence in the database.
 		// therefore we here need to check the name once more!
 		let gene_id;
-		if self.names.contains_key( &name ){
+		if self.names.contains_key( name ){
 			let mut i =1;
 			let mut name2 = format!("{}.{}", name.to_string(),i);
 			while self.names.contains_key( &name2 ){
 				i +=1;
-				name2 = format!("{}.{}", name.to_string(),i);
+				name2 = format!("{}.{}", name,i);
 			}
 			gene_id = self.genes.len();
 			self.names.insert( name2.to_string(), gene_id );
-			gene_data = GeneData::new( seq, &name2, &chr, start );
+			gene_data = GeneData::new( seq, unique_name, &name2, chr, start );
 			self.genes.push(gene_data.clone());
 		}else {
 			gene_id = self.genes.len();
@@ -280,7 +280,7 @@ impl GenesMapper{
     		gene_data.hash(&mut hasher);
     		let hash_value = hasher.finish();
     		if let Some(other_name) = self.gene_hashes.get( &hash_value ){
-
+    			#[cfg(debug_assertions)]
     			eprintln!("The sequence for gene {gene_data} has already been added before {other_name}");
     			continue 'main;
     		}else {
@@ -430,12 +430,12 @@ impl GenesMapper{
         data
     }
 
-    fn query_database( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
+    /*fn query_database( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
     	//if self.small_entries {
     		return self.query_database_small( seq );
     	//}
 		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
-		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
+		let mut read_data = GeneData::new( seq,"read_t", "read", "read2", 0 );
 		let mut i = 0;
 		let mut failed = 0;
 
@@ -488,9 +488,12 @@ impl GenesMapper{
 		res_vec
     }
 
-    fn query_database_small( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
+	fn query_database_small( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
+    */
+    
+    fn query_database( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
 		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
-		let mut read_data = GeneData::new( seq, "read", "read2", 0 );
+		let mut read_data = GeneData::new( seq, "read_t", "read", "read2", 0 );
 		let mut i = 0;
 
 		#[cfg(debug_assertions)]
@@ -551,7 +554,7 @@ impl GenesMapper{
     }
 
     pub fn get_strict(&self, seq: &[u8], _cellid:u32, nwa: &mut NeedlemanWunschAffine ) ->  Result< Vec<MapperResult>, MappingError >{ 
-		let read_data = GeneData::new( seq, "read", "read2", 0 );
+		let read_data = GeneData::new( seq,"read_t", "read", "read2", 0 );
 		// store the gene id, the relative start on that and the count for this combo
 		let res_vec = self.query_database( seq );
 
@@ -708,6 +711,14 @@ impl GenesMapper{
 		self.names.get( gname ).map(|id| id + self.offset)
 	}
 
+	pub fn get_gene(&self, gene_id:usize) -> Option<&GeneData> {
+		if gene_id < self.genes.len(){
+			Some(&self.genes[gene_id])
+		}else {
+			None
+		}
+	}
+
 	pub fn get_gene_count(&self) -> usize{
 		self.genes.len()
 	}
@@ -757,7 +768,7 @@ impl GenesMapper{
 	fn max_id( &self ) -> usize { // return the max:id for the sparse export of the data
 		self.genes.len()
 	}*/
-	pub fn write_index( &mut self, path: String ) -> Result< (), String>{
+	pub fn write_index( &mut self, path: &str ) -> Result< (), String>{
 		// this index needs to store the genes vectors and names. Genes binary and names as comma separated list?
 		// Serialize the vector to binary
 		let serialized = bincode::serialize(&self).unwrap();
@@ -775,31 +786,52 @@ impl GenesMapper{
 		}; //will be necessary for the downstream analyses
 		Ok(())
 	}
-	pub fn load_index(  path: String ) -> Result< Self, String>{
-		let mut file = match File::open(path.to_string() + "/index.bin"){
-			Ok(f) => f,
-			Err(err) => {panic!("The index could not be loaded from {path}:\n{err:?}")},
-		};
-		let mut buffer = Vec::new();
-		file.read_to_end(&mut buffer).unwrap();
-		let deserialized: Self = match bincode::deserialize(&buffer){
-			Ok(bin) => bin,
-			Err(e) => {panic!("Loading the inde we hit this error:\n{e}\nTry to re-create the index?")}
-		};
-		eprintln!("GenesMapper binary Index loaded from {}/index.bin\n{deserialized}", path);
-		if deserialized.genes.is_empty(){
-			eprintln!("No index data found in the path {}", path);
-			exit(0);
-		}
-		Ok(deserialized)
+	pub fn load_index(path: &str) -> Result<Self, String> {
+	    let index_file_path = format!("{}/index.bin", path);
+	    
+	    // Attempt to open the file
+	    let mut file = match File::open(&index_file_path){
+	    	Ok(f) => f,
+	    	Err(e) => {
+	    		eprintln!("File not found {}", path);
+	    		return Err("File not found".to_string() );
+	    	}
+	    };
+
+	    // Read the file into a buffer
+	    let mut buffer = Vec::new();
+	    match file.read_to_end(&mut buffer){
+	    	Ok(_) => (),
+	    	Err(e) => {
+	    		eprintln!("Failed to read the index file: {:?}\nYou might need to re-index the genome due to a software update?", e);
+	    		return  Err("Failed to read the index file".to_string() );
+	    	}
+	    };
+
+	    // Deserialize the buffer
+	    let deserialized: Self = match bincode::deserialize(&buffer){
+	    	Ok(this) => this,
+	    	Err(e) => {
+	    		eprintln!("Error deserializing the index: {:?}", e);
+	    		return Err( "Error deserializing the index".to_string() )
+	    	}
+	    };
+
+	    // Check if the index is empty
+	    if deserialized.genes.is_empty() {
+	        return Err(format!("The read index is empty {}", path));
+	    }
+
+	    eprintln!("GenesMapper binary Index loaded from {}/index.bin\n{}", path, deserialized);
+	    Ok(deserialized)
 	}
 
 	/// this will simply export the mapper entries as gzipped fasta database
-	pub fn write_index_txt( &mut self, path: String ) -> Result< (), String>{
+	pub fn write_index_txt( &mut self, path: &str ) -> Result< (), String>{
 
 		let f1 = match File::create(path.to_string() + "/indexed_sequences.fa.gz"){
 			Ok(file) => file,
-			Err(err) => panic!("The file {} cound not be created: {err}",path + "/indexed_sequences.fa.gz" )
+			Err(err) => panic!("The file {}/indexed_sequences.fa.gz cound not be created: {err}",path )
 		};
 		let file1 = GzEncoder::new(f1, Compression::default());
 		let mut buff1 = BufWriter::new( file1 );

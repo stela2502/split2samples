@@ -165,7 +165,7 @@ fn main() {
             ).unwrap().to_string();
 
         //id = seqrec.id().split(|&x| x == delimiter[0]).collect()[0];
-        let keys = index.add( &seqrec.seq(), id.clone(), id.clone(), 0 );
+        let keys = index.add( &seqrec.seq(), &id, &id, &id, 0 );
         eprintln!("\t {keys} keys on chromosome '{}':", id );
     }
     eprintln!();
@@ -184,10 +184,10 @@ fn main() {
     eprintln!("We created this fast_mapper object:");
     index.print();
 
-    index.write_index( opts.outpath.to_string() ).unwrap();
+    index.write_index( &opts.outpath ).unwrap();
 
     if opts.text{
-        index.write_index_txt( opts.outpath.to_string() ).unwrap();
+        index.write_index_txt( &opts.outpath ).unwrap();
         eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.",opts.outpath );
     }
 

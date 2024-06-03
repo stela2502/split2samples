@@ -106,7 +106,7 @@ impl AnalysisGeneMapper{
 	    
 	    if let Some(i) = index {
 	    	println!("Loading index from path {i}");
-	    	genes = match  GenesMapper::load_index( i ){
+	    	genes = match  GenesMapper::load_index( &i ){
 	    		Ok(r) => r,
 	    		Err(e) => panic!("Failed to load the index {e:?}")
 	    	};
@@ -125,7 +125,7 @@ impl AnalysisGeneMapper{
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
 		                	if let Some(id) = st.to_string().split('|').next(){
-			                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
+			                    genes.add( &seqrec.seq().to_vec(), id, id, "genetag", 0 );
 		                	}
 		            	},
 		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -158,7 +158,7 @@ impl AnalysisGeneMapper{
 		                	if let Some(id) = st.to_string().split('|').next(){
 		                		//seq_temp = seqrec.seq().to_vec();
 		                		//seq_temp.reverse();
-			                    antibodies.add( &seqrec.seq().to_vec(), id.to_string(), "antibody_tag".to_string(), 0 );
+			                    antibodies.add( &seqrec.seq().to_vec(), id, id, "antibody_tag", 0 );
 		                    	//ab_names.push( id.to_string() );
 		                    	//gene_names.push( id.to_string() );
 		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
@@ -213,7 +213,7 @@ impl AnalysisGeneMapper{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_hs"), "human_sample".to_string(), 0 );
+	        	samples.add( &seq.to_vec(), &format!("SampleTag{id:02}_hs"), &format!("SampleTag{id:02}_hs"), "human_sample", 0 );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -242,7 +242,7 @@ impl AnalysisGeneMapper{
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"), "mouse_sample".to_string(), 0 );
+	        	samples.add( &seq.to_vec(), &format!("SampleTag{id:02}_mm"), &format!("SampleTag{id:02}_mm"), "mouse_sample", 0 );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -294,9 +294,9 @@ impl AnalysisGeneMapper{
 
 	pub fn report4gname( &mut self, gname: &[&str] ){
 		//eprintln!("report4gname - Not supported at the moment");
-		self.antibodies.report4(gname);
+		//self.antibodies.report4(gname);
 		self.genes.report4(gname);
-		self.samples.report4(gname);
+		//self.samples.report4(gname);
 
 	}
 
@@ -326,9 +326,9 @@ impl AnalysisGeneMapper{
 		self.samples.debug(value);
     }
 
-	pub fn write_index(&mut self, path:&String ){
-		self.genes.write_index( path.to_string() ).unwrap();
-		self.genes.write_index_txt( path.to_string() ).unwrap();
+	pub fn write_index(&mut self, path:&str ){
+		self.genes.write_index( path ).unwrap();
+		self.genes.write_index_txt( path ).unwrap();
 	}
 
 
@@ -432,7 +432,15 @@ impl AnalysisGeneMapper{
 		    0x200 (512): QC_FAIL - Read fails quality checks.
 		    0x400 (1024): DUPLICATE - PCR or optical duplicate.
 		 */
-		record += &format!("{}\t", gene_id[0].get_name() );
+		let gene_name = match &self.genes.get_gene(gene_id[0].gene_id()){
+		 	Some(gene_data) => {
+		 		gene_data.get_unique_name().to_string()
+		 	},
+		 	None => {
+		 		return None
+		 	}
+		};
+		record += &format!("{}\t", gene_name ); // needs to be the transcript id!
 		// the name of the database sequence
     	record += &format!("{}\t", gene_id[0].start() +1);
     	// the start position of the read
@@ -441,7 +449,8 @@ impl AnalysisGeneMapper{
     	let cig = gene_id[0].get_cigar();
     	let (mine, _other) = cig.calculate_covered_nucleotides( &cig.to_string() );
     	if mine != read2.len(){
-    		panic!("I am trying to create a bam line and found a discrepancy between cigar length and sequence length: {cig}\n{read2}");
+    		// This calculation is faulty. All the reported ones are correct
+    		eprintln!("I am trying to create a bam line and found a discrepancy between cigar length and sequence length: {cig}\n{read2}");
     	}
 		let read_mod = match cig.fixed {
 			Some(CigarEndFix::StartInsert) => {

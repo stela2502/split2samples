@@ -34,7 +34,8 @@ pub struct GeneData {
 	name: String,
 	/// where came this gene from (chr) not used at the moment
 	chr: String,
-	/// alternative gene names (like transcript id or family name)
+	/// alternative unique name (like transcript id)
+	unique_name: String,
 	//other_ids:Vec<String>,
 	/// If this is a subseq of the main entry - where on the main entry does this start
 	start: usize,
@@ -93,19 +94,20 @@ impl Iterator for GeneData {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for GeneData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "GeneData name {} on chr {} at position {} with {} entries:\n{}",
-        	self.name, self.chr, self.start, self.len(), self.as_dna_string() )
+        write!(f, "GeneData name {}/{} on chr {} at position {} with {} entries:\n{}",
+        	self.name, self.unique_name, self.chr, self.start, self.len(), self.as_dna_string() )
     }
 }
 
 impl GeneData{
 	//pub fn new( seq: &[u8], name:&str, chr:&str, start:usize, other_ids:Vec<String> )-> Self{
-	pub fn new( seq: &[u8], name:&str, chr:&str, start:usize ) -> Self {
+	pub fn new( seq: &[u8], unique_name:&str, name:&str, chr:&str, start:usize ) -> Self {
 		let u8_encoded = Self::encode( seq );
 		Self{
 			u8_encoded,
 			length: seq.len(),
 			name: name.to_string(),
+			unique_name : unique_name.to_string(),
 			chr: chr.to_string(),
 			start,
 			//other_ids: other_ids,
@@ -132,7 +134,7 @@ impl GeneData{
 
 	/// returns the GeneData's data as fasta sequence - >name|chr|start\nseq\n
 	pub fn to_fasta(&self) -> String{
-		let mut fasta = format!(">{}|{}|{}\n", self.name, self.chr, self.start);
+		let mut fasta = format!(">{}|{}|{}|{}\n",self.unique_name, self.name, self.chr, self.start);
 		fasta += &self.as_dna_string();
 		fasta += "\n";
 		fasta
@@ -179,6 +181,13 @@ impl GeneData{
 			}
 		}
 		ret
+	}
+
+	pub fn set_unique_name(&mut self, name:&str) {
+		self.unique_name = name.to_string();
+	}
+	pub fn get_unique_name(&self) -> &str{
+		&self.unique_name
 	}
 
 	pub fn set_name(&mut self, name:&str) {
@@ -228,6 +237,7 @@ impl GeneData{
 			u8_encoded,
 			length: seq.len(),
 			name: "unnamed".to_string(),
+			unique_name: "unnamed".to_string(),
 			chr: "unknown".to_string(),
 			start:0,
 			current_position:0,
@@ -345,6 +355,7 @@ impl GeneData{
             u8_encoded: sliced_data,
             length: end - start,
             name: (self.name.to_string() + " slice").to_string(),
+            unique_name: (self.unique_name.to_string() + " slice").to_string(),
             chr : self.chr.to_string(),
             start : self.start + start,
             current_position:0,

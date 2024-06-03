@@ -18,33 +18,34 @@ mod tests {
 		}
 		*/
 		//new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, ids:Vec<String> )
-		let gene = Gene::new( "chr1".to_string(), "1".to_string(), "100".to_string(), 
-			"+".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
-		assert_eq!( gene.chrom, "chr1".to_string(), "chr" );
+		let gene = Gene::new( "chr1", "1", "100", 
+			"+","testTranscript1", "testGene1", vec!["testFam1".to_string()] );
+		assert_eq!( gene.chrom, "chr1", "chr" );
 		assert_eq!( gene.start, 1, "start" );
 		assert_eq!( gene.end, 100, "end" );
 		//assert_eq!( gene.sense_strand, true, "sense" );
-		assert_eq!( gene.name, "testGene1".to_string(), "name" );
-		assert_eq!( gene.ids[0], "testFam1".to_string(), "family name" );
+		assert_eq!( gene.name, "testGene1", "name" );
+		assert_eq!( gene.transcript, "testTranscript1", "name" );
+		assert_eq!( gene.ids[0], "testFam1", "family name" );
 	}
 	#[test]
 	fn test_exons(){
-		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "100".to_string(), 
-			"+".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+		let mut gene = Gene::new( "chr1", "1", "100", 
+			"+", "testTranscript1", "testGene1", vec!["testFam1".to_string()] );
 		
-		gene.add_exon( "1".to_string(), "20".to_string() );
-		gene.add_exon( "35".to_string(), "60".to_string() );
+		gene.add_exon( "1", "20" );
+		gene.add_exon( "35", "60" );
 
 		assert_eq!( gene.exon_length(), 2, "exons have been stored");
 	}
 
 	#[test]
 	fn test_to_mrna(){
-		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "20".to_string(), 
-			"+".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+		let mut gene = Gene::new( "chr1", "1", "20", 
+			"+", "testTranscript1", "testGene1", vec!["testFam1".to_string()] );
 		
-		gene.add_exon( "1".to_string(), "5".to_string() );
-		gene.add_exon( "15".to_string(), "20".to_string() );
+		gene.add_exon( "1", "5" );
+		gene.add_exon( "15", "20" );
 
 		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec(), 100 ) {
 			assert_eq!( seq, b"ACCCCAATTTT".to_vec(), "Correct mrna? {seq:?}" );
@@ -62,11 +63,11 @@ mod tests {
 
 	#[test]
 	fn test_to_mrna_rev(){
-		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "20".to_string(), 
-			"-".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+		let mut gene = Gene::new( "chr1", "1", "20", 
+			"-", "testTranscript1", "testGene1", vec!["testFam1".to_string()] );
 		
-		gene.add_exon( "1".to_string(), "5".to_string() );
-		gene.add_exon( "15".to_string(), "20".to_string() );
+		gene.add_exon( "1", "5" );
+		gene.add_exon( "15", "20" );
 
 		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec(), 100 ) {
 			assert_eq!( seq, b"AAAATTGGGGT".to_vec(), "Correct mrna? {seq:?}" );
@@ -89,13 +90,13 @@ mod tests {
 		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
 		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
 
-		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
-			"+".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+		let mut gene = Gene::new( "chr1", "1", "200", 
+			"+", "testTranscript1", "testGene1", vec!["testFam1".to_string()] );
 
-		gene.add_exon( "1".to_string(), "20".to_string() );
-		gene.add_exon( "41".to_string(), "60".to_string() );
-		gene.add_exon( "81".to_string(), "100".to_string() );
-		gene.add_exon( "121".to_string(), "140".to_string() );
+		gene.add_exon( "1", "20" );
+		gene.add_exon( "41", "60" );
+		gene.add_exon( "81", "100" );
+		gene.add_exon( "121", "140" );
 		
 
 
@@ -114,13 +115,13 @@ mod tests {
 		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
 		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
 
-		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
-			"+".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+		let mut gene = Gene::new( "chr1", "1", "200", 
+			"+", "testTranscript1", "testGene1", vec!["testFam1".to_string()] );
 
-		gene.add_exon( "1".to_string(), "20".to_string() );
-		gene.add_exon( "41".to_string(), "60".to_string() );
-		gene.add_exon( "81".to_string(), "100".to_string() );
-		gene.add_exon( "121".to_string(), "140".to_string() );
+		gene.add_exon( "1", "20" );
+		gene.add_exon( "41", "60" );
+		gene.add_exon( "81", "100" );
+		gene.add_exon( "121", "140" );
 		
 
 
@@ -140,13 +141,13 @@ mod tests {
 		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
 		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
 
-		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
-			"-".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+		let mut gene = Gene::new( "chr1", "1", "200", 
+			"-", "testTranscript1", "testGene1", vec!["testFam1".to_string()] );
 
-		gene.add_exon( "1".to_string(), "20".to_string() );
-		gene.add_exon( "41".to_string(), "60".to_string() );
-		gene.add_exon( "81".to_string(), "100".to_string() );
-		gene.add_exon( "121".to_string(), "140".to_string() );
+		gene.add_exon( "1", "20" );
+		gene.add_exon( "41", "60" );
+		gene.add_exon( "81", "100" );
+		gene.add_exon( "121", "140" );
 		
 
 		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 100 ) {
@@ -165,13 +166,13 @@ mod tests {
 		//          012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
 		let seq = b"AGCTAAATGCAGACTGTGGCAGAATGGAATTTCATGAGAGGTTTGACTTGGTATCTTTTCTAGGCTAAAACTACAAAGAAGATTGTGCTGAGACTGGAGTGCGTTGAGCCCAACTGCAGATCTAAGAGGATGCTGGCTATTAAGAGATGCAAGCATTTTGAATTGGGAGGCGACAAGAAGAGAAAGGGCCAAGTGATCCAGTTCTAAGCAGATTTTGTTATGAAGACAATAAAATCTTGACCTTTC";
 
-		let mut gene = Gene::new( "chr1".to_string(), "1".to_string(), "200".to_string(), 
-			"-".to_string(), "testGene1".to_string(), vec!["testFam1".to_string()] );
+		let mut gene = Gene::new( "chr1", "1", "200", 
+			"-", "testTranscript1", "testGene1", vec!["testFam1".to_string()] );
 
-		gene.add_exon( "1".to_string(), "20".to_string() );
-		gene.add_exon( "41".to_string(), "60".to_string() );
-		gene.add_exon( "81".to_string(), "100".to_string() );
-		gene.add_exon( "121".to_string(), "140".to_string() );
+		gene.add_exon( "1", "20" );
+		gene.add_exon( "41", "60" );
+		gene.add_exon( "81", "100" );
+		gene.add_exon( "121", "140" );
 		
 
 		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 30 ) {

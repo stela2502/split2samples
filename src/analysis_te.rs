@@ -91,7 +91,7 @@ impl AnalysisTE{
 
 	    if let Some(i) = te_index {
 	    	println!("Loading te_index from path {i}");
-	    	match te_index_obj.load_index( i ){
+	    	match te_index_obj.load_index( &i ){
 	    		Ok(_r) => (),
 	    		Err(e) => panic!("Failed to load the te_index {e:?}")
 	    	}
@@ -104,7 +104,7 @@ impl AnalysisTE{
 
 		    if Path::new(&expr_path).exists(){
 		    	println!("Loading expression index from path {expr_path}");
-		    	match expr_index_obj.load_index( expr_path ){
+		    	match expr_index_obj.load_index( &expr_path ){
 		    		Ok(_r) => (),
 		    		Err(e) => panic!("Failed to load the te_index {e:?}")
 		    	}
@@ -154,7 +154,7 @@ impl AnalysisTE{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_hs"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), &format!("SampleTag{id:02}_hs"), &format!("SampleTag{id:02}_hs"), EMPTY_VEC.clone() );
 	        	sample_names.push( format!("SampleTag{id:02}_hs") );
 	        	id +=1;
 	        }
@@ -184,7 +184,7 @@ impl AnalysisTE{
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), &format!("SampleTag{id:02}_mm"), &format!("SampleTag{id:02}_mm"), EMPTY_VEC.clone() );
 	        	sample_names.push( format!("SampleTag{id:02}_mm") );
 	        	id +=1;
 	        }
@@ -217,9 +217,9 @@ impl AnalysisTE{
 		}
 	}
 
-	pub fn write_index(&mut self, path:&String ){
-		self.expr_index_obj.write_index( path.to_string() ).unwrap();
-		self.expr_index_obj.write_index_txt( path.to_string() ).unwrap();
+	pub fn write_index(&mut self, path:&str ){
+		self.expr_index_obj.write_index( path ).unwrap();
+		self.expr_index_obj.write_index_txt( path ).unwrap();
 	}
 
 

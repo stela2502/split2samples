@@ -522,8 +522,7 @@ At the moment this tool would create a transcript specific index, but report onl
 
 ```
 
-./target/release/create_gene_mapper_index -g testData/KI270728.1.gtf.gz -f testData/KI270728.1.fa.gz -o testData/mapperTest/index 
-
+./target/release/create_gene_mapper_index -g testData/KI270728.1.gtf.gz -f testData/KI270728.1.fa.gz -o testData/mapperTest/index --genename gene_id --transcript transcript_id
 ```
 
 ```

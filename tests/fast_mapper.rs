@@ -27,7 +27,7 @@ mod tests {
         let mut id = 1;
         for seq in sequences{
             //seq.reverse();
-            mapper.add( &seq.to_vec(), format!("Sample{id}"),EMPTY_VEC.clone() );
+            mapper.add( &seq.to_vec(), &format!("Sample{id}"), &format!("Sample{id}"),EMPTY_VEC.clone() );
             id +=1;
         }
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
@@ -71,9 +71,9 @@ mod tests {
         let classes1 = vec![ "Ulk2".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
 
         let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
-        mapper.add( &seq.to_vec(), "Ulk2".to_string(), classes1 );
+        mapper.add( &seq.to_vec(), "Ulk2.1", "Ulk2", classes1 );
         let classes2 = vec![ "Ulk1".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
-        mapper.add( &seq.to_vec(), "Ulk1".to_string(), classes2 );
+        mapper.add( &seq.to_vec(), "Ulk.1.1", "Ulk1", classes2 );
         
         let mut tool = IntToStr::new(seq.to_vec(), 32);
         if let Some((first, second)) = tool.next(){
@@ -112,17 +112,17 @@ mod tests {
         let classes1 = vec![ "Ulk2".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
 
         let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
-        mapper.add( &seq.to_vec(), "Ulk2".to_string(), classes1 );
+        mapper.add( &seq.to_vec(),"Ulk.1", "Ulk2", classes1 );
         let classes2 = vec![ "Ulk1".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
-        mapper.add( &seq.to_vec(), "Ulk1".to_string(), classes2 );
+        mapper.add( &seq.to_vec(), "Ulk.1", "Ulk2", classes2 );
 
         let mut mapper2 = FastMapper::new( 32, 10, 0 );
         let classes3 = vec![ "Ulk2".to_string(), "famB".to_string(), "clusterA".to_string(), "regionA".to_string()];
 
         let seq = &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC";
-        mapper2.add( &seq.to_vec(), "Ulk2".to_string(), classes3 );
+        mapper2.add( &seq.to_vec(),"Ulk2.1", "Ulk2", classes3 );
         let classes4 = vec![ "Ulk1".to_string(), "famB".to_string(), "clusterA".to_string(), "regionA".to_string()];
-        mapper2.add( &seq.to_vec(), "Ulk1".to_string(), classes4 );
+        mapper2.add( &seq.to_vec(), "Ulk.1", "Ulk2", classes4 );
 
         mapper.merge( mapper2 );
 
@@ -157,7 +157,8 @@ mod tests {
 
 
 
-        mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), "Ulk2".to_string(), EMPTY_VEC.clone() );
+        mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(),
+         "Ulk2.1", "Ulk2", EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Ulk2".to_string(), geneid );
 
         //ATCCCATCCTTCATTGTTCGCCTGGA #0
@@ -166,7 +167,7 @@ mod tests {
         //...........................................................................
 
         mapper.add( &b"CGAGGCTGTGTATTACTGTGCCGTGGGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagtgggaaggaGAAAAGTCGTATACAGATTTGGGATCTTAGGCTCTGGAGACATTCAG".to_vec(), 
-            "Vpreb1".to_string(),EMPTY_VEC.clone() );
+            "Vpreb1.1", "Vpreb1",EMPTY_VEC.clone() );
         geneid +=1;
         mapper.names4sparse.insert( "Vpreb1".to_string(), geneid );
 
@@ -176,7 +177,8 @@ mod tests {
         assert_eq!(  mapper.get( b"GGGCTCCGGAGCCAGGAAAAGAAGAGGAtggagagggagt", &mut tool ).unwrap(), vec![1] );
 
         //adding the same sequence as Gene2 with the name Gene3 should not make the next search return None
-        mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), "Gene3".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"CCAAGAATGGTTCCTGTGTTGTATATTATTTGGTATCTTTTACTTACCTGCTTGAATACTTGAATAAACCATTCACCGGTTTTAATCCTTTTACTTCAAAACTTACACATACTGACCTAC".to_vec(), 
+            "Transcrip3", "Gene3", EMPTY_VEC.clone() );
 
         match mapper.get( b"GTTGTATTTTATTTGGTATTTTTTACTTACCTGTTTGAATACTTG", &mut tool ){
             Err(MappingError::MultiMatch) => {
@@ -199,7 +201,8 @@ mod tests {
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
         mapper.change_start_id( 10 );
         assert_eq!( mapper.last_count, 0);
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
+            "Transcript1", "Gene1",EMPTY_VEC.clone() );
         assert_eq!( mapper.last_count, 1 );
         assert_eq!(mapper.names_store[0] , "Gene1".to_string(), "gene was 'Gene1'");
         let res = mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool );
@@ -214,7 +217,8 @@ mod tests {
         let mut mapper = FastMapper::new( 16, 10, 10 );
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
         assert_eq!( mapper.last_count, 0);
-        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
+            "Transcript1", "Gene1", EMPTY_VEC.clone() );
         assert_eq!( mapper.last_count, 1 );
         assert_eq!(mapper.names_store[0] , "Gene1".to_string(), "gene was 'Gene1'");
         let res = mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool );
@@ -234,11 +238,11 @@ mod tests {
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
         let mut geneid = 0;
         
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGAATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGAATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Transcript1", "Gene1",EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(),
-         "Gene2".to_string(),EMPTY_VEC.clone() );
+         "Transcript1", "Gene2", EMPTY_VEC.clone() );
         geneid +=1;
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
@@ -248,11 +252,11 @@ mod tests {
         assert_eq!(  mapper.get( b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC", &mut tool ).unwrap(), vec![1] );
 
         let opath = "testData/output_index_test";
-        mapper.write_index( opath.to_string() ).unwrap();
+        mapper.write_index( opath ).unwrap();
         mapper.print();
 
         let mut mapper2 = FastMapper::new( 16, 10, 0 );
-        mapper2.load_index( opath.to_string() ).unwrap();
+        mapper2.load_index( opath ).unwrap();
 
         assert_eq!(  mapper.with_data, mapper2.with_data );
 
@@ -276,13 +280,13 @@ mod tests {
 
         let geneid = 0;
         
-        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Gene1".to_string(),EMPTY_VEC.clone() );
+        mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Transcrip1", "Gene1", EMPTY_VEC.clone() );
         mapper.names4sparse.insert( "Gene1".to_string(), geneid );
 
         let mut other = FastMapper::new( 16, 10, 0 );
 
         other.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
-            "Gene2".to_string(),EMPTY_VEC.clone() );
+            "Transcript1", "Gene2", EMPTY_VEC.clone() );
 
         assert!( mapper.names_store.len() == 1, "Not exactly one gene in mapper 1" );
         assert!( other.names_store.len() == 1, "Not exactly one gene in mapper 2" );
@@ -298,8 +302,8 @@ mod tests {
 
         //             "AGGAGGCCCCGCGTGAGAGTGATCAATCCAGGATACATTCCCGTC"
         let seq = b"GTTGTCAAGATGCTACCGTTCAGAGGGCAAGGTGTCACAT";
-        index.add( &seq.to_vec(), "Transcript0".to_string(),vec!("Transcript0".to_string(), "Gene0".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
-        index.add( &seq.to_vec(), "Transcript1".to_string(),vec!( "Transcript1".to_string(), "Gene1".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
+        index.add( &seq.to_vec(), "Transcript0", "Gene2", vec!("Transcript0".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
+        index.add( &seq.to_vec(), "Transcript1", "Gene1", vec!( "Transcript1".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
 
         let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 

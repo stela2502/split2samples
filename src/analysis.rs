@@ -105,7 +105,7 @@ impl Analysis{
 	    
 	    if let Some(i) = index {
 	    	println!("Loading index from path {i}");
-	    	match genes.load_index( i ){
+	    	match genes.load_index( &i ){
 	    		Ok(_r) => (),
 	    		Err(e) => panic!("Failed to load the index {e:?}")
 	    	}
@@ -124,9 +124,9 @@ impl Analysis{
 			        let seqrec = e_record.expect("invalid record");
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
-		                	if let Some(id) = st.to_string().split('|').next(){
-			                    genes.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
-		                	}
+							if let Some(transcript_id) = st.to_string().split('|').next() {
+								genes.add(&seqrec.seq().to_vec(), transcript_id, transcript_id, EMPTY_VEC.clone());
+							}
 		            	},
 		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
 		        	}
@@ -151,14 +151,9 @@ impl Analysis{
 			        let seqrec = ab_record.expect("invalid record");
 		        	match std::str::from_utf8(seqrec.id()){
 			            Ok(st) => {
-		                	if let Some(id) = st.to_string().split('|').next(){
-		                		//seq_temp = seqrec.seq().to_vec();
-		                		//seq_temp.reverse();
-			                    antibodies.add( &seqrec.seq().to_vec(), id.to_string(), EMPTY_VEC.clone() );
-		                    	//ab_names.push( id.to_string() );
-		                    	//gene_names.push( id.to_string() );
-		                    	//genes2.add_unchecked( &seqrec.seq(), id.to_string() );
-		                	};
+							if let Some(transcript_id) = st.to_string().split('|').next() {
+								antibodies.add(&seqrec.seq().to_vec(), transcript_id, transcript_id, EMPTY_VEC.clone());
+							}
 		            	},
 		            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
 		        	}
@@ -209,7 +204,7 @@ impl Analysis{
 	        	//seq.reverse();
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_hs"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), &format!("SampleTag{id:02}_hs"), &format!("SampleTag{id:02}_hs"), EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -238,7 +233,7 @@ impl Analysis{
 	        	//let mut seq_ext = b"GTTGTCAAGATGCTACCGTTCAGAG".to_vec();
 	        	//seq_ext.extend_from_slice( seq );
 	        	//samples.add_small( &seq_ext, format!("Sample{id}"),EMPTY_VEC.clone() );
-	        	samples.add( &seq.to_vec(), format!("SampleTag{id:02}_mm"),EMPTY_VEC.clone() );
+	        	samples.add( &seq.to_vec(), &format!("SampleTag{id:02}_mm"), &format!("SampleTag{id:02}_mm"), EMPTY_VEC.clone() );
 	        	//sample_names.push( format!("Sample{id}") );
 	        	id +=1;
 	        }
@@ -307,9 +302,9 @@ impl Analysis{
 		self.genes.set_highest_humming_val(value);
     }
 
-	pub fn write_index(&mut self, path:&String ){
-		self.genes.write_index( path.to_string() ).unwrap();
-		self.genes.write_index_txt( path.to_string() ).unwrap();
+	pub fn write_index(&mut self, path:&str ){
+		self.genes.write_index( path ).unwrap();
+		self.genes.write_index_txt( path ).unwrap();
 	}
 
 

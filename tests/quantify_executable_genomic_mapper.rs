@@ -71,6 +71,7 @@ fn test_quantify_gene_mapper() {
     }else {
         println!("{}", cmd );
     }
+        panic!("Just so...");
 
     // Check if the command was successful (exit code 0)
     assert!(output.status.success());

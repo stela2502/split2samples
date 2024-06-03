@@ -251,9 +251,10 @@ impl MultiMatch{
 				    }
 				    let total = start_length + end_length;
 				    if total == length {
-				    	//println!("end_obj.start(){} - (start_obj.start() {} + start_length {})", start_obj.start(), end_obj.start(), start_length);
+				    	eprintln!("end_obj.start(){} - (start_obj.start() {} + start_length {})", start_obj.start(), end_obj.start(), start_length);
+				    	/*
 			    		let cigar_str = &format!("{}M{}N{}M", start_length, 
-			    			start_obj.start() - (end_obj.start() + start_length), end_length );
+			    			(end_obj.start() + start_length) - start_obj.start() , end_length );
 			    		let cigar = Cigar::new( cigar_str );
 			    		//println!("The length of start match + end match fits the expected length -> Cigar: {}", cigar );
 			    		Ok(
@@ -269,7 +270,8 @@ impl MultiMatch{
 			    				start_obj.get_name(), 
 			    				start_obj.db_length(),
 		    				)
-		    			)
+		    			)*/
+		    			Ok(best)
 			    	}else {
 			    		//eprintln!("Start match and end match do not cover the whole read - additional mutations?!:\n{start:?}\n{end:?}\n");
 				    	Ok(best)

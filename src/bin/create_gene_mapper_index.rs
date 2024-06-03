@@ -140,7 +140,15 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
             
             // and add a gene
             // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
-            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), transcript_id.to_string(), vec![gene_name.to_string(), transcript_id.to_string()] );
+            let gene = Gene::new( 
+                &parts[0],  
+                &parts[3], 
+                &parts[4], 
+                &parts[6],
+                &transcript_id, 
+                &gene_name, 
+                vec![gene_name.to_string(), transcript_id.to_string()] 
+            );
             #[cfg(debug_assertions)]
             println!("I am inserting a new gene: {} {}",transcript_id, gene );
             genes.insert( transcript_id, gene );
@@ -149,15 +157,15 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
         if parts[2] == "exon"{
             // capture the parts I need
             //eprintln!("I found an exon!");
-            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
+            if let Some(captures) = re_transcript_id.captures( &parts[8] ){
                 transcript_id = captures.get(1).unwrap().as_str().to_string();
             }else {
                 eprintln!("I could not identify a gene_id in the attributes {:?}", &parts[8] );
                 continue;
             }
             // and add an exon
-            match genes.get_mut( &transcript_id.to_string() ){
-                Some(gene) => gene.add_exon( parts[3].to_string(), parts[4].to_string() ),
+            match genes.get_mut( &transcript_id ){
+                Some(gene) => gene.add_exon( &parts[3], &parts[4] ),
                 None => eprintln!( "ignoring transcript! ({})", transcript_id  )
             }
         }
@@ -202,7 +210,9 @@ fn process_genes_multi ( genes: &[Gene], index: &mut GenesMapper ,
                 }else {
                     match seq_records.get( &format!("chr{}", &gene.chrom ) ){
                         Some(seq) => {
-                            gene.add_to_genes_mapper( seq, index, COVERED_AREA, genes2print.contains( &gene_name ) );
+                            gene.add_to_genes_mapper( 
+                                seq, index, COVERED_AREA, genes2print.contains( &gene_name ) 
+                            );
                             //println!("The genes detected: {:?}", index.names_store );
                         },
                         None => {
@@ -466,10 +476,10 @@ fn main() {
     eprintln!("We created this fast_mapper object:");
     index.print();
 
-    index.write_index( opts.outpath.to_string() ).unwrap();
+    index.write_index( &opts.outpath ).unwrap();
 
     if opts.text{
-        index.write_index_txt( opts.outpath.to_string() ).unwrap();
+        index.write_index_txt( &opts.outpath ).unwrap();
         eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.",opts.outpath );
     }
 

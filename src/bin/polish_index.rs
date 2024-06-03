@@ -32,7 +32,7 @@ fn main() {
 
     let mut index = FastMapper::new( 32, 10, 0 );
 
-    match index.load_index( opts.index ){
+    match index.load_index( &opts.index ){
     	Ok(_) => {},
     	Err(e) => {
     		panic!("polish_index main: Load index hit an error: {e:?}" )
@@ -49,7 +49,7 @@ fn main() {
 
     report.stop_single_processor_time();
 
-    match fixed_index.write_index( opts.outpath ){
+    match fixed_index.write_index( &opts.outpath ){
     	Ok(_) => {},
     	Err(e) => {
     		panic!("polish_index main: Write index hit an error: {e:?}" )

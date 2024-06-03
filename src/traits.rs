@@ -9,7 +9,7 @@ use core::fmt;
 pub trait Index : Sync{
 
 	fn get(&self, seq: &[u8]) ->  Option< usize >;
-	fn add(&mut self, seq: &[u8], name: std::string::String, class_ids: Vec<String> ) -> usize;
+	fn add(&mut self, seq: &[u8],unique_name: &str, name: &str, class_ids: Vec<String> ) -> usize;
 	fn get_id( &self, name: String ) -> usize;
 	fn print( &self );
 	fn change_start_id ( &mut self, new_start :usize );

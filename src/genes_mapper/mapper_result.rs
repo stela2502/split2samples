@@ -48,7 +48,7 @@ impl Default for MapperResult {
 
 
 impl MapperResult{
-	pub fn new( gene_id:usize,  start: usize, save:bool, cigar:Option<Cigar>, mapq:u8, nw:f32,score:usize, edit_dist:f32, name:&str, db_length:usize ) -> Self{
+	pub fn new( gene_id:usize, start: usize, save:bool, cigar:Option<Cigar>, mapq:u8, nw:f32,score:usize, edit_dist:f32, name:&str, db_length:usize ) -> Self{
 
         Self{
 			gene_id,

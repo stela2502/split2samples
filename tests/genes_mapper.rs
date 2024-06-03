@@ -28,7 +28,7 @@ mod tests {
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
+		                    genes.add( &seqrec.seq().to_vec(), &id, &id, &id, 0 );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -109,7 +109,7 @@ mod tests {
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
+		                    genes.add( &seqrec.seq().to_vec(), &id, &id, &id, 0 );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -138,7 +138,7 @@ mod tests {
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
+		                    genes.add( &seqrec.seq().to_vec(), &id, &id, &id, 0 );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -169,7 +169,7 @@ mod tests {
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
+		                    genes.add( &seqrec.seq().to_vec(), &id, &id, &id, 0 );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -279,7 +279,7 @@ mod tests {
 	        	match std::str::from_utf8(seqrec.id()){
 		            Ok(st) => {
 	                	if let Some(id) = st.to_string().split('|').next(){
-		                    genes.add( &seqrec.seq().to_vec(), id.to_string(), id.to_string(), 0 );
+		                    genes.add( &seqrec.seq().to_vec(), &id, &id, &id,0 );
 	                	}
 	            	},
 	            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -302,7 +302,7 @@ mod tests {
 	        }
 	    }
 
-		match genes.write_index( "testData/output_index_test/genes".to_string()  ){
+		match genes.write_index( "testData/output_index_test/genes"  ){
 			Ok(_) => { },
 			Err(e) => panic!("Writing of the index failed with the error {e}")
 		};
@@ -310,7 +310,7 @@ mod tests {
 		assert_eq!( Path::new("testData/output_index_test/genes/index.bin").exists(), true, "the index file exists");
 		assert_eq!( Path::new("testData/output_index_test/genes/indexed_sequences.fa.gz").exists(), true, "the fasta file exists");
 
-		let mut from_binary = match GenesMapper::load_index( "testData/output_index_test/genes".to_string() ){
+		let mut from_binary = match GenesMapper::load_index( "testData/output_index_test/genes" ){
 			Ok(mapper) => mapper,
 			Err(e) => {panic!("The loading of the index failed with the error {e}")}
 		};
@@ -320,5 +320,6 @@ mod tests {
 
 
 	}
+	
 
 }

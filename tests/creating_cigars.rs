@@ -13,8 +13,8 @@ mod tests {
 	fn test_full_match(){
 		let seq1 = b"ACACCTAATCGGAGGAGCTACTCTAGTATTAATAAATATTAGCCCACCAACAGCTACCATTACATTTATTATTTTACTTCTACTCACAAT";
 		let seq2 = &seq1.clone();
-		let gd1 = GeneData::new( seq1, "read", "chrM", 0 );
-		let gd2 = GeneData::new( seq2, "database", "chrM", 0 );
+		let gd1 = GeneData::new( seq1, "read", "read", "chrM", 0 );
+		let gd2 = GeneData::new( seq2, "database", "database", "chrM", 0 );
 		let mut cigar = Cigar::new("");
 		let mut nwa = NeedlemanWunschAffine::new();
 		nwa.set_debug(true);
@@ -36,8 +36,8 @@ mod tests {
 
 		let seq1 = b"ACACCTAATCGGAGGAGCTACTCTAGTATTAATATTATTTTACTTCTACTCACAAT";
 		let seq2 = b"ACACCTAATCGGAGGAGCTACTCTAGTATTAATAAATATTAGCCCACCAACAGCTACCATTACATTTATTATTTTACTTCTACTCACAAT";
-		let gd1 = GeneData::new( seq1, "read", "chrM", 0 );
-		let gd2 = GeneData::new( seq2, "database", "chrM", 0 );
+		let gd1 = GeneData::new( seq1, "read", "read", "chrM", 0 );
+		let gd2 = GeneData::new( seq2, "database", "database", "chrM", 0 );
 		let mut cigar = Cigar::new("");
 		let mut nwa = NeedlemanWunschAffine::new();
 		nwa.set_debug(true);
@@ -59,8 +59,8 @@ mod tests {
 		let seq1 = b"ACACCTAATCGGAGGAGCTACTCTAGTATTAATAAATATTAGCCCACCAACAGCTACCATTACATTTATTATTTTACTTCTACTCACAAT";
 		let seq2 =                                   b"ACACCTAATCGGAGGAGCTACTCTAGTATTAATATTATTTTACTTCTACTCACAAT";
 
-		let gd1 = GeneData::new( seq1, "read", "chrM", 0 );
-		let gd2 = GeneData::new( seq2, "database", "chrM", 0 );
+		let gd1 = GeneData::new( seq1, "read", "read", "chrM", 0 );
+		let gd2 = GeneData::new( seq2, "database", "database", "chrM", 0 );
 		let mut cigar = Cigar::new("");
 		let mut nwa = NeedlemanWunschAffine::new();
 		nwa.set_debug(true);

@@ -386,6 +386,8 @@ impl Cigar{
 	    let mut mine = 0;
 	    let mut other = 0;
 	    let mut current_number = String::new();
+	    let mut inserts = 0;
+	    let mut deletions = 0;
 	    
 	    for c in cigar_string.chars() {
 	        if c.is_digit(10) {
@@ -401,10 +403,12 @@ impl Cigar{
 	                	other += count; 
 	                },
 	                'I' => {
-	                	mine += count; // Insertion
+	                	inserts += count;
+	                	//mine += count; // Insertion
 	                },
 	                'D' => {
-	                	other += count;// Deletion or intron
+	                	deletions += count;
+	                	//other += count;// Deletion or intron
 	                },
 	                'S' => {
 	                	mine += count;// Deletion or intron
@@ -417,12 +421,17 @@ impl Cigar{
 	            current_number.clear(); // Clear the current number for the next operation
 	        }
 	    }   
+	    mine = mine + deletions - inserts ;
+	    other = other + inserts - deletions;
 	    (mine, other)
 	}
 
 	pub fn len (&self) -> usize{
 		let mut mine = 0;
 		let mut current_number = String::new();
+		let mut inserts = 0;
+	    let mut deletions = 0;
+
 		for c in self.cigar.chars() {
 	        if c.is_digit(10) {
 	            // If the character is a digit, append it to the current number
@@ -436,7 +445,12 @@ impl Cigar{
 	                	mine  += count; // Match, mismatch, or sequence match
 	                },
 	                'I' => {
-	                	mine += count; // Insertion
+	                	inserts += count;
+	                	//mine += count; // Insertion
+	                },
+	                'D' => {
+	                	deletions += count;
+	                	//other += count;// Deletion or intron
 	                },
 	                'S' => {
 	                	mine += count;// soft klipped
@@ -449,7 +463,7 @@ impl Cigar{
 	            current_number.clear(); // Clear the current number for the next operation
 	        }
 	    }   
-	    mine
+	    mine + deletions - inserts
 	}
 
 	pub fn convert_to_cigar(&mut self, path: &[CigarEnum] ){
@@ -598,11 +612,11 @@ impl Cigar{
 		            j -= 1;
 		        } else if max == up_score {
 		        	//println!("adding Deletion");
-		            path.push(CigarEnum::Deletion);
+		        	path.push(CigarEnum::Insertion);
 		            i -= 1;
 		        } else {
 		        	//println!("adding Insertion");
-		            path.push(CigarEnum::Insertion);
+		            path.push(CigarEnum::Deletion);
 		            j -= 1;
 		        }
 		    }
@@ -610,13 +624,13 @@ impl Cigar{
 		    // If there are remaining gaps at the beginning of the sequences, fill them with the corresponding directions
 		    while i > 0 {
 		    	//println!("End not reached by main - adding Deletion");
-		        path.push(CigarEnum::Deletion);
+		        path.push(CigarEnum::Insertion);
 		        i -= 1;
 		    }
 
 		    while j > 0 {
 		    	//println!("End not reached by main - adding Insertion");
-		        path.push(CigarEnum::Insertion);
+		        path.push(CigarEnum::Deletion);
 		        j -= 1;
 		    }
 

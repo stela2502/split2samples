@@ -79,6 +79,7 @@ fn test_quantify_gene_mapper() {
         }
     }
 
+
         /*CountsType
     The data of that part needs to be collected, too!
 collected read counts:

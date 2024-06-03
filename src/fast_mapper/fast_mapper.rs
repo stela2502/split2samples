@@ -492,10 +492,10 @@ impl FastMapper{
     }
 
     /// The add function returns the intern id. 
-    pub fn add(&mut self, seq: &Vec<u8>, name: std::string::String, class_ids: Vec<String> ) -> usize{
+    pub fn add(&mut self, seq: &Vec<u8>, _unique_name: &str, name: &str, class_ids: Vec<String> ) -> usize{
 
 
-        let mut classes_vec = vec![name.clone()];
+        let mut classes_vec = vec![name.to_string()];
         classes_vec.extend( class_ids);
 
         let classes =  self.intern_ids_for_gene_names( &classes_vec );
@@ -587,7 +587,7 @@ impl FastMapper{
         //println!("I have now {i} mappers for the gene {name}");
         if i == 0 {
             //eprint!(".");
-            println!("add -> gene {} ({:?}) does not get an entry in the fast_mapper object! - too short or a duplicate? {} bp", &name.as_str(), classes, seq.len() );
+            println!("add -> gene {} ({:?}) does not get an entry in the fast_mapper object! - too short or a duplicate? {} bp", name, classes, seq.len() );
         }
         /*else {
             println!("I added {i} mappper entries for gene {name}");
@@ -1065,14 +1065,14 @@ impl FastMapper{
         "CellID\t".to_owned()+&ret.join("\t")
     }
 
-    pub fn write_index( &mut self, path: String ) -> Result< (), &str>{
-        let rs = Path::new( &path ).exists();
+    pub fn write_index( &mut self, path: &str ) -> Result< (), &str>{
+        let rs = Path::new( path ).exists();
 
         if ! rs {
             let mut dir_builder = DirBuilder::new();
             dir_builder.recursive(true);
 
-            match dir_builder.create ( path.clone() ){
+            match dir_builder.create ( path ){
                 Ok(_file) => (),
                 Err(err) => {
                      eprintln!("Error?: {err:#?}");
@@ -1081,11 +1081,11 @@ impl FastMapper{
         }
 
         // remove the old files if they exist:
-        let fpath = Path::new(&path ) ;
+        let fpath = Path::new( path ) ;
         if fs::remove_file(fpath.join("index.1.Index.gz") ).is_ok(){};
         if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  &path );
+        let mut ofile = Ofilesr::new( 1, "index", "Index", "gene.txt",  path );
 
         
         let mut count:usize;
@@ -1177,10 +1177,10 @@ impl FastMapper{
         Ok(())
     }
 
-    pub fn load_index( &mut self, path: String ) -> Result< (), &str>{
+    pub fn load_index( &mut self, path: &str ) -> Result< (), &str>{
 
-        let f1 = Path::new( &path ).join("index.1.Index");
-        let f2 = Path::new( &path ).join("index.1.gene.txt");
+        let f1 = Path::new( path ).join("index.1.Index");
+        let f2 = Path::new( path ).join("index.1.gene.txt");
         if ! f1.exists() {
             panic!("Index file {} does not exist", f1.to_str().unwrap() );
         }
@@ -1188,7 +1188,7 @@ impl FastMapper{
             panic!("kmer names file {} does not exist", f2.to_str().unwrap() );
         }
 
-        let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  &path  );
+        let mut ifile =Ifilesr::new( 1, "index", "Index", "gene.txt",  path  );
 
         let mut buff_u64 = [0_u8 ;8 ];
         let mut buff_u16 = [0_u8 ;2 ];
@@ -1284,14 +1284,14 @@ impl FastMapper{
         Ok(())
     }
 
-    pub fn write_index_txt( &mut self, path: String ) -> Result< (), &str>{
-        let rs = Path::new( &path ).exists();
+    pub fn write_index_txt( &mut self, path: &str ) -> Result< (), &str>{
+        let rs = Path::new( path ).exists();
 
         if ! rs {
             let mut dir_builder = DirBuilder::new();
             dir_builder.recursive(true);
 
-            match dir_builder.create ( path.clone() ){
+            match dir_builder.create ( path ){
                 Ok(_file) => (),
                 Err(err) => {
                      eprintln!("Error?: {err:#?}");
@@ -1304,7 +1304,7 @@ impl FastMapper{
         if fs::remove_file(fpath.join("index.1.Index.txt.gz") ).is_ok(){};
         if fs::remove_file(fpath.join("index.1.gene.txt.gz") ).is_ok(){};
 
-        let mut ofile = Ofilesr::new( 1, "index", "Index.txt", "gene.txt.gz",  &path );
+        let mut ofile = Ofilesr::new( 1, "index", "Index.txt", "gene.txt.gz",  path );
 
         
         let mut count:usize;

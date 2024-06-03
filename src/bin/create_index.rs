@@ -139,22 +139,30 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
             
             // and add a gene
             // pub fn new(chrom:String, start_s:String, end_s:String, sense_strand_s:String, name:String, id:String )
-            let gene = Gene::new( parts[0].to_string(),  parts[3].to_string(), parts[4].to_string(), parts[6].to_string(), gene_name.to_string(), vec![gene_name.to_string(), transcript_id.to_string()] );
+            let gene = Gene::new( 
+                &parts[0],  
+                &parts[3], 
+                &parts[4], 
+                &parts[6], 
+                &gene_name, 
+                &transcript_id, 
+                vec![gene_name.to_string(), transcript_id.to_string()] 
+            );
             genes.insert( transcript_id, gene );
         }
 
         if parts[2] == "exon"{
             // capture the parts I need
             //eprintln!("I found an exon!");
-            if let Some(captures) = re_transcript_id.captures( &parts[8].to_string() ){
+            if let Some(captures) = re_transcript_id.captures( &parts[8] ){
                 transcript_id = captures.get(1).unwrap().as_str().to_string();
             }else {
                 eprintln!("I could not identify a gene_id in the attributes {:?}", &parts[8] );
                 continue;
             }
             // and add an exon
-            match genes.get_mut( &transcript_id.to_string() ){
-                Some(gene) => gene.add_exon( parts[3].to_string(), parts[4].to_string() ),
+            match genes.get_mut( &transcript_id ){
+                Some(gene) => gene.add_exon( &parts[3], &parts[4] ),
                 None => eprintln!( "ignoring transcript! ({})", transcript_id  )
             }
         }
@@ -470,10 +478,10 @@ fn main() {
     eprintln!("We created this fast_mapper object:");
     index.eprint();
 
-    index.write_index( opts.outpath.to_string() ).unwrap();
+    index.write_index( &opts.outpath ).unwrap();
 
     if opts.text{
-        index.write_index_txt( opts.outpath.to_string() ).unwrap();
+        index.write_index_txt( &opts.outpath ).unwrap();
         eprintln!("A text version of the index was written to {} - you can simply remove that after an optional inspection.",opts.outpath );
     }
 

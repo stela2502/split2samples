@@ -48,7 +48,7 @@ pub struct GeneIds{
 
 impl Index for GeneIds {
 
-    fn add(&mut self, seq: &[u8], name: String, _class_ids: Vec<String>) -> usize {
+    fn add(&mut self, seq: &[u8], _unique_name: &str, name: &str, _class_ids: Vec<String>) -> usize {
         
         if seq.len() > self.seq_len{
             self.seq_len = seq.len() 
@@ -93,9 +93,9 @@ impl Index for GeneIds {
 
             if let std::collections::btree_map::Entry::Vacant(e) = self.kmers.entry(km) {
                 //let info = Info::new(km, name.clone() );
-                if ! self.names.contains_key( &name ){
-                    self.names.insert( name.clone(), self.max_id );
-                    self.names_store.insert( self.max_id, name.clone() );
+                if ! self.names.contains_key( name ){
+                    self.names.insert( name.to_string(), self.max_id );
+                    self.names_store.insert( self.max_id, name.to_string() );
                     self.max_id += 1;
                 }
                 //println!("I insert a kmer {} for name {}", std::str::from_utf8(kmer).unwrap().to_string(), name );
