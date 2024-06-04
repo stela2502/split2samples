@@ -18,7 +18,7 @@ mod tests {
 
 	// we need a temp index testData/index/tmp_idx which is ignored by git anyhow
 
-	fn test_this_seqence( seq: &[u8], database:String, sam_line: Option<&str>, err:Option<MappingError> ){
+	fn test_this_seqence( seq: &[u8], database:&str, sam_line: Option<&str>, err:Option<MappingError> ){
 
 		let mut results = MappingInfo::new( None, 20.0, 10, None );
 
@@ -95,7 +95,7 @@ mod tests {
 	#[test]
 	fn chrM_over_the_edge( ){
 		let seq = b"CGATGGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTGTGCACGCGATAG";
-		let database = "testData/ChrM.fasta.gz".to_string();
+		let database = "testData/ChrM.fasta.gz";
 
 		let bam_line= "SomeRead20+85\t0\tchrM\t1\t39\t72M1X12M\t*\t0\t0\tCGATGGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTGTGCACGC\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:39\tnM:i:0.011764706\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
 		test_this_seqence( seq, database, Some(bam_line), None );
@@ -104,7 +104,7 @@ mod tests {
 	#[test]
 	fn should_map_not_to_center(){
 		let seq = b"CCTACAAGCCTCAGAGTACTTCGAGTCTCCCTTCACCATTTCCGACGGCATCTACGGCTCAACATTTTTTGTAGCCACAGGCTTCCACGG";
-		let database = "testData/ChrM.fasta.gz".to_string();
+		let database = "testData/ChrM.fasta.gz";
 		let bam_line= "SomeRead2\t0\tchrM\t9731\t40\t90M\t*\t0\t0\tCCTACAAGCCTCAGAGTACTTCGAGTCTCCCTTCACCATTTCCGACGGCATCTACGGCTCAACATTTTTTGTAGCCACAGGCTTCCACGG\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:40\tnM:i:0\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
 		test_this_seqence( seq, database, Some(bam_line), None );
 	}
@@ -112,7 +112,7 @@ mod tests {
 	#[test]
 	fn simulate_chrm_read_over_start(){
 		let name = "Btla";
-		let database = "testData/genes.fasta".to_string();
+		let database = "testData/genes.fasta";
 		// start and end of the 'contig'
 		//          eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeesssssssssssssssssssssssssss
 		let seq = b"ATGTATGTTGTAGCTCCTCAAATAAATTTGTTCCAGCATTAgcactctcacttactaagcATGTTCTA";
@@ -123,7 +123,7 @@ mod tests {
 	#[test]
 	fn simulate_chrm_read_over_start2(){
 		let name = "Btla";
-		let database = "testData/genes.fasta".to_string();
+		let database = "testData/genes.fasta";
 		// start and end of the 'contig'
 		//          eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeessssssss
 		let seq = b"ATGTATGTTGTAGCTCCTCAAATAAATTTGTTCCAGCATTAgcactctc";
@@ -136,7 +136,7 @@ mod tests {
 	#[test]
 	fn simulate_obscue_error1(){
 		let name = "Btla";
-		let database = "testData/ChrM.fasta.gz".to_string();
+		let database = "testData/ChrM.fasta.gz";
 		// start and end of the 'contig'
 		//          eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeessssssss
 		let seq = b"GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTGTGCACGCGATAGCATTG";
@@ -146,6 +146,13 @@ mod tests {
 
 	}
 
+    #[test]
+    fn test_buffer_overflow_issue_in_calculate_cigar(){
+        let seq = b"CAAGCAGTTTGCACGTTTGTGATTCTAGAGAGAGAAGACGACGGCGAAGTAGGAGTGG";
+        let bam_line= "SomeRead2";
+        let database = "testData/Srsf11.fasta.gz";
+        test_this_seqence( seq, database, Some(bam_line), None );
+    }
     /*#[test]
     fn identify_the_better_database_entry() {
         let name ="Rpl11_int";
