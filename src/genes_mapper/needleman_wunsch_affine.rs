@@ -392,8 +392,14 @@ impl <'a> NeedlemanWunschAffine {
 		                    }
 		                    matching += 1;
 		                    // both sequences had a match so we need to check the next seqence position in both sequences:
-		                    seq1_id -= 1;
-		                    seq2_id -= 1;
+		                    if seq1_id ==0 {
+		                    	eprintln!("sequence1 is at it's end - let's hope that this is the last round?")
+		                    }
+		                    if seq2_id == 0 {
+		                    	eprintln!("sequence2 is at it's end - let's hope that this is the last round?")
+		                    }
+		                    seq1_id = seq1_id.saturating_sub(1);
+		                    seq2_id = seq2_id.saturating_sub(1);
 		                   
 		                    // this is going to be the match that we just detected
 		                    cigar[i] = CigarEnum::Match;
