@@ -49,7 +49,7 @@ impl MultiMatch{
         if a_name == b_name {
         	// ok that is strange - we got two matches to the same gene with the same "quality"
         	#[cfg(debug_assertions)]
-        	eprintln!("We have two different matches to the same gene with the same quality!?!");
+        	eprintln!("We have two different matches to the same gene with the same quality!?!\n{a}\n{b}");
         	return Some(a.clone())
         }
         #[cfg(debug_assertions)]

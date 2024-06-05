@@ -109,7 +109,9 @@ mod tests {
         let mut nwa = NeedlemanWunschAffine::new();
 
         // two different transcription ends - do we get them both?
-        check_sequence(&index, b"GCCAGGTGGTCCTTACCATGACCAACATGGACCCTGTGGACACAGCCACGTATTACTGT", Some("ENSG00000278510"), Some("ENST00000619806"), &mut nwa );
+        // matches to both of them - I can not check for the transcript name as it is a randoim process which one gets reported - they are both equal at this test
+        check_sequence(&index, b"GCCAGGTGGTCCTTACCATGACCAACATGGACCCTGTGGACACAGCCACGTATTACTGT", Some("ENSG00000278510"), None, &mut nwa );
+        // matches to only ENST00020619806 (artificially created!!)
 		check_sequence(&index, b"ATGCCTCCTGTACAAGAACCCAGGCTGCGTCTCAGTGGTGCTCCCTCCCTACCTCTGCAGAACAGGAAAGT", Some("ENSG00000278510"),  Some("ENST00020619806"), &mut nwa );
 
 

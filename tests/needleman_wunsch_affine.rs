@@ -66,7 +66,7 @@ mod tests {
 		cigar.convert_to_cigar( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_gap.tsv"));
 
-		assert_eq!( format!("{}",cigar), "18M4I28M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "18M4D28M - None", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -92,7 +92,7 @@ mod tests {
 		cigar.convert_to_cigar( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_insert.tsv"));
 
-		assert_eq!( format!("{}",cigar), "18M4D28M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "18M4I28M - None", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -118,7 +118,7 @@ mod tests {
 		cigar.convert_to_cigar( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_gap.tsv"));
 
-		assert_eq!( format!("{}",cigar), "17M84I19M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "17M84D19M - None", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -146,7 +146,7 @@ mod tests {
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_insert.tsv"));
 
-		assert_eq!( format!("{}",cigar), "17M84D19M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar), "17M84I19M - None", "get a perfect 50 bp matching result" )
 
 
 	}

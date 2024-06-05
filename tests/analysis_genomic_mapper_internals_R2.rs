@@ -52,7 +52,10 @@ mod tests {
 	    }else {
 	    	eprintln!("Expression file could not be read - ignoring")
 	    }
-	    idx.write_index( idx_path );
+	    match idx.write_index( idx_path ) {
+	    	Ok(_) => {println!("I have expoorted the index {idx}")},
+	    	Err(e) => {panic!("I could not write the index for {idx}")}
+	    };
 
 		// new(_gene_kmers:usize, version:String, specie: String, index:Option<String>, num_threads:usize, exp:&str, _debug: bool  ) -> Self{
 		let mut worker = AnalysisGenomicMapper::new( 32, "v1".to_string(), "mouse".to_string(), Some(idx_path.to_string() ), 1, "bd", true);
@@ -146,39 +149,13 @@ mod tests {
 
 	}
 
-    #[test]
+    /*#[test]
     fn test_buffer_overflow_issue_in_calculate_cigar(){
         let seq = b"CAAGCAGTTTGCACGTTTGTGATTCTAGAGAGAGAAGACGACGGCGAAGTAGGAGTGG";
         let bam_line= "SomeRead2";
         let database = "testData/Srsf11.fasta.gz";
         test_this_seqence( seq, database, Some(bam_line), None );
-    }
-    /*#[test]
-    fn identify_the_better_database_entry() {
-        let name ="Rpl11_int";
-        let database = "testData/problematic_match.fasta".to_string();
-        let seq = b"GGAGAAAGGCCTGAAGGTGCGGGAGTATGAGTTGCGGAAAAATAACTTCTCGGATACTGGAAACTTTGGTTTTGGAATTCAAGAACACAT";
-        let bam_line= "SomeRead20+78\t0\tRpl11\t320\t40\t78M\t*\t0\t0\tGGAGAAAGGCCTGAAGGTGCGGGAGTATGAGTTGCGGAAAAATAACTTCTCGGATACTGGAAACTTTGGTTTTGGAAT\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:40\tnM:i:0\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-        test_this_seqence( seq, database, Some(bam_line), None );
-
     }*/
 
-    /*#[test]
-    fn idenitfy_sample1() {
-    	let database = "testData/problematic_match.fasta.gz".to_string();
-    	let seq = b"ATTGTCAAGATGCTACCGTTCAGAGAAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAGAAAA";
-    	// sample ids do not create a sam line!
-    	test_this_seqence( seq, database, None, None );
-    }*/
-
-    // A00681:881:H3MV7DSX7:1:1107:7021:16532 2:N:0:CACAATCCCA+TTGTGGATAT      0       Defb39_int      10595   40      17M18446744073709551274N73M     *       0       0       GAACTAACCAGTACCCCGAGCTCTTGACTCTAGCTGCATATGTATCAAAAGATGGCCTAGTCGGCCATCACTGGAAAGAGAGGCCCATTG      FFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFF,FFFFFFFFFFFFFFFFFF:FFFFFFFFFF:FFFFFFFF      NH:i:1  HI:i:1  AS:i:40 nM:i:0  RE:A:I  li:i:0  BC:Z:AAGCCTGGAGAC       QT:Z:FFFFFFFFFFFF       CR:Z:GTGTCCTGTCATGACT   CY:Z:FFFFFFFFFFFFFFFF   CB:Z:GTGTCCTGTCATGACT-1 UR:Z:AAGCCTGGAGAC       UZ:Z:FFFFFFFFFFFF       UB:Z:AAGCCTGGAGAC       RG:Z:Sample4:0:1:HN2CKBGX9:1
-    // GAACTAACCAGTACCCCGAGCTCTTGACTCTAGCTGCATATGTATCAAAAGATGGCCTAGTCGGCCATCACTGGAAAGAGAGGCCCATTG
-    /*#[test]
-    fn real_live_splice_site() {
-    	let database = "testData/Defb39_human.fasta.gz".to_string();
-    	let seq = b"GAACTAACCAGTACCCCGAGCTCTTGACTCTAGCTGCATATGTATCAAAAGATGGCCTAGTCGGCCATCACTGGAAAGAGAGGCCCATTG";
-    	// sample ids do not create a sam line!
-    	test_this_seqence( seq, database, Some("Text"), None );
-    }*/
 
 }

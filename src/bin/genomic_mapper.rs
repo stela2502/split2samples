@@ -193,8 +193,6 @@ fn main() {
 
     worker.write_data( opts.outpath, &mut results, opts.min_umi );
 
-
-
     match now.elapsed() {
         Ok(elapsed) => {
             let mut milli = elapsed.as_millis();

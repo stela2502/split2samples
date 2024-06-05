@@ -421,8 +421,8 @@ impl Cigar{
 	            current_number.clear(); // Clear the current number for the next operation
 	        }
 	    }   
-	    mine = mine + deletions - inserts ;
-	    other = other + inserts - deletions;
+	    mine = mine + inserts.saturating_sub(deletions);
+	    other = other + deletions.saturating_sub(inserts) ;
 	    (mine, other)
 	}
 
@@ -463,7 +463,8 @@ impl Cigar{
 	            current_number.clear(); // Clear the current number for the next operation
 	        }
 	    }   
-	    mine + deletions - inserts
+	    //mine + deletions.saturating_sub(inserts)
+	    mine + inserts.saturating_sub(deletions)
 	}
 
 	pub fn convert_to_cigar(&mut self, path: &[CigarEnum] ){
@@ -501,6 +502,7 @@ impl Cigar{
 		}
 	}
 
+	/// this function literally checks for 1D1J or vice versa. An artifact from earlier fixes.
 	pub fn fix_1d1i_1i1d(&mut self, cigar: &mut Vec<CigarEnum>, start_pos: Option<usize>) {
 
 		if ! self.contains.iter().any(|&x| x){

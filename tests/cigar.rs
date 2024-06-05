@@ -7,6 +7,24 @@ mod tests {
 	use rustody::genes_mapper::cigar::CigarEnum;
 	use rustody::genes_mapper::CigarEndFix;
 
+
+
+	#[test]
+	fn test_cvalculate_covered_1(){
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("5D30M");
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (30, 35), "corect sizes" );
+
+		obj.restart_from_cigar("5I30M");
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (35, 30), "corect sizes" );
+
+		obj.restart_from_cigar("5I15M3D15M");
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (32, 30), "corect sizes" );
+
+		obj.restart_from_cigar("5D15M3I15M");
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (30, 32), "corect sizes" );
+	}
+
 	#[test]
 	fn test_soft_start(){
 		let mut obj = Cigar::default();
@@ -52,20 +70,28 @@ mod tests {
 	fn test_calculate_covered_nucleotides_deletions() {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("14M1X39M1D7M1X12M");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (75, 73), "corect sizes" )
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (74, 75), "corect sizes" )
 	}
 	#[test]
 	fn test_calculate_covered_nucleotides_insertions() {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("14M1X39M1I7M1X12M");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (73, 75), "corect sizes" )
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (75, 74), "corect sizes" )
 	}
 	#[test]
 	fn test_calculate_covered_nucleotides_real() {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X8M1I39M2X16M7X");
-		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (72, 74), "corect sizes" )
+		assert_eq!( obj.calculate_covered_nucleotides( &obj.to_string() ), (74, 73), "corect sizes" )
 	}
+
+	#[test]
+	fn test_calculate_len_real() {
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("1X8M1I39M2X16M7X");
+		assert_eq!( obj.len(), 74, "1X8M1I39M2X16M7X - corect sizes" )
+	}
+
 
 	#[test]
 	fn test_default_is_worst() {
