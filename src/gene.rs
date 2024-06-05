@@ -123,7 +123,7 @@ impl Gene{
 				println!(">{}\n{}", self.name.to_string() + " " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 			}
 			if let Some(nascent) = raw{
-				index.add( &nascent.to_owned(),&self.name , &(self.name.to_string() +"_int"), self.ids.clone() );
+				index.add( &nascent.to_owned(), &(self.name.to_string() + "_int") , &(self.name.to_string() +"_int"), self.ids.clone() );
 				if print {
 					println!(">{}\n{}", self.name.to_string() + "_int " + &self.chrom  , std::str::from_utf8(  &mrna[ mrna.len()-covered_area.. ].to_owned()  ).unwrap() );
 				}
