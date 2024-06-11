@@ -302,7 +302,8 @@ impl GenesMapper{
 	    }
 	}
 
-	fn slice_objects ( &self, start:i32, change_start: &GeneData, change_end: &GeneData ) -> Option<( GeneData, GeneData )> {
+	/// slice the read and the database to get the likely matching regions from both.
+	fn slice_objects ( &self, start:i32, change_end: &GeneData, change_start: &GeneData ) -> Option<( GeneData, GeneData )> {
 		
 		let abs_start = start.abs() as usize;
 		match start < 0{
@@ -310,21 +311,22 @@ impl GenesMapper{
 				let obj_a = match change_end.slice( abs_start, (change_end.len() - abs_start ).min( change_start.len() )){
 					Some(val) => val,
 					None => {
-						eprintln!("I could not slice change_start start {start} length {} and seq {change_start}", (change_end.len() - abs_start ).min( change_start.len() ));
+						eprintln!("GenesMapper::slice_objects - I could not slice change_start start {start} length {} and seq {change_start}", (change_end.len() - abs_start ).min( change_start.len() ));
 						return None
 					},
 				};
 				let obj_b = match change_start.slice( 0, obj_a.len() ){
 					Some(val) => val,
 					None => {
-						eprintln!("I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
+						eprintln!("GenesMapper::slice_objects - I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
 						return None
 					},
 				};
 
-				if self.debug{
-					println!("slicing with start <0 {start} and \n{change_start}\nand\n{change_end}");
-					println!("I got you this return values:\n{obj_b}\n{obj_a}\ngood?\n")
+				#[cfg(debug_assertions)]
+				{
+					println!("GenesMapper::slice_objects - slicing with start <0 {start} and \n{change_start}\nand\n{change_end}");
+					println!("GenesMapper::slice_objects - I got you this return values:\n{obj_b}\n{obj_a}\ngood?\n")
 				}
 				Some((obj_b, obj_a))
 			},
@@ -332,51 +334,26 @@ impl GenesMapper{
 				let obj_a = match change_start.slice( abs_start, (change_start.len() - abs_start ).min( change_end.len() )){
 					Some(val) => val,
 					None => {
-						eprintln!("I could not slice change_start start {start} length {} and seq {change_start}", (change_start.len() - abs_start ).min( change_end.len() ));
+						eprintln!("GenesMapper::slice_objects - I could not slice change_start start {start} length {} and seq {change_start}", (change_start.len() - abs_start ).min( change_end.len() ));
 						return None
 					},
 				};
 				let obj_b = match change_end.slice( 0, obj_a.len() ){
 					Some(val) => val,
 					None => {
-						eprintln!("I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
+						eprintln!("GenesMapper::slice_objects - I could not slice change_end start 0 length {} and seq {change_end}", obj_a.len());
 						return None
 					},
 				};
 				#[cfg(debug_assertions)]
-				if self.debug{
-					println!("slicing with start >0 {start} and \n{change_start}\nand\n{change_end}");
-					println!("I got you this return values:\n{obj_a}\n{obj_b}\ngood?\n")
+				{
+					println!("GenesMapper::slice_objects - slicing with start >0 {start} and \n{change_start}\nand\n{change_end}");
+					println!("GenesMapper::slice_objects - I got you this return values:\n{obj_a}\n{obj_b}\ngood?\n")
 				}
-				Some((obj_a, obj_b))
+				Some((obj_b, obj_a))
 			}
 		}	
 	}
-
-	// /// this function adjusts the GeneData objects to get rid of terminal I's.
-	// fn fix_database_4_cigar( &self, gene_id:&usize, database: &GeneData, read: &GeneData, cigar: &mut Cigar, match_length_problems:&Regex ){
-
-	// 	if let Some(capture) = match_length_problems.captures( &cigar.cigar ) {
-	// 		let num_bp: usize = capture[1].parse().unwrap();
-	// 		//eprintln!("updateing the cigar string {cigar}");
-	// 		match &capture[2] {
-	// 			"I" => {
-	// 				// the database was num_bp too large
-	// 				let adjusted_db = database.slice(0, database.len() - num_bp ).unwrap();
-	// 				let _uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
-	// 				//eprintln!("Type I: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
-	// 			},
-	// 			"D" => {
-	// 				// the database was num_bp too short
-	// 				let adjusted_db = &self.genes[*gene_id].slice( database.get_start() - self.genes[*gene_id].get_start() , database.len() + num_bp ).unwrap();
-	// 				let _uw = read.needleman_wunsch( &adjusted_db, self.highest_humming_val, Some( cigar) );
-	// 				//eprintln!("Type D: I compare the read {read} to original db {database} and the new databse {adjusted_db} \nand obtained the new cigar '{cigar}'");
-	// 			},
-	// 			&_ => (),
-	// 		};
-	// 		//eprintln!("updataed cigar string   = '{cigar}'");
-	// 	}
-	// }
 
 	
 
@@ -580,7 +557,7 @@ impl GenesMapper{
 		#[allow(unused_variables)]
 	    for ((gene_id, start), count) in &res_vec {
 
-	    	if let Some((read, database)) = self.slice_objects( *start, &self.genes[*gene_id], &read_data ){
+	    	if let Some((  read, database)) = self.slice_objects( *start, &read_data, &self.genes[*gene_id] ){
 	    		cigar.clear();
 	    		if (read.len() as f32) < (read_data.len() as f32 * 0.8) && (read.len() as f32) < (self.genes[*gene_id].len() as f32 * 0.9) {
 	    			// this database match is a little short!
@@ -606,7 +583,7 @@ impl GenesMapper{
 				if nw.abs() < self.highest_nw_val  {
 					#[cfg(debug_assertions)]
 					if self.debug{
-						println!("################## And I deem this match intereting");
+						println!("##################\n################## And I deem this match interesting\n##################");
 					}
 					if cigar.mapping_quality() > 20 && cigar.state_changes() < 10  {
 						helper.push( 
@@ -623,7 +600,7 @@ impl GenesMapper{
 				}
 				#[cfg(debug_assertions)]
 				if self.debug{
-					println!("I got this nw: {nw} and the matches: {}",helper);
+					println!("I got this nw: {nw} and the matches up to now: {}",helper);
 				}
 			};			
 
@@ -642,7 +619,11 @@ impl GenesMapper{
 					if cigar.mapping_quality() > 20 && cigar.fixed != Some(CigarEndFix::Both) {
 						#[cfg(debug_assertions)]
 						println!("get_strict got an accepted match (get_strict) {}", val );
-						Ok(vec![val])
+						// so here is where we check if the match did not hit the expected area
+						let mut ret = val.clone();
+						ret.fix_border_insertion( &read_data, &self.genes[val.gene_id()] );
+
+						Ok(vec![ret])
 					}else {
 						#[cfg(debug_assertions)]
 						println!("secondary checks failed: {} <= 20 || {:?} != Some(CigarEndFix::Both) ", cigar.mapping_quality(), cigar.fixed);

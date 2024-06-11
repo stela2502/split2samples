@@ -319,8 +319,15 @@ impl GeneData{
     	let mut end =start + length;
 
     	if end > self.len(){
-    		//eprintln!("You have requested more than I have ({end} > {} ) - giving you only {}! {self}", self.len(), self.len());
+    		#[cfg(debug_assertions)]
+    		println!("You have requested more than I have ({end} > {} ) - giving you only {}! {self}", self.len(), self.len());
     		end = self.len();
+    	}
+    	if end == self.len() && start == 0{
+    		// you requested all!
+    		#[cfg(debug_assertions)]
+    		println!("start == 0 and end == len() -> returning unchanged object");
+    		return Some(self.clone())
     	}
         let mut sliced_data = Vec::with_capacity( (length +3) / 4 );
         let mut current_byte = 0;
@@ -350,6 +357,9 @@ impl GeneData{
         if bit_position != 0 {
             sliced_data.push(current_byte);
         }
+
+        #[cfg(debug_assertions)]
+        println!("returning a sliced DNA string length {start}..{end} length {} based on my {}bp long sequence", end - start, self.len() );
 
         Some(Self {
             u8_encoded: sliced_data,

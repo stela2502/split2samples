@@ -1,3 +1,5 @@
+use crate::analysis::MinimalSam;
+
 use needletail::parse_fastx_file;
 use needletail::parser::SequenceRecord;
 //use std::collections::HashSet;
@@ -578,7 +580,8 @@ impl AnalysisGeneMapper{
 
 		*/	
 	    record += &format!("RG:Z:{}", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
-
+	    #[cfg(debug_assertions)]
+	    println!("the bam line is this:\n{record}");
 	    Some(record)
     }
 
@@ -590,6 +593,7 @@ impl AnalysisGeneMapper{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
         let mut nwa = NeedlemanWunschAffine::new();
+        let minimal_sam = MinimalSam::new();
 
         //let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
 
@@ -630,7 +634,7 @@ impl AnalysisGeneMapper{
 
 	                        if gene_id[0].save(){
 	                        	//build_sam_record ( &self, read2:&SeqReq, gene_id:&Vec<MapperResult>, cell_id:&SeqReq, umi:&SeqReq ) 
-							    //bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
+							    //bam.push(minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq ));
 	                        }
 							
 	                        true
@@ -662,7 +666,7 @@ impl AnalysisGeneMapper{
 
 		                        if gene_id[0].save(){
 		                        	//build_sam_record ( &self, read2:&SeqReq, gene_id:&Vec<MapperResult>, cell_id:&SeqReq, umi:&SeqReq ) 
-								    //bam.push(self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ));
+								    //bam.push(minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq ));
 		                        }
 		                        true
 		                    },
@@ -695,10 +699,10 @@ impl AnalysisGeneMapper{
 
 		                        if gene_id[0].save(){
 		                        	//build_sam_record ( &self, read2:&SeqReq, gene_id:&Vec<MapperResult>, cell_id:&SeqReq, umi:&SeqReq )
-		                        	match self.build_sam_record( &data[i].1, gene_id, cell_seq, umi_seq ) {
+		                        	match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
 			                        	Some(sam_line) => bam.push( sam_line ),
 			                        	None => {
-			                        		eprintln!("There has been an error in the build_sam_record() function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
+			                        		eprintln!("There has been an error in the minimal_sam.to_sam_line function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
 			                        	}
 			                        }
 		                        }

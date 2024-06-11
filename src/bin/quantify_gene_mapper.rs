@@ -2,7 +2,7 @@ use clap::Parser;
 
 //use this::sampleids::SampleIds;
 use rustody::mapping_info::MappingInfo;
-use rustody::analysis_genemapper::AnalysisGeneMapper;
+use rustody::analysis::AnalysisGeneMapper;
 //use this::last5::Last5;
 
 use std::path::PathBuf;

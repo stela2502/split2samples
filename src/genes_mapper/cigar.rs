@@ -2,6 +2,8 @@
 
 use crate::traits::Cell;
 use crate::traits::BinaryMatcher;
+use crate::genes_mapper::gene_data::GeneData;
+
 //use crate::genes_mapper::gene_data::GeneData;
 use core::cmp::Ordering;
 
@@ -168,16 +170,105 @@ impl Cigar{
         max(a, max(b, c))
     }
 
-    pub fn to_string(&self) -> String{
+    pub fn to_string(&self) -> String {
     	self.cigar.to_string()
     }
 
-    pub fn restart_from_cigar(&mut self, cigar_string:&str ) {
-    	self.clear();
-    	let mut result = Vec::new();
-		let re = Regex::new(r"(\d+)(\w)").unwrap();
+    // this function is used in combination with to_sam_string to
+    // fix the issues with internal insertions/dseletions in the read sequence.
+    pub fn length_del_start(&self) -> usize {
+		if ! self.contains[CigarEnum::Deletion.to_id()] {
+			// not necessary to process this!
+			return 0;
+		}
+		let re_start = Regex::new(r"^(\d+)D").unwrap();
+		for cap in re_start.captures_iter( &self.to_string() ) {
+			let count: usize = cap[1].parse().unwrap();
+			return count
+		}
+		return 0;
+    }
 
-		for cap in re.captures_iter(cigar_string) {
+    pub fn to_sam_string(&self) -> String{
+    	let mut ret = self.cigar.to_string();
+		if ! self.contains[CigarEnum::Deletion.to_id()] {
+			// not necessary to process this!
+			return ret;
+		}
+		let re_start = Regex::new(r"^(\d+D)").unwrap();
+		if let Some(mat) =re_start.captures(&ret) {
+			if let Some(clippable) = mat.get(1) {
+				ret.replace_range(0..clippable.end(), "")
+			}
+		}
+		let re_end = Regex::new(r"(\d+D)$").unwrap();
+		if let Some(mat) =re_end.captures(&ret) {
+			if let Some(clippable) = mat.get(1) {
+				ret.replace_range(clippable.start()..clippable.end(), "")
+			}
+		}
+		return ret
+    }
+
+    pub fn fix_border_insertion( &mut self, mapping_start: usize, read:&GeneData, database:&GeneData )->usize{
+    	let mut ret =0 ;
+    	if self.contains[CigarEnum::Insertion.to_id()] {
+			let re_start = Regex::new(r"^(\d+)I").unwrap();
+			if let Some(mat) =re_start.captures(&self.cigar) {
+				let mut cigar_vec = self.string_to_vec( &self.cigar );
+				// this means likely that my read does reach into the < start area of the gene
+				let count: usize = mat[1].parse().unwrap();
+
+				for i in 0..count  { //  runs once for count==1
+					if read.get_nucleotide_2bit( i ) == database.get_nucleotide_2bit( mapping_start - (count -i) ){
+						println!("The sequence at database position {} is the same as the sequence on read position {}", i,mapping_start - (count -i) );
+						cigar_vec[i] = CigarEnum::Match;
+					}else {
+						println!("The sequence at database position {} is NOT the same as the sequence on read position {}",
+							 i,
+							 mapping_start - (count -i)
+						);
+						cigar_vec[i] = CigarEnum::Mismatch;
+					}
+				}
+				ret = count;
+				self.clear();
+				self.convert_to_cigar( &cigar_vec );
+			}
+			// we now also need to check if the end would also contain I's
+			let re_end = Regex::new(r"(\d+)I$").unwrap();
+			if let Some(mat) =re_end.captures(&self.cigar) {
+				let mut cigar_vec = self.string_to_vec( &self.cigar );
+				// this means likely that my read does reach into the < start area of the gene
+				let count: usize = mat[1].parse().unwrap();
+				let (mine, other) = self.calculate_covered_nucleotides(&self.cigar );
+				let cigar_vec_len = cigar_vec.len();
+				for i in 0..count  { //  runs once for count==1
+					if read.get_nucleotide_2bit( read.len() - count + i ) == database.get_nucleotide_2bit( mapping_start + other +i +1 ) {
+						println!("The sequence at database position {} is the same as the sequence on read position {}",
+							read.len() - count + i , 
+							mapping_start + other +i +1 
+						);
+						cigar_vec[ cigar_vec_len - i -1 ] = CigarEnum::Match;
+					}else {
+						println!("The sequence at database position {} is NOT the same as the sequence on read position {}",
+							read.len() - count + i , 
+							mapping_start + other +i +1 
+						);
+						cigar_vec[ cigar_vec_len - i -1 ] = CigarEnum::Mismatch;
+					}
+				}
+				self.clear();
+				self.convert_to_cigar( &cigar_vec );
+			}
+		}
+		ret
+    }
+
+    fn string_to_vec(&self, cigar_string:&str ) -> Vec<CigarEnum> {
+    	let mut result = Vec::new();
+    	let re = Regex::new(r"(\d+)(\w)").unwrap();
+    	for cap in re.captures_iter(cigar_string) {
 	        let count: usize = cap[1].parse().unwrap();
 	        let operation = &cap[2];
 	        let cigar_type = match CigarEnum::from_str(operation) {
@@ -192,9 +283,17 @@ impl Cigar{
 	            result.push(cigar_type);
 	        }
    		}
+   		result
+    }
+
+    pub fn restart_from_cigar(&mut self, cigar_string:&str ) {
+    	self.clear();
+
+    	let result = self.string_to_vec(cigar_string);
 
 	    self.convert_to_cigar( &result );
     }
+
 
     /// cleanup in this regards is meant to fix alignment errors.
     pub fn clean_up_cigar<T>(&mut self, _seq1:&T, _seq2:&T)

@@ -2,7 +2,7 @@ use clap::Parser;
 
 //use this::sampleids::SampleIds;
 use rustody::mapping_info::MappingInfo;
-use rustody::analysis_genemapper::AnalysisGeneMapper;
+use rustody::analysis::AnalysisGeneMapper;
 use rustody::genes_mapper::sequence_record::SeqRec;
 //use this::last5::Last5;
 
@@ -139,7 +139,10 @@ fn main() {
     let r1 = SeqRec::new( b"SomeRead1", b"AGGAGATTAACTGGCCTGCGAGCCTGTTCAGGTAGCGGTGACGACTACATATGCTGCACATTTTTT", b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" );
     let qual: Vec<u8>  = vec![b'F'; opts.dna.len()];
     let r2 = SeqRec::new( b"SomeRead2", &opts.dna.as_bytes(), qual.as_slice() );
+    println!("I am analyzing this read:\n{}",&r2);
     let data= vec![ (r1, r2 )];
+
+
     worker.analyze_paralel( &data, &mut results, pos );
 
     //worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );

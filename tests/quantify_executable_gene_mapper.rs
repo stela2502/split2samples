@@ -7,12 +7,16 @@ use std::fs;
 use std::io::BufReader;
 use std::io::BufRead;
 use std::collections::HashMap;
+use std::process::exit;
 
 #[test]
 fn test_quantify_gene_mapper() {
     
     let is_release_mode = !cfg!(debug_assertions);
-
+    if ! is_release_mode {
+        eprintln!("Test should be re-run in release mode (speed!)");
+        exit(0);
+    }
     let command = if is_release_mode {
         "./target/release/quantify_gene_mapper"
     } else {

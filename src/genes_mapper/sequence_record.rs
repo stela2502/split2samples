@@ -94,6 +94,14 @@ impl SeqRec{
 		}
 
 	}
+
+    /*pub fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
+        if pos < self.len(){
+            Some( self.enc( &self.seq[pos]) )
+        }else{
+            None
+        }
+    }*/
 	pub fn id(&self) -> &[u8] {
         &self.id
     }

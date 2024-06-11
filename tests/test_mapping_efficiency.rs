@@ -9,14 +9,16 @@ fn test_quantify_rhapsody_multi_ok_seq() {
 	
 	let is_release_mode = !cfg!(debug_assertions);
 
+    
+
 	// this is mapping to Sry using BLASTN
     // but the sequence is really really bad - better not match?!
 	let seq1 = "AGAAGCAGCAGTTCCATGACCACCACCAAAAGAAGAGAAGAATAAAACAACAACAACAAAAACAACAACAAAAC";
 
     // Execute the command with the provided arguments
     let output = Command::new(
-    	if is_release_mode { "./target/release/map_one_sequence" } 
-    	else { "./target/debug/map_one_sequence" }
+    	if is_release_mode { "./target/release/check_read_fast_mapper" } 
+    	else { "./target/debug/check_read_fast_mapper" }
     	).args(&[
     		"-s", "mouse",
             "-o", "testData/output_1e5",
@@ -44,8 +46,8 @@ fn test_quantify_rhapsody_multi_failed_strict() {
 
     // Execute the command with the provided arguments
     let output = Command::new(
-        if is_release_mode { "./target/release/map_one_sequence" } 
-        else { "./target/debug/map_one_sequence" }
+        if is_release_mode { "./target/release/check_read_fast_mapper" } 
+        else { "./target/debug/check_read_fast_mapper" }
         ).args(&[
             "-s", "mouse",
             "-o", "testData/output_1e5",
@@ -74,8 +76,8 @@ fn test_cxcr4_mapping() {
 
     // Execute the command with the provided arguments
     let output = Command::new(
-        if is_release_mode { "./target/release/map_one_sequence" } 
-        else { "./target/debug/map_one_sequence" }
+        if is_release_mode { "./target/release/check_read_fast_mapper" } 
+        else { "./target/debug/check_read_fast_mapper" }
         ).args(&[
             "-s", "mouse",
             "-o", "testData/output_1e5",
@@ -104,8 +106,8 @@ fn test_quantify_rhapsody_multi_bad_seq() {
 
     // Execute the command with the provided arguments
     let output = Command::new(
-    	if is_release_mode { "./target/release/map_one_sequence" } 
-    	else { "./target/debug/map_one_sequence" }
+    	if is_release_mode { "./target/release/check_read_fast_mapper" } 
+    	else { "./target/debug/check_read_fast_mapper" }
     	).args(&[
     		"-s", "mouse",
             "-o", "testData/output_1e5",
@@ -120,4 +122,26 @@ fn test_quantify_rhapsody_multi_bad_seq() {
 
     assert!( stdout.contains( "I have collected these genes: {}"), "Gene detected!");
 
+}
+
+#[test]
+fn test_quantify_rhapsody_multi_bad_seq() {
+    let seq = "TAACAATGCATCGTAAAACCTTCAGAAGGAAAGAATGTTGTGGACCATTTTTTTTTGTGTGTGGCAGTTTTAAGTTATTAGTTTTCAAA";
+    // Execute the command with the provided arguments
+    let output = Command::new(
+        if is_release_mode { "./target/release/check_read_gene_mapper" } 
+        else { "./target/debug/check_read_gene_mapper" }
+        ).args(&[
+            "-s", "mouse",
+            "-o", "testData/output_1e5",
+            "-e", "testData/2276_20220531_chang_to_rpl36a_amplicons.fasta",
+            "-a", "testData/MyAbSeqPanel.fasta",
+            "-d", seq1
+        ])
+        .output()
+        .expect("Failed to execute command");
+
+    let stdout = std::str::from_utf8( &output.stdout).unwrap();
+
+    assert!( stdout.contains( "I have collected these genes: {}"), "Gene detected!");
 }

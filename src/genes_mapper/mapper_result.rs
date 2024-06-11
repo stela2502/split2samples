@@ -2,6 +2,7 @@
 
 use crate::genes_mapper::Cigar;
 //use crate::genes_mapper::CigarEndFix;
+use crate::genes_mapper::gene_data::GeneData;
 
 use core::fmt;
 
@@ -63,6 +64,12 @@ impl MapperResult{
             db_length,
 		}
 	}
+
+    pub fn fix_border_insertion( &mut self, read:&GeneData, gene:&GeneData) {
+        let mut cigar = self.get_cigar();
+        self.start -= cigar.fix_border_insertion( self.start, read, gene );
+        self.cigar = Some( cigar);
+    }
 
     pub fn db_length(&self) -> usize{
         self.db_length

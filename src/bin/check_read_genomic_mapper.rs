@@ -2,7 +2,7 @@ use clap::Parser;
 
 //use this::sampleids::SampleIds;
 use rustody::mapping_info::MappingInfo;
-use rustody::analysis_genomic_mapper::AnalysisGenomicMapper;
+use rustody::analysis::AnalysisGenomicMapper;
 use rustody::genes_mapper::sequence_record::SeqRec;
 //use this::last5::Last5;
 

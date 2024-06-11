@@ -25,6 +25,7 @@ mod tests {
     }
 }
 
+pub mod analysis;
 pub mod errors;
 pub mod opts_te;
 pub mod cellids10x;
@@ -34,10 +35,6 @@ pub mod sampleids;
 pub mod singlecelldata;
 pub mod ofiles;
 pub mod ifiles;
-pub mod analysis;
-pub mod analysis_te;
-pub mod analysis_genemapper;
-pub mod analysis_genomic_mapper;
 pub mod last5;
 
 pub mod fast_mapper;

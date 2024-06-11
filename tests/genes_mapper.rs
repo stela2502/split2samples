@@ -192,7 +192,7 @@ mod tests {
 	#[test]
 	fn test_wrap_arount_to_max(){
 
-		let mut cig = Cigar::new( "21M1D49M1I3M" );
+		let mut cig = Cigar::new( "21M1I52M1D" );
 		cig.fixed = Some(CigarEndFix::Na);
 		test_this_seqence( 
 			b"CTGCCCCTCTTTTGTGTTGTCTTTTTTTCTTAGACTATCTGTCCTTTCTCCTTGATTTCTAAACTATGTTATTT",

@@ -26,6 +26,20 @@ mod tests {
 	}
 
 	#[test]
+	fn test_to_sam_string(){
+		let mut obj = Cigar::default();
+
+		obj.restart_from_cigar("1D15M1I30M");
+		let fixed = obj.to_sam_string();
+
+		assert_eq!( fixed, "15M1I30M", "internal insert overhanging D fixed at start");
+		
+		obj.restart_from_cigar("15M1I30M1D");
+		let fixed = obj.to_sam_string();
+		assert_eq!( fixed, "15M1I30M", "internal insert overhanging D fixed at end");
+	}
+
+	#[test]
 	fn test_soft_start(){
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M");

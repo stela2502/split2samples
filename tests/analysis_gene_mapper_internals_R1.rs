@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests {
 
-	use rustody::analysis_genemapper::AnalysisGeneMapper;
+	use rustody::analysis::AnalysisGeneMapper;
 	use rustody::mapping_info::MappingInfo;
 	use rustody::genes_mapper::SeqRec;
 	use rustody::errors::MappingError;
