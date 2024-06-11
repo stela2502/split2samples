@@ -563,7 +563,7 @@ impl Cigar{
 	        }
 	    }   
 	    //mine + deletions.saturating_sub(inserts)
-	    mine + inserts;//.saturating_sub(deletions)
+	    mine + inserts//.saturating_sub(deletions)
 	}
 
 	pub fn convert_to_cigar(&mut self, path: &[CigarEnum] ){
