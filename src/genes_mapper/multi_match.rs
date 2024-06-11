@@ -251,7 +251,7 @@ impl MultiMatch{
 				    }
 				    let total = start_length + end_length;
 				    if total == length {
-				    	eprintln!("end_obj.start(){} - (start_obj.start() {} + start_length {})", start_obj.start(), end_obj.start(), start_length);
+				    	//eprintln!("end_obj.start(){} - (start_obj.start() {} + start_length {})", start_obj.start(), end_obj.start(), start_length);
 				    	/*
 			    		let cigar_str = &format!("{}M{}N{}M", start_length, 
 			    			(end_obj.start() + start_length) - start_obj.start() , end_length );

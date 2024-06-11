@@ -520,8 +520,8 @@ impl Cigar{
 	            current_number.clear(); // Clear the current number for the next operation
 	        }
 	    }   
-	    mine = mine + inserts.saturating_sub(deletions);
-	    other = other + deletions.saturating_sub(inserts) ;
+	    mine = mine + inserts;//.saturating_sub(deletions);
+	    other = other + deletions;//.saturating_sub(inserts) ;
 	    (mine, other)
 	}
 
@@ -563,7 +563,7 @@ impl Cigar{
 	        }
 	    }   
 	    //mine + deletions.saturating_sub(inserts)
-	    mine + inserts.saturating_sub(deletions)
+	    mine + inserts;//.saturating_sub(deletions)
 	}
 
 	pub fn convert_to_cigar(&mut self, path: &[CigarEnum] ){

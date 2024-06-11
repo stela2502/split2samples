@@ -393,12 +393,6 @@ impl <'a> NeedlemanWunschAffine {
 		                    }
 		                    matching += 1;
 		                    // both sequences had a match so we need to check the next seqence position in both sequences:
-		                    if read_id ==0 {
-		                    	eprintln!("sequence1 is at it's end - let's hope that this is the last round?")
-		                    }
-		                    if database_id == 0 {
-		                    	eprintln!("sequence2 is at it's end - let's hope that this is the last round?")
-		                    }
 		                    read_id = read_id.saturating_sub(1);
 		                    database_id = database_id.saturating_sub(1);
 		                   
