@@ -1,0 +1,1 @@
+./target/debug/check_read_gene_mapper -d TCTGATTTTTTTTTTTTTCCTCCCTCTCCCTGCCCCTGCAAAGAAGAGAACCAATAAATTTTAGGGTTGTCTGTGCGTATAGACTCTGTC -e testData/Setd1b.fastq.gz -o ~/tmp -s mouse
