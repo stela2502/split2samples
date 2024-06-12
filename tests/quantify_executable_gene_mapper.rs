@@ -159,7 +159,7 @@ sample reads      : 12 UMIs (0.02% of cellular)
     sample UMIs should be 911 but was 862
     */
 
-    exp.insert( "na".to_string(), 34898 );
+    exp.insert( "na".to_string(), 34930 );
     exp.insert( "SampleTag01_mm".to_string(), 111 );
     exp.insert( "SampleTag02_mm".to_string(), 202 );
     exp.insert( "SampleTag03_mm".to_string(), 232 );
@@ -174,13 +174,13 @@ sample reads      : 12 UMIs (0.02% of cellular)
     exp.insert( "filtered reads".to_string(), 14078 );
 
     //collected read counts:
-    exp.insert( "expression reads".to_string(), 43944 );
-    exp.insert( "antibody reads".to_string(),   19377 );
+    exp.insert( "expression reads".to_string(), 43948 );
+    exp.insert( "antibody reads".to_string(),   19445 );
     exp.insert( "sample reads".to_string(),     862 );
 
     //reported UMI counts:
-    exp.insert( "expression UMIs".to_string(),  43870 );
-    exp.insert( "antibody UMIs".to_string(),    19338 );
+    exp.insert( "expression UMIs".to_string(),  43874 );
+    exp.insert( "antibody UMIs".to_string(),    19405 );
     exp.insert( "sample UMIs".to_string(),      862 );
 
     // Iterate over the actual hashmap and assert each key-value pair separately

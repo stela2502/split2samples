@@ -192,15 +192,19 @@ impl GenesMapper{
     }
     fn reject_key(&self,  key:&u16 ) -> bool{
 		if &self.di_nuc_tab_length( &key ) < &4{ // could be as simple as AAAACAAA or ACACACAC
+			#[cfg(debug_assertions)]
 			if self.debug{
 				println!("this key was rejected: {}", Self::key_to_string( &key ) );
 			}
+			
 			return true;
 		}
 		if key > &65534 {
+			#[cfg(debug_assertions)]
 			if self.debug{
 				println!("this key was rejected: {}", Self::key_to_string( &key ) );
 			}
+			
 			return true
 		}
 		false
@@ -536,6 +540,9 @@ impl GenesMapper{
 		let res_vec = self.query_database( seq );
 
 		if res_vec.is_empty() {
+			if self.debug{
+				println!("No matching gene found - cause: Not enough keys matching to a single gene");
+			}
 			return Err(MappingError::NoMatch)
 		}
 
@@ -612,16 +619,18 @@ impl GenesMapper{
 				helper.get_best( seq.len()) );
 			println!("#################################################################################");
 		}
-		match helper.get_best( seq.len()){
+
+		let ret = match helper.get_best( seq.len()){
 			Ok(val) => {
 				//println!("I found a best result! {}", &val);
 				if let Some(cigar) = val.cigar(){
 					if cigar.mapping_quality() > 20 && cigar.fixed != Some(CigarEndFix::Both) {
-						#[cfg(debug_assertions)]
-						println!("get_strict got an accepted match (get_strict) {}", val );
 						// so here is where we check if the match did not hit the expected area
 						let mut ret = val.clone();
-						ret.fix_border_insertion( &read_data, &self.genes[val.gene_id()] );
+						#[cfg(debug_assertions)]
+						println!("I found a best result! {}\nand have fixed the fix_border_insertions", &ret);
+
+						ret.fix_border_insertion( &read_data, &self.genes[val.gene_id() - self.offset] );
 
 						Ok(vec![ret])
 					}else {
@@ -632,7 +641,7 @@ impl GenesMapper{
 					}
 				}else {
 					#[cfg(debug_assertions)]
-					println!("The match had no acciociated cigar!?!" );
+					println!("The match had no acceptable cigar!?!" );
 					Err(MappingError::NoMatch)
 					//self.get( &read_data, &res_vec, cellid, nwa)
 				}			
@@ -643,7 +652,18 @@ impl GenesMapper{
 				Err(MappingError::NoMatch)
 				//self.get( &read_data, &res_vec, cellid, nwa)
 			}, //that is kind of OK
+		};
+		if self.debug {
+			match ret.clone(){
+				Ok(val) => {
+					println!("I have found this match best match:\n{}", val[0] )
+				},
+				Err(e) => {
+					println!("No matching gene found - cause: {e:?}");
+				}
+			}
 		}
+		ret
 	}
 
 	pub fn report4( &mut self, genes: &[&str]) {

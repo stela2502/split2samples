@@ -125,8 +125,11 @@ fn test_quantify_rhapsody_multi_bad_seq() {
 }
 
 #[test]
-fn test_quantify_rhapsody_multi_bad_seq() {
-    let seq = "TAACAATGCATCGTAAAACCTTCAGAAGGAAAGAATGTTGTGGACCATTTTTTTTTGTGTGTGGCAGTTTTAAGTTATTAGTTTTCAAA";
+fn test_quantify_rhapsody_multi_bad_seq2() {
+
+    let is_release_mode = !cfg!(debug_assertions);
+
+    let seq1 = "TAACAATGCATCGTAAAACCTTCAGAAGGAAAGAATGTTGTGGACCATTTTTTTTTGTGTGTGGCAGTTTTAAGTTATTAGTTTTCAAA";
     // Execute the command with the provided arguments
     let output = Command::new(
         if is_release_mode { "./target/release/check_read_gene_mapper" } 
@@ -143,5 +146,5 @@ fn test_quantify_rhapsody_multi_bad_seq() {
 
     let stdout = std::str::from_utf8( &output.stdout).unwrap();
 
-    assert!( stdout.contains( "I have collected these genes: {}"), "Gene detected!");
+    assert!( stdout.contains( "No matching gene found"), "Gene detected!: {stdout}");
 }

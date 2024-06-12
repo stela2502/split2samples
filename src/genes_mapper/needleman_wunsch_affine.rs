@@ -308,9 +308,7 @@ impl <'a> NeedlemanWunschAffine {
 		    			_ => unreachable!()
 		    		};
 		    		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		    		if self.debug{
-		    			println!("inserted the value {} at position {rev_id}", &cigar[rev_id] );
-		    		}
+		    		println!("inserted the value {} at position {rev_id}", &cigar[rev_id] );
 		    		//println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {}",cigar[rev_id]);
 		    		
 		    	}else {
@@ -325,7 +323,8 @@ impl <'a> NeedlemanWunschAffine {
 		    } else if i > 0 || j > 0  {
 		    	// we have etimated the wrongpath length!
 		    	cigar.insert(0, CigarEnum::Empty);
-		    	//println!("Inserting a new CigarEnum::Empty at position 0");
+		    	#[cfg(debug_assertions)]
+		    	println!("Inserting a new CigarEnum::Empty at position 0 (i:{i}; j:{j}");
 		    	//self.debug = true;
 		    }   
 	    }
@@ -367,6 +366,8 @@ impl <'a> NeedlemanWunschAffine {
 		//let mut restarts = 0;
 		while i > 0 {
 		    i -= 1;
+		    #[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		    println!("We are at cigar position {i}");
 		    // this is where I try to match the unmatched bits from the opposit side.
 		    match gap_start {
 		    	// count how many nucleotides might be wrongly placed in the area 
@@ -378,19 +379,15 @@ impl <'a> NeedlemanWunschAffine {
 		                while let (Some(nuc1), Some(nuc2)) = (read.get_nucleotide_2bit(read_id.saturating_sub(1)), database.get_nucleotide_2bit(database_id.saturating_sub(1) )) {
 		                    if nuc1 != nuc2 {
 		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	if self.debug{
-		                    		println!("I detected a {replace_with} at position {i} (read_id = {read_id}; database_id = {database_id}) - but {} does not match {}", 
-		                    			Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char)
-		                    	}
+		                    	println!("I detected a {replace_with} at position {i} (read_id = {read_id}; database_id = {database_id}) - but {} does not match {}", 
+		                    		Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char);
 		                    	//read_id -= 1;
 		                    	//database_id -= 1;
 		                    	break;
 		                    }
 		                    #[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    if self.debug{
-		                    	println!("I detected a {replace_with} at position {i} - and {} does match {}", 
-		                    		Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char)
-		                    }
+		                    println!("I detected a {replace_with} at position {i} - and {} does match {}", 
+		                    	Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char);
 		                    matching += 1;
 		                    // both sequences had a match so we need to check the next seqence position in both sequences:
 		                    read_id = read_id.saturating_sub(1);
@@ -404,23 +401,22 @@ impl <'a> NeedlemanWunschAffine {
 		                    	// if we just replace that we change the alignement length!
 		                    	// actually this is a wrong alignement here: just drop it and check if that works
 		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	if self.debug{
-		                    		println!("#1 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
-		                    	}
+		                    	println!("#1 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
 		                    	cigar.remove(i);
 		                    	i-=1;
 		                    	drop_replaces+=1;
 		                    }
 		                    // make sure we overwrite the old value to make the required move of the deletion / insert
 		                    else if cigar[i] != replace_with{
-		                    	cigar[i] = replace_with;
 		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	if self.debug {
+		                    	{
 		                    		cig.convert_to_cigar( &cigar );
 		                    		println!("#1 at position {i}+1 (now looking into {i}) - I will replace the {} with {} here {cig}",  cigar[i], replace_with);
-		                    		println!("The updated alignement:\n{}", self.int_state_to_string( read, database, &cigar ));
 		                    	}
-
+								cigar[i] = replace_with;
+								#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+								println!("The updated alignement:\n{}\nThe new matching count is {}", 
+									self.int_state_to_string( read, database, &cigar ), matching-1);
 		                        matching -= 1;
 		                    }
 		                    if i == 0 {
@@ -430,9 +426,7 @@ impl <'a> NeedlemanWunschAffine {
 		                if matching > 0 {
 		                	gap_start = Some( (matching, replace_with, drop_replaces) );
 		                	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                	if self.debug{
-		                		println!("#1 I created a gap_start {gap_start:?}");
-		                	}
+		                	println!("#1 I created a gap_start {gap_start:?}");
 		                }
 		                /*
 		                println!("We decided that this needs to be changed: {gap_start:?}");
@@ -442,40 +436,45 @@ impl <'a> NeedlemanWunschAffine {
 		            }
 		        }
 		        // move the remaining deletion / insert 
-		        Some( (to_ignore, replace_with, drop_replaces) ) => {
-		        	// whatever the system thought it would do here - do not do that
+		        Some( (to_shift, replace_with, drop_replaces) ) => {
+		        	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		        	{
+		        		println!("After having fixed the #1 move we still have data to shift:");
+		        		println!("We need to move {} {} elements", to_shift, replace_with);
+		        	}
+		        	// move the replace_with to this position ignoring the Cigar command at this place.
 		        	if cigar[i] != replace_with {
-			        	// at least if it consumed a nucleotiode from both DNA strings - not a good idea!
+			        	// at least if it consumed a nucleotiode from both DNA strings
 			            //if cigar[i] == CigarEnum::Match || cigar[i] == CigarEnum::Mismatch {
-			            if to_ignore > 0 {
+			            if to_shift > 0 {
 			            	if cigar[i].opposite(&replace_with) {
 		                    	// if we just replace that we change the alignement length!
 		                    	// actually this is a wrong alignement here: just drop it and check if that works!
 		                    	
 		                    	cigar.remove(i);
 		                    	i-=1;
-		                    	gap_start = Some((to_ignore, replace_with, drop_replaces + 1) );
+		                    	gap_start = Some((to_shift, replace_with, drop_replaces + 1) );
 		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	if self.debug {
+		                    	{
 		                    		println!("#2 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
 		                    		println!("The updated alignement: {}", self.int_state_to_string( read, database, &cigar ));
 		                    	}
 		                    }else if cigar[i] != replace_with {
-		                    	cigar[i] = replace_with;
 		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	if self.debug{
+		                    	{
 		                    		cig.convert_to_cigar( &cigar );
 		                    		println!("#2 position {i} - replcaing a {} with {} ({cig})", cigar[i], replace_with);
 		                    		println!("The updated alignement: {}", self.int_state_to_string( read, database, &cigar ));
 		                    	}
-		                    	gap_start = Some((to_ignore - 1, replace_with, drop_replaces) );
+		                    	cigar[i] = replace_with;
+		                    	gap_start = Some((to_shift - 1, replace_with, drop_replaces) );
 		                    }
 		                } else {
 		                    gap_start = None;
 		                }
 		            }else if drop_replaces > 0 {
 		            	cigar[i] = replace_with;
-		                gap_start = Some((to_ignore - 1, replace_with, drop_replaces -1 ) );
+		                gap_start = Some((to_shift - 1, replace_with, drop_replaces -1 ) );
 		            }
 		        }
 		    };
@@ -487,8 +486,23 @@ impl <'a> NeedlemanWunschAffine {
 		    	database_id = database_id.saturating_sub(1);
 		    }
 		}
+
+		match gap_start{
+			Some( (to_shift, replace_with, drop_replaces) ) => {
+				//This is very unexpected!
+				for i in 0..to_shift{
+					cigar.insert(0, replace_with);
+					_=cigar.pop();
+				}
+			},
+			None => {
+				//nothing to do here - that should be the normal!
+			}
+		};
+
+
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		if self.debug {
+		{
 			cig.convert_to_cigar( &cigar );
 			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
 	    	println!("del/ins remapped cigar string:\n{cig}\n{}\n{}", alng1, alng2);
@@ -500,7 +514,7 @@ impl <'a> NeedlemanWunschAffine {
 		cig.fix_1d1i_1i1d( &mut cigar, None );
 
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		if self.debug {
+		{
 			cig.convert_to_cigar( &cigar );
 			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
 	    	println!("final remapped cigar string:\ndatabase  : {cig}\nread      : {}\nalignement: {}", alng1, alng2);
