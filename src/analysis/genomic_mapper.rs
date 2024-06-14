@@ -357,7 +357,11 @@ impl AnalysisGenomicMapper{
 	                    	report.multimapper +=1;
 	                    	report.no_data +=1;
 	                    	false
-	                    }
+	                    },
+	                    Err(MappingError::OnlyCrap) => {
+	                    	report.no_data +=1;
+	                    	continue
+	                    },
 	                };
 	                
 
@@ -397,7 +401,11 @@ impl AnalysisGenomicMapper{
 		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
 		                    	report.multimapper +=1;
 		                    	report.no_data +=1;
-		                    }
+		                    },
+		                    Err(MappingError::OnlyCrap) => {
+		                    	report.no_data +=1;
+		                    	continue
+		                    },
 		                };
 		            }
 	            },
@@ -597,7 +605,7 @@ impl AnalysisGenomicMapper{
 		        report.stop_multi_processor_time();
 
 			    for gex in total_results{
-			    	self.gex.merge(&gex.0.0);
+			    	self.gex.merge(gex.0.0);
 			    	for line in gex.0.1{
 			    		match writeln!(writer, "{}", line){
 			        		Ok(_) => (),
@@ -651,7 +659,7 @@ impl AnalysisGenomicMapper{
 	        report.stop_multi_processor_time();
 
 	        for gex in total_results{
-	        	self.gex.merge(&gex.0.0);
+	        	self.gex.merge(gex.0.0);
 	        	for line in gex.0.1{
 		    		match writeln!(writer, "{}", line){
 		        		Ok(_) => (),

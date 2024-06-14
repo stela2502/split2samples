@@ -72,6 +72,14 @@ mod tests {
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		assert_eq!( obj.mapping_quality(), 26 );
 	}
+	#[test]
+	fn test_cigar_fix(){
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("1M1X1M5X1M1X2M2X1M1X1M1X2M8X2I61M");
+		assert_eq!( obj.cigar, "30X61M");
+		assert_eq!( obj.fixed, Some(CigarEndFix::Start), "both fixed");
+	}
+
 
 	#[test]
 	fn test_calculate_covered_nucleotides() {

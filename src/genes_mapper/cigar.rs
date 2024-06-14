@@ -307,6 +307,7 @@ impl Cigar{
     	let result = self.string_to_vec(cigar_string);
 
 	    self.convert_to_cigar( &result );
+	    self.soft_clip_start_end();
     }
 
 
@@ -413,6 +414,8 @@ impl Cigar{
     	let old_cigar = &self.cigar.clone();
 		self.fixed = Some(CigarEndFix::Na);
 
+		println!("Just while debugging: the 'old cigar' = {old_cigar}");
+
 	    if let Some(mat) = re_end.captures(&old_cigar) {
 	        if let Some(clippable) = mat.get(1) {
 	        	if clippable.start() > 0{
@@ -493,6 +496,7 @@ impl Cigar{
 	        }
 	    }
 
+	    println!("This is the fixed cigar: {self}");
 
     }
 

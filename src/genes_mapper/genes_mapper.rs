@@ -10,6 +10,10 @@ use crate::genes_mapper::MapperResult;
 use crate::genes_mapper::MultiMatch;
 use crate::genes_mapper::CigarEndFix;
 
+use needletail::parse_fastx_file;
+use std::path::Path;
+
+
 use crate::singlecelldata::IndexedGenes;
 use crate::traits::BinaryMatcher;
 
@@ -85,7 +89,7 @@ impl GenesMapper{
 			offset: offset,
 			names: BTreeMap::new(),
 			highest_nw_val: 0.2,
-			highest_humming_val: 0.6,
+			highest_humming_val: 0.8,
 			min_matches: 10, //40 bp exact match
 			report4: None, // report for a gene?
 			debug:false,
@@ -558,13 +562,13 @@ impl GenesMapper{
 	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
-		
+		let mut crappy_mappings = false;
 
 		// collect all possible matches
 		#[allow(unused_variables)]
 	    for ((gene_id, start), count) in &res_vec {
 
-	    	if let Some((  read, database)) = self.slice_objects( *start, &read_data, &self.genes[*gene_id] ){
+	    	if let Some(( read, database)) = self.slice_objects( *start, &read_data, &self.genes[*gene_id] ){
 	    		cigar.clear();
 	    		if (read.len() as f32) < (read_data.len() as f32 * 0.8) && (read.len() as f32) < (self.genes[*gene_id].len() as f32 * 0.9) {
 	    			// this database match is a little short!
@@ -583,11 +587,12 @@ impl GenesMapper{
 					println!("read \n{read}\nto database\n{database}\n");
 					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
 				}
-				
-				cigar.convert_to_cigar( &nwa.cigar_vec() );
-				cigar.clean_up_cigar(&read, &database);
 
 				if nw.abs() < self.highest_nw_val  {
+
+					cigar.convert_to_cigar( &nwa.cigar_vec() );
+					cigar.clean_up_cigar(&read, &database);
+
 					#[cfg(debug_assertions)]
 					if self.debug{
 						println!("##################\n################## And I deem this match interesting\n##################");
@@ -604,6 +609,11 @@ impl GenesMapper{
 					}
 
 					cigar.clear();
+				}else {
+					crappy_mappings = true;
+					if helper.len() > 0 {
+						break
+					}
 				}
 				#[cfg(debug_assertions)]
 				if self.debug{
@@ -642,14 +652,14 @@ impl GenesMapper{
 				}else {
 					#[cfg(debug_assertions)]
 					println!("The match had no acceptable cigar!?!" );
-					Err(MappingError::NoMatch)
+					if crappy_mappings { Err(MappingError::OnlyCrap)} else { Err(MappingError::NoMatch) }
 					//self.get( &read_data, &res_vec, cellid, nwa)
 				}			
 			},
 			Err(_) => {
 				#[cfg(debug_assertions)]
 				println!("No best mapper identified!");
-				Err(MappingError::NoMatch)
+				if crappy_mappings { Err(MappingError::OnlyCrap)} else { Err(MappingError::NoMatch) }
 				//self.get( &read_data, &res_vec, cellid, nwa)
 			}, //that is kind of OK
 		};
@@ -787,6 +797,54 @@ impl GenesMapper{
 		}; //will be necessary for the downstream analyses
 		Ok(())
 	}
+
+
+	pub fn from_fastq( &mut self,  path: Option<String>) -> Result<(), String> {
+		
+		match path{
+			Some(file) => {
+
+		    	if Path::new(&file).exists(){
+
+			    	let mut expr_file = parse_fastx_file(file).expect("valid path/file");
+			    	let mut unique_name = HashSet::<String>::new();
+
+			    	while let Some(e_record) = expr_file.next() {
+				        let seqrec = e_record.expect("invalid record");
+			        	match std::str::from_utf8(seqrec.id()){
+				            Ok(st) => {
+			                	if let Some(id) = st.to_string().split('|').next(){
+			                		let unique = if unique_name.contains( id ) {
+			                			let mut id = 1;
+			                			let mut name = id.to_string()+&id.to_string();
+			                			while unique_name.contains( &name ) {
+			                				id += 1;
+			                				name = id.to_string()+&id.to_string();
+			                			}
+			                			name
+			                		}else {
+			                			id.to_string()
+			                		};
+				                    self.add( &seqrec.seq().to_vec(), id, &unique, "genetag", 0 );
+			                	}
+			            	},
+			            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
+			        	}
+			        }
+
+			    }else {
+			    	eprintln!("Expression file could not be read - ignoring")
+			    }
+			    
+				Ok(())
+			},
+			None => { 
+				Err("No file obtained".to_string()) 
+			}
+		}
+
+	}
+
 	pub fn load_index(path: &str) -> Result<Self, String> {
 	    let index_file_path = format!("{}/index.bin", path);
 	    

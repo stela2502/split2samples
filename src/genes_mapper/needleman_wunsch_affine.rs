@@ -102,7 +102,7 @@ impl <'a> NeedlemanWunschAffine {
 	    self.m = database.len();
 	    let n = self.n;
 	    let m = self.m;
-	    if n.min(m) < 15  || read.tri_nuc_abs_diff(database) > humming_cut{
+	    if n.min(m) < 15  && read.tri_nuc_abs_diff(database) > humming_cut{
             return 100.0
         }
 
@@ -137,7 +137,6 @@ impl <'a> NeedlemanWunschAffine {
 	    let size = n.min(m) as f32;
 	    self.cigar_vec = Some(self.to_cigar_vec( read, database, humming_cut ));
 	    // this call might have swapped but the self.n and self.m have been updated!
-
 	    (size - self.dp[self.n][self.m] as f32) / size
 
 	}
@@ -414,10 +413,12 @@ impl <'a> NeedlemanWunschAffine {
 		                    		println!("#1 at position {i}+1 (now looking into {i}) - I will replace the {} with {} here {cig}",  cigar[i], replace_with);
 		                    	}
 								cigar[i] = replace_with;
+								matching= matching.saturating_sub(1);
+
 								#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 								println!("The updated alignement:\n{}\nThe new matching count is {}", 
-									self.int_state_to_string( read, database, &cigar ), matching-1);
-		                        matching -= 1;
+									self.int_state_to_string( read, database, &cigar ), matching);
+		                       
 		                    }
 		                    if i == 0 {
 		                        break;
@@ -467,7 +468,10 @@ impl <'a> NeedlemanWunschAffine {
 		                    		println!("The updated alignement: {}", self.int_state_to_string( read, database, &cigar ));
 		                    	}
 		                    	cigar[i] = replace_with;
-		                    	gap_start = Some((to_shift - 1, replace_with, drop_replaces) );
+		                    	if to_shift > 1 {
+		                    		gap_start = Some((to_shift - 1, replace_with, drop_replaces) );
+		                    	}
+		                    	
 		                    }
 		                } else {
 		                    gap_start = None;
@@ -490,9 +494,14 @@ impl <'a> NeedlemanWunschAffine {
 		match gap_start{
 			Some( (to_shift, replace_with, drop_replaces) ) => {
 				//This is very unexpected!
-				for i in 0..to_shift{
-					cigar.insert(0, replace_with);
-					_=cigar.pop();
+				if to_shift > cigar.len() {
+					//todo: find out why this is even checked here!
+					//eprintln!("{} overshot the start with {} entries {:?}", replace_with, to_shift, self.int_state_to_string( read, database, &cigar ) );
+				}else {
+					for i in 0..to_shift{
+						cigar.insert(0, replace_with);
+						_=cigar.pop();
+					}
 				}
 			},
 			None => {

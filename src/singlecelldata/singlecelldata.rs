@@ -132,7 +132,34 @@ impl SingleCellData{
         }
     }
 
+
     /// merge two SingleCellData objects - keep track of the umis!
+    pub fn merge(&mut self, mut other: SingleCellData) {
+        if ! other.is_empty() {
+            // Reset all internal measurements
+            self.checked = false;
+            self.passing = 0;
+            self.genes_with_data.clear();
+
+            for other_cell in other.data.iter_mut().flat_map(|map| map.values_mut()) {
+                let index = self.to_key(&other_cell.name); // Extracting the first u8 of the u64 key
+                match self.data[index].entry(other_cell.name) {
+                    std::collections::btree_map::Entry::Occupied(mut entry) => {
+                        // If cell exists, merge with existing cell
+                        //println!( "merge cell {} {}", other_cell.name, other_cell);
+                        let cell = entry.get_mut();
+                        cell.merge(other_cell);
+                    }
+                    std::collections::btree_map::Entry::Vacant(entry) => {
+                        // If cell doesn't exist, insert new cell
+                        //println!( "steel cell {} {}", other_cell.name, other_cell);
+                        entry.insert(std::mem::take(other_cell)); // Move ownership
+                    }
+                }
+            }
+        }
+    }
+    /* // my old fucntion:
     pub fn merge( &mut self, other:&SingleCellData ){
         // reset all internal measurements
         self.checked= false;
@@ -153,7 +180,7 @@ impl SingleCellData{
                 }
             }
         }
-    }
+    }*/
 
     /// checks if there are cells that seam to contain data from another cell.
     /// Meaning there are the same gene/umi combinations in both cells
