@@ -7,7 +7,7 @@ use crate::singlecelldata::SingleCellData;
 use crate::singlecelldata::cell_data::GeneUmiHash;
 //use crate::geneids::GeneIds;
 use crate::genes_mapper::GenesMapper;
-use crate::genes_mapper::{ MapperResult, SeqRec, CigarEndFix};
+use crate::genes_mapper::{ SeqRec};
 //use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
 use std::env;

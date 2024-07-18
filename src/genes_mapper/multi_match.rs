@@ -1,5 +1,5 @@
 use crate::genes_mapper::MapperResult;
-use crate::genes_mapper::{Cigar, CigarEndFix};
+use crate::genes_mapper::{ CigarEndFix};
 
 use rand::Rng;
 
@@ -109,6 +109,7 @@ impl MultiMatch{
 			let mut start:Option<MapperResult> = None ;
 			let mut end:Option<MapperResult> = None;
 			let mut rng = rand::thread_rng();
+			#[allow(unused_assignments, unused_variables)]
 			let mut multimapper = false;
 
 			for value in &self.data{
@@ -156,7 +157,7 @@ impl MultiMatch{
 						let this = MapperResult::new( 
 			    			value.gene_id(),
 			    			value.start(), 
-			    			true, 
+			    			multimapper, 
 			    			Some( cigar.clone() ), 
 			    			cigar.mapping_quality(), 
 			    			value.get_nw(),
@@ -164,6 +165,7 @@ impl MultiMatch{
 			    			cigar.edit_distance(), 
 			    			value.get_name(), 
 			    			value.db_length(),
+			    			
 						);
 						if start.is_some() {
 							start = match self.get_spliced_mapper( &start.unwrap(), &this ){
@@ -178,7 +180,7 @@ impl MultiMatch{
 						let this = MapperResult::new( 
 			    			value.gene_id(),
 			    			value.start(), 
-			    			true, 
+			    			multimapper, 
 			    			Some( cigar.clone() ), 
 			    			cigar.mapping_quality(), 
 			    			value.get_nw(),

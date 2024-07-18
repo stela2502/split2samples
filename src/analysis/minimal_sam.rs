@@ -1,5 +1,5 @@
 
-use crate::genes_mapper::{ GenesMapper, MapperResult, SeqRec, CigarEndFix };
+use crate::genes_mapper::{ GenesMapper, MapperResult, SeqRec };
 
 #[derive(Debug, Clone)]
 pub struct MinimalSam {

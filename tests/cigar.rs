@@ -4,8 +4,7 @@
 #[cfg(test)]
 mod tests {
 	use rustody::genes_mapper::Cigar;
-	use rustody::genes_mapper::cigar::CigarEnum;
-	use rustody::genes_mapper::CigarEndFix;
+	use rustody::genes_mapper::cigar::{CigarEnum, CigarEndFix};
 
 
 
@@ -44,6 +43,7 @@ mod tests {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M");
 		obj.soft_clip_start_end( );
+		println!("This is the obtained cigar: {obj}");
 		assert_eq!( obj.cigar, "24X65M");
 		assert_eq!( obj.fixed, Some(CigarEndFix::Start), "start fixed");
 	}
@@ -53,6 +53,7 @@ mod tests {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("59M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		obj.soft_clip_start_end( );
+		println!("This is the obtained cigar: {obj}");
 		assert_eq!( obj.cigar, "59M30X");
 		assert_eq!( obj.fixed, Some(CigarEndFix::End), "end fixed");
 	}
@@ -62,6 +63,7 @@ mod tests {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		obj.soft_clip_start_end( );
+		println!("This is the obtained cigar: {obj}");
 		assert_eq!( obj.cigar, "24X65M30X");
 		assert_eq!( obj.fixed, Some(CigarEndFix::Both), "both fixed");
 	}
@@ -76,6 +78,7 @@ mod tests {
 	fn test_cigar_fix(){
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1M1X1M5X1M1X2M2X1M1X1M1X2M8X2I61M");
+		println!("This is the obtained cigar: {obj}");
 		assert_eq!( obj.cigar, "30X61M");
 		assert_eq!( obj.fixed, Some(CigarEndFix::Start), "both fixed");
 	}

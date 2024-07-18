@@ -9,7 +9,7 @@ use crate::singlecelldata::cell_data::GeneUmiHash;
 use crate::genes_mapper::GenesMapper;
 //#[cfg(debug_assertions)]
 //use crate::genes_mapper::CigarEndFix;
-use crate::genes_mapper::{ MapperResult, SeqRec, NeedlemanWunschAffine};
+use crate::genes_mapper::{ SeqRec, NeedlemanWunschAffine};
 
 //use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!

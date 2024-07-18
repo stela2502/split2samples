@@ -14,7 +14,7 @@ pub struct NeedlemanWunschAffine{
 	n: usize,
 	m: usize,
 	cigar_vec: Option<Vec<CigarEnum>>,
-	circles:usize,
+	//circles:usize,
 	debug:bool,
 }
 
@@ -29,7 +29,7 @@ impl <'a> NeedlemanWunschAffine {
 	    	n: 0,
 	    	m: 0,
 	    	cigar_vec: None,
-	    	circles:0,
+	    	//circles:0,
 	    	debug: false,
 	    };
 	    me
@@ -492,13 +492,13 @@ impl <'a> NeedlemanWunschAffine {
 		}
 
 		match gap_start{
-			Some( (to_shift, replace_with, drop_replaces) ) => {
+			Some( (to_shift, replace_with, _drop_replaces) ) => {
 				//This is very unexpected!
 				if to_shift > cigar.len() {
 					//todo: find out why this is even checked here!
 					//eprintln!("{} overshot the start with {} entries {:?}", replace_with, to_shift, self.int_state_to_string( read, database, &cigar ) );
 				}else {
-					for i in 0..to_shift{
+					for _i in 0..to_shift{
 						cigar.insert(0, replace_with);
 						_=cigar.pop();
 					}

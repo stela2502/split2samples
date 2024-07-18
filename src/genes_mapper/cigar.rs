@@ -253,7 +253,7 @@ impl Cigar{
 				let mut cigar_vec = self.string_to_vec( &self.cigar );
 				// this means likely that my read does reach into the < start area of the gene
 				let count: usize = mat[1].parse().unwrap();
-				let (mine, other) = self.calculate_covered_nucleotides(&self.cigar );
+				let (_mine, other) = self.calculate_covered_nucleotides(&self.cigar );
 				let cigar_vec_len = cigar_vec.len();
 				for i in 0..count  { //  runs once for count==1
 					if read.get_nucleotide_2bit( read.len() - count + i ) == database.get_nucleotide_2bit( mapping_start + other +i  ) {
@@ -428,17 +428,9 @@ impl Cigar{
 				        let (mine, other) = self.calculate_covered_nucleotides(clipped_part);
 				        #[cfg(not(debug_assertions))]
 				        let (mine, _other) = self.calculate_covered_nucleotides(clipped_part);
-				        #[cfg(debug_assertions)]
-				        {
-				        	println!("Detected an over match!");
-				        	println!("	clipped part = {clipped_part} with a mine size of {mine} and an other size of {other}");
-				        }
+
 				        self.cigar.replace_range((clippable.start()+2)..clippable.end(), &format!("{}X", mine));
 				        self.fixed = Some(CigarEndFix::End);
-				        #[cfg(debug_assertions)]
-				        {
-				        	println!("updated cigar!\n{self}");
-				        }
 				    } else {
 				        // The character is not a digit - great
 				        let clipped_part = &self.cigar[clippable.start()..clippable.end()];
@@ -456,8 +448,11 @@ impl Cigar{
 			        self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}X", mine));
 			        self.fixed = Some(CigarEndFix::End);
 			    }
+			    
 	        }
 	    }
+		#[cfg(debug_assertions)]
+		println!("Updated cigar after end clipping: {self}");
 
 	    let problem = r"^\d\d*S$";
 		let re_problem = regex::Regex::new(problem).unwrap();
@@ -467,8 +462,6 @@ impl Cigar{
 	   		self.state_changes = 1;
 	   		return;
 	   	}
-		#[cfg(debug_assertions)]
-	   	println!("This is the Cigar after the end fix: {self}");
 	    
 	    if let Some(mat) = re_start.captures(&old_cigar) {
 	        if let Some(clippable) = mat.get(1) {
@@ -481,22 +474,20 @@ impl Cigar{
 	            		Some(CigarEndFix::Na) => self.fixed =Some( CigarEndFix::Start),
 	            		_ => unreachable!() ,
 	            	}
+	            	
 	        	}else {
 	        		// This can be totally normal for really really crappy matches.
-	        		// panic!("With {self} I found a crappy match {} {}: {} old: {}", clippable.start(), clippable.end(), self.cigar.len(), old_cigar);
+	        		eprintln!("With {self} I found a crappy match {} {}: {} old: {}", clippable.start(), clippable.end(), self.cigar.len(), old_cigar);
 	        	}
 	            
 	        }
 	    }
+	    #[cfg(debug_assertions)]
+	    println!("Updated cigar after start clipping: {self}");
 
-	    self.state_changes = 0;
-	    for c in self.cigar.chars() {
-	        if ! c.is_digit(10) {
-	        	self.state_changes +=1;
-	        }
-	    }
+	    self.state_changes = self.cigar.chars().filter(|c| !c.is_digit(10)).count();
 
-	    println!("This is the fixed cigar: {self}");
+	    println!("This is the final cigar inside function: {self}");
 
     }
 
@@ -552,7 +543,7 @@ impl Cigar{
 		let mut mine = 0;
 		let mut current_number = String::new();
 		let mut inserts = 0;
-	    let mut deletions = 0;
+	    //let mut deletions = 0;
 
 		for c in self.cigar.chars() {
 	        if c.is_digit(10) {
@@ -571,7 +562,7 @@ impl Cigar{
 	                	//mine += count; // Insertion
 	                },
 	                'D' => {
-	                	deletions += count;
+	                	//deletions += count;
 	                	//other += count;// Deletion or intron
 	                },
 	                'S' => {

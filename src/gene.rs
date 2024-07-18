@@ -206,7 +206,7 @@ impl Gene{
 	    //println!( "The sorted exons: {:?}", sorted_exons);
 
 	    // exons upper/lower case iterations to see the breaks
-	    let mut lc = false;
+	    //let mut lc = false;
 	    for reg in &sorted_exons {
 	        if reg[0] > seq.len() || reg[1] > seq.len() {
 	            eprintln!("The exon positions exceed the sequence length!");
@@ -263,7 +263,7 @@ impl Gene{
 			let start_index = self.start.saturating_sub(1);
 			let end_index = self.end.min(seq.len());
 			let nascent = seq.get(start_index..end_index).unwrap_or_default().to_vec();
-			let (glob_start, glob_end) = self.to_mrna_positions(covered_area);
+			let (_glob_start, _glob_end) = self.to_mrna_positions(covered_area);
 			//make the nascent WAY longer??
 			//self.cut_to_size(nascent, glob_end - glob_start )
 			self.cut_to_size(nascent, covered_area*2 )

@@ -223,6 +223,7 @@ impl GenesMapper{
 		let mut hasher = DefaultHasher::new();
 		gene_data.hash(&mut hasher);
 		let hash_value = hasher.finish();
+		#[allow(unused_variables)]
 		if let Some(other_name) = self.gene_hashes.get( &hash_value ){
 			#[cfg(debug_assertions)]
 			eprintln!("The sequence for gene {gene_data} has already been added before: {other_name}");
@@ -287,6 +288,7 @@ impl GenesMapper{
     		let mut hasher = DefaultHasher::new();
     		gene_data.hash(&mut hasher);
     		let hash_value = hasher.finish();
+    		#[allow(unused_variables)]
     		if let Some(other_name) = self.gene_hashes.get( &hash_value ){
     			#[cfg(debug_assertions)]
     			eprintln!("The sequence for gene {gene_data} has already been added before {other_name}");
@@ -813,19 +815,21 @@ impl GenesMapper{
 				        let seqrec = e_record.expect("invalid record");
 			        	match std::str::from_utf8(seqrec.id()){
 				            Ok(st) => {
-			                	if let Some(id) = st.to_string().split('|').next(){
-			                		let unique = if unique_name.contains( id ) {
+			                	if let Some(orig_gname) = st.to_string().split('|').next(){
+			                		let unique = if unique_name.contains( orig_gname ) {
 			                			let mut id = 1;
 			                			let mut name = id.to_string()+&id.to_string();
 			                			while unique_name.contains( &name ) {
 			                				id += 1;
-			                				name = id.to_string()+&id.to_string();
+			                				name = format!("{}_{}", orig_gname, id);
 			                			}
+			                			unique_name.insert(name.clone() );
 			                			name
 			                		}else {
-			                			id.to_string()
+			                			unique_name.insert(orig_gname.to_string() );
+			                			orig_gname.to_string()
 			                		};
-				                    self.add( &seqrec.seq().to_vec(), id, &unique, "genetag", 0 );
+				                    self.add( &seqrec.seq().to_vec(), orig_gname, &unique, "genetag", 0 );
 			                	}
 			            	},
 			            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
@@ -852,7 +856,7 @@ impl GenesMapper{
 	    let mut file = match File::open(&index_file_path){
 	    	Ok(f) => f,
 	    	Err(e) => {
-	    		eprintln!("File not found {}", path);
+	    		eprintln!("File not found {}: {e:?}", path);
 	    		return Err("File not found".to_string() );
 	    	}
 	    };
