@@ -399,8 +399,12 @@ impl Cigar{
     /// let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){4,})";
     /// let end = r"((?:[1-7]M|[1-9][0-9]*[IXD]){4,})$";
     pub fn soft_clip_start_end( &mut self) {
-    	if self.state_changes < 6 {
+    	if self.state_changes < 6 && self.fixed == None{
     		self.fixed = Some(CigarEndFix::Na);
+    		return;
+    	}
+    	if self.fixed != None{
+    		//println!("Do not run soft_clip_start_end twice! {:?}", self.fixed );
     		return;
     	}
     	let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){4,})";
@@ -414,7 +418,7 @@ impl Cigar{
     	let old_cigar = &self.cigar.clone();
 		self.fixed = Some(CigarEndFix::Na);
 
-		println!("Just while debugging: the 'old cigar' = {old_cigar}");
+		//println!("Just while debugging: the 'old cigar' = {old_cigar} and self = {self}");
 
 	    if let Some(mat) = re_end.captures(&old_cigar) {
 	        if let Some(clippable) = mat.get(1) {
@@ -487,7 +491,8 @@ impl Cigar{
 
 	    self.state_changes = self.cigar.chars().filter(|c| !c.is_digit(10)).count();
 
-	    println!("This is the final cigar inside function: {self}");
+	    /*println!("This is the final cigar inside function: {self}");
+	    println!("And more specifically the fixed field: {:?}", self.fixed);*/
 
     }
 
@@ -587,16 +592,21 @@ impl Cigar{
 		self.cigar.clear();
 		self.state_changes = 0;
 
+		//println!("The cigar Path: {path:?}");
+
 		//let mut loc_path = path.to_vec();
 
 	    for &direction in path.iter() {
 	        if Some(direction) == last_direction {
 	            count += 1;
-	        } else {
+	            //println!("Count with state {last_direction:?} increased to {count}");
+	        }
+	        else {
 	        	self.state_changes += 1;
 	            if count > 0 {
 	                self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
 	                self.contains[last_direction.unwrap().to_id()] =  true ;
+	                //println!("Added {count}{last_direction:?}");
 	            }
 	            count = 1;
 	            last_direction = Some(direction);
@@ -606,7 +616,7 @@ impl Cigar{
 	    if count > 0 {
 	        self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
 	        self.contains[last_direction.unwrap().to_id()] =  true ;
-	    }    
+	    }
 	}
 
 	fn populate_contains( &mut self, cigar: &[CigarEnum] ) {

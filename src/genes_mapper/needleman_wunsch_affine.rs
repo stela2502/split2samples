@@ -342,10 +342,13 @@ impl <'a> NeedlemanWunschAffine {
 	    	println!("The initial alignement:\n{}", self.int_state_to_string( read, database, &cigar ));
 	    }*/
 
-	    //println!("Before fixup I have:\n{cig}");
+		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		{
+			println!("Before fixup I have:\n{cig}");
+			println!("Fixing aroung deletion/insertion mapping");
 
-	    //println!("Fixing aroung deletion/insertion mapping");
-
+		}
+	    
 	    // The alignement is consitently bad at mapping bp around a Deletion/Insertion.
 	    // It is more likely that bp that would match somewhere in the gap are scattered over the gap,
 	    // even if the bp would 100% match the gap start.
@@ -357,44 +360,51 @@ impl <'a> NeedlemanWunschAffine {
 		let mut read_id = read.len();
 		let mut database_id = database.len();
 		let mut i = cigar.len();
-		// Find the position of the last non-deletion cigar operation
+
+		// Step 1: Skip trailing deletions in the Cigar vector
 		while i > 0 && cigar[i - 1] == CigarEnum::Deletion {
 		    i -= 1;
 		    database_id -=1;
 		}
-		//let mut restarts = 0;
+
+		// Step 2: Process Cigar vector to correct alignments around gaps
 		while i > 0 {
 		    i -= 1;
+
 		    #[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		    println!("We are at cigar position {i}");
+
 		    // this is where I try to match the unmatched bits from the opposit side.
 		    match gap_start {
-		    	// count how many nucleotides might be wrongly placed in the area 
+		    	// Case when no gap has been started
 		        None => {
+
 		            if cigar[i] == CigarEnum::Deletion || cigar[i] == CigarEnum::Insertion{
 		                matching = 0;
 		                let replace_with = cigar[i];
 		                let mut drop_replaces = 0;
+
+		                // Check nucleotide matches and adjust Cigar vector
 		                while let (Some(nuc1), Some(nuc2)) = (read.get_nucleotide_2bit(read_id.saturating_sub(1)), database.get_nucleotide_2bit(database_id.saturating_sub(1) )) {
-		                    if nuc1 != nuc2 {
+		                    // nuc1 and nuc2 are the two nucleotides that are aligned here
+		                    if nuc1 != nuc2 { // break this while loop if they do not match
 		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		                    	println!("I detected a {replace_with} at position {i} (read_id = {read_id}; database_id = {database_id}) - but {} does not match {}", 
 		                    		Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char);
-		                    	//read_id -= 1;
-		                    	//database_id -= 1;
 		                    	break;
 		                    }
 		                    #[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		                    println!("I detected a {replace_with} at position {i} - and {} does match {}", 
 		                    	Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char);
 		                    matching += 1;
-		                    // both sequences had a match so we need to check the next seqence position in both sequences:
+
+		                    // both sequences had a match so we need to change the cigar vector and decrease the read ids:
 		                    read_id = read_id.saturating_sub(1);
 		                    database_id = database_id.saturating_sub(1);
-		                   
-		                    // this is going to be the match that we just detected
 		                    cigar[i] = CigarEnum::Match;
-		                    // now let's look in the sequence before the one we just made.
+
+		                    // sometimes an I is followed by a D or vice versa.
+		                    // Therefore we here check if that is the case.
 		                    i -= 1;
 		                    if cigar[i].opposite(&replace_with) {
 		                    	// if we just replace that we change the alignement length!
@@ -468,9 +478,8 @@ impl <'a> NeedlemanWunschAffine {
 		                    		println!("The updated alignement: {}", self.int_state_to_string( read, database, &cigar ));
 		                    	}
 		                    	cigar[i] = replace_with;
-		                    	if to_shift > 1 {
-		                    		gap_start = Some((to_shift - 1, replace_with, drop_replaces) );
-		                    	}
+		                    	gap_start = Some((to_shift.saturating_sub(1), replace_with, drop_replaces) );
+		                    	
 		                    	
 		                    }
 		                } else {

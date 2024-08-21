@@ -340,6 +340,8 @@ mod tests {
 		let mut nwa = NeedlemanWunschAffine::new();
 		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
 		cigar.convert_to_cigar( &nwa.cigar_vec() );
+		//println!("nwa: {}", &nwa.to_string( &obj2, &obj ) );
+		println!("Cigar: {}", cigar );
 		cigar.clean_up_cigar(&obj2, &obj);
 		//let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 

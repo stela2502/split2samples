@@ -10,7 +10,7 @@ use core::fmt;
 pub struct MapperResult{
 	gene_id: usize,
 	start: usize,
-	save: bool,
+	multimapper: bool,
 	cigar: Option<Cigar>,
 	mapq: u8,
 	score: usize,
@@ -25,8 +25,8 @@ pub struct MapperResult{
 // Implementing Display trait for MapperResult
 impl fmt::Display for MapperResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MapperResult ( gene_id {}, gene_name {}, start {}, save {}, cigar {:?}, nw {}, mapq {}, edit_dist {}, position_from_end {})\n", 
-            self.gene_id, self.gene_name, self.start, self.save, self.cigar, self.nw, self.mapq, self.edit_dist, self.position_from_end() )
+        write!(f, "MapperResult ( gene_id {}, gene_name {}, start {}, multimapper {}, cigar {:?}, nw {}, mapq {}, edit_dist {}, position_from_end {})\n", 
+            self.gene_id, self.gene_name, self.start, self.multimapper, self.cigar, self.nw, self.mapq, self.edit_dist, self.position_from_end() )
     }
 }
 
@@ -35,7 +35,7 @@ impl Default for MapperResult {
         MapperResult {
             gene_id: 0,
             start: 0,
-            save: false,
+            multimapper: false,
             cigar: Some(Cigar::default()),
             mapq: 200,
             score: 0,
@@ -49,12 +49,12 @@ impl Default for MapperResult {
 
 
 impl MapperResult{
-	pub fn new( gene_id:usize, start: usize, save:bool, cigar:Option<Cigar>, mapq:u8, nw:f32,score:usize, edit_dist:f32, name:&str, db_length:usize ) -> Self{
+	pub fn new( gene_id:usize, start: usize, multimapper:bool, cigar:Option<Cigar>, mapq:u8, nw:f32,score:usize, edit_dist:f32, name:&str, db_length:usize ) -> Self{
 
         Self{
 			gene_id,
 			start,
-			save,
+			multimapper,
 			cigar,
 			mapq,
 			score,
@@ -90,8 +90,8 @@ impl MapperResult{
         self.start
     }
 
-    pub fn save(&self) -> bool {
-        self.save
+    pub fn multimapper(&self) -> bool {
+        self.multimapper
     }
 
     pub fn cigar(&self) -> &Option<Cigar> {
@@ -117,5 +117,9 @@ impl MapperResult{
     }
     pub fn edit_dist(&self) -> f32 {
         self.edit_dist
+    }
+
+    pub fn save(&self) -> bool {
+        true
     }
 }

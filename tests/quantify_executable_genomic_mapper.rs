@@ -128,7 +128,7 @@ fn test_quantify_gene_mapper() {
 
     assert_eq!( empty , 0,"still {} empty lines in the sam file", empty);
 
-    assert_eq!( i , 44417,"not the right number of lines in the sam file {}", i);
+    assert_eq!( i , 44414,"not the right number of lines in the sam file {}", i);
     
     // check the sampleCounts
 

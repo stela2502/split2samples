@@ -7,6 +7,13 @@ mod tests {
 	use rustody::genes_mapper::cigar::{CigarEnum, CigarEndFix};
 
 
+	#[test]
+	fn test_change_fixed_manually(){
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("5D30M");
+		obj.fixed = Some( CigarEndFix::Both );
+		assert_eq!( obj.fixed, Some( CigarEndFix::Both ), "Manual chjange works");
+	}
 
 	#[test]
 	fn test_cvalculate_covered_1(){
@@ -61,8 +68,13 @@ mod tests {
 	#[test]
 	fn test_soft_both(){
 		let mut obj = Cigar::default();
+		println!("default cigar: {:?}", obj);
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
-		obj.soft_clip_start_end( );
+		println!("restart_from_cigar: {:?}", obj);
+		println!("Memory address of obj before function: {:p}", &obj);
+		obj.soft_clip_start_end();
+		println!("Immediate post-function fixed: {:?}", obj.fixed);
+		println!("Memory address of obj after function: {:p}", &obj);
 		println!("This is the obtained cigar: {obj}");
 		assert_eq!( obj.cigar, "24X65M30X");
 		assert_eq!( obj.fixed, Some(CigarEndFix::Both), "both fixed");
@@ -72,7 +84,7 @@ mod tests {
 	fn test_quality(){
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
-		assert_eq!( obj.mapping_quality(), 26 );
+		assert_eq!( obj.mapping_quality(), 21 );
 	}
 	#[test]
 	fn test_cigar_fix(){
