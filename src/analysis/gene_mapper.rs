@@ -740,10 +740,11 @@ impl AnalysisGeneMapper{
 			    good_reads.clear();
 			    //println!("{}", report.log_str());
 			    report.stop_single_processor_time();
+			    let log_str = report.log_str();
+		        pb.set_message( log_str.clone() );
+		        report.write_to_log( log_str );
 			}
-			let log_str = report.log_str();
-	        pb.set_message( log_str.clone() );
-	        report.write_to_log( log_str );
+			report.log(&pb);
 		}
 		
 
