@@ -497,11 +497,7 @@ impl AnalysisGeneMapper{
 		                        	guh,
 		                        	report
 		                        ){
-		                        	report.pcr_duplicates += 1 
-		                        }
-
-		                        if gene_id[0].save(){
-		                        	//build_sam_record ( &self, read2:&SeqReq, gene_id:&Vec<MapperResult>, cell_id:&SeqReq, umi:&SeqReq )
+		                        	report.pcr_duplicates += 1;
 		                        	match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
 			                        	Some(sam_line) => bam.push( sam_line ),
 			                        	None => {
@@ -745,7 +741,9 @@ impl AnalysisGeneMapper{
 			    //println!("{}", report.log_str());
 			    report.stop_single_processor_time();
 			}
-			report.log(&pb);
+			let log_str = report.log_str();
+	        pb.set_message( log_str.clone() );
+	        report.write_to_log( log_str );
 		}
 		
 
@@ -793,7 +791,9 @@ impl AnalysisGeneMapper{
 		    	}
 	        	report.merge( &gex.1 );
 	        }
-	        pb.set_message( report.log_str().clone() );
+	        let log_str = report.log_str();
+	        pb.set_message( log_str.clone() );
+	        report.write_to_log( log_str );
 	    }
 
 	    report.stop_single_processor_time();
