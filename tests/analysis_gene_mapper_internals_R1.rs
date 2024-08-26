@@ -36,7 +36,11 @@ mod tests {
 	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search" );
 	    	},
 	    	None=> {
-	    		assert_eq!(sam_strings[0], sam_line, "We got the expected sam line?");
+	    		if sam_strings.len() > 0 {
+	    			assert_eq!(sam_strings[0], sam_line, "We got the expected sam line?");
+	    		}else {
+	    			panic!("I expected a sam line in return and got nothing?!");
+	    		}
 	    	}
 	    }
 	}

@@ -546,6 +546,7 @@ impl GenesMapper{
 		let res_vec = self.query_database( seq );
 
 		if res_vec.is_empty() {
+			#[cfg(debug_assertions)]
 			if self.debug{
 				println!("No matching gene found - cause: Not enough keys matching to a single gene");
 			}

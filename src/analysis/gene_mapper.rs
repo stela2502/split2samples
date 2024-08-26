@@ -498,12 +498,13 @@ impl AnalysisGeneMapper{
 		                        	report
 		                        ){
 		                        	report.pcr_duplicates += 1;
-		                        	match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
-			                        	Some(sam_line) => bam.push( sam_line ),
-			                        	None => {
-			                        		eprintln!("There has been an error in the minimal_sam.to_sam_line function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
-			                        	}
-			                        }
+		                        }
+		                        // add it whether it is a duplicate or not
+		                        match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
+		                        	Some(sam_line) => bam.push( sam_line ),
+		                        	None => {
+		                        		eprintln!("There has been an error in the minimal_sam.to_sam_line function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
+		                        	}
 		                        }
 		                    },
 		                    Err(MappingError::NoMatch) => {

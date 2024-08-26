@@ -519,6 +519,10 @@ impl SingleCellData{
         ret
     }
 
+    pub fn passing_cells( &self) -> usize {
+        self.passing
+    }
+
     pub fn n_reads( &mut self, genes:&IndexedGenes, names: &Vec<String> ) -> usize {
         let mut count = 0;
 

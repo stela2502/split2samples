@@ -151,7 +151,7 @@ fn main() {
 
     //worker.write_data( opts.outpath, &mut results, opts.min_umi );
 
-
+    println!("{}",results.log_str());
 
     match now.elapsed() {
         Ok(elapsed) => {
