@@ -11,6 +11,9 @@ fi
 mkdir -p /opt/Rustody_files
 cp ./resources/CellRanger/*.gz ${path}
 export RustodyFiles="${path}"
+ln /opt/Rustody_files/737k-august-2016.txt.gz /opt/Rustody_files/737K-august-2016.txt.gz
+ln /opt/Rustody_files/737k-april-2014_rc.txt.gz /opt/Rustody_files/737K-april-2014_rc.txt.gz
+ln /opt/Rustody_files/737k-arc-v1.txt.gz /opt/Rustody_files/737K-arc-v1.txt.gz
 
 cp target/release/split2samples /usr/local/bin
 cp target/release/quantify_rhapsody /usr/local/bin
