@@ -388,13 +388,13 @@ impl AnalysisGenomicMapper{
 		                    },
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
-		                    	report.write_to_ofile( Fspot::Buff1, 
+		                    	/*report.write_to_ofile( Fspot::Buff1, 
 		                    		format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].1) 
 		                    	);
 								
 								report.write_to_ofile( Fspot::Buff2, 
 									format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].0 ) 
-								);
+								);*/
 		                    	report.no_data +=1;
 		                    },
 		                    Err(MappingError::MultiMatch) => {
