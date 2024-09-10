@@ -33,5 +33,4 @@ serde = { version="1.0.103", features = ["derive"] }
 num-traits = "*"
 
 [features]
-# print a lot (!) of additional mapping intermediates (on top of the additional debug output)
-mapping_debug =[]
+mapping_debug = []

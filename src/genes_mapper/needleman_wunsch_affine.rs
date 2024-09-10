@@ -261,6 +261,8 @@ impl <'a> NeedlemanWunschAffine {
 	where
     T: BinaryMatcher {
 
+    	//println!("needleman_wunsch_affine::to_cigar_vec is called.");
+
 		let (mut i, mut j) = (read.len(), database.len());
 
 	    let mut cigar = vec![CigarEnum::Empty;i.max(j)];
@@ -272,7 +274,7 @@ impl <'a> NeedlemanWunschAffine {
 
 	    	//if let (Some(nuc1), Some(nuc2)) = (read.get_nucleotide_2bit(i.saturating_sub(1)), database.get_nucleotide_2bit(j.saturating_sub(1)) ){
 	    		let this_value = self.dp[i][j];
-	    		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+	    		#[cfg( debug_assertions )]
 	    		if self.debug {
 	    			println!("I am testing this part of the dp matrix with the lower right corner i:{i};j:{j}:\n{}\t{}\n{}\t{}",
 		    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
@@ -307,7 +309,7 @@ impl <'a> NeedlemanWunschAffine {
 		    			},
 		    			_ => unreachable!()
 		    		};
-		    		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		    		#[cfg( debug_assertions )]
 		    		if self.debug{
 		    			println!("inserted the value {} at position {rev_id}", &cigar[rev_id] );
 		    		}
@@ -323,15 +325,15 @@ impl <'a> NeedlemanWunschAffine {
 		    if rev_id > 0 {
 		    	rev_id -= 1;
 		    } else if i > 0 || j > 0  {
-		    	// we have etimated the wrongpath length!
+		    	// we have etimated the wrong path length!
 		    	cigar.insert(0, CigarEnum::Empty);
-		    	//println!("Inserting a new CigarEnum::Empty at position 0");
+		    	println!("Inserting a new CigarEnum::Empty at position 0 - new len: {}:\n{}", cigar.len(), Self::cigar_to_string(&cigar));
 		    	//self.debug = true;
 		    }   
 	    }
 
 	    if rev_id != 0 {
-	    	panic!("We have not filled in all the valiues here!?!?");
+	    	panic!("We have not filled in all the values here!?!?");
 	    }
 
 	    // I need that for the debug:
@@ -377,7 +379,7 @@ impl <'a> NeedlemanWunschAffine {
 		                let mut drop_replaces = 0;
 		                while let (Some(nuc1), Some(nuc2)) = (read.get_nucleotide_2bit(read_id.saturating_sub(1)), database.get_nucleotide_2bit(database_id.saturating_sub(1) )) {
 		                    if nuc1 != nuc2 {
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		                    	#[cfg( debug_assertions )]
 		                    	if self.debug{
 		                    		println!("I detected a {replace_with} at position {i} (read_id = {read_id}; database_id = {database_id}) - but {} does not match {}", 
 		                    			Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char)
@@ -386,7 +388,7 @@ impl <'a> NeedlemanWunschAffine {
 		                    	//database_id -= 1;
 		                    	break;
 		                    }
-		                    #[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		                    #[cfg( feature = "mapping_debug" )]
 		                    if self.debug{
 		                    	println!("I detected a {replace_with} at position {i} - and {} does match {}", 
 		                    		Self::to_utf8(nuc1) as char, Self::to_utf8(nuc2) as char)
@@ -403,7 +405,7 @@ impl <'a> NeedlemanWunschAffine {
 		                    if cigar[i].opposite(&replace_with) {
 		                    	// if we just replace that we change the alignement length!
 		                    	// actually this is a wrong alignement here: just drop it and check if that works
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		                    	#[cfg( feature = "mapping_debug" )]
 		                    	if self.debug{
 		                    		println!("#1 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
 		                    	}
@@ -414,7 +416,7 @@ impl <'a> NeedlemanWunschAffine {
 		                    // make sure we overwrite the old value to make the required move of the deletion / insert
 		                    else if cigar[i] != replace_with{
 		                    	cigar[i] = replace_with;
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		                    	#[cfg( debug_assertions )]
 		                    	if self.debug {
 		                    		cig.convert_to_cigar( &cigar );
 		                    		println!("#1 at position {i}+1 (now looking into {i}) - I will replace the {} with {} here {cig}",  cigar[i], replace_with);
@@ -429,7 +431,7 @@ impl <'a> NeedlemanWunschAffine {
 		                }
 		                if matching > 0 {
 		                	gap_start = Some( (matching, replace_with, drop_replaces) );
-		                	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		                	#[cfg( debug_assertions )]
 		                	if self.debug{
 		                		println!("#1 I created a gap_start {gap_start:?}");
 		                	}
@@ -455,14 +457,14 @@ impl <'a> NeedlemanWunschAffine {
 		                    	cigar.remove(i);
 		                    	i-=1;
 		                    	gap_start = Some((to_ignore, replace_with, drop_replaces + 1) );
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		                    	#[cfg( debug_assertions )]
 		                    	if self.debug {
 		                    		println!("#2 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
 		                    		println!("The updated alignement: {}", self.int_state_to_string( read, database, &cigar ));
 		                    	}
 		                    }else if cigar[i] != replace_with {
 		                    	cigar[i] = replace_with;
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		                    	#[cfg( debug_assertions )]
 		                    	if self.debug{
 		                    		cig.convert_to_cigar( &cigar );
 		                    		println!("#2 position {i} - replcaing a {} with {} ({cig})", cigar[i], replace_with);
@@ -487,7 +489,7 @@ impl <'a> NeedlemanWunschAffine {
 		    	database_id = database_id.saturating_sub(1);
 		    }
 		}
-		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		#[cfg( debug_assertions )]
 		if self.debug {
 			cig.convert_to_cigar( &cigar );
 			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
@@ -499,7 +501,7 @@ impl <'a> NeedlemanWunschAffine {
 		cig.clear();
 		cig.fix_1d1i_1i1d( &mut cigar, None );
 
-		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		#[cfg( debug_assertions )]
 		if self.debug {
 			cig.convert_to_cigar( &cigar );
 			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
