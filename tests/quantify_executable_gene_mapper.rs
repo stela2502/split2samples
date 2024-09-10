@@ -23,10 +23,12 @@ fn test_quantify_gene_mapper() {
         "./target/debug/quantify_gene_mapper"
     };
 
+    let outpath = "testData/output_1e5_gm";
+
     let args = &[
         "-r", "testData/1e5_mRNA_S1_R1_001.fastq.gz",
         "-f", "testData/1e5_mRNA_S1_R2_001.fastq.gz",
-        "-o", "testData/output_1e5_q_gm",
+        "-o",  outpath,
         "-s", "mouse",
         "-e", "testData/genes.fasta",
         "-a", "testData/MyAbSeqPanel.fasta",
@@ -58,7 +60,7 @@ fn test_quantify_gene_mapper() {
     let output_str = String::from_utf8_lossy(&output.stdout);
 
     // Check if output contains the expected lines
-    let file_path ="testData/output_1e5_q_gm/SampleCounts.tsv";
+    let file_path = &(outpath.to_string() +"/SampleCounts.tsv");
     assert!(output_str.contains(file_path));
 
     assert!(fs::metadata(file_path).is_ok(), "expected outfile does exists");
@@ -159,7 +161,7 @@ sample reads      : 12 UMIs (0.02% of cellular)
     sample UMIs should be 911 but was 862
     */
 
-    exp.insert( "na".to_string(), 34898 );
+    exp.insert( "na".to_string(), 34930 );
     exp.insert( "SampleTag01_mm".to_string(), 111 );
     exp.insert( "SampleTag02_mm".to_string(), 202 );
     exp.insert( "SampleTag03_mm".to_string(), 232 );
@@ -174,13 +176,13 @@ sample reads      : 12 UMIs (0.02% of cellular)
     exp.insert( "filtered reads".to_string(), 14078 );
 
     //collected read counts:
-    exp.insert( "expression reads".to_string(), 43944 );
-    exp.insert( "antibody reads".to_string(),   19377 );
+    exp.insert( "expression reads".to_string(), 43948 );
+    exp.insert( "antibody reads".to_string(),   19445 );
     exp.insert( "sample reads".to_string(),     862 );
 
     //reported UMI counts:
-    exp.insert( "expression UMIs".to_string(),  43870 );
-    exp.insert( "antibody UMIs".to_string(),    19338 );
+    exp.insert( "expression UMIs".to_string(),  43874 );
+    exp.insert( "antibody UMIs".to_string(),    19405 );
     exp.insert( "sample UMIs".to_string(),      862 );
 
     // Iterate over the actual hashmap and assert each key-value pair separately

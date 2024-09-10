@@ -10,6 +10,10 @@ use crate::genes_mapper::MapperResult;
 use crate::genes_mapper::MultiMatch;
 use crate::genes_mapper::CigarEndFix;
 
+use needletail::parse_fastx_file;
+use std::path::Path;
+
+
 use crate::singlecelldata::IndexedGenes;
 use crate::traits::BinaryMatcher;
 
@@ -85,7 +89,7 @@ impl GenesMapper{
 			offset: offset,
 			names: BTreeMap::new(),
 			highest_nw_val: 0.2,
-			highest_humming_val: 0.6,
+			highest_humming_val: 0.8,
 			min_matches: 10, //40 bp exact match
 			report4: None, // report for a gene?
 			debug:false,
@@ -192,15 +196,19 @@ impl GenesMapper{
     }
     fn reject_key(&self,  key:&u16 ) -> bool{
 		if &self.di_nuc_tab_length( &key ) < &4{ // could be as simple as AAAACAAA or ACACACAC
+			#[cfg(debug_assertions)]
 			if self.debug{
 				println!("this key was rejected: {}", Self::key_to_string( &key ) );
 			}
+			
 			return true;
 		}
 		if key > &65534 {
+			#[cfg(debug_assertions)]
 			if self.debug{
 				println!("this key was rejected: {}", Self::key_to_string( &key ) );
 			}
+			
 			return true
 		}
 		false
@@ -215,6 +223,7 @@ impl GenesMapper{
 		let mut hasher = DefaultHasher::new();
 		gene_data.hash(&mut hasher);
 		let hash_value = hasher.finish();
+		#[allow(unused_variables)]
 		if let Some(other_name) = self.gene_hashes.get( &hash_value ){
 			#[cfg(debug_assertions)]
 			eprintln!("The sequence for gene {gene_data} has already been added before: {other_name}");
@@ -279,6 +288,7 @@ impl GenesMapper{
     		let mut hasher = DefaultHasher::new();
     		gene_data.hash(&mut hasher);
     		let hash_value = hasher.finish();
+    		#[allow(unused_variables)]
     		if let Some(other_name) = self.gene_hashes.get( &hash_value ){
     			#[cfg(debug_assertions)]
     			eprintln!("The sequence for gene {gene_data} has already been added before {other_name}");
@@ -536,6 +546,10 @@ impl GenesMapper{
 		let res_vec = self.query_database( seq );
 
 		if res_vec.is_empty() {
+			#[cfg(debug_assertions)]
+			if self.debug{
+				println!("No matching gene found - cause: Not enough keys matching to a single gene");
+			}
 			return Err(MappingError::NoMatch)
 		}
 
@@ -551,13 +565,13 @@ impl GenesMapper{
 	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
-		
+		let mut crappy_mappings = false;
 
 		// collect all possible matches
 		#[allow(unused_variables)]
 	    for ((gene_id, start), count) in &res_vec {
 
-	    	if let Some((  read, database)) = self.slice_objects( *start, &read_data, &self.genes[*gene_id] ){
+	    	if let Some(( read, database)) = self.slice_objects( *start, &read_data, &self.genes[*gene_id] ){
 	    		cigar.clear();
 	    		if (read.len() as f32) < (read_data.len() as f32 * 0.8) && (read.len() as f32) < (self.genes[*gene_id].len() as f32 * 0.9) {
 	    			// this database match is a little short!
@@ -576,11 +590,12 @@ impl GenesMapper{
 					println!("read \n{read}\nto database\n{database}\n");
 					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
 				}
-				
-				cigar.convert_to_cigar( &nwa.cigar_vec() );
-				cigar.clean_up_cigar(&read, &database);
 
 				if nw.abs() < self.highest_nw_val  {
+
+					cigar.convert_to_cigar( &nwa.cigar_vec() );
+					cigar.clean_up_cigar(&read, &database);
+
 					#[cfg(debug_assertions)]
 					if self.debug{
 						println!("##################\n################## And I deem this match interesting\n##################");
@@ -597,6 +612,11 @@ impl GenesMapper{
 					}
 
 					cigar.clear();
+				}else {
+					crappy_mappings = true;
+					if helper.len() > 0 {
+						break
+					}
 				}
 				#[cfg(debug_assertions)]
 				if self.debug{
@@ -612,16 +632,18 @@ impl GenesMapper{
 				helper.get_best( seq.len()) );
 			println!("#################################################################################");
 		}
-		match helper.get_best( seq.len()){
+
+		let ret = match helper.get_best( seq.len()){
 			Ok(val) => {
 				//println!("I found a best result! {}", &val);
 				if let Some(cigar) = val.cigar(){
 					if cigar.mapping_quality() > 20 && cigar.fixed != Some(CigarEndFix::Both) {
-						#[cfg(debug_assertions)]
-						println!("get_strict got an accepted match (get_strict) {}", val );
 						// so here is where we check if the match did not hit the expected area
 						let mut ret = val.clone();
-						ret.fix_border_insertion( &read_data, &self.genes[val.gene_id()] );
+						#[cfg(debug_assertions)]
+						println!("I found a best result! {}\nand have fixed the fix_border_insertions", &ret);
+
+						ret.fix_border_insertion( &read_data, &self.genes[val.gene_id() - self.offset] );
 
 						Ok(vec![ret])
 					}else {
@@ -632,18 +654,29 @@ impl GenesMapper{
 					}
 				}else {
 					#[cfg(debug_assertions)]
-					println!("The match had no acciociated cigar!?!" );
-					Err(MappingError::NoMatch)
+					println!("The match had no acceptable cigar!?!" );
+					if crappy_mappings { Err(MappingError::OnlyCrap)} else { Err(MappingError::NoMatch) }
 					//self.get( &read_data, &res_vec, cellid, nwa)
 				}			
 			},
 			Err(_) => {
 				#[cfg(debug_assertions)]
 				println!("No best mapper identified!");
-				Err(MappingError::NoMatch)
+				if crappy_mappings { Err(MappingError::OnlyCrap)} else { Err(MappingError::NoMatch) }
 				//self.get( &read_data, &res_vec, cellid, nwa)
 			}, //that is kind of OK
+		};
+		if self.debug {
+			match ret.clone(){
+				Ok(val) => {
+					println!("I have found this match best match:\n{}", val[0] )
+				},
+				Err(e) => {
+					println!("No matching gene found - cause: {e:?}");
+				}
+			}
 		}
+		ret
 	}
 
 	pub fn report4( &mut self, genes: &[&str]) {
@@ -767,6 +800,56 @@ impl GenesMapper{
 		}; //will be necessary for the downstream analyses
 		Ok(())
 	}
+
+
+	pub fn from_fastq( &mut self,  path: Option<String>) -> Result<(), String> {
+		
+		match path{
+			Some(file) => {
+
+		    	if Path::new(&file).exists(){
+
+			    	let mut expr_file = parse_fastx_file(file).expect("valid path/file");
+			    	let mut unique_name = HashSet::<String>::new();
+
+			    	while let Some(e_record) = expr_file.next() {
+				        let seqrec = e_record.expect("invalid record");
+			        	match std::str::from_utf8(seqrec.id()){
+				            Ok(st) => {
+			                	if let Some(orig_gname) = st.to_string().split('|').next(){
+			                		let unique = if unique_name.contains( orig_gname ) {
+			                			let mut id = 1;
+			                			let mut name = id.to_string()+&id.to_string();
+			                			while unique_name.contains( &name ) {
+			                				id += 1;
+			                				name = format!("{}_{}", orig_gname, id);
+			                			}
+			                			unique_name.insert(name.clone() );
+			                			name
+			                		}else {
+			                			unique_name.insert(orig_gname.to_string() );
+			                			orig_gname.to_string()
+			                		};
+				                    self.add( &seqrec.seq().to_vec(), orig_gname, &unique, "genetag", 0 );
+			                	}
+			            	},
+			            	Err(err) => eprintln!("The expression entry's id could not be read: {err}"),
+			        	}
+			        }
+
+			    }else {
+			    	eprintln!("Expression file could not be read - ignoring")
+			    }
+			    
+				Ok(())
+			},
+			None => { 
+				Err("No file obtained".to_string()) 
+			}
+		}
+
+	}
+
 	pub fn load_index(path: &str) -> Result<Self, String> {
 	    let index_file_path = format!("{}/index.bin", path);
 	    
@@ -774,7 +857,7 @@ impl GenesMapper{
 	    let mut file = match File::open(&index_file_path){
 	    	Ok(f) => f,
 	    	Err(e) => {
-	    		eprintln!("File not found {}", path);
+	    		eprintln!("File not found {}: {e:?}", path);
 	    		return Err("File not found".to_string() );
 	    	}
 	    };

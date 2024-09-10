@@ -1,5 +1,5 @@
 
-use crate::genes_mapper::{ GenesMapper, MapperResult, SeqRec, CigarEndFix };
+use crate::genes_mapper::{ GenesMapper, MapperResult, SeqRec };
 
 #[derive(Debug, Clone)]
 pub struct MinimalSam {
@@ -69,7 +69,7 @@ impl MinimalSam {
 		 */
 		let gene_name = match index.get_gene(gene_id[0].gene_id()){
 		 	Some(gene_data) => {
-		 		gene_data.get_unique_name().to_string()
+		 		gene_data.get_unique_name()
 		 	},
 		 	None => {
 		 		return None
@@ -194,4 +194,5 @@ impl MinimalSam {
 	    println!("the bam line is this:\n{record}");
 	    Some(record)
 	}
+
 }

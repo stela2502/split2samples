@@ -16,6 +16,7 @@ pub enum FilterError {
 pub enum MappingError {
     NoMatch,
     MultiMatch,
+    OnlyCrap,
 }
 
 #[derive(Debug)]

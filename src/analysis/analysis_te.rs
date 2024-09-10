@@ -334,7 +334,11 @@ impl AnalysisTE{
 	                    	report.multimapper +=1;
 	                    	report.no_data +=1;
 	                    	continue
-	                    }
+	                    },
+	                    Err(MappingError::OnlyCrap) => {
+	                    	report.no_data +=1;
+	                    	continue
+	                    },
 	                };
 
 	                if ! ok{
@@ -360,6 +364,10 @@ impl AnalysisTE{
 		                    Err(MappingError::MultiMatch) => {
 		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
 		                    	report.multimapper +=1;
+		                    	report.no_data +=1;
+		                    	continue
+		                    },
+		                    Err(MappingError::OnlyCrap) => {
 		                    	report.no_data +=1;
 		                    	continue
 		                    },
@@ -402,7 +410,11 @@ impl AnalysisTE{
 		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
 		                    	report.multimapper +=1;
 		                    	report.no_data +=1;
-		                    }
+		                    },
+		                    Err(MappingError::OnlyCrap) => {
+		                    	report.no_data +=1;
+		                    	continue
+		                    },
 		                };
 
 		            }
@@ -554,7 +566,7 @@ impl AnalysisTE{
 		        report.stop_multi_processor_time();
 
 			    for gex in total_results{
-			    	self.gex.merge(&gex.0);
+			    	self.gex.merge(gex.0);
 			       	report.merge( &gex.1 );
 			    }
 			    //eprintln!("Collecting more reads");
@@ -601,7 +613,7 @@ impl AnalysisTE{
 	        report.stop_multi_processor_time();
 
 	        for gex in total_results{
-	        	self.gex.merge(&gex.0);
+	        	self.gex.merge(gex.0);
 	        	report.merge( &gex.1 );
 	        }
 	        pb.set_message( report.log_str().clone() );

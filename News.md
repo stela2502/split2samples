@@ -1,3 +1,9 @@
+# 2.2.2
+
+The Cigars are now - hopefully standard conform.
+Lots of bugs fixed. Speed of genomic_mapper is still far lower than the fast_mapper, but I have more confidence in it's mapping quality.
+
+
 # 2.2.1
 
 Using 10x data the index length of 400 bp is too short.

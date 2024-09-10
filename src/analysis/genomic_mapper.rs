@@ -9,7 +9,7 @@ use crate::singlecelldata::cell_data::GeneUmiHash;
 use crate::genes_mapper::GenesMapper;
 //#[cfg(debug_assertions)]
 //use crate::genes_mapper::CigarEndFix;
-use crate::genes_mapper::{ MapperResult, SeqRec, NeedlemanWunschAffine};
+use crate::genes_mapper::{ SeqRec, NeedlemanWunschAffine};
 
 //use crate::traits::BinaryMatcher;
 // to access the command that was used to run this!
@@ -357,7 +357,11 @@ impl AnalysisGenomicMapper{
 	                    	report.multimapper +=1;
 	                    	report.no_data +=1;
 	                    	false
-	                    }
+	                    },
+	                    Err(MappingError::OnlyCrap) => {
+	                    	report.no_data +=1;
+	                    	continue
+	                    },
 	                };
 	                
 
@@ -384,20 +388,24 @@ impl AnalysisGenomicMapper{
 		                    },
 		                    Err(MappingError::NoMatch) => {
 		                    	// I want to be able to check why this did not work
-		                    	report.write_to_ofile( Fspot::Buff1, 
+		                    	/*report.write_to_ofile( Fspot::Buff1, 
 		                    		format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].1) 
 		                    	);
 								
 								report.write_to_ofile( Fspot::Buff2, 
 									format!(">Cell{cell_id} no gene detected\n{}\n", &data[i].0 ) 
-								);
+								);*/
 		                    	report.no_data +=1;
 		                    },
 		                    Err(MappingError::MultiMatch) => {
 		                    	// this is likely not mapping to anyting else if we alredy have mult matches here!
 		                    	report.multimapper +=1;
 		                    	report.no_data +=1;
-		                    }
+		                    },
+		                    Err(MappingError::OnlyCrap) => {
+		                    	report.no_data +=1;
+		                    	continue
+		                    },
 		                };
 		            }
 	            },
@@ -597,7 +605,7 @@ impl AnalysisGenomicMapper{
 		        report.stop_multi_processor_time();
 
 			    for gex in total_results{
-			    	self.gex.merge(&gex.0.0);
+			    	self.gex.merge(gex.0.0);
 			    	for line in gex.0.1{
 			    		match writeln!(writer, "{}", line){
 			        		Ok(_) => (),
@@ -651,7 +659,7 @@ impl AnalysisGenomicMapper{
 	        report.stop_multi_processor_time();
 
 	        for gex in total_results{
-	        	self.gex.merge(&gex.0.0);
+	        	self.gex.merge(gex.0.0);
 	        	for line in gex.0.1{
 		    		match writeln!(writer, "{}", line){
 		        		Ok(_) => (),

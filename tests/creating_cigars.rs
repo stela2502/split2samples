@@ -45,7 +45,7 @@ mod tests {
 		let _nw = nwa.needleman_wunsch_affine( &gd1, &gd2, 0.4);
 		cigar.convert_to_cigar( &nwa.cigar_vec() );
 		cigar.clean_up_cigar(&gd1, &gd2);
-
+		//assert_eq!( &cigar.to_string(), "67D23M", "I expected 34M34D22M as I manually deleted 34 bp from the read" );
 		assert_eq!( &cigar.to_string(), "32M34D24M", "I expected 34M34D22M as I manually deleted 34 bp from the read" );
 	}
 
@@ -67,8 +67,9 @@ mod tests {
 		
 		let _nw = nwa.needleman_wunsch_affine( &gd1, &gd2, 0.4 );
 		cigar.convert_to_cigar( &nwa.cigar_vec() );
+		println!("The cigar before being cleaned up in any weay: {cigar}");
 		cigar.clean_up_cigar(&gd1, &gd2);
-
+		//assert_eq!( &cigar.to_string(), "67I23M", "I expected 34M34I22M as I manually deleted 34 bp from the database" );
 		assert_eq!( &cigar.to_string(), "32M34I24M", "I expected 34M34I22M as I manually deleted 34 bp from the database" );
 	}
 }
