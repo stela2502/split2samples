@@ -46,6 +46,7 @@ pub struct MappingInfo{
     pub file_io_time: Duration,
     pub subprocess_time: Duration,
     pub reads_log: BTreeMap<String, usize >,
+    pub error_counts: HashMap<String, usize>,  // To store error types and their counts
 
 }
 
@@ -85,6 +86,7 @@ impl MappingInfo{
 			file_io_time,
 			subprocess_time,
 			reads_log,
+			error_counts: HashMap::new(),  // Initialize the HashMap
 		};
 		this.start_counter();
 		this
@@ -134,6 +136,32 @@ impl MappingInfo{
 		format!("{}", now)
 	    
 	}
+
+	// Unified reporting method that logs errors into the HashMap
+    pub fn report(&mut self, issue: &str) {
+        // Increment the count for the issue type
+        *self.error_counts.entry(issue.to_string()).or_insert(0) += 1;
+
+        println!("Issue reported: {}", issue);
+    }
+
+    // Optionally, add a method to retrieve counts for a specific issue
+    pub fn get_issue_count(&self, issue: &str) -> usize {
+        *self.error_counts.get(issue).unwrap_or(&0)  // Return count or 0 if not present
+    }
+
+    // Method to export error_counts to a CSV file
+    pub fn report_to_csv(&self, file_path: &str) -> io::Result<()> {
+        let mut file = File::create(file_path)?;  // Create a file for writing
+        writeln!(file, "Error Type,Count")?;  // Write CSV header
+
+        // Iterate over the error_counts and write each as a row in the CSV
+        for (error_type, count) in &self.error_counts {
+            writeln!(file, "{},{}", error_type, count)?;  // Write each error type and count
+        }
+
+        Ok(())  // Return Ok if successful
+    }
 
 	pub fn split_duration( elapsed:Duration ) -> ( u128, u128, u128, u128 ){
 
