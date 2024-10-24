@@ -207,7 +207,13 @@ impl MappingInfo{
 			*self.reads_log.entry(name.to_string()).or_insert(0) += value;
 		}
 		self.analyzed = self.total;
+		for (error_type, count) in &other.error_counts {
+            // For each error type in `other`, increment the value in `self`
+            *self.error_counts.entry(error_type.clone()).or_insert(0) += count;
+        }
 	}
+
+
 
 	pub fn write_to_log ( &mut self, text:String ){
 
