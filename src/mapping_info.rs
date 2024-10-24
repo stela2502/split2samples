@@ -151,7 +151,7 @@ impl MappingInfo{
     }
 
     // Method to export error_counts to a CSV file
-    pub fn report_to_csv(&self, file_path: &str) -> io::Result<()> {
+    pub fn report_to_csv(&self, file_path: &str) -> Result<()> {
         let mut file = File::create(file_path)?;  // Create a file for writing
         writeln!(file, "Error Type,Count")?;  // Write CSV header
 
