@@ -151,16 +151,16 @@ impl MappingInfo{
     }
 
     // Method to export error_counts to a CSV file
-    pub fn report_to_csv(&self, file_path: &str) -> Result<()> {
-        let mut file = File::create(file_path)?;  // Create a file for writing
-        writeln!(file, "Error Type,Count")?;  // Write CSV header
+    pub fn report_to_csv(&self, file_path: &str) {
+        let mut file = File::create(file_path).unwrap();  // Create a file for writing
+        writeln!(file, "Error Type,Count").unwrap();  // Write CSV header
 
         // Iterate over the error_counts and write each as a row in the CSV
         for (error_type, count) in &self.error_counts {
-            writeln!(file, "{},{}", error_type, count)?;  // Write each error type and count
+            writeln!(file, "{},{}", error_type, count);  // Write each error type and count
         }
 
-        Ok(())  // Return Ok if successful
+        //Ok(())  // Return Ok if successful
     }
 
 	pub fn split_duration( elapsed:Duration ) -> ( u128, u128, u128, u128 ){
