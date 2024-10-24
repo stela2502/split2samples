@@ -7,7 +7,7 @@ use std::io::Write;
 use std::time::{Duration, SystemTime};
 
 use chrono::{DateTime, Utc};
-
+use std::collections::HashMap;
 
 /// MappingInfo captures all mapping data and is a way to easily copy this data over multiple analysis runs.
 pub struct MappingInfo{
