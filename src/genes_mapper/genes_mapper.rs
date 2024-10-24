@@ -416,67 +416,6 @@ impl GenesMapper{
         //println!("\nMakes sense? {:?}", data);
         data
     }
-
-    /*fn query_database( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
-    	//if self.small_entries {
-    		return self.query_database_small( seq );
-    	//}
-		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
-		let mut read_data = GeneData::new( seq,"read_t", "read", "read2", 0 );
-		let mut i = 0;
-		let mut failed = 0;
-
-		while let Some((key, start)) = read_data.next(){
-
-			//println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
-			if self.reject_key(&key){
-				continue;
-			}
-			
-			if ! self.mapper[key as usize].is_empty() {
-				i+=1;
-				failed = 0;
-				#[cfg(debug_assertions)]
-				if self.debug {
-					let values: Vec<_> = self.mapper[key as usize].data().collect();
-					let m = 9.min( values.len() );
-					println!("I am testing this key: {} and got {:?} ...", Self::as_dna_string(&key) , &values[0..m] );
-				}
-				// this will directly modify the res HashMap as it can also find more than one!
-				self.mapper[key as usize].get( &mut res, start as i32 );
-			}
-			else {
-				failed +=1;
-				if failed == 3 {
-					match read_data.iterator_skip_to_next_frame() {
-						Ok(_) => failed = 0,
-						Err(_) => break,
-					}
-				}
-				#[cfg(debug_assertions)]
-				if self.debug{
-					println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
-				}
-			}
-			if i == 30 {
-				break;
-			}
-		}
-		let mut res_vec: Vec<_> = res.into_iter().collect();
-		res_vec.retain(|(_, counts)| *counts > 4);
-	    // longest first
-	    res_vec.sort_by(|( (a_key, _a_rel_start), a_counts), ((b_key, _b_rel_start), b_counts)| {
-	    	match b_counts.cmp(&a_counts) {
-		        std::cmp::Ordering::Equal => a_key.cmp(b_key),
-		        other => other,
-		    }
-		});
-
-		res_vec
-    }
-
-	fn query_database_small( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
-    */
     
     fn query_database( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
 		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
@@ -618,16 +557,13 @@ impl GenesMapper{
 						break
 					}
 				}
-				#[cfg(debug_assertions)]
-				if self.debug{
-					println!("I got this nw: {nw} and the matches up to now: {}",helper);
-				}
 			};			
 
 		} // end populating helper
+
 		#[cfg(debug_assertions)]
-		if self.debug{
-			//let res_lines = res_vec.iter().map(|obj| format!("{:?}", obj)).collect::<Vec<String>>().join("\n");
+		{
+		//let res_lines = res_vec.iter().map(|obj| format!("{:?}", obj)).collect::<Vec<String>>().join("\n");
 			println!("mapping the read {read_data}\nwe obtained an initial mapping result \n{helper}\nand in the end found \n{:?}",
 				helper.get_best( seq.len()) );
 			println!("#################################################################################");

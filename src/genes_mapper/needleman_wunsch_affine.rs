@@ -383,7 +383,7 @@ impl <'a> NeedlemanWunschAffine {
 		                let mut drop_replaces = 0;
 
 		                // Check nucleotide matches and adjust Cigar vector
-		                while let (Some(nuc1), Some(nuc2)) = (read.get_nucleotide_2bit(read_id.saturating_sub(1)), database.get_nucleotide_2bit(database_id.saturating_sub(1) )) {
+		                while let (Some(_nuc1), Some(_nuc2)) = (read.get_nucleotide_2bit(read_id.saturating_sub(1)), database.get_nucleotide_2bit(database_id.saturating_sub(1) )) {
 
 		                    matching += 1;
 

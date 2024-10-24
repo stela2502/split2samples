@@ -76,14 +76,12 @@ impl Gene{
 			Err(e) => panic!("I could not parse the end of the transcript as usize: {e:?}"),
 		};
 
-		let sense_strand = sense_strand_s == "+";
-
 		Self{
 			chrom: chrom.to_string(),
 			start,
 			end,
 			exons,
-			sense_strand,
+			sense_strand: match sense_strand_s{ "+" => true, _ => false },
 			name: name.to_string(),
 			transcript: transcript.to_string(),
 			ids,
@@ -165,10 +163,10 @@ impl Gene{
 
 	/// generate mRNA and nacent RNA (if the last exon is small enough)
 	pub fn generate_rna_and_nascent_strings(&self, seq: &[u8], covered_area: usize) -> (Option<Vec<u8>>, Option<Vec<u8>>) {
-	    let mrna = self.to_mrna(seq.to_owned(), covered_area);
+	    let nascent = self.to_nascent( seq, covered_area );
+	    let mrna = self.to_mrna( seq, covered_area );
 
-	    let nascent = self.to_nascent(seq.to_owned(), covered_area);
-	    (mrna, nascent)
+	    ( mrna, nascent)
 	}
 
 	/// returns the start position on the mRNA in genomic coordinates and the global end position
@@ -196,7 +194,7 @@ impl Gene{
 	/// get the mRNA sequence of the transcript in sense orientation.
 	/// Fails if any other base than AGCT is in the sequence
 	/// This returns the revers complement if on the opposite starnd
-	pub fn to_mrna(&self, seq: Vec<u8>, covered_area:usize) -> Option<Vec<u8>> {
+	pub fn to_mrna(&self, seq: &[u8], covered_area:usize) -> Option<Vec<u8>> {
 
 	    let mut mrna = Vec::<u8>::with_capacity(seq.len() ); // Allocate more space for potential additions
 
@@ -216,12 +214,12 @@ impl Gene{
 			mrna.extend_from_slice(&seq[reg[0] - 1..(reg[1])]);
 	    }
 	    //println!("the final mRNA   {:?}", std::str::from_utf8(&mrna) );
-	    self.cut_to_size(mrna, covered_area )
+	    self.cut_to_size( &mrna, covered_area )
 
 	}
 
 	/// cut the RNA to the right size
-	fn cut_to_size( &self, seq:Vec<u8>, covered_area:usize) -> Option<Vec<u8>> {
+	fn cut_to_size( &self, seq: &[u8], covered_area:usize) -> Option<Vec<u8>> {
 		
 		let start = seq.len().saturating_sub(covered_area);
 		if ! self.sense_strand{
@@ -244,7 +242,7 @@ impl Gene{
 	/// get the nascent RNA for this transcript (including introns).
 	/// Fails if any other base than AGCT is in the sequence
 	/// This returns the revers complement if on the opposite starnd
-	fn to_nascent(&self, seq:Vec<u8> , covered_area:usize) -> Option<Vec<u8>> {
+	fn to_nascent(&self, seq: &[u8] , covered_area:usize) -> Option<Vec<u8>> {
 		if self.exons.len() == 0{
 			eprintln!("I have no exons?! - something is wrong here! {self}");
 			return None
@@ -266,7 +264,7 @@ impl Gene{
 			let (_glob_start, _glob_end) = self.to_mrna_positions(covered_area);
 			//make the nascent WAY longer??
 			//self.cut_to_size(nascent, glob_end - glob_start )
-			self.cut_to_size(nascent, covered_area*2 )
+			self.cut_to_size(&nascent, covered_area*2 )
 		}
 		else {
 			None
@@ -274,7 +272,7 @@ impl Gene{
 	}
 
 	/// the reverse complement of a Vec<u8>
-    fn rev_compl( seq:Vec<u8> ) -> Vec<u8>{
+    fn rev_compl( seq:&[u8] ) -> Vec<u8>{
 	    seq.iter()
 	        .rev()
 	        .filter_map(|&c| COMPLEMENT[c as usize])

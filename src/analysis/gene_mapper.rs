@@ -40,7 +40,7 @@ use std::thread;
 use rayon::prelude::*;
 use rayon::slice::ParallelSlice;
 
-use crate::ofiles::{Ofiles, Fspot};
+use crate::ofiles::{Ofiles};
 //use std::fs::write;
 
 //static EMPTY_VEC: Vec<String> = Vec::new();
