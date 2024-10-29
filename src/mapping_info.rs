@@ -163,6 +163,20 @@ impl MappingInfo{
         //Ok(())  // Return Ok if successful
     }
 
+    // Method to export error_counts to a CSV-formatted String
+	pub fn report_to_string(&self) -> String {
+	    // Start with the header
+	    let mut output = String::from("Error Type,Count\n");
+
+	    // Iterate over the error_counts and append each as a row in the CSV format
+	    for (error_type, count) in &self.error_counts {
+	        // Append each error type and count, followed by a newline
+	        output.push_str(&format!("{},{}\n", error_type, count));
+	    }
+
+	    output // Return the content as a String
+	}
+
 	pub fn split_duration( elapsed:Duration ) -> ( u128, u128, u128, u128 ){
 
         let mut milli = elapsed.as_millis();
