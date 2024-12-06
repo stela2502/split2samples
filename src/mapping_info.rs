@@ -141,8 +141,7 @@ impl MappingInfo{
     pub fn report(&mut self, issue: &str) {
         // Increment the count for the issue type
         *self.error_counts.entry(issue.to_string()).or_insert(0) += 1;
-
-        println!("Issue reported: {}", issue);
+        //println!("Issue reported: {}", issue);
     }
 
     // Optionally, add a method to retrieve counts for a specific issue
