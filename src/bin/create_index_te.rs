@@ -527,6 +527,8 @@ fn main() {
 
     println!("Collapsing the index down to a usable size? at {h}h {m}min {s}sec.");
 
+    // even with TE indexes I would like to get only unique entries - not sure that is even possible!
+    index.purge( 24 );
     index.make_index_te_ready();
 
     //println!("The merged index has not been produced ( memory issues!)");

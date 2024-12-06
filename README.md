@@ -14,6 +14,12 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
+### latest
+
+This is not functional any more. The mapper is EXTREMELY inefficient.
+And I do not have the time to fix that.
+Parts of this package are used in the new quantify_bam tool.
+
 ### 2.2.0
 
 Strange - the whole system was kind of out of order - I had dropped back to version 2.1.3 before I canged my Cargo.toml info.

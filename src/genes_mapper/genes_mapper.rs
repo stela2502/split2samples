@@ -195,19 +195,16 @@ impl GenesMapper{
     	data
     }
     fn reject_key(&self,  key:&u16 ) -> bool{
-		if &self.di_nuc_tab_length( &key ) < &4{ // could be as simple as AAAACAAA or ACACACAC
+		if &self.di_nuc_tab_length( &key ) < &2{ // could be as simple as AAAACAAA or ACACACAC
 			#[cfg(debug_assertions)]
-			if self.debug{
-				println!("this key was rejected: {}", Self::key_to_string( &key ) );
-			}
+			println!("this key was rejected: {}", Self::key_to_string( &key ) );
 			
 			return true;
 		}
 		if key > &65534 {
 			#[cfg(debug_assertions)]
-			if self.debug{
-				println!("this key was rejected: {}", Self::key_to_string( &key ) );
-			}
+			println!("this key was rejected: {}", Self::key_to_string( &key ) );
+			
 			
 			return true
 		}
@@ -218,7 +215,7 @@ impl GenesMapper{
 	/// the main add function to add a gene into the index. 
 	pub fn add(&mut self, seq: &[u8], unique_name:&str, name: &str, chr: &str, start:usize ) -> usize{
 
-		let mut gene_data = GeneData::new( seq, &unique_name, name, chr, start );
+		let mut gene_data = GeneData::new( seq, &unique_name, name, chr, start, true );
 		// Hash the gene_data object to obtain its hash value
 		let mut hasher = DefaultHasher::new();
 		gene_data.hash(&mut hasher);
@@ -245,7 +242,7 @@ impl GenesMapper{
 			}
 			gene_id = self.genes.len();
 			self.names.insert( name2.to_string(), gene_id );
-			gene_data = GeneData::new( seq, unique_name, &name2, chr, start );
+			gene_data = GeneData::new( seq, unique_name, &name2, chr, start, true );
 			self.genes.push(gene_data.clone());
 		}else {
 			gene_id = self.genes.len();
@@ -365,6 +362,11 @@ impl GenesMapper{
 		}	
 	}
 
+	/// purge single 16bp fragments that link to more than max_links different positions.
+	pub fn purge(&mut self, max_links:usize ) {
+		self.mapper.retain(|link| link.len() <= max_links);
+	}
+
 	
 
 	fn all_values_same(vec: &[i32]) -> Result<(), GeneSelectionError> {
@@ -419,15 +421,15 @@ impl GenesMapper{
     
     fn query_database( &self, seq: &[u8] ) -> Vec<((usize, i32), usize)> {
 		let mut res = HashMap::<(usize, i32), usize>::new();// Vec<i32>>::new();
-		let mut read_data = GeneData::new( seq, "read_t", "read", "read2", 0 );
+		let mut read_data = GeneData::new( seq, "read_t", "read", "read2", 0, false );
 		let mut i = 0;
 
 		#[cfg(debug_assertions)]
 		println!("I am runing query_database_small");
 
 		while let Some((key, start)) = read_data.next(){
-
-			//println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
+			#[cfg(debug_assertions)]
+			println!("after {i} (matching) iterations ({}) the res looks like that {res:?}", Self::key_to_string( &key) );
 			if self.reject_key(&key){
 				continue;
 			}
@@ -443,16 +445,11 @@ impl GenesMapper{
 				// this will directly modify the res HashMap as it can also find more than one!
 				self.mapper[key as usize].get( &mut res, start as i32 );
 			}
-			else {
-				#[cfg(debug_assertions)]
-				if self.debug{
-					println!("I am testing this key: {} and got Nothing", Self::as_dna_string(&key) );
-				}
-			}
 			if i == 30 {
 				break;
 			}
 		}
+
 		let mut res_vec: Vec<_> = res.into_iter().collect();
 
 		#[cfg(debug_assertions)]
@@ -480,7 +477,7 @@ impl GenesMapper{
     }
 
     pub fn get_strict(&self, seq: &[u8], _cellid:u32, nwa: &mut NeedlemanWunschAffine ) ->  Result< Vec<MapperResult>, MappingError >{ 
-		let read_data = GeneData::new( seq,"read_t", "read", "read2", 0 );
+		let read_data = GeneData::new( seq,"read_t", "read", "read2", 0, false );
 		// store the gene id, the relative start on that and the count for this combo
 		let res_vec = self.query_database( seq );
 

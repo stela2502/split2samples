@@ -82,6 +82,12 @@ pub struct FastMapper{
 // here the functions
 
 impl FastMapper{
+
+    /// purge single 16bp fragments that link to more than max_links different positions.
+    pub fn purge(&mut self, max_links:usize ) {
+        self.mapper.retain(|link| link.len() <= max_links);
+    }
+    
     /// kmer_size: how long should the single kmers to search in the sequences be (rec. 9)
     pub fn new( kmer_len:usize, allocate:usize, offset: usize )-> Self {
         //println!("I would add {} new entries here:", u16::MAX);

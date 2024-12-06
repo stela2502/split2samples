@@ -170,6 +170,8 @@ fn main() {
     }
     eprintln!();
 
+    // replicate Subreads way to get only unique mappers.
+    index.purge( 24 );
     index.make_index_te_ready(); 
 
     report.stop_single_processor_time();

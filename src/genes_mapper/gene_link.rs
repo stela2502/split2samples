@@ -38,6 +38,10 @@ impl GeneLink{
 		}
 	}
 
+	pub fn len( &self ) -> usize{
+		self.data.len()
+	}
+
 
 	pub fn data(&self) -> std::slice::Iter<(usize, usize)>{
 		self.data.iter()

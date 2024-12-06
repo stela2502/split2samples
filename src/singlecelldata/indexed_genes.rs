@@ -9,7 +9,7 @@ pub struct IndexedGenes{
 	offset: usize,
 }
 
-// Implementing Display trait for SecondSeq
+// Implementing Display trait for IndexedGenes
 impl fmt::Display for IndexedGenes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     	let first = 5.min( self.names.len() );
@@ -19,6 +19,33 @@ impl fmt::Display for IndexedGenes {
 }
 
 impl IndexedGenes{
+
+	pub fn empty ( off:Option<usize> ) -> Self {
+
+		Self{
+			names: BTreeMap::new(),
+			ids_to_name: Vec::with_capacity( 80_000 ),
+			offset : match( off ){
+				Some(o) => o,
+				None => 0,
+			},
+		}
+
+	}
+	/// Returns the gene ID for the given gene name.
+    /// If the gene does not exist, assigns a new ID.
+    pub fn get_gene_id(&mut self, gene: &str) -> usize {
+        // Check if the gene already exists in the map
+        if let Some(&gene_id) = self.names.get(gene) {
+            return gene_id;
+        }
+
+        // Gene doesn't exist; assign a new ID
+        let new_id = self.offset + self.ids_to_name.len();
+        self.names.insert(gene.to_string(), new_id);
+        self.ids_to_name.push(gene.to_string());
+        new_id
+    }
 
 	pub fn new ( data: &BTreeMap<String, usize>, offset: usize ) -> Self {
 		let mut ids_to_name = vec![String::new(); data.len() + offset ];

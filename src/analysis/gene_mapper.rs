@@ -411,7 +411,6 @@ impl AnalysisGeneMapper{
 	            	// or a mRNA match
 	            	// And of casue not a match at all
 
-
 	            	ok = match &self.antibodies.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa ){
 	                    Ok(gene_id) =>{
 

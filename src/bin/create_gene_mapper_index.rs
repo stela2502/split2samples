@@ -462,6 +462,8 @@ fn main() {
         index.merge(&idx);
         //report.merge( &gex.1 );
     }
+    // remove all links that link to more than 24 different locations (rep elements)
+    index.purge( 24 );
     index.make_index_te_ready(); 
 
     report.stop_single_processor_time();

@@ -47,13 +47,13 @@ mod tests {
 		gene.add_exon( "1", "5" );
 		gene.add_exon( "15", "20" );
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec(), 100 ) {
-			assert_eq!( seq, b"ACCCCAATTTT".to_vec(), "Correct mrna? {seq:?}" );
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT", 100 ) {
+			assert_eq!( seq, b"ACCCCAATTTT", "Correct mrna? {seq:?}" );
 		}else {
 			panic!("to_mrna has not returned a sequence!")
 		}
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT".to_vec(), 100 ) {
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT", 100 ) {
 			panic!("The sequences is one bp too short - that should return None - not {seq:?}!")
 		}else {
 			assert!(true); // to show we did good.
@@ -69,13 +69,13 @@ mod tests {
 		gene.add_exon( "1", "5" );
 		gene.add_exon( "15", "20" );
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT".to_vec(), 100 ) {
-			assert_eq!( seq, b"AAAATTGGGGT".to_vec(), "Correct mrna? {seq:?}" );
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTTT", 100 ) {
+			assert_eq!( seq, b"AAAATTGGGGT", "Correct mrna? {seq:?}" );
 		}else {
 			panic!("to_mrna has not returned a sequence!")
 		}
 
-		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT".to_vec(), 100 ) {
+		if let Some(seq) = gene.to_mrna( b"ACCCCGAAAAAAAAAATTT", 100 ) {
 			panic!("The sequences is one bp too short - that should return None - not {seq:?}!")
 		}else {
 			assert!(true); // to show we did good.
@@ -100,7 +100,7 @@ mod tests {
 		
 
 
-		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 100 ) {
+		if let Some(mrna) = gene.to_mrna( seq, 100 ) {
 			assert_eq!(mrna.len(), 80, "I had expected a 60bp sequence");
 			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "AGCTAAATGCAGACTGTGGCGTTTGACTTGGTATCTTTTCGATTGTGCTGAGACTGGAGTTCTAAGAGGATGCTGGCTAT", "spliced correctly");
 		}else {
@@ -125,7 +125,7 @@ mod tests {
 		
 
 
-		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 30 ) {
+		if let Some(mrna) = gene.to_mrna( seq, 30 ) {
 			assert_eq!(mrna.len(), 30, "I had expected a 30bp sequence");
 			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "AGACTGGAGTTCTAAGAGGATGCTGGCTAT", "spliced correctly - and subset");
 		}else {
@@ -150,7 +150,7 @@ mod tests {
 		gene.add_exon( "121", "140" );
 		
 
-		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 100 ) {
+		if let Some(mrna) = gene.to_mrna( seq, 100 ) {
 			assert_eq!(mrna.len(), 80, "I had expected a 60bp sequence");
 			// manually reversed the sequence!
 			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "ATAGCCAGCATCCTCTTAGAACTCCAGTCTCAGCACAATCGAAAAGATACCAAGTCAAACGCCACAGTCTGCATTTAGCT", "spliced correctly");
@@ -175,7 +175,7 @@ mod tests {
 		gene.add_exon( "121", "140" );
 		
 
-		if let Some(mrna) = gene.to_mrna( seq.to_vec(), 30 ) {
+		if let Some(mrna) = gene.to_mrna( seq, 30 ) {
 			assert_eq!(mrna.len(), 30, "I had expected a 60bp sequence");
 			// manually reversed the sequence!
 			assert_eq!( std::str::from_utf8(&mrna).expect("Invalid UTF-8 sequence"), "CAAGTCAAACGCCACAGTCTGCATTTAGCT", "spliced correctly");

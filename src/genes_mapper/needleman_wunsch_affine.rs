@@ -312,7 +312,7 @@ impl <'a> NeedlemanWunschAffine {
 		    		if self.debug{
 		    			println!("inserted the value {} at position {rev_id}", &cigar[rev_id] );
 		    		}
-		    		//println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {}",cigar[rev_id]);
+		    		println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {}",cigar[rev_id]);
 		    		
 		    	}else {
 		    		panic!("I can not decode the df matrix to aCigar state at :{i}; j{j}:\n{}\t{}\n{}\t{}",

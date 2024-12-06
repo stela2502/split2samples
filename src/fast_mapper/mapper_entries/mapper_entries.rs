@@ -21,6 +21,11 @@ impl Default for MapperEntry {
  }
 
 impl MapperEntry{
+
+	pub fn len(&self) -> usize{
+		self.map.len()
+	}
+
 	pub fn new( ) -> Self{
 		/*let mut all = allocate;
 		if allocate < 4 {

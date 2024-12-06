@@ -30,9 +30,9 @@ mod tests {
 		let mut test = 	NeedlemanWunschAffine::new();
 
 		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", "read1",
-			"read1","gene1", 0  );
+			"read1","gene1", 0 , false );
 		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC","database",  //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
-			"database", "database1", 0);
+			"database", "database1", 0, true);
 
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		assert_eq!( nw, 0.0, "perfect match has nw of 0");
@@ -55,9 +55,9 @@ mod tests {
 		//AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC
 
 		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGAGATCACCCCCATAGGTTTGGTCCTAGC", "read1",
-			"read1","gene1", 0  );
+			"read1","gene1", 0, false  );
 		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", "database", //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
-			"database", "database1", 0);
+			"database", "database1", 0, true);
 
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		assert!( nw < 0.5, "this NOT perfect match has nw of less than 0.5");
@@ -81,9 +81,9 @@ mod tests {
 		//AAGCCGGCGTAAAGAGTG----AGATCACCCCCATAGGTTTGGTCCTAGC
 
 		let read = GeneData::new(     b"AAGCCGGCGTAAAGAGTGTTTTAGATCACCCCCATAGGTTTGGTCCTAGC", "read1",
-			"read1","gene1", 0  );
+			"read1","gene1", 0, false  );
 		let database = GeneData::new( b"AAGCCGGCGTAAAGAGTGAGATCACCCCCATAGGTTTGGTCCTAGC", "database", //CTTTCTATTAGCTCTTAGTAAGATTACACATGCAAGCATC", 
-			"database", "database1", 0);
+			"database", "database1", 0, true);
 
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		assert!( nw < 0.5, "this NOT perfect match has nw of less than 0.5");
@@ -107,9 +107,9 @@ mod tests {
 		//AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC
 
 		let read = GeneData::new(     b"AAAACGCTTAGCCTAGCATTTCGTGCCAGCCACCGC", "read1",
-			"read1","gene1", 0  );
+			"read1","gene1", 0, false  );
 		let database = GeneData::new( b"AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC","database", 
-			"database", "database1", 0);
+			"database", "database1", 0, true);
 
 		let _nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		//assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 {nw}");
@@ -134,9 +134,9 @@ mod tests {
 		//AAAACGCTTAGCCTAGC------------------------------------------------------------------------------------ATTTCGTGCCAGCCACCGC
 		
 		let read = GeneData::new( b"AAAACGCTTAGCCTAGCCACACCCCCACGGGAAACAGCAGTGATTAACCTTTAGCAATAAACGAAAGTTTAACTAAGCTATACTAACCCCAGGGTTGGTCAATTTCGTGCCAGCCACCGC","read1",
-			"read", "read1", 0);
+			"read", "read1", 0, false);
 		let database = GeneData::new(     b"AAAACGCTTAGCCTAGCATTTCGTGCCAGCCACCGC", "database", 
-			"database","database1", 0  );
+			"database","database1", 0, true);
 
 		let _nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		//assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 0");
@@ -169,10 +169,10 @@ mod tests {
 
 		let database= GeneData::new(
 			b"CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA","database", 
-			"database", "database_larger", 0);
+			"database", "database_larger", 0, false);
 		let read = GeneData::new(
 			b"CAGGCTATGATCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA","read1",
-			"read_w_deletion", "deletion_after_10bp", 0);
+			"read_w_deletion", "deletion_after_10bp", 0, true);
 		let mut test = 	NeedlemanWunschAffine::new();
 
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
@@ -196,10 +196,10 @@ mod tests {
 			
 		let database= GeneData::new(
 			b"CTGGCTATGACTCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGAGGCTTCGTGAATGAATGAATCTA","database", 
-			"database", "database_larger", 0);
+			"database", "database_larger", 0, false);
 		let read = GeneData::new(
 			b"CAGGCTATGATCCTCAGCAGTAAGAGAGAAAAGATGAATGAAGCCACTGCAGCTTCGTGAATGAATGCATCAA","read1",
-			"read_w_deletion", "deletion_after_10bp", 0);
+			"read_w_deletion", "deletion_after_10bp", 0, true);
 		let mut test = 	NeedlemanWunschAffine::new();
 
 		let nw = test.needleman_wunsch_affine( &database, &read, 1.0 );

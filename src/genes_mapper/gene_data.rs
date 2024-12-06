@@ -24,6 +24,8 @@ const MATCH_SCORE: i32 = 1;
 const MISMATCH_SCORE: i32 = -4;
 const GAP_PENALTY: i32 = -1;
 
+
+
 #[derive(Debug, Clone,Deserialize,Serialize)]
 pub struct GeneData {
 	/// The data storage - we will never store any seq other than a 2bit encoded one.
@@ -42,7 +44,9 @@ pub struct GeneData {
 	/// and this is something private used for the next function
 	current_position: usize,
 	/// and this reports if the first set of next calls has been finished
-	first_set_finished:bool
+	first_set_finished:bool,
+	/// indicates the type of return values - 1bp overlapping tiles (false) or 2bp overlapping tiles (true)
+	index_type: bool
 }
 
 impl Hash for GeneData {
@@ -61,14 +65,8 @@ impl PartialEq for GeneData {
 
 
 impl Iterator for GeneData {
-    type Item = (u16, usize);
-
+	type Item = (u16, usize);
     fn next(&mut self) -> Option<Self::Item> {
-        // Check if there are still 8 bp combinations left to iterate over
-        if self.current_position % 8 == 0 && self.first_set_finished {
-    		// this index has already been reported on
-    		self.current_position +=1;
-    	}
         if self.current_position + 8 <= self.length {
         	//println!("I return the position {}!", self.current_position);
             let result = self.key_at_position(self.current_position)?;
@@ -91,6 +89,7 @@ impl Iterator for GeneData {
     }
 }
 
+
 // Implementing Display trait for SecondSeq
 impl fmt::Display for GeneData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -100,8 +99,10 @@ impl fmt::Display for GeneData {
 }
 
 impl GeneData{
+
+
 	//pub fn new( seq: &[u8], name:&str, chr:&str, start:usize, other_ids:Vec<String> )-> Self{
-	pub fn new( seq: &[u8], unique_name:&str, name:&str, chr:&str, start:usize ) -> Self {
+	pub fn new( seq: &[u8], unique_name:&str, name:&str, chr:&str, start:usize, index_type: bool ) -> Self {
 		let u8_encoded = Self::encode( seq );
 		Self{
 			u8_encoded,
@@ -113,15 +114,21 @@ impl GeneData{
 			//other_ids: other_ids,
 			current_position:0,
 			first_set_finished:false,
+			index_type,
 		}
 	}
 
 	/// This shifts the next 8bp window by 1 bp and sets the start to the sequence start.
 	/// It throws an error if the iterator would reach its end this way.
 	pub fn iterator_skip_to_next_frame(&mut self)  -> Result<(), &'static str> {
-        self.current_position = (self.current_position % 8) + 1;
+		if self.index_type {
+			self.current_position = (self.current_position % 8) + 3;
+		}else {
+			self.current_position = (self.current_position % 8) + 1;
+		}
+        
         self.first_set_finished = true;
-		if self.current_position == 8 {
+		if self.current_position == 8 || self.current_position > 8 {
 			Err("iterator reached the end.")
 		}else {
 			Ok(())
@@ -242,6 +249,7 @@ impl GeneData{
 			start:0,
 			current_position:0,
 			first_set_finished:false,
+			index_type: false,
 		}
 	}
 
@@ -370,6 +378,7 @@ impl GeneData{
             start : self.start + start,
             current_position:0,
             first_set_finished:false,
+            index_type : self.index_type,
         })
     }
 

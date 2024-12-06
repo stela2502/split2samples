@@ -336,7 +336,7 @@ impl IntToStr {
 
     	ret
 	}
-	/// needed for the secundary mappings
+	/// needed for the secondary mappings
     /// takes the UTF8 encoded sequence and encodes the first 32 into a u64 
 	pub fn into_u64(&self ) -> u64{
 

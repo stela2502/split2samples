@@ -211,6 +211,7 @@ impl Cigar{
     }
 
     pub fn fix_border_insertion( &mut self, mapping_start: usize, read:&GeneData, database:&GeneData )->usize{
+    	
     	let mut ret =0 ;
     	if self.contains[CigarEnum::Insertion.to_id()] {
 			let re_start = Regex::new(r"^(\d+)I").unwrap();
@@ -399,6 +400,7 @@ impl Cigar{
     /// let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){4,})";
     /// let end = r"((?:[1-7]M|[1-9][0-9]*[IXD]){4,})$";
     pub fn soft_clip_start_end( &mut self) {
+
     	if self.state_changes < 6 && self.fixed == None{
     		self.fixed = Some(CigarEndFix::Na);
     		return;
@@ -628,6 +630,8 @@ impl Cigar{
 	/// this function literally checks for 1D1J or vice versa. An artifact from earlier fixes.
 	pub fn fix_1d1i_1i1d(&mut self, cigar: &mut Vec<CigarEnum>, start_pos: Option<usize>) {
 
+		// for a test - just not do this:
+		// return;
 		if ! self.contains.iter().any(|&x| x){
 			self.populate_contains(&cigar);
 		}
@@ -717,7 +721,7 @@ impl Cigar{
 
 		    while i > 0 && j > 0 {
 		        let current_score = matrix[i][j].score;
-		        //println!("Current score = {current_score}");
+		        println!("Current score = {current_score}");
 		        let diagonal_score = matrix[i - 1][j - 1].score;
 		        let up_score = matrix[i - 1][j].score;
 		        let left_score = matrix[i][j - 1].score;
@@ -726,21 +730,21 @@ impl Cigar{
 		        if max == diagonal_score {
 		        	if diagonal_score > current_score {
 		        		// mismatch!!!
-		        		//println!("adding Mismatch");
+		        		println!("adding Mismatch");
 		        		path.push(CigarEnum::Mismatch);
 		        	}else {
 		        		// match
-		        		//println!("adding Match");
+		        		println!("adding Match");
 		        		path.push(CigarEnum::Match);
 		        	}
 		            i -= 1;
 		            j -= 1;
 		        } else if max == up_score {
-		        	//println!("adding Deletion");
+		        	println!("adding Deletion");
 		        	path.push(CigarEnum::Insertion);
 		            i -= 1;
 		        } else {
-		        	//println!("adding Insertion");
+		        	println!("adding Insertion");
 		            path.push(CigarEnum::Deletion);
 		            j -= 1;
 		        }
@@ -748,13 +752,13 @@ impl Cigar{
 
 		    // If there are remaining gaps at the beginning of the sequences, fill them with the corresponding directions
 		    while i > 0 {
-		    	//println!("End not reached by main - adding Deletion");
+		    	println!("End not reached by main - adding INSERTION");
 		        path.push(CigarEnum::Insertion);
 		        i -= 1;
 		    }
 
 		    while j > 0 {
-		    	//println!("End not reached by main - adding Insertion");
+		    	println!("End not reached by main - adding DELETION");
 		        path.push(CigarEnum::Deletion);
 		        j -= 1;
 		    }
