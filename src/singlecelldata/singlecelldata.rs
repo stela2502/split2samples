@@ -294,7 +294,7 @@ impl SingleCellData{
 
         if fs::remove_file(file_path.join("matrix.mtx.gz") ).is_ok(){};
 
-        let file = match File::create_dir_all( file_path.join("matrix.mtx.gz") ){
+        let file = match fs::create_dir_all( file_path.join("matrix.mtx.gz") ){
             Ok(file) => file,
             Err(err) => {
                 panic!("Error creating the path?: {err:#?}");
@@ -310,7 +310,7 @@ impl SingleCellData{
         //}
         if  fs::remove_file(file_path.join("barcodes.tsv.gz") ).is_ok(){};
 
-        let file_b = match File::create_dir_all( file_path.join("barcodes.tsv.gz") ){
+        let file_b = match fs::create_dir_all( file_path.join("barcodes.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
                 panic!("Error creating the path?: {err:#?}");
