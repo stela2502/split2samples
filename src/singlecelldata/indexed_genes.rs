@@ -47,19 +47,16 @@ impl IndexedGenes{
 	/// Returns the gene ID for the given gene name.
     /// If the gene does not exist, assigns a new ID.
     pub fn get_gene_id(&mut self, gene: &str) -> usize {
-    	// strip away all ['"] elements!
-    	let cleaned: String = gene.chars()
-        	.filter(|&c| c != '"' && c != '\'')
-        	.collect();
+
         // Check if the gene already exists in the map
-        if let Some(&gene_id) = self.names.get(&cleaned) {
+        if let Some(&gene_id) = self.names.get(gene) {
             return gene_id;
         }
 
         // Gene doesn't exist; assign a new ID
         let new_id = self.offset + self.ids_to_name.len();
-        self.names.insert(cleaned.to_string(), new_id);
-        self.ids_to_name.push(cleaned);
+        self.names.insert(gene.to_string(), new_id);
+        self.ids_to_name.push(gene.to_string());
         new_id
     }
 

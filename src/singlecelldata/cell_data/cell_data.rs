@@ -163,9 +163,8 @@ impl CellData{
 
         //let other_total_reads = std::mem::take(&mut other.total_reads);
         for (gene_id, count) in &other.total_reads {
-            let double_counts = too_much.get(&gene_id).unwrap_or(&0);
-            let mine = self.total_reads.entry(*gene_id).or_insert(0);
-            *mine += count - double_counts;
+            let double_counts = too_much.get(&gene_id).copied().unwrap_or(0);
+            self.total_reads.entry(*gene_id).and_modify(|e| *e += count - double_counts);
         }
     }
 
