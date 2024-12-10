@@ -139,77 +139,30 @@ impl CellData{
     }
 
     /// adds the other values into this object
+    /// The other genes is the position of the gene in index2 translated to the merged index
     pub fn merge_re_id_genes(&mut self, other: &CellData, other_genes: &Vec::<usize> ) {
         self.total_umis += other.total_umis;
-        let mut too_much = BTreeMap::<usize, usize>::new();
-
+        
         for (gene_umi_combo, counts) in &other.genes {
             // re-id the UMI count touple
             let re_ided_umi_combo= GeneUmiHash( 
                 other_genes[gene_umi_combo.0],
                 gene_umi_combo.1
             );
-            match self.genes.entry(re_ided_umi_combo) {
-                std::collections::btree_map::Entry::Occupied(mut entry) => {
-                    *entry.get_mut() += counts;
-                    let counter = too_much.entry(re_ided_umi_combo.0).or_insert(0);
-                    *counter += 1;
-                }
-                std::collections::btree_map::Entry::Vacant(entry) => {
-                    entry.insert(*counts);
-                }
+            if ! self.add( re_ided_umi_combo ){
+                // This combination has already been recorded!
+                println!("Already present: {:?}", re_ided_umi_combo);
+            }else {
+                println!("NEW: {:?}, counts: {}", re_ided_umi_combo, counts);
             }
         }
 
-        //let other_total_reads = std::mem::take(&mut other.total_reads);
-        for (gene_id, count) in &other.total_reads {
-            let double_counts = too_much.get(&gene_id).copied().unwrap_or(0);
-            self.total_reads.entry(*gene_id).and_modify(|e| *e += count - double_counts);
-        }
     }
 
-    /* my old function
-    pub fn merge(&mut self, other:&CellData ){
-
-        self.total_umis += other.total_umis;
-        let mut too_much = BTreeMap::<usize, usize>::new();
-
-        for (gene_umi_combo, counts) in &other.genes {
-            match self.genes.get_mut( gene_umi_combo ) {
-                Some(count) => {
-                    *count += counts;
-                    let counter = too_much.entry(gene_umi_combo.0).or_insert(0);
-                    *counter += 1;
-                },
-                None => {
-                    self.genes.insert( *gene_umi_combo, 1);
-                }
-            }
-        }
-        for (gene_id, count) in &other.total_reads {
-            let double_counts = *too_much.entry(*gene_id).or_insert_with(|| 0);
-            let mine = self.total_reads.entry(*gene_id).or_insert(0);
-            *mine += count - double_counts;
-        }
-        /*for (hash, (umis, ids) ) in &other.multimapper {
-            let double_counts = 0;
-            for umi in umis {
-                self.add_multimapper( ids.clone(), *umi );
-                double_counts += 1;
-            }
-            match self.total_reads.get_mut( &(*hash as usize) ){
-                Some( val ) => {
-                    let add = other.total_reads.get( &(*hash as usize) ).unwrap_or(&double_counts) - double_counts;
-                    *val += add
-                },
-                None => panic!("merge could not copy the total gene values for multimapper hash {hash}",  ),
-            };
-        }*/
-    }*/
 
     // returns false if the gene/umi combo has already been recorded!
     pub fn add(&mut self, gh: GeneUmiHash ) -> bool{
-        //println!("adding gene id {}", geneid );
+        println!("adding gene id {}", gh );
         return match self.genes.get_mut( &gh ) {
             Some( gene ) => {
                 *gene +=1;
