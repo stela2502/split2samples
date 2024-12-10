@@ -142,19 +142,22 @@ impl CellData{
     /// The other genes is the position of the gene in index2 translated to the merged index
     pub fn merge_re_id_genes(&mut self, other: &CellData, other_genes: &Vec::<usize> ) {
         self.total_umis += other.total_umis;
-        
+
         for (gene_umi_combo, counts) in &other.genes {
             // re-id the UMI count touple
             let re_ided_umi_combo= GeneUmiHash( 
                 other_genes[gene_umi_combo.0],
                 gene_umi_combo.1
             );
+            let _ = self.add( re_ided_umi_combo );
+            /*
             if ! self.add( re_ided_umi_combo ){
                 // This combination has already been recorded!
                 println!("Already present: {:?}", re_ided_umi_combo);
             }else {
                 println!("NEW: {:?}, counts: {}", re_ided_umi_combo, counts);
             }
+            */
         }
 
     }
@@ -162,7 +165,7 @@ impl CellData{
 
     // returns false if the gene/umi combo has already been recorded!
     pub fn add(&mut self, gh: GeneUmiHash ) -> bool{
-        println!("adding gene id {}", gh );
+        //println!("adding gene id {}", gh );
         return match self.genes.get_mut( &gh ) {
             Some( gene ) => {
                 *gene +=1;
