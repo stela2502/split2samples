@@ -159,6 +159,37 @@ impl SingleCellData{
             }
         }
     }
+
+    /// merge two SingleCellData objects - with a different gene list!!
+    pub fn merge_re_id_genes(&mut self, other: SingleCellData, other_ids: &Vec::<usize> ) {
+        if ! other.is_empty() {
+            // Reset all internal measurements
+            self.checked = false;
+            self.passing = 0;
+            self.genes_with_data.clear();
+
+            for other_cell in other.data.iter().flat_map(|map| map.values()) {
+                let index = self.to_key(&other_cell.name); // Extracting the first u8 of the u64 key
+                match self.data[index].entry(other_cell.name) {
+                    std::collections::btree_map::Entry::Occupied(mut entry) => {
+                        // If cell exists, merge with existing cell
+                        //println!( "merge cell {} {}", other_cell.name, other_cell);
+                        let cell = entry.get_mut();
+                        cell.merge_re_id_genes(other_cell, &other_ids);
+                    }
+                    std::collections::btree_map::Entry::Vacant(entry) => {
+                        // If cell doesn't exist, insert new cell
+                        //println!( "steel cell {} {}", other_cell.name, other_cell);
+                        let mut cell = CellData::new( other_cell.name.clone() );
+                        cell.merge_re_id_genes( other_cell, &other_ids );
+                        entry.insert( cell ); // Move ownership
+                    }
+                }
+            }
+
+        }
+    }
+
     /* // my old fucntion:
     pub fn merge( &mut self, other:&SingleCellData ){
         // reset all internal measurements

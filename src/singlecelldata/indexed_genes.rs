@@ -25,13 +25,25 @@ impl IndexedGenes{
 		Self{
 			names: BTreeMap::new(),
 			ids_to_name: Vec::with_capacity( 80_000 ),
-			offset : match( off ){
+			offset : match off {
 				Some(o) => o,
 				None => 0,
 			},
 		}
 
 	}
+
+
+	/// merges the other list into this list and returns a Vec of new ids for the other data 
+	pub fn merge (&mut self, other: &IndexedGenes) -> Vec<usize>{
+		let mut rec = Vec::<usize>::with_capacity( other.len() );
+		for gene in &other.ids_to_name {
+			rec.push ( self.get_gene_id( gene ) )
+		}
+		rec
+	}
+
+
 	/// Returns the gene ID for the given gene name.
     /// If the gene does not exist, assigns a new ID.
     pub fn get_gene_id(&mut self, gene: &str) -> usize {
@@ -51,11 +63,15 @@ impl IndexedGenes{
         new_id
     }
 
+    pub fn len( &self ) -> usize{
+    	self.names.len()
+    }
+
 	pub fn new ( data: &BTreeMap<String, usize>, offset: usize ) -> Self {
 		let mut ids_to_name = vec![String::new(); data.len() + offset ];
 		let mut names = BTreeMap::new();
 		let mut max_entry = 0_usize;
-		let _ =data.iter().for_each(| (_,val) | if *val > max_entry {max_entry = *val});
+		let _ = data.iter().for_each(| (_,val) | if *val > max_entry {max_entry = *val});
 		println!("I have gotten a max extry of {max_entry} and have a vec with {} available spaces",ids_to_name.len() );
 		if max_entry > (data.len() + offset) {
 			panic!("This is a library error - why is my largest id {max_entry} when it should be {}?!?",  data.len() + offset);
@@ -73,7 +89,7 @@ impl IndexedGenes{
 	}
 
 	/// returns the external id - the ID used in the single_cell_data class.
-	pub fn ids_for_gene_names(&self, names:&Vec<String> ) -> Vec<usize>{
+	pub fn ids_for_gene_names(&self, names:&Vec::<String> ) -> Vec<usize>{
 		let mut ret = Vec::<usize>::with_capacity( names.len() );
 		for name in names{
 			if let Some(id) = self.names.get( name ){
