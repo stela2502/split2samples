@@ -167,7 +167,7 @@ impl MappingInfo{
     // Method to export error_counts to a CSV-formatted String
 	pub fn report_to_string(&self) -> String {
 	    // Start with the header
-	    let mut output = String::from("Error Type,Count\n");
+	    let mut output = String::from("Error Type\tCount\n");
 
 	    // Iterate over the error_counts and append each as a row in the CSV format
 	    for (error_type, count) in &self.error_counts {
