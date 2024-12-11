@@ -255,6 +255,7 @@ impl MappingInfo{
 		
 	}
 
+	/// add info from .report() into the log file as tab sep tables.
 	pub fn log_report( &mut self ) {
 		let log_str = self.report_to_string();
 		self.write_to_log( log_str );
