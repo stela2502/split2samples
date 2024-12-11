@@ -255,6 +255,11 @@ impl MappingInfo{
 		
 	}
 
+	pub fn log_report( &mut self ) {
+		let log_str = self.report_to_string();
+		self.write_to_log( log_str );
+	}
+
 	pub fn log( &mut self, pb:&ProgressBar ){
 		if self.total % self.split == 0{
 			self.log_iter+=1;
