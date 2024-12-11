@@ -3,6 +3,8 @@ use std::fs::File;
 use indicatif::{ProgressBar};
 use std::collections::BTreeMap;
 
+use num_format::{Locale, ToFormattedString};
+
 use std::io::Write;
 use std::time::{Duration, SystemTime};
 
@@ -170,7 +172,8 @@ impl MappingInfo{
 	    // Iterate over the error_counts and append each as a row in the CSV format
 	    for (error_type, count) in &self.error_counts {
 	        // Append each error type and count, followed by a newline
-	        output.push_str(&format!("{},{}\n", error_type, count));
+	        let formatted = count.to_formatted_string(&Locale::en);
+	        output.push_str(&format!("{},{}\n", error_type, formatted));
 	    }
 
 	    output // Return the content as a String

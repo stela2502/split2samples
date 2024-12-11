@@ -23,6 +23,7 @@ indicatif = {version = "*", features = ["rayon"]}
 kmers = { git="https://github.com/COMBINE-lab/kmers" }
 needletail = "0.5.1"
 noodles-bam = "0.26.0"
+num-format = "0.4"
 rand = "0.8"
 
 noodles-bgzf = "0.26.0"
