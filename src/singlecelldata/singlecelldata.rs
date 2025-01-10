@@ -298,20 +298,21 @@ impl SingleCellData{
 
 
     /// this will create a path and populate that with 10x kind of files.
-    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &IndexedGenes, min_count:usize) -> Result< (), &str>{
+    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &IndexedGenes, min_count:usize) -> Result< String, &str>{
         let names= genes.get_all_gene_names();
         return self.write_sparse_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes:&IndexedGenes, names: &Vec<String>, min_count:usize) -> Result< (), &str>{
+    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes:&IndexedGenes, names: &Vec<String>, min_count:usize) -> Result<String, &str>{
             
         let rs = Path::new( &file_path ).exists();
 
         self.update_genes_to_print( genes, names);
 
         if self.genes_to_print.is_empty(){
-            eprintln!("No genes to report on - no data written to path {:?}", file_path.to_str());
-            return Ok(())
+            let err = format!("No genes to report on - no data written to path {:?}", file_path.to_str());
+            eprintln!( "{}", err );
+            return Ok( err )
         }
 
         if ! rs {
@@ -328,7 +329,7 @@ impl SingleCellData{
         let file = match File::create( file_path.join("matrix.mtx.gz") ){
             Ok(file) => file,
             Err(err) => {
-                panic!("Error creating the path?: {err:#?}");
+                return Err("Error creating the path?: {err:#?}");
             }
         };
         let file1 = GzEncoder::new(file, Compression::default());
@@ -344,7 +345,7 @@ impl SingleCellData{
         let file_b = match File::create( file_path.join("barcodes.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
-                panic!("Error creating the path?: {err:#?}");
+                return Err("Error creating the path?: {err:#?}");
             }
         };
         let file2 = GzEncoder::new(file_b, Compression::default());
@@ -354,7 +355,7 @@ impl SingleCellData{
             Ok(_) => (),
             Err(err) => {
                 eprintln!("write error: {err}");
-                return Err::<(), &str>("Header could not be written")
+                return Err("Header could not be written");
             }
         };
 
@@ -363,7 +364,7 @@ impl SingleCellData{
         let file_f = match File::create( file_path.join("features.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
-                panic!("Error creating the path?: {err:#?}");
+                return Err("Error creating the path?: {err:#?}");
             }
         };
         let file3 = GzEncoder::new(file_f, Compression::default());
@@ -374,7 +375,7 @@ impl SingleCellData{
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}" );
-                    return Err::<(), &str>("feature could not be written")   
+                    return Err("feature could not be written")   
                 }
             }
         }
@@ -396,7 +397,7 @@ impl SingleCellData{
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");
-                    return Err::<(), &str>("cell barcode could not be written")   
+                    return Err( "cell barcode could not be written")   
                 }
             };
 
@@ -407,15 +408,15 @@ impl SingleCellData{
                         Ok(_) => { entries += 1; },
                         Err(err) => {
                             eprintln!("write error: {err}");
-                            return Err::<(), &str>("cell data could not be written")
+                            return Err( "cell data could not be written")
                         }
                     }
                 }
             }
         } 
-
-        println!( "sparse Matrix: {} cell(s), {} gene(s) and {} entries written to path {:?}; ", cell_id, gene_ids.len(), entries, file_path.into_os_string().into_string());
-        Ok( () )
+        let report = format!("sparse Matrix: {} cell(s), {} gene(s) and {} entries written to path {:?}; ", cell_id, gene_ids.len(), entries, file_path.into_os_string().into_string());
+        println!( "{}",report );
+        Ok( report )
     }
     /// Update the gene names for export to sparse
     /// returns the count of cells and the count of total gene values

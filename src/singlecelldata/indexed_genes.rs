@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use core::fmt;
 
+use regex::Regex;
+
 
 pub struct IndexedGenes{
 	/// to store the name to external id of the genes
@@ -32,6 +34,28 @@ impl IndexedGenes{
 		}
 
 	}
+
+	/// End pattern match subsetting of the gene names structure
+	pub fn subset(&self, regex: &Regex, offset: usize ) -> IndexedGenes {
+        // Use enumerate to build both ids_to_name and names
+        let mut new_names = BTreeMap::new();
+        let new_ids_to_name: Vec<String> = self
+            .ids_to_name
+            .iter()
+            .filter(|name| regex.is_match(name))
+            .map(|name| {
+                let new_index = new_names.len(); // Current size of new_names gives the new index
+                new_names.insert(name.clone(), new_index); // Populate new_names
+                name.clone() // Return the name for the Vec
+            })
+            .collect();
+
+        IndexedGenes {
+            names: new_names,
+            ids_to_name: new_ids_to_name,
+            offset: 0, // Reset offset for the new subset
+        }
+    }
 
 
 	/// merges the other list into this list and returns a Vec of new ids for the other data 

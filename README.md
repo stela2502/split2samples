@@ -100,6 +100,12 @@ cp target/release/te_analysis /usr/bin
 cp target/release/create_gene_mapper_index /usr/bin
 ``` 
 
+Or easier:
+```
+cargo install --git https://github.com/stela2502/Rustody
+
+```
+
 With 10x data we need also the 10x whitelists and therefore we need to set a environment variable.
 This is not complicated, but needs admin rights if not working in an docker or singularity environment:
 
